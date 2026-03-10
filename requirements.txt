@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+playwright
+playwright-stealth
+apscheduler
+pydantic
+pydantic-settings
+jinja2
+python-multipart
