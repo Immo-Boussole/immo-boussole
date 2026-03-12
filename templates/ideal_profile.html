@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
+            --border: rgba(255,255,255,0.07); --text: #eef2ff; --text-2: #8b9cc8;
+            --accent: #4f8ef7; --accent-2: #6366f1;
+            --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
+            --shadow: 0 8px 32px rgba(0,0,0,0.5);
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .topnav {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem;
+        }
+        .nav-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-2); text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: var(--trans); }
+        .nav-back:hover { color: var(--accent); }
+
+        .hero {
+            background: linear-gradient(160deg, #0e1628 0%, #131929 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 3rem 2rem 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(79,142,247,0.12) 0%, transparent 70%);
+        }
+        .hero-icon { font-size: 3rem; margin-bottom: 1rem; position: relative; }
+        .hero h1 { font-size: 2rem; font-weight: 900; position: relative; }
+        .hero p { color: var(--text-2); margin-top: 0.5rem; font-size: 0.9rem; position: relative; }
+        .hero-based { display: inline-block; margin-top: 0.75rem; background: rgba(79,142,247,0.12); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; color: var(--accent); position: relative; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+        /* Stats bar */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+        .stat-item { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; text-align: center; transition: var(--trans); }
+        .stat-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .stat-item .val { font-size: 1.8rem; font-weight: 900; }
+        .stat-item .acc { color: var(--accent); }
+        .stat-item .gr { color: var(--green); }
+        .stat-item .lbl { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); margin-top: 0.25rem; }
+
+        /* No data state */
+        .no-data { text-align: center; background: var(--surface); border: 1px dashed rgba(255,255,255,0.1); border-radius: 16px; padding: 4rem 2rem; color: var(--text-2); }
+        .no-data i { font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; display: block; }
+        .no-data h2 { font-size: 1.25rem; color: var(--text); margin-bottom: 0.5rem; }
+
+        /* Section layout */
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+        @media (max-width: 700px) { .section-grid { grid-template-columns: 1fr; } }
+
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+        .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.4rem; }
+
+        /* DPE bars */
+        .dpe-bars { display: flex; flex-direction: column; gap: 0.6rem; }
+        .dpe-row { display: flex; align-items: center; gap: 0.8rem; }
+        .dpe-letter { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; flex-shrink: 0; }
+        .dpe-A { background: #00c950; color: #000; } .dpe-B { background: #50d970; color: #000; }
+        .dpe-C { background: #ccdf30; color: #000; } .dpe-D { background: #f7c948; color: #000; }
+        .dpe-E { background: #f09939; color: #000; } .dpe-F { background: #e8593a; color: #fff; }
+        .dpe-G { background: #c73232; color: #fff; }
+        .dpe-bar-track { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+        .dpe-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+        .dpe-count { font-size: 0.75rem; font-weight: 700; color: var(--text-2); width: 20px; text-align: right; }
+
+        /* Pros/Cons lists */
+        .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
+        .feedback-item { background: var(--surface-2); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; line-height: 1.5; border-left: 3px solid; }
+        .feedback-item.pro { border-color: var(--green); color: #c0fce8; }
+        .feedback-item.con { border-color: var(--red); color: #fbc5ca; }
+        .empty-feedback { color: var(--text-2); font-size: 0.82rem; font-style: italic; padding: 0.5rem; }
+
+        /* Top listings */
+        .top-listing { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; background: var(--surface-2); border-radius: 10px; margin-bottom: 0.5rem; text-decoration: none; color: var(--text); transition: var(--trans); border: 1px solid var(--border); }
+        .top-listing:hover { border-color: var(--accent); transform: translateX(4px); }
+        .tl-dpe { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; flex-shrink: 0; }
+        .tl-info { flex: 1; min-width: 0; }
+        .tl-title { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tl-sub { font-size: 0.72rem; color: var(--text-2); }
+        .tl-price { font-size: 0.9rem; font-weight: 800; color: var(--accent); white-space: nowrap; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="topnav">
+    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour au tableau de bord</a>
+</div>
+
+<div class="hero">
+    <div class="hero-icon">⭐</div>
+    <h1>Fiche de Bien Idéal</h1>
+    <p>Synthèse dynamique basée sur vos avis combinés à ≥ 7/10</p>
+    {% if profile.based_on > 0 %}
+    <span class="hero-based"><i class="fa-solid fa-chart-bar"></i> Basé sur {{ profile.based_on }} avis positifs</span>
+    {% endif %}
+</div>
+
+<div class="container">
+
+    {% if profile.based_on == 0 %}
+    <div class="no-data">
+        <i class="fa-solid fa-star-half-stroke"></i>
+        <h2>Pas encore assez de données</h2>
+        <p>Notez des biens avec au moins <strong>7/10</strong> pour que la fiche idéale se construise automatiquement.</p>
+        <br>
+        <a href="/" style="color: var(--accent); text-decoration: none; font-weight: 600;">
+            <i class="fa-solid fa-arrow-left"></i> Retour aux annonces
+        </a>
+    </div>
+
+    {% else %}
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+        {% if profile.avg_price %}
+        <div class="stat-item">
+            <div class="val acc">{{ "{:,.0f}".format(profile.avg_price).replace(",", " ") }} €</div>
+            <div class="lbl">Budget moyen</div>
+        </div>
+        {% endif %}
+        {% if profile.avg_area %}
+        <div class="stat-item">
+            <div class="val gr">{{ profile.avg_area }} m²</div>
+            <div class="lbl">Surface idéale</div>
+        </div>
+        {% endif %}
+        {% if profile.avg_price_per_sqm %}
+        <div class="stat-item">
+            <div class="val">{{ "{:,.0f}".format(profile.avg_price_per_sqm) }} €</div>
+            <div class="lbl">Prix/m² moyen</div>
+        </div>
+        {% endif %}
+        {% if profile.avg_rooms %}
+        <div class="stat-item">
+            <div class="val">{{ profile.avg_rooms }}</div>
+            <div class="lbl">Pièces (moy.)</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section-grid">
+
+        <!-- Points positifs -->
+        <div class="panel">
+            <div class="panel-title" style="color: var(--green);">
+                <i class="fa-solid fa-thumbs-up"></i> Ce qu'on aime
+            </div>
+            <div class="feedback-list">
+                {% if profile.common_pros %}
+                {% for pro in profile.common_pros %}
+                <div class="feedback-item pro">{{ pro }}</div>
+                {% endfor %}
+                {% else %}
+                <div class="empty-feedback">Aucun point positif enregistré.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Points négatifs -->
+        <div class="panel">
+            <div class="panel-title" style="color: var(--red);">
+                <i class="fa-solid fa-thumbs-down"></i> À éviter
+            </div>
+            <div class="feedback-list">
+                {% if profile.common_cons %}
+                {% for con in profile.common_cons %}
+                <div class="feedback-item con">{{ con }}</div>
+                {% endfor %}
+                {% else %}
+                <div class="empty-feedback">Aucun point négatif enregistré.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- DPE Distribution -->
+        {% if profile.dpe_distribution %}
+        <div class="panel">
+            <div class="panel-title"><i class="fa-solid fa-bolt"></i> Distribution DPE</div>
+            {% set total_dpe = profile.dpe_distribution.values()|sum %}
+            <div class="dpe-bars">
+                {% for letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
+                {% set cnt = profile.dpe_distribution.get(letter, 0) %}
+                {% if cnt > 0 %}
+                <div class="dpe-row">
+                    <div class="dpe-letter dpe-{{ letter }}">{{ letter }}</div>
+                    <div class="dpe-bar-track">
+                        <div class="dpe-bar-fill dpe-{{ letter }}" style="width: {{ (cnt / total_dpe * 100)|int }}%"></div>
+                    </div>
+                    <div class="dpe-count">{{ cnt }}</div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Top listings -->
+        {% if profile.top_listings %}
+        <div class="panel">
+            <div class="panel-title"><i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> Meilleures annonces</div>
+            {% for listing in profile.top_listings[:6] %}
+            <a href="/listings/{{ listing.id }}" class="top-listing">
+                <div class="tl-dpe dpe-{{ listing.dpe_rating or 'NC' }}" title="DPE {{ listing.dpe_rating or '?' }}">
+                    {{ listing.dpe_rating or '?' }}
+                </div>
+                <div class="tl-info">
+                    <div class="tl-title">{{ listing.title[:50] }}</div>
+                    <div class="tl-sub">{{ listing.location or 'N/C' }} {% if listing.area %}· {{ listing.area }}m²{% endif %}</div>
+                </div>
+                <div class="tl-price">
+                    {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
