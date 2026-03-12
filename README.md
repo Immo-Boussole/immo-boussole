@@ -63,6 +63,16 @@ Le projet est entièrement containerisé pour faciliter le déploiement.
 3. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
 4. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
 
+## 🏗️ Structure du Projet
+
+- `app/` : Logique backend (scrapers, modèles, services API).
+- `templates/` : Pages HTML (Jinja2).
+- `static/` : Assets CSS et médias téléchargés (photos des annonces).
+- `tests/` : Scripts de tests unitaires et d'intégration.
+- `debug/` : Outils de débogage et logs de scraping temporaires.
+- `Dockerfile` & `docker-compose.yml` : Configuration Docker.
+- `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
+
 ## 🏗️ Stack Technique
 - **Backend** : FastAPI (Python)
 - **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
