@@ -1,1 +1,74 @@
-# immo-boussole
+# 🧭 Immo-Boussole
+
+**Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger) de manière structurée entre **Jean-Marc** et **Marceline**.
+
+![Dashboard Preview](static/img/dashboard_preview.png) *(Note: Générez votre propre aperçu après lancement)*
+
+## 🚀 Fonctionnalités Clés
+
+- **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) via PinchTab (Headless Browser).
+- **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
+- **Détection de Doublons** : Alerte si un bien similaire (prix, surface, ville) est déjà présent.
+- **Avis Collaboratifs** : Système de notation et de commentaires séparés pour **Jean-Marc** et **Marceline**.
+- **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
+- **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
+
+## 🛠️ Installation & Lancement
+
+### Prérequis
+- Python 3.10+
+- [PinchTab](https://github.com/...) lancé localement (port 9867 par défaut) pour le scraping.
+
+### Installation Locale
+1. **Cloner le projet**
+2. **Créer un environnement virtuel** :
+   ```bash
+   python -m venv venv
+   .\venv\Scripts\activate  # Windows
+   ```
+3. **Installer les dépendances** :
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Configurer l'environnement** :
+   ```bash
+   cp .env.example .env
+   # Renseigner votre SCRAPINGBEE_API_KEY (optionnel) ou ajuster PINCHTAB_URL
+   ```
+5. **Lancer le serveur** :
+   ```bash
+   python -m uvicorn app.main:app --reload
+   ```
+   L'application est accessible sur [http://127.0.0.1:8000](http://127.0.0.1:8000).
+
+---
+
+## 🐳 Utilisation avec Docker
+
+Le projet est entièrement containerisé pour faciliter le déploiement.
+
+1. **Préparer le .env** : Assurez-vous que `PINCHTAB_URL` pointe vers `http://host.docker.internal:9867`.
+2. **Lancer le conteneur** :
+   ```bash
+   docker compose up -d
+   ```
+3. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
+
+---
+
+## 📖 Guide d'Utilisation
+
+1. **Ajouter un bien** : Cliquez sur "+ Ajouter une annonce" et collez l'URL LeBonCoin ou SeLoger.
+2. **Évaluer** : Cliquez sur une carte pour voir les détails, puis remplissez votre section (Jean-Marc ou Marceline).
+3. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
+4. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
+
+## 🏗️ Stack Technique
+- **Backend** : FastAPI (Python)
+- **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
+- **Scraping** : PinchTab / BeautifulSoup4 / HTTPX
+- **Frontend** : HTML5 / Vanilla CSS / Jinja2
+- **Scheduler** : APScheduler (pour les recherches automatiques)
+
+---
+*Développé avec ❤️ pour Jean-Marc & Marceline.*
