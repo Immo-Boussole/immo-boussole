@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[codz]
+*.pyo
+*.pyd
+*.so
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Tests & debug files
+test_*.py
+*_debug.*
+*_snapshot.*
+debug_*.py
+add_and_run.py
+nodes_debug.json
+
+# Database (stored in Docker volume)
+*.db
+*.db-journal
+
+# Local media (stored in Docker volume)
+static/
+
+# Environment files (passed via docker-compose)
+.env
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation & logs
+README.md
+LICENSE
+*.log
+*.html
+
+# Docker files themselves (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

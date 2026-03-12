@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
+            --border: rgba(255,255,255,0.07); --text: #eef2ff; --text-2: #8b9cc8;
+            --accent: #4f8ef7; --accent-2: #6366f1;
+            --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
+            --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        .topnav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: var(--trans);
+        }
+        .nav-back:hover { color: var(--accent); }
+        .nav-title { font-size: 1rem; font-weight: 700; }
+        .nav-src { margin-left: auto; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.05em; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+        .layout { display: grid; grid-template-columns: 1fr 380px; gap: 2rem; align-items: start; }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+        /* ── Carousel ── */
+        .carousel { border-radius: var(--radius); overflow: hidden; background: var(--surface-2); position: relative; margin-bottom: 1.5rem; }
+        .carousel-track { display: flex; transition: transform 0.4s ease; }
+        .carousel-slide { min-width: 100%; height: 380px; position: relative; }
+        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; }
+        .carousel-placeholder {
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, var(--surface-2), #0f1826);
+            color: var(--text-2); font-size: 4rem;
+        }
+        .carousel-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.6); border: none; color: #fff;
+            width: 38px; height: 38px; border-radius: 50%;
+            font-size: 1rem; cursor: pointer; z-index: 5;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--trans);
+        }
+        .carousel-btn:hover { background: var(--accent); }
+        .carousel-prev { left: 1rem; }
+        .carousel-next { right: 1rem; }
+        .carousel-dots { display: flex; justify-content: center; gap: 0.4rem; margin-top: 0.75rem; padding-bottom: 0.25rem; }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); cursor: pointer; transition: var(--trans); }
+        .dot.active { background: var(--accent); transform: scale(1.3); }
+        .photo-count { position: absolute; bottom: 0.75rem; right: 0.75rem; background: rgba(0,0,0,0.6); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; z-index: 3; }
+
+        /* ── Info Card ── */
+        .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem; }
+
+        .listing-title { font-size: 1.5rem; font-weight: 800; line-height: 1.3; margin-bottom: 0.5rem; }
+        .listing-location { color: var(--text-2); font-size: 0.9rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.4rem; }
+
+        .price-block { display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.25rem; flex-wrap: wrap; }
+        .price-main { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
+        .price-ppsqm { font-size: 1rem; font-weight: 600; color: var(--text-2); }
+
+        .costs-row { display: flex; gap: 1.5rem; margin-top: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .cost-item { font-size: 0.78rem; color: var(--text-2); display: flex; align-items: center; gap: 0.3rem; }
+        .cost-item strong { color: var(--text); }
+
+        .specs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.75rem; }
+        .spec { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; text-align: center; }
+        .spec .sv { font-size: 1.2rem; font-weight: 800; }
+        .spec .sl { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); margin-top: 0.2rem; }
+
+        /* DPE cards */
+        .dpe-block { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+        .dpe-card { flex: 1; border-radius: 10px; padding: 0.85rem; text-align: center; }
+        .dpe-card .letter { font-size: 2rem; font-weight: 900; }
+        .dpe-card .dpe-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.2rem; opacity: 0.8; }
+        .dpe-A { background: #00c950; color: #000; } .dpe-B { background: #50d970; color: #000; }
+        .dpe-C { background: #ccdf30; color: #000; } .dpe-D { background: #f7c948; color: #000; }
+        .dpe-E { background: #f09939; color: #000; } .dpe-F { background: #e8593a; color: #fff; }
+        .dpe-G { background: #c73232; color: #fff; } .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+        /* Description */
+        .description { font-size: 0.875rem; line-height: 1.7; color: var(--text-2); max-height: 140px; overflow: hidden; position: relative; }
+        .description.expanded { max-height: none; }
+        .description::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface)); }
+        .description.expanded::after { display: none; }
+        .read-more { font-size: 0.78rem; color: var(--accent); cursor: pointer; margin-top: 0.5rem; display: none; font-weight: 600; }
+
+        /* Duplicate warning */
+        .dup-warning {
+            background: rgba(248,168,75,0.08);
+            border: 1px solid rgba(248,168,75,0.3);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+        }
+        .dup-warning strong { color: var(--orange); }
+
+        /* ── Right Panel ── */
+        .right-panel > * { margin-bottom: 1.25rem; }
+
+        .section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.4rem; }
+
+        /* Review Card */
+        .review-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .reviewer-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+        .avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
+        }
+        .avatar.jm { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+        .avatar.marceline { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff; }
+        .reviewer-name { font-weight: 700; font-size: 0.9rem; }
+        .reviewer-role { font-size: 0.7rem; color: var(--text-2); }
+        .rating-display { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; font-size: 1.1rem; font-weight: 800; color: var(--yellow); }
+        .rating-badge { background: rgba(249,208,79,0.15); border: 1px solid rgba(249,208,79,0.3); border-radius: 8px; padding: 0.3rem 0.6rem; }
+
+        .review-section { margin-bottom: 0.75rem; }
+        .review-section-lbl { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); margin-bottom: 0.3rem; }
+        .review-text { font-size: 0.82rem; line-height: 1.6; }
+        .pros-text { color: var(--green); }
+        .cons-text { color: var(--red); }
+        .no-review { color: var(--text-2); font-size: 0.8rem; font-style: italic; padding: 0.5rem 0; }
+
+        /* Review Form */
+        .review-form { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-top: 0.75rem; display: none; }
+        .review-form.open { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .form-row { margin-bottom: 0.75rem; }
+        .form-row label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--text-2); margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-row textarea, .form-row input[type="number"] {
+            width: 100%; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text);
+            font-size: 0.82rem; font-family: inherit; resize: vertical; transition: var(--trans);
+        }
+        .form-row textarea:focus, .form-row input:focus { outline: none; border-color: var(--accent); }
+        .form-row textarea { min-height: 70px; }
+        .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
+
+        .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: var(--trans); font-family: inherit; }
+        .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.sm { padding: 0.35rem 0.65rem; font-size: 0.72rem; }
+        .btn-toggle { width: 100%; justify-content: center; margin-top: 0.5rem; }
+
+        /* Visit badge */
+        .visit-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 6px; margin-left: auto; }
+        .visit-badge.done { background: rgba(16,217,164,0.1); color: var(--green); border: 1px solid rgba(16,217,164,0.3); }
+        .visit-badge.pending { background: rgba(139,156,200,0.1); color: var(--text-2); border: 1px solid var(--border); }
+
+        /* Ext link */
+        .ext-link { display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem; text-decoration: none; color: var(--text); font-size: 0.85rem; font-weight: 600; transition: var(--trans); }
+        .ext-link:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 0.85rem 1.25rem; font-size: 0.82rem; font-weight: 600; color: var(--green); box-shadow: var(--shadow); transform: translateY(80px); opacity: 0; transition: var(--trans); z-index: 999; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="topnav">
+    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+    <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
+    <span class="nav-src">{{ listing.source }}</span>
+</div>
+
+<div class="container">
+
+    {% if listing.is_duplicate and duplicate_original %}
+    <div class="dup-warning">
+        <strong><i class="fa-solid fa-triangle-exclamation"></i> Doublon détecté !</strong>
+        Ce bien a des caractéristiques similaires à
+        <a href="/listings/{{ duplicate_original.id }}" style="color: var(--orange);">
+            {{ duplicate_original.title[:60] }} (ID #{{ duplicate_original.id }})
+        </a>
+        — même prix, surface et ville.
+    </div>
+    {% endif %}
+
+    <div class="layout">
+
+        <!-- ── Left Column ── -->
+        <div class="left-col">
+
+            <!-- Photo Carousel -->
+            <div class="carousel" id="carousel">
+                <div class="carousel-track" id="track">
+                    {% if photos %}
+                    {% for photo in photos %}
+                    <div class="carousel-slide">
+                        <img src="/{{ photo }}" alt="Photo {{ loop.index }}" loading="{{ 'eager' if loop.index == 1 else 'lazy' }}">
+                    </div>
+                    {% endfor %}
+                    <span class="photo-count">{{ photos|length }} photo{{ 's' if photos|length > 1 }}</span>
+                    {% else %}
+                    <div class="carousel-slide">
+                        <div class="carousel-placeholder"><i class="fa-regular fa-image"></i></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if photos|length > 1 %}
+                <button class="carousel-btn carousel-prev" onclick="slide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="carousel-btn carousel-next" onclick="slide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                {% endif %}
+            </div>
+            {% if photos|length > 1 %}
+            <div class="carousel-dots" id="dots">
+                {% for photo in photos %}
+                <div class="dot {{ 'active' if loop.index == 1 }}" onclick="goTo({{ loop.index0 }})"></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Main Info -->
+            <div class="info-card">
+                <div class="listing-title">{{ listing.title }}</div>
+                <div class="listing-location">
+                    <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i>
+                    {{ listing.location or "Localisation non disponible" }}
+                </div>
+
+                <div class="price-block">
+                    <span class="price-main">
+                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
+                    </span>
+                    {% if listing.price_per_sqm %}
+                    <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm) }} €/m²</span>
+                    {% endif %}
+                </div>
+
+                <div class="costs-row">
+                    {% if listing.land_tax %}
+                    <div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> Taxe foncière : <strong>{{ listing.land_tax|int }} €/an</strong></div>
+                    {% endif %}
+                    {% if listing.charges %}
+                    <div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> Charges : <strong>{{ listing.charges|int }} €/mois</strong></div>
+                    {% endif %}
+                    {% if listing.agency_fee %}
+                    <div class="cost-item"><i class="fa-solid fa-handshake"></i> Honoraires : <strong>{{ listing.agency_fee|int }} €</strong></div>
+                    {% endif %}
+                </div>
+
+                <div class="specs-grid">
+                    {% if listing.area %}
+                    <div class="spec"><div class="sv">{{ listing.area }} m²</div><div class="sl">Surface</div></div>
+                    {% endif %}
+                    {% if listing.land_area %}
+                    <div class="spec"><div class="sv">{{ listing.land_area }} m²</div><div class="sl">Terrain</div></div>
+                    {% endif %}
+                    {% if listing.rooms %}
+                    <div class="spec"><div class="sv">{{ listing.rooms }}</div><div class="sl">Pièces</div></div>
+                    {% endif %}
+                    {% if listing.bedrooms %}
+                    <div class="spec"><div class="sv">{{ listing.bedrooms }}</div><div class="sl">Chambres</div></div>
+                    {% endif %}
+                    {% if listing.floor is not none %}
+                    <div class="spec"><div class="sv">{{ listing.floor }}{% if listing.total_floors %}/{{ listing.total_floors }}{% endif %}</div><div class="sl">Étage</div></div>
+                    {% endif %}
+                    {% if listing.building_year %}
+                    <div class="spec"><div class="sv">{{ listing.building_year }}</div><div class="sl">Année</div></div>
+                    {% endif %}
+                </div>
+
+                <!-- DPE & GES -->
+                <div class="dpe-block">
+                    <div class="dpe-card dpe-{{ listing.dpe_rating or 'NC' }}">
+                        <div class="letter">{{ listing.dpe_rating or '?' }}</div>
+                        <div class="dpe-label">DPE</div>
+                    </div>
+                    <div class="dpe-card dpe-{{ listing.ges_rating or 'NC' }}">
+                        <div class="letter">{{ listing.ges_rating or '?' }}</div>
+                        <div class="dpe-label">GES</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if listing.description_text %}
+            <div class="info-card">
+                <div class="section-title"><i class="fa-solid fa-align-left"></i> Description</div>
+                <div class="description" id="desc">{{ listing.description_text }}</div>
+                <div class="read-more" id="readMore" onclick="toggleDesc()">Lire la suite <i class="fa-solid fa-chevron-down"></i></div>
+            </div>
+            {% endif %}
+
+            <!-- Scraped at info -->
+            <div style="font-size: 0.72rem; color: var(--text-2); text-align: right; padding: 0 0.25rem;">
+                {% if listing.scraped_at %}
+                Données extraites le {{ listing.scraped_at.strftime('%d/%m/%Y à %H:%M') }}
+                {% endif %}
+                — <a href="{{ listing.url }}" target="_blank" style="color: var(--accent);">Voir l'annonce originale <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+            </div>
+        </div>
+
+        <!-- ── Right Panel: Reviews ── -->
+        <div class="right-panel">
+
+            <a href="{{ listing.url }}" target="_blank" class="ext-link">
+                <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>
+                Voir sur {{ listing.source }}
+            </a>
+
+            <!-- Jean-Marc Review -->
+            {% set jm_review = reviews_by_reviewer.get('jean-marc') %}
+            <div class="review-card">
+                <div class="reviewer-header">
+                    <div class="avatar jm">JM</div>
+                    <div>
+                        <div class="reviewer-name">Jean-Marc</div>
+                        <div class="reviewer-role">Propriétaire</div>
+                    </div>
+                    {% if jm_review %}
+                    <div class="rating-badge rating-display">
+                        <i class="fa-solid fa-star"></i> {{ jm_review.rating or '—' }}
+                    </div>
+                    {% endif %}
+                    {% if jm_review and jm_review.visit_done %}
+                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> Visité</span>
+                    {% endif %}
+                </div>
+
+                {% if jm_review %}
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> Points positifs</div>
+                    <div class="review-text pros-text">{{ jm_review.pros or '—' }}</div>
+                </div>
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> Points négatifs</div>
+                    <div class="review-text cons-text">{{ jm_review.cons or '—' }}</div>
+                </div>
+                {% if jm_review.notes %}
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+                    <div class="review-text">{{ jm_review.notes }}</div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="no-review">Pas encore d'avis de Jean-Marc.</div>
+                {% endif %}
+
+                <button class="btn btn-toggle" onclick="toggleForm('form-jm')">
+                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if jm_review else 'Donner mon avis' }}
+                </button>
+
+                <div class="review-form" id="form-jm">
+                    <div class="form-row">
+                        <label>Points positifs</label>
+                        <textarea id="jm-pros" placeholder="Lumineux, beau jardin, quartier calme...">{{ jm_review.pros or '' }}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>Points négatifs</label>
+                        <textarea id="jm-cons" placeholder="Cuisine trop petite, pas de garage...">{{ jm_review.cons or '' }}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>Note / 10</label>
+                        <input type="number" id="jm-rating" min="0" max="10" step="0.5" value="{{ jm_review.rating or '' }}" placeholder="7.5">
+                    </div>
+                    <div class="form-row">
+                        <label>Notes libres</label>
+                        <textarea id="jm-notes" placeholder="Remarques complémentaires...">{{ jm_review.notes or '' }}</textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn sm" onclick="toggleForm('form-jm')">Annuler</button>
+                        <button class="btn primary sm" onclick="submitReview('jean-marc', {{ listing.id }})">
+                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marceline Review -->
+            {% set marceline_review = reviews_by_reviewer.get('marceline') %}
+            <div class="review-card">
+                <div class="reviewer-header">
+                    <div class="avatar marceline">M</div>
+                    <div>
+                        <div class="reviewer-name">Marceline</div>
+                        <div class="reviewer-role">Propriétaire</div>
+                    </div>
+                    {% if marceline_review %}
+                    <div class="rating-badge rating-display">
+                        <i class="fa-solid fa-star"></i> {{ marceline_review.rating or '—' }}
+                    </div>
+                    {% endif %}
+                    {% if marceline_review and marceline_review.visit_done %}
+                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> Visité</span>
+                    {% endif %}
+                </div>
+
+                {% if marceline_review %}
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> Points positifs</div>
+                    <div class="review-text pros-text">{{ marceline_review.pros or '—' }}</div>
+                </div>
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> Points négatifs</div>
+                    <div class="review-text cons-text">{{ marceline_review.cons or '—' }}</div>
+                </div>
+                {% if marceline_review.notes %}
+                <div class="review-section">
+                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+                    <div class="review-text">{{ marceline_review.notes }}</div>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="no-review">Pas encore d'avis de Marceline.</div>
+                {% endif %}
+
+                <button class="btn btn-toggle" onclick="toggleForm('form-marceline')">
+                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if marceline_review else 'Donner mon avis' }}
+                </button>
+
+                <div class="review-form" id="form-marceline">
+                    <div class="form-row">
+                        <label>Points positifs</label>
+                        <textarea id="marceline-pros" placeholder="Beau quartier, cuisine moderne...">{{ marceline_review.pros or '' }}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>Points négatifs</label>
+                        <textarea id="marceline-cons" placeholder="Bruyant, sans cave...">{{ marceline_review.cons or '' }}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>Note / 10</label>
+                        <input type="number" id="marceline-rating" min="0" max="10" step="0.5" value="{{ marceline_review.rating or '' }}" placeholder="8">
+                    </div>
+                    <div class="form-row">
+                        <label>Notes libres</label>
+                        <textarea id="marceline-notes" placeholder="Remarques supplémentaires...">{{ marceline_review.notes or '' }}</textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn sm" onclick="toggleForm('form-marceline')">Annuler</button>
+                        <button class="btn primary sm" onclick="submitReview('marceline', {{ listing.id }})">
+                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end right-panel -->
+    </div><!-- end layout -->
+</div><!-- end container -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+    // ── Carousel ──────────────────────────────────────────────────────────────
+    let current = 0;
+    const total = {{ photos|length or 0 }};
+
+    function goTo(idx) {
+        current = Math.max(0, Math.min(idx, total - 1));
+        document.getElementById('track').style.transform = `translateX(-${current * 100}%)`;
+        document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    }
+    function slide(dir) { goTo(current + dir); }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft') slide(-1);
+        if (e.key === 'ArrowRight') slide(1);
+    });
+
+    // ── Description toggle ────────────────────────────────────────────────────
+    const desc = document.getElementById('desc');
+    const readMore = document.getElementById('readMore');
+    if (desc && desc.scrollHeight > desc.offsetHeight + 20) {
+        readMore.style.display = 'block';
+    }
+    function toggleDesc() {
+        desc.classList.toggle('expanded');
+        readMore.innerHTML = desc.classList.contains('expanded')
+            ? 'Réduire <i class="fa-solid fa-chevron-up"></i>'
+            : 'Lire la suite <i class="fa-solid fa-chevron-down"></i>';
+    }
+
+    // ── Review Forms ──────────────────────────────────────────────────────────
+    function toggleForm(id) {
+        document.getElementById(id).classList.toggle('open');
+    }
+
+    function showToast(msg, ok = true) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+        t.style.color = ok ? 'var(--green)' : 'var(--red)';
+        t.classList.add('show');
+        setTimeout(() => { t.classList.remove('show'); }, 3000);
+    }
+
+    async function submitReview(reviewer, listingId) {
+        const prefix = reviewer === 'jean-marc' ? 'jm' : 'marceline';
+        const body = {
+            reviewer,
+            pros: document.getElementById(`${prefix}-pros`).value,
+            cons: document.getElementById(`${prefix}-cons`).value,
+            rating: parseFloat(document.getElementById(`${prefix}-rating`).value) || null,
+            notes: document.getElementById(`${prefix}-notes`).value,
+            visit_done: false,
+        };
+
+        try {
+            const res = await fetch(`/api/listings/${listingId}/reviews`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) {
+                showToast('✓ Avis sauvegardé !');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                const err = await res.json();
+                showToast('Erreur : ' + (err.detail || 'inconnue'), false);
+            }
+        } catch (e) {
+            showToast('Erreur réseau.', false);
+        }
+    }
+</script>
+</body>
+</html>

@@ -8,3 +8,7 @@ pydantic
 pydantic-settings
 jinja2
 python-multipart
+beautifulsoup4
+httpx
+aiofiles
+requests

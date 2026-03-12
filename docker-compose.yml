@@ -1,0 +1,52 @@
+services:
+
+  # ── Application principale ──────────────────────────────────────────────────
+  immo-boussole:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: immo-boussole
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+    environment:
+      # Base de données SQLite (chemin dans le volume)
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+      # PinchTab tourne sur la machine hôte → host.docker.internal:9867
+      # Sur Linux (sans Docker Desktop) : remplacez par l'IP de l'hôte
+      PINCHTAB_URL: "${PINCHTAB_URL:-http://host.docker.internal:9867}"
+      SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
+      SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
+      DEBUG: "${DEBUG:-false}"
+
+    volumes:
+      # Persistance de la base de données SQLite
+      - db-data:/app/data
+      # Persistance des photos téléchargées
+      - media-data:/app/static
+
+    # Sur Linux, pour que host.docker.internal fonctionne
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/listings')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ── Volumes persistants ─────────────────────────────────────────────────────
+volumes:
+  db-data:
+    name: immo-boussole-db
+  media-data:
+    name: immo-boussole-media
