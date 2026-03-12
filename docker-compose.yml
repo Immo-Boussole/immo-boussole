@@ -7,15 +7,16 @@ services:
       dockerfile: Dockerfile
     container_name: immo-boussole
     restart: unless-stopped
+    depends_on:
+      - pinchtab
     ports:
       - "8000:8000"
 
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
-      # PinchTab tourne sur la machine hôte → host.docker.internal:9867
-      # Sur Linux (sans Docker Desktop) : remplacez par l'IP de l'hôte
-      PINCHTAB_URL: "${PINCHTAB_URL:-http://host.docker.internal:9867}"
+      # Utilise le service pinchtab interne au réseau Docker
+      PINCHTAB_URL: "http://pinchtab:9867"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-false}"
@@ -26,9 +27,14 @@ services:
       # Persistance des photos téléchargées
       - media-data:/app/static
 
-    # Sur Linux, pour que host.docker.internal fonctionne
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+  # ── Moteur de Scraping (Headless Browser) ───────────────────────────────────
+  pinchtab:
+    image: pinchtab/pinchtab
+    container_name: pinchtab
+    restart: unless-stopped
+    ports:
+      - "9867:9867"
+    # Note: PinchTab expose par défaut son API sur le port 9867
 
     healthcheck:
       test: ["CMD", "python", "-c",
