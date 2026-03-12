@@ -45,13 +45,16 @@
 
 ## 🐳 Utilisation avec Docker
 
-Le projet est entièrement containerisé pour faciliter le déploiement.
+Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **PinchTab**.
 
-1. **Préparer le .env** : Assurez-vous que `PINCHTAB_URL` pointe vers `http://host.docker.internal:9867`.
-2. **Lancer le conteneur** :
+1. **Lancer l'ensemble des services** :
    ```bash
    docker compose up -d
    ```
+   Cette commande télécharge et lance deux conteneurs : `immo-boussole` (l'application) et `pinchtab` (le navigateur headless).
+
+2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
+
 3. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
 
 ---
