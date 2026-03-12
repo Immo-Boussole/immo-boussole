@@ -17,7 +17,7 @@
 
 ### Prérequis
 - Python 3.10+
-- [PinchTab](https://github.com/...) lancé localement (port 9867 par défaut) pour le scraping.
+- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) lancé localement (port 8191 par défaut) pour le scraping.
 
 ### Installation Locale
 1. **Cloner le projet**
@@ -33,7 +33,7 @@
 4. **Configurer l'environnement** :
    ```bash
    cp .env.example .env
-   # Renseigner votre SCRAPINGBEE_API_KEY (optionnel) ou ajuster PINCHTAB_URL
+   # Renseigner votre SCRAPINGBEE_API_KEY (optionnel) ou ajuster FLARESOLVERR_URL
    ```
 5. **Lancer le serveur** :
    ```bash
@@ -45,13 +45,13 @@
 
 ## 🐳 Utilisation avec Docker
 
-Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **PinchTab**.
+Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **FlareSolverr**.
 
 1. **Lancer l'ensemble des services** :
    ```bash
    docker compose up -d
    ```
-   Cette commande télécharge et lance deux conteneurs : `immo-boussole` (l'application) et `pinchtab` (le navigateur headless).
+   Cette commande télécharge et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
 
 2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
 
@@ -79,7 +79,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 ## 🏗️ Stack Technique
 - **Backend** : FastAPI (Python)
 - **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
-- **Scraping** : PinchTab / BeautifulSoup4 / HTTPX
+- **Scraping** : FlareSolverr / BeautifulSoup4 / HTTPX
 - **Frontend** : HTML5 / Vanilla CSS / Jinja2
 - **Scheduler** : APScheduler (pour les recherches automatiques)
 
