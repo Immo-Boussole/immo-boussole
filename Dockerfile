@@ -19,7 +19,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-LABEL maintainer="Jean-Marc & Marce"
+LABEL maintainer="Jean-Marc & Marceline"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
 
 # Copy installed packages from builder
@@ -43,7 +43,7 @@ VOLUME ["/app/data", "/app/static"]
 
 # ── Environment defaults ──────────────────────────────────────────────────────
 ENV DATABASE_URL="sqlite:////app/data/immo_boussole.db" \
-    PINCHTAB_URL="http://host.docker.internal:9867" \
+    FLARESOLVERR_URL="http://flaresolverr:8191" \
     SCRAPING_INTERVAL_HOURS=12 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -56,6 +56,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # ── Start ─────────────────────────────────────────────────────────────────────
 CMD ["python", "-m", "uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1"]
+    "--host", "0.0.0.0", \
+    "--port", "8000", \
+    "--workers", "1"]

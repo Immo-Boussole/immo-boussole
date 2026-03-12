@@ -8,15 +8,15 @@ services:
     container_name: immo-boussole
     restart: unless-stopped
     depends_on:
-      - pinchtab
+      - flaresolverr
     ports:
       - "8000:8000"
 
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
-      # Utilise le service pinchtab interne au réseau Docker
-      PINCHTAB_URL: "http://pinchtab:9867"
+      # Utilise le service flaresolverr interne au réseau Docker
+      FLARESOLVERR_URL: "http://flaresolverr:8191"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-false}"
@@ -27,22 +27,16 @@ services:
       # Persistance des photos téléchargées
       - media-data:/app/static
 
-  # ── Moteur de Scraping (Headless Browser) ───────────────────────────────────
-  pinchtab:
-    image: pinchtab/pinchtab
-    container_name: pinchtab
+  # ── Moteur de Scraping (Self-Hosted Cloudflare Bypass) ─────────────────────
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
     restart: unless-stopped
     ports:
-      - "9867:9867"
-    # Note: PinchTab expose par défaut son API sur le port 9867
-
-    healthcheck:
-      test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/listings')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
+      - CAPTCHA_SOLVER=none # We don't have a captcha solver configured by default
 
     logging:
       driver: "json-file"

@@ -195,7 +195,10 @@
 <div class="topnav">
     <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
     <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
-    <span class="nav-src">{{ listing.source }}</span>
+    <span class="nav-src" style="margin-left: 1rem;">{{ listing.source }}</span>
+    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})" title="Supprimer cette annonce" style="margin-left: auto; color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
+        <i class="fa-solid fa-trash-can"></i> Supprimer
+    </button>
 </div>
 
 <div class="container">
@@ -476,14 +479,162 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ── Modal: Confirmation suppression (slide) ── -->
+<div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
+    <div class="modal delete-modal">
+        <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <h2 style="color: var(--text); margin-bottom: 0.5rem;">Supprimer cette annonce ?</h2>
+        <p class="delete-title-preview" id="deleteTitlePreview" style="font-size: 0.82rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
+        <p class="delete-warning" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.25rem;">Cette action est <strong>irréversible</strong>. Les avis associés seront également supprimés.</p>
+
+        <div class="slide-confirm-wrapper" style="padding: 0.25rem 0 0.75rem;">
+            <div class="slide-track" id="slideTrack" style="position: relative; height: 52px; background: var(--surface-2); border: 1px solid rgba(242,92,105,0.3); border-radius: 26px; display: flex; align-items: center; overflow: hidden; user-select: none;">
+                <div class="slide-thumb" id="slideThumb" style="position: absolute; left: 4px; width: 44px; height: 44px; background: var(--red); border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.85rem; cursor: grab; touch-action: none; box-shadow: 0 4px 14px rgba(242,92,105,0.4); z-index: 2; display: flex; gap: 1px;">
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
+                </div>
+                <span class="slide-label" id="slideLabel" style="width: 100%; text-align: center; font-size: 0.78rem; font-weight: 600; color: rgba(242,92,105,0.7); letter-spacing: 0.04em; pointer-events: none;">Glissez pour confirmer</span>
+            </div>
+        </div>
+
+        <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
+            <i class="fa-solid fa-xmark"></i> Annuler
+        </button>
+    </div>
+</div>
+
+<!-- Extra styles for deletion modal on this page -->
+<style>
+    .modal-backdrop {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+        padding: 2rem; width: 100%; max-width: 420px; box-shadow: var(--shadow);
+        animation: slideUp 0.3s ease; text-align: center;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .delete-icon {
+        width: 60px; height: 60px; border-radius: 50%;
+        background: rgba(242,92,105,0.12); border: 1px solid rgba(242,92,105,0.3);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; color: var(--red); margin: 0 auto 1rem;
+    }
+    .slide-thumb.done { background: #10d9a4 !important; cursor: default; }
+</style>
+
 <script>
+    // ── Deletion Logic ────────────────────────────────────────────────────────
+    let pendingDeleteId = null;
+
+    function openDeleteModal(id, title) {
+        pendingDeleteId = id;
+        document.getElementById('deleteTitlePreview').textContent = title;
+        document.getElementById('deleteModal').classList.add('open');
+        resetSlider();
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('open');
+        pendingDeleteId = null;
+        resetSlider();
+    }
+
+    function resetSlider() {
+        const thumb = document.getElementById('slideThumb');
+        const label = document.getElementById('slideLabel');
+        const track = document.getElementById('slideTrack');
+        thumb.style.transition = 'left 0.3s ease';
+        thumb.style.left = '4px';
+        thumb.classList.remove('done');
+        thumb.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>';
+        label.textContent = 'Glissez pour confirmer';
+        label.style.color = '';
+        track.style.borderColor = '';
+        setTimeout(() => { thumb.style.transition = ''; }, 300);
+    }
+
+    async function confirmDelete() {
+        if (!pendingDeleteId) return;
+        const id = pendingDeleteId;
+        try {
+            const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('✓ Annonce supprimée avec succès !');
+                setTimeout(() => window.location.href = '/', 1500);
+            } else {
+                showToast('Erreur lors de la suppression.', false);
+                resetSlider();
+            }
+        } catch (e) {
+            showToast('Erreur réseau.', false);
+            resetSlider();
+        }
+    }
+
+    // Slider logic
+    (() => {
+        let dragging = false, startX = 0, startLeft = 4;
+        const getThumb  = () => document.getElementById('slideThumb');
+        const getTrack  = () => document.getElementById('slideTrack');
+        const getLabel  = () => document.getElementById('slideLabel');
+
+        function onStart(e) {
+            const thumb = getThumb();
+            if (thumb.classList.contains('done')) return;
+            dragging = true;
+            startX = (e.touches ? e.touches[0].clientX : e.clientX);
+            startLeft = parseInt(thumb.style.left) || 4;
+            thumb.style.transition = 'none';
+        }
+
+        function onMove(e) {
+            if (!dragging) return;
+            const thumb = getThumb();
+            const track = getTrack();
+            const label = getLabel();
+            const maxLeft = track.clientWidth - thumb.clientWidth - 4;
+            const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+            const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
+            thumb.style.left = newLeft + 'px';
+            const progress = (newLeft - 4) / (maxLeft - 4);
+            label.style.opacity = 1 - progress;
+            if (progress >= 0.95) {
+                dragging = false;
+                thumb.style.transition = 'left 0.2s ease';
+                thumb.style.left = maxLeft + 'px';
+                thumb.classList.add('done');
+                thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
+                label.textContent = 'Suppression...';
+                label.style.opacity = 1;
+                confirmDelete();
+            }
+        }
+        function onEnd() { 
+            if (dragging) {
+                dragging = false;
+                resetSlider();
+            }
+        }
+
+        document.addEventListener('mousedown',  e => { if (e.target.closest('#slideThumb')) onStart(e); });
+        document.addEventListener('mousemove',  e => onMove(e));
+        document.addEventListener('mouseup',    onEnd);
+        document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); });
+        document.addEventListener('touchmove',  e => onMove(e));
+        document.addEventListener('touchend',   onEnd);
+    })();
+
     // ── Carousel ──────────────────────────────────────────────────────────────
     let current = 0;
     const total = {{ photos|length or 0 }};
 
     function goTo(idx) {
         current = Math.max(0, Math.min(idx, total - 1));
-        document.getElementById('track').style.transform = `translateX(-${current * 100}%)`;
+        const track = document.getElementById('track');
+        if (track) track.style.transform = `translateX(-${current * 100}%)`;
         document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
     }
     function slide(dir) { goTo(current + dir); }
@@ -492,6 +643,7 @@
     document.addEventListener('keydown', e => {
         if (e.key === 'ArrowLeft') slide(-1);
         if (e.key === 'ArrowRight') slide(1);
+        if (e.key === 'Escape') { closeDeleteModal(); }
     });
 
     // ── Description toggle ────────────────────────────────────────────────────

@@ -15,8 +15,10 @@ class Settings(BaseSettings):
     # Optional ScrapingBee API key (legacy / fallback)
     SCRAPINGBEE_API_KEY: str = None
 
-    # PinchTab headless browser URL
-    # Default: localhost for dev, host.docker.internal for Docker
+    # FlareSolverr URL (for self-hosted bypass)
+    FLARESOLVERR_URL: str = "http://127.0.0.1:8191"
+
+    # Deprecated: PinchTab URL
     PINCHTAB_URL: str = "http://127.0.0.1:9867"
 
     class Config:

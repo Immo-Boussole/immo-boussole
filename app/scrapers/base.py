@@ -28,93 +28,52 @@ class BaseScraper(abc.ABC):
 
     async def extract_page_content(self, url: str) -> Dict:
         """
-        Fetches page content via the local PinchTab headless browser API.
-        Handles proxies, CAPTCHAs, and JS rendering.
+        Fetches page content via a self-hosted FlareSolverr instance.
+        Handles Cloudflare challenges and returns the rendered HTML.
         """
-        print(f"[Scraper] Extraction via PinchTab pour : {url}")
+        print(f"[Scraper] Extraction via FlareSolverr pour : {url}")
 
         def fetch():
             import time
-            import random
-
-            api_url = settings.PINCHTAB_URL
-            run_id = int(time.time())
-            instance_id = None
-
-            # Human emulation: random delay before request
-            pre_launch_delay = random.uniform(5, 15)
-            print(f"[Scraper] Attente anti-bot de {pre_launch_delay:.1f}s avant PinchTab...")
-            time.sleep(pre_launch_delay)
+            api_url = settings.FLARESOLVERR_URL
+            
+            payload = {
+                "cmd": "request.get",
+                "url": url,
+                "maxTimeout": 60000,
+                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
+            }
 
             try:
-                # 1. Launch instance (headed mode to bypass bot checks)
-                res_inst = requests.post(f"{api_url}/instances/launch", json={
-                    "name": f"scraper_{run_id}",
-                    "mode": "headed"
-                })
-                res_inst.raise_for_status()
-                instance_id = res_inst.json().get("id")
+                # Call FlareSolverr
+                response = requests.post(
+                    f"{api_url}/v1",
+                    json=payload,
+                    timeout=70  # Slightly longer than maxTimeout
+                )
+                response.raise_for_status()
+                data = response.json()
 
-                # 2. Open Tab with retry logic for instance boot
-                res_tab = None
-                for attempt in range(10):
-                    time.sleep(2)
-                    res_tab = requests.post(
-                        f"{api_url}/instances/{instance_id}/tabs/open",
-                        json={"url": url}
-                    )
-                    if res_tab.status_code == 503:
-                        print(f"[Scraper] Instance {instance_id} démarre, tentative {attempt + 1}/10...")
-                        continue
-                    res_tab.raise_for_status()
-                    break
+                if data.get("status") == "ok":
+                    solution = data.get("solution", {})
+                    html = solution.get("response", "")
+                    print(f"[Scraper] Succès FlareSolverr pour {url}")
+                    return {"html": html}
+                else:
+                    print(f"[Scraper] FlareSolverr erreur : {data.get('message')}")
+                    return {}
 
-                if res_tab is None or res_tab.status_code == 503:
-                    raise Exception(f"Instance {instance_id} non prête après 20s.")
-
-                tab_id = res_tab.json().get("tabId")
-
-                # 3. Wait for JS rendering and bot protection layers
-                post_launch_delay = random.uniform(8, 15)
-                print(f"[Scraper] Attente de rendu JS de {post_launch_delay:.1f}s...")
-                time.sleep(post_launch_delay)
-
-                # 4. Get full HTML via JS execution
-                try:
-                    res_script = requests.post(
-                        f"{api_url}/tabs/{tab_id}/script",
-                        json={"script": "return document.documentElement.outerHTML;"}
-                    )
-                    res_script.raise_for_status()
-                    content = res_script.json().get("result", "")
-                    if content:
-                        return {"html": content}
-                except Exception as eval_err:
-                    print(f"[Scraper] Erreur JS, fallback texte: {eval_err}")
-
-                # 5. Fallback: raw text extraction
-                res_text = requests.get(f"{api_url}/tabs/{tab_id}/text")
-                res_text.raise_for_status()
-                return {"text": res_text.json().get("text", "")}
-
-            except Exception as req_err:
-                print(f"[Scraper] Erreur PinchTab : {req_err}")
+            except Exception as e:
+                print(f"[Scraper] Erreur FlareSolverr : {e}")
+                # Fallback to direct HTTP if FlareSolverr fails/is missing? 
+                # Better to return empty so calling code knows it failed.
                 return {}
-
-            finally:
-                # Always cleanup instance to prevent memory leaks
-                if instance_id:
-                    try:
-                        requests.delete(f"{api_url}/instances/{instance_id}")
-                        print(f"[Scraper] Instance {instance_id} nettoyée.")
-                    except Exception as cleanup_err:
-                        print(f"[Scraper] Erreur nettoyage instance ({instance_id}): {cleanup_err}")
 
         try:
             content = await asyncio.to_thread(fetch)
             return content
         except Exception as e:
-            print(f"[Scraper] Erreur async PinchTab : {e}")
+            print(f"[Scraper] Erreur async FlareSolverr : {e}")
             return {}
 
     def _normalize_city(self, location_str: Optional[str]) -> Optional[str]:
