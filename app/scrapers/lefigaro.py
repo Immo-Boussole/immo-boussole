@@ -47,11 +47,13 @@ class LeFigaroScraper(BaseScraper):
                     title_elem = item.find(['h2', 'span'], class_=re.compile(r'title|subject'))
                     title = title_elem.text.strip() if title_elem else "Annonce Le Figaro"
                     
-                    price_elem = item.find(text=re.compile(r'\d+[\s\d]*€'))
+                    price_elem = item.find(text=re.compile(r'(\d+[\d\s]*)\s*€'))
                     price = 0.0
                     if price_elem:
-                        price_str = re.sub(r'[^\d]', '', price_elem)
-                        if price_str: price = float(price_str)
+                        match = re.search(r'(\d+[\d\s]*)\s*€', price_elem)
+                        if match:
+                            price_str = re.sub(r'[^\d]', '', match.group(1))
+                            if price_str: price = float(price_str)
                     
                     ext_id = url.split('-')[-1].split('.')[0]
 
@@ -95,10 +97,12 @@ class LeFigaroScraper(BaseScraper):
         details["description_text"] = og_desc.get("content", "") if og_desc else ""
 
         # Extract price
-        price_elem = soup.find(text=re.compile(r'\d+[\s\d]*€'))
+        price_elem = soup.find(text=re.compile(r'(\d+[\d\s]*)\s*€'))
         if price_elem:
-            price_str = re.sub(r'[^\d]', '', price_elem)
-            if price_str: details["price"] = float(price_str)
+            match = re.search(r'(\d+[\d\s]*)\s*€', price_elem)
+            if match:
+                price_str = re.sub(r'[^\d]', '', match.group(1))
+                if price_str: details["price"] = float(price_str)
 
         # External ID
         ext_id = url.split('-')[-1].split('.')[0]
