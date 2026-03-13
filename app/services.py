@@ -131,101 +131,56 @@ async def create_listing_from_details(
         (Listing.external_id == external_id) | (Listing.url == original_url)
     ).first()
 
-    if existing:
-        # Update scraped_at timestamp and return
-        existing.scraped_at = datetime.utcnow()
-        existing.status = ListingStatus.NEW
-        db.commit()
-        db.refresh(existing)
-        return existing, False
-
-    # Prepare photo URLs for download
-    photo_urls = details.get("photo_urls", [])
-
-    # Check for duplicates before inserting
-    price = details.get("price")
-    area = details.get("area")
-    city = details.get("city")
-    duplicate = check_duplicate(db, price, area, city)
-
-    # Create new listing
-    new_listing = Listing(
+    listing = existing if existing else Listing(
         external_id=external_id,
-        title=details.get("title", "Annonce importée"),
         url=original_url,
         original_url=original_url,
-        price=price,
-        price_per_sqm=details.get("price_per_sqm"),
-        location=details.get("location"),
-        city=city,
-        area=area,
-        land_area=details.get("land_area"),
-        rooms=details.get("rooms"),
-        bedrooms=details.get("bedrooms"),
-        bathroom_count=details.get("bathroom_count"),
-        toilet_count=details.get("toilet_count"),
-        floor=details.get("floor"),
-        total_floors=details.get("total_floors"),
-        building_year=details.get("building_year"),
-        # Property characteristics
-        property_type=details.get("property_type"),
-        condition=details.get("condition"),
-        heating_type=details.get("heating_type"),
-        heating_mode=details.get("heating_mode"),
-        kitchen_type=details.get("kitchen_type"),
-        orientation=details.get("orientation"),
-        view=details.get("view"),
-        # Outdoor & amenities
-        cellar=details.get("cellar"),
-        parking_count=details.get("parking_count"),
-        balcony=details.get("balcony"),
-        balcony_area=details.get("balcony_area"),
-        terrace=details.get("terrace"),
-        terrace_area=details.get("terrace_area"),
-        garden=details.get("garden"),
-        garden_area=details.get("garden_area"),
-        pool=details.get("pool"),
-        elevator=details.get("elevator"),
-        interphone=details.get("interphone"),
-        guardian=details.get("guardian"),
-        furnished=details.get("furnished"),
-        # Energy
-        dpe_rating=details.get("dpe_rating"),
-        ges_rating=details.get("ges_rating"),
-        dpe_value=details.get("dpe_value"),
-        ges_value=details.get("ges_value"),
-        # Costs
-        land_tax=details.get("land_tax"),
-        charges=details.get("charges"),
-        agency_fee=details.get("agency_fee"),
-        # Copropriété
-        copropriete_lots=details.get("copropriete_lots"),
-        procedure_syndic=details.get("procedure_syndic"),
-        honoraires_a_charge=details.get("honoraires_a_charge"),
-        # Media
-        virtual_tour_url=details.get("virtual_tour_url"),
-        description_text=details.get("description_text"),
-        original_photo_urls=json.dumps(photo_urls) if photo_urls else None,
-        source=source,
-        status=ListingStatus.NEW,
-        scraped_at=datetime.utcnow(),
-        is_duplicate=(duplicate is not None),
-        duplicate_of_id=duplicate.id if duplicate else None,
+        date_added=datetime.utcnow()
     )
 
+    # ── Update / Set Fields ──────────────────────────────────────────────
+    for key, value in details.items():
+        if hasattr(listing, key) and value is not None:
+            # Skip fields handled specially or problematic
+            if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
+                continue
+            setattr(listing, key, value)
+    
+    if details.get("photo_urls"):
+        listing.original_photo_urls = json.dumps(details.get("photo_urls"))
 
-    db.add(new_listing)
+    # Store source and update timestamp
+    listing.source = source
+    listing.scraped_at = datetime.utcnow()
+    listing.status = ListingStatus.NEW
+
+    # ── Duplicate Check (if not already marked) ──
+    if not listing.is_duplicate:
+        price = details.get("price") or listing.price
+        area = details.get("area") or listing.area
+        city = details.get("city") or listing.city
+        duplicate = check_duplicate(db, price, area, city)
+        if duplicate and (not existing or duplicate.id != listing.id):
+            listing.is_duplicate = True
+            listing.duplicate_of_id = duplicate.id
+
+    if not existing:
+        db.add(listing)
+    
     db.commit()
-    db.refresh(new_listing)
+    db.refresh(listing)
 
-    # Download photos asynchronously in background
+    # ── Download photos asynchronously in background ──
+    photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
-        local_paths = await download_listing_photos(new_listing.id, photo_urls)
-        if local_paths:
-            new_listing.photos_local = photos_to_json(local_paths)
-            db.commit()
+        # Avoid re-downloading if already present (unless it's a re-scrape with different photos?)
+        if not listing.photos_local or len(photo_urls) > 0: 
+            local_paths = await download_listing_photos(listing.id, photo_urls)
+            if local_paths:
+                listing.photos_local = photos_to_json(local_paths)
+                db.commit()
 
-    return new_listing, True
+    return listing, (not existing)
 
 
 # ─── Scrape and Diff (Search Queries) ─────────────────────────────────────────

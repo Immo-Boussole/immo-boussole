@@ -95,30 +95,46 @@ class BieniciScraper(BaseScraper):
         if match:
             try:
                 data = json.loads(match.group(1))
-                # Map fields from JSON if found
+                # Usually BienIci has ad data under adDetail or similar keys
+                ad = None
+                if "adDetail" in data:
+                    ad = data["adDetail"].get("ad")
+                elif "ads" in data and isinstance(data["ads"], dict):
+                    # Sometimes it's a map of ID -> ad
+                    ad = next(iter(data["ads"].values()), None)
+                
+                if ad:
+                    details["title"] = ad.get("title", details.get("title"))
+                    details["description_text"] = ad.get("description", details.get("description_text"))
+                    details["price"] = ad.get("price")
+                    details["area"] = ad.get("surfaceArea")
+                    details["rooms"] = ad.get("roomsCount")
+                    
+                    # Photos
+                    photos = []
+                    medias = ad.get("photos", ad.get("media", []))
+                    if isinstance(medias, list):
+                        for m in medias:
+                            if isinstance(m, dict):
+                                url = m.get("url")
+                                if url: photos.append(url)
+                            elif isinstance(m, str):
+                                photos.append(m)
+                    
+                    if photos:
+                        details["photo_urls"] = photos
+                    
+                    city = ad.get("city")
+                    if city:
+                        details["city"] = self._normalize_city(city)
+                        details["location"] = city
             except Exception as e:
                 print(f"[BienIci] Error parsing detail JSON: {e}")
 
-        og_desc = soup.find('meta', attrs={"property": "og:description"})
-        details["description_text"] = og_desc.get("content", "") if og_desc else ""
-
-        # Photo URLs
-        og_img = soup.find('meta', attrs={"property": "og:image"})
-        if og_img:
-            details["photo_urls"] = [og_img.get("content")]
-
-        # Price and Attributes
-        body_text = soup.get_text().lower()
-        if '€' in body_text:
-            match = re.search(r'(\d+[\d\s]*)\s*€', body_text)
-            if match: details["price"] = float(match.group(1).replace(' ', ''))
-        
-        if 'm²' in body_text:
-            match = re.search(r'(\d+[\d\s,]*)\s*m²', body_text)
-            if match:
-                details["area"] = float(match.group(1).replace(',', '.').replace(' ', ''))
-
-        ext_id = url.split('/')[-1].split('?')[0]
-        details["external_id"] = f"bienici_{ext_id}"
+        # Photo URLs Fallback
+        if not details.get("photo_urls"):
+            og_img = soup.find('meta', attrs={"property": "og:image"})
+            if og_img:
+                details["photo_urls"] = [og_img.get("content")]
 
         return details

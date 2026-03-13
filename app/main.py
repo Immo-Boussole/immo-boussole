@@ -233,6 +233,54 @@ def get_listing(listing_id: int, db: Session = Depends(get_db)):
     return listing
 
 
+@app.post("/api/listings/{listing_id}/rescrape")
+async def rescrape_listing(listing_id: int, db: Session = Depends(get_db)):
+    """Manually trigger or re-trigger scraping for a specific listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+
+    url = listing.url
+    # ── Determine source ──
+    from app.scrapers import (
+        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
+        LogicimmoScraper, BieniciScraper, IadfranceScraper,
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    )
+    
+    scraper = None
+    if "leboncoin.fr" in url: source, scraper = Source.LEBONCOIN, LeboncoinScraper()
+    elif "seloger.com" in url: source, scraper = Source.SELOGER, SelogerScraper()
+    elif "lefigaro.fr" in url: source, scraper = Source.LEFIGARO, LeFigaroScraper()
+    elif "logic-immo.com" in url: source, scraper = Source.LOGICIMMO, LogicimmoScraper()
+    elif "bienici.com" in url: source, scraper = Source.BIENICI, BieniciScraper()
+    elif "iadfrance.fr" in url: source, scraper = Source.IADFRANCE, IadfranceScraper()
+    elif "immobilier.notaires.fr" in url: source, scraper = Source.NOTAIRES, NotairesScraper()
+    elif "vinci-immobilier.com" in url: source, scraper = Source.VINCI, VinciScraper()
+    elif "immobilier-france.fr" in url: source, scraper = Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper()
+    else: source, scraper = Source.MANUAL, None
+
+    # ── Scrape ──
+    details = {}
+    if scraper:
+        try:
+            details = await scraper.get_listing_details(url)
+        except Exception as e:
+            print(f"[API] Re-scrape error for {url}: {e}")
+    
+    if not details or not details.get("title"):
+        details = await fetch_basic_metadata(url)
+
+    # ── Update via service ──
+    updated_listing, _ = await create_listing_from_details(db, details, source, url)
+    
+    return {
+        "status": "updated",
+        "listing_id": updated_listing.id,
+        "title": updated_listing.title
+    }
+
+
 @app.post("/api/listings/submit-url")
 async def submit_listing_url(
     body: SubmitUrlRequest,

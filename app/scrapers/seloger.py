@@ -169,5 +169,61 @@ class SelogerScraper(BaseScraper):
 
     def _extract_detail_from_json(self, data) -> Dict:
         """Extracts enriched details from SeLoger's embedded JSON."""
-        # Placeholder - structure varies greatly by SeLoger version
-        return {}
+        details = {}
+        # Path found by subagent: window.__UFRN_LIFECYCLE_SERVERREQUEST__.app_cldp.data.classified
+        classified = None
+        if isinstance(data, dict):
+            # Check for the UFRN structure
+            if "app_cldp" in data and "data" in data["app_cldp"]:
+                classified = data["app_cldp"]["data"].get("classified")
+            # Fallback check for other common SeLoger keys
+            elif "props" in data and "pageProps" in data["props"]:
+                classified = data["props"]["pageProps"].get("ad")
+            elif "classified" in data:
+                classified = data["classified"]
+
+        if classified:
+            try:
+                details["title"] = classified.get("title", classified.get("subject"))
+                details["description_text"] = classified.get("description")
+                
+                # Prices are usually in pricing or as direct fields
+                pricing = classified.get("pricing", {})
+                details["price"] = pricing.get("amount") or classified.get("price")
+                
+                # Location
+                tags = classified.get("location", {}).get("tags", [])
+                if tags:
+                    details["location"] = tags[0] # Often "Paris 15ème"
+                    details["city"] = self._normalize_city(tags[0])
+                
+                # Characteristics
+                rooms = classified.get("rooms", {})
+                details["rooms"] = rooms.get("total") or classified.get("roomCount")
+                details["area"] = classified.get("livingArea") or classified.get("surface")
+
+                # Photos 
+                # Path: classified.domains.medias.images
+                photos = []
+                domains = classified.get("domains", {})
+                medias = domains.get("medias", {})
+                images = medias.get("images", [])
+                
+                # Alternative paths for photos
+                if not images:
+                    images = classified.get("photos", [])
+                
+                if isinstance(images, list):
+                    for img in images:
+                        if isinstance(img, dict):
+                            url = img.get("url")
+                            if url: photos.append(url)
+                        elif isinstance(img, str):
+                            photos.append(img)
+                
+                if photos:
+                    details["photo_urls"] = photos
+            except Exception as e:
+                print(f"[SeLoger] Error parsing details from JSON: {e}")
+
+        return details
