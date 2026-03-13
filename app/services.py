@@ -8,8 +8,11 @@ from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.models import Listing, ListingStatus, SearchQuery, Source, Review
-from app.scrapers.leboncoin import LeboncoinScraper
-from app.scrapers.seloger import SelogerScraper
+from app.scrapers import (
+    LeboncoinScraper, SelogerScraper, LeFigaroScraper,
+    LogicimmoScraper, BieniciScraper, IadfranceScraper,
+    NotairesScraper, VinciScraper, ImmobilierFranceScraper
+)
 from app.media import download_listing_photos, photos_to_json
 
 
@@ -114,14 +117,48 @@ async def create_listing_from_details(
         land_area=details.get("land_area"),
         rooms=details.get("rooms"),
         bedrooms=details.get("bedrooms"),
+        bathroom_count=details.get("bathroom_count"),
+        toilet_count=details.get("toilet_count"),
         floor=details.get("floor"),
         total_floors=details.get("total_floors"),
         building_year=details.get("building_year"),
+        # Property characteristics
+        property_type=details.get("property_type"),
+        condition=details.get("condition"),
+        heating_type=details.get("heating_type"),
+        heating_mode=details.get("heating_mode"),
+        kitchen_type=details.get("kitchen_type"),
+        orientation=details.get("orientation"),
+        view=details.get("view"),
+        # Outdoor & amenities
+        cellar=details.get("cellar"),
+        parking_count=details.get("parking_count"),
+        balcony=details.get("balcony"),
+        balcony_area=details.get("balcony_area"),
+        terrace=details.get("terrace"),
+        terrace_area=details.get("terrace_area"),
+        garden=details.get("garden"),
+        garden_area=details.get("garden_area"),
+        pool=details.get("pool"),
+        elevator=details.get("elevator"),
+        interphone=details.get("interphone"),
+        guardian=details.get("guardian"),
+        furnished=details.get("furnished"),
+        # Energy
         dpe_rating=details.get("dpe_rating"),
         ges_rating=details.get("ges_rating"),
+        dpe_value=details.get("dpe_value"),
+        ges_value=details.get("ges_value"),
+        # Costs
         land_tax=details.get("land_tax"),
         charges=details.get("charges"),
         agency_fee=details.get("agency_fee"),
+        # Copropriété
+        copropriete_lots=details.get("copropriete_lots"),
+        procedure_syndic=details.get("procedure_syndic"),
+        honoraires_a_charge=details.get("honoraires_a_charge"),
+        # Media
+        virtual_tour_url=details.get("virtual_tour_url"),
         description_text=details.get("description_text"),
         original_photo_urls=json.dumps(photo_urls) if photo_urls else None,
         source=source,
@@ -130,6 +167,7 @@ async def create_listing_from_details(
         is_duplicate=(duplicate is not None),
         duplicate_of_id=duplicate.id if duplicate else None,
     )
+
 
     db.add(new_listing)
     db.commit()
@@ -157,6 +195,13 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
     scrapers = {
         Source.LEBONCOIN: LeboncoinScraper(),
         Source.SELOGER: SelogerScraper(),
+        Source.LEFIGARO: LeFigaroScraper(),
+        Source.LOGICIMMO: LogicimmoScraper(),
+        Source.BIENICI: BieniciScraper(),
+        Source.IADFRANCE: IadfranceScraper(),
+        Source.NOTAIRES: NotairesScraper(),
+        Source.VINCI: VinciScraper(),
+        Source.IMMOBILIER_FRANCE: ImmobilierFranceScraper(),
     }
 
     scraper = scrapers.get(query.source)

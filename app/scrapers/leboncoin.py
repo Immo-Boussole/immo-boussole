@@ -179,51 +179,67 @@ class LeboncoinScraper(BaseScraper):
             except Exception as e:
                 print(f"[LBC] Erreur parsing détail JSON: {e}")
 
-        # Fallback: BeautifulSoup for meta tags at minimum
+        # Fallback: BeautifulSoup for meta tags and LeBonCoin-specific selectors
         soup = BeautifulSoup(html_content, 'html.parser')
         title_tag = soup.find('title')
         if title_tag:
             details["title"] = title_tag.text.strip()
 
-        # Try to find og:description
-        og_desc = soup.find('meta', attrs={"property": "og:description"})
-        if og_desc:
-            details["description_text"] = og_desc.get("content", "")
+        # LeBonCoin-specific: full description text
+        desc_container = soup.find('div', attrs={"data-qa-id": "adview_description_container"})
+        if desc_container:
+            details["description_text"] = desc_container.get_text(separator="\n", strip=True)
+        else:
+            # Fallback to og:description meta tag
+            og_desc = soup.find('meta', attrs={"property": "og:description"})
+            if og_desc:
+                details["description_text"] = og_desc.get("content", "")
+
+        # LeBonCoin-specific: location block (city + zip code)
+        location_block = soup.find('div', class_="mb-lg")
+        if location_block:
+            location_text = location_block.get_text(separator=" ", strip=True)
+            if location_text:
+                details["location"] = location_text
+                details["city"] = self._normalize_city(location_text)
 
         return details
+
 
     # ─── Private Helpers ──────────────────────────────────────────────────────
 
     def _parse_attributes(self, attrs: list) -> Dict:
         """
         Parses the LeBonCoin 'attributes' list from JSON to extract
-        DPE, GES, surface, rooms, floor, land_tax, charges.
+        all property characteristics exposed on the detail page.
         """
         result = {}
-        attr_map = {
-            "energy_rate": "dpe_rating",
-            "ges": "ges_rating",
-            "square": "area",
-            "land_plot_square": "land_area",
-            "rooms": "rooms",
-            "bedrooms": "bedrooms",
-            "floor_number": "floor",
-            "nb_floors_building": "total_floors",
-            "annual_charges": "charges",
-            "fai_included": None,  # skip
-        }
 
         for attr in attrs:
             key = attr.get("key", "")
             val = attr.get("value", attr.get("value_label", ""))
+            label = attr.get("value_label", val)  # Human-readable label when available
 
+            # ── Energy ─────────────────────────────────────────────────────
             if key == "energy_rate":
-                # DPE: "C", "D", etc.
                 result["dpe_rating"] = str(val).upper()[:1] if val else None
 
             elif key == "ges":
                 result["ges_rating"] = str(val).upper()[:1] if val else None
 
+            elif key == "energy_value":
+                try:
+                    result["dpe_value"] = float(str(val).replace(",", ".").replace(" ", ""))
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "ges_value":
+                try:
+                    result["ges_value"] = float(str(val).replace(",", ".").replace(" ", ""))
+                except (ValueError, TypeError):
+                    pass
+
+            # ── Surfaces ────────────────────────────────────────────────────
             elif key == "square":
                 try:
                     result["area"] = float(str(val).replace(",", ".").replace(" ", ""))
@@ -236,6 +252,28 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
 
+            elif key == "balcony_surface":
+                try:
+                    result["balcony_area"] = float(str(val).replace(",", ".").replace(" ", ""))
+                    result["balcony"] = True
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "terrace_surface":
+                try:
+                    result["terrace_area"] = float(str(val).replace(",", ".").replace(" ", ""))
+                    result["terrace"] = True
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "garden_surface":
+                try:
+                    result["garden_area"] = float(str(val).replace(",", ".").replace(" ", ""))
+                    result["garden"] = True
+                except (ValueError, TypeError):
+                    pass
+
+            # ── Rooms / Counts ──────────────────────────────────────────────
             elif key == "rooms":
                 try:
                     result["rooms"] = int(val)
@@ -245,6 +283,18 @@ class LeboncoinScraper(BaseScraper):
             elif key == "bedrooms":
                 try:
                     result["bedrooms"] = int(val)
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "nb_bathrooms":
+                try:
+                    result["bathroom_count"] = int(val)
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "nb_toilets":
+                try:
+                    result["toilet_count"] = int(val)
                 except (ValueError, TypeError):
                     pass
 
@@ -260,16 +310,86 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
 
+            elif key == "parking_places_nb":
+                try:
+                    result["parking_count"] = int(val)
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "nb_lots":
+                try:
+                    result["copropriete_lots"] = int(val)
+                except (ValueError, TypeError):
+                    pass
+
+            # ── Boolean amenities ───────────────────────────────────────────
+            elif key == "balcony_count":
+                try:
+                    result["balcony"] = int(val) > 0
+                except (ValueError, TypeError):
+                    result["balcony"] = bool(val)
+
+            elif key == "terrace_count":
+                try:
+                    result["terrace"] = int(val) > 0
+                except (ValueError, TypeError):
+                    result["terrace"] = bool(val)
+
+            elif key in ("garden", "has_garden"):
+                result["garden"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "swimming_pool":
+                result["pool"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "elevator":
+                result["elevator"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "cellar":
+                result["cellar"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "intercom":
+                result["interphone"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "guardian":
+                result["guardian"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "furnished":
+                result["furnished"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            elif key == "procedure_in_progress":
+                result["procedure_syndic"] = str(val).lower() not in ("0", "false", "non", "no", "")
+
+            # ── Text characteristics ────────────────────────────────────────
+            elif key == "real_estate_type":
+                result["property_type"] = str(label).lower() if label else None
+
+            elif key == "estate_condition":
+                result["condition"] = str(label).lower() if label else None
+
+            elif key == "heating":
+                result["heating_type"] = str(label).lower() if label else None
+
+            elif key == "heating_mode":
+                result["heating_mode"] = str(label).lower() if label else None
+
+            elif key == "kitchen":
+                result["kitchen_type"] = str(label).lower() if label else None
+
+            elif key == "orientation":
+                result["orientation"] = str(label) if label else None
+
+            elif key == "view":
+                result["view"] = str(label) if label else None
+
             elif key in ("annual_charges", "charges"):
                 try:
                     result["charges"] = float(str(val).replace(",", ".").replace(" ", ""))
                 except (ValueError, TypeError):
                     pass
 
-            # Land tax is rarely in attributes, often only in body text
-            # We'll try to extract it via regex from description_text separately
+            elif key == "fai_included":
+                result["honoraires_a_charge"] = str(label) if label else None
 
-        # Try to extract land tax from description
         return result
 
     def _extract_land_tax_from_text(self, text: str) -> Optional[float]:
@@ -306,3 +426,4 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
         return None
+

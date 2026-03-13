@@ -14,6 +14,13 @@ class ListingStatus(str, enum.Enum):
 class Source(str, enum.Enum):
     LEBONCOIN = "leboncoin"
     SELOGER = "seloger"
+    LEFIGARO = "lefigaro"
+    LOGICIMMO = "logicimmo"
+    BIENICI = "bienici"
+    IADFRANCE = "iadfrance"
+    NOTAIRES = "notaires"
+    VINCI = "vinci"
+    IMMOBILIER_FRANCE = "immobilier_france"
     MANUAL = "manuel"
 
 
@@ -35,20 +42,56 @@ class Listing(Base):
     city = Column(String, nullable=True)           # Normalized city for duplicate detection
     area = Column(Float, nullable=True)            # Surface habitable en m²
     land_area = Column(Float, nullable=True)       # Surface terrain en m²
-    rooms = Column(Integer, nullable=True)         # Nombre de pièces
+    rooms = Column(Integer, nullable=True)           # Nombre de pièces
     bedrooms = Column(Integer, nullable=True)
+    bathroom_count = Column(Integer, nullable=True)  # Nombre de salles de bain
+    toilet_count = Column(Integer, nullable=True)    # Nombre de WC séparés
     floor = Column(Integer, nullable=True)
     total_floors = Column(Integer, nullable=True)
     building_year = Column(Integer, nullable=True)
 
+    # Property characteristics
+    property_type = Column(String, nullable=True)    # maison, appartement, terrain, etc.
+    condition = Column(String, nullable=True)         # bon état, à rénover, neuf, etc.
+    heating_type = Column(String, nullable=True)      # gaz, électrique, PAC, fioul, etc.
+    heating_mode = Column(String, nullable=True)      # individuel, collectif
+    kitchen_type = Column(String, nullable=True)      # américaine, séparée, équipée, etc.
+    orientation = Column(String, nullable=True)       # Sud, Nord-Ouest, etc.
+    view = Column(String, nullable=True)              # dégagée, mer, jardin, etc.
+
+    # Outdoor & amenities (stored as 0/1)
+    cellar = Column(Boolean, nullable=True)           # Cave
+    parking_count = Column(Integer, nullable=True)    # Places de parking/garage
+    balcony = Column(Boolean, nullable=True)          # Balcon
+    balcony_area = Column(Float, nullable=True)       # Surface balcon m²
+    terrace = Column(Boolean, nullable=True)          # Terrasse
+    terrace_area = Column(Float, nullable=True)       # Surface terrasse m²
+    garden = Column(Boolean, nullable=True)           # Jardin
+    garden_area = Column(Float, nullable=True)        # Surface jardin m²
+    pool = Column(Boolean, nullable=True)             # Piscine
+    elevator = Column(Boolean, nullable=True)         # Ascenseur
+    interphone = Column(Boolean, nullable=True)       # Interphone/digicode
+    guardian = Column(Boolean, nullable=True)         # Gardien
+    furnished = Column(Boolean, nullable=True)        # Meublé
+
     # Energy ratings
-    dpe_rating = Column(String(1), nullable=True)  # A, B, C, D, E, F, G
-    ges_rating = Column(String(1), nullable=True)  # A, B, C, D, E, F, G
+    dpe_rating = Column(String(1), nullable=True)    # A, B, C, D, E, F, G
+    ges_rating = Column(String(1), nullable=True)    # A, B, C, D, E, F, G
+    dpe_value = Column(Float, nullable=True)          # kWh/m²/an
+    ges_value = Column(Float, nullable=True)          # kgCO₂/m²/an
 
     # Costs
-    land_tax = Column(Float, nullable=True)        # Taxe foncière annuelle
-    charges = Column(Float, nullable=True)         # Charges mensuelles de copropriété
+    land_tax = Column(Float, nullable=True)           # Taxe foncière annuelle
+    charges = Column(Float, nullable=True)            # Charges copropriété mensuelles
     agency_fee = Column(Float, nullable=True)
+
+    # Copropriété
+    copropriete_lots = Column(Integer, nullable=True) # Nombre de lots
+    procedure_syndic = Column(Boolean, nullable=True) # Procédure syndicale en cours
+    honoraires_a_charge = Column(String, nullable=True)  # Acquéreur ou vendeur
+
+    # Media supplémentaires
+    virtual_tour_url = Column(String, nullable=True)  # URL visite virtuelle 3D
 
     # Description
     description_text = Column(Text, nullable=True)

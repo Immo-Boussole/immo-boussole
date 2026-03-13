@@ -238,15 +238,40 @@ async def submit_listing_url(
             "is_duplicate": existing.is_duplicate,
         }
 
-    # Determine source
+    # Determine source and scraper
+    from app.scrapers import (
+        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
+        LogicimmoScraper, BieniciScraper, IadfranceScraper,
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    )
+
     if "leboncoin.fr" in url:
         source = Source.LEBONCOIN
-        from app.scrapers.leboncoin import LeboncoinScraper
         scraper = LeboncoinScraper()
     elif "seloger.com" in url:
         source = Source.SELOGER
-        from app.scrapers.seloger import SelogerScraper
         scraper = SelogerScraper()
+    elif "lefigaro.fr" in url:
+        source = Source.LEFIGARO
+        scraper = LeFigaroScraper()
+    elif "logic-immo.com" in url:
+        source = Source.LOGICIMMO
+        scraper = LogicimmoScraper()
+    elif "bienici.com" in url:
+        source = Source.BIENICI
+        scraper = BieniciScraper()
+    elif "iadfrance.fr" in url:
+        source = Source.IADFRANCE
+        scraper = IadfranceScraper()
+    elif "immobilier.notaires.fr" in url:
+        source = Source.NOTAIRES
+        scraper = NotairesScraper()
+    elif "vinci-immobilier.com" in url:
+        source = Source.VINCI
+        scraper = VinciScraper()
+    elif "immobilier-france.fr" in url:
+        source = Source.IMMOBILIER_FRANCE
+        scraper = ImmobilierFranceScraper()
     else:
         source = Source.MANUAL
         scraper = None
