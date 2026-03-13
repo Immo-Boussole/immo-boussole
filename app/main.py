@@ -61,6 +61,7 @@ templates = Jinja2Templates(directory="templates")
 
 class SubmitUrlRequest(BaseModel):
     url: str
+    skip_scraping: bool = False
 
     @field_validator("url")
     @classmethod
@@ -116,6 +117,22 @@ def read_root(request: Request, db: Session = Depends(get_db)):
         "listings": listings,
         "queries": queries,
         "title": "Tableau de Bord — Immo-Boussole",
+    })
+
+
+@app.get("/listings/table")
+def listings_table_page(request: Request, db: Session = Depends(get_db)):
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).all()
+    queries = db.query(SearchQuery).all()
+
+    for listing in listings:
+        listing._photos = json_to_photos(listing.photos_local)
+
+    return templates.TemplateResponse("listings_table.html", {
+        "request": request,
+        "listings": listings,
+        "queries": queries,
+        "title": "Tableau des Annonces — Immo-Boussole",
     })
 
 
@@ -275,6 +292,27 @@ async def submit_listing_url(
     else:
         source = Source.MANUAL
         scraper = None
+
+    if body.skip_scraping:
+        # Create listing with minimal info immediately
+        new_listing = Listing(
+            url=url,
+            original_url=url,
+            source=source,
+            status=ListingStatus.NEW,
+            title=f"Lien ajouté sans scraping ({source})",
+            date_added=datetime.utcnow()
+        )
+        db.add(new_listing)
+        db.commit()
+        db.refresh(new_listing)
+        print(f"[API] Listing #{new_listing.id} ajouté manuellement sans scraping.")
+        return {
+            "status": "success",
+            "message": "Annonce ajoutée sans scraping.",
+            "listing_id": new_listing.id,
+            "title": new_listing.title
+        }
 
     # Scrape details
     # ── Scrape details ────────────────────────────────────────────────────

@@ -50,7 +50,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 1. **Lancer l'ensemble des services** :
    ```bash
-   docker compose up -d
+   docker compose up -d --build immo-boussole
    ```
    Cette commande télécharge et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
 

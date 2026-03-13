@@ -196,7 +196,7 @@
     <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
     <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
     <span class="nav-src" style="margin-left: 1rem;">{{ listing.source }}</span>
-    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})" title="Supprimer cette annonce" style="margin-left: auto; color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
+    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="margin-left: auto; color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
         <i class="fa-solid fa-trash-can"></i> Supprimer
     </button>
 </div>
@@ -261,7 +261,12 @@
                         {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
                     </span>
                     {% if listing.price_per_sqm %}
-                    <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm) }} €/m²</span>
+                    <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</span>
+                    {% endif %}
+                    {% if listing.virtual_tour_url %}
+                    <a href="{{ listing.virtual_tour_url }}" target="_blank" class="btn sm primary" style="margin-left: auto;">
+                        <i class="fa-solid fa-vr-cardboard"></i> Visite Virtuelle
+                    </a>
                     {% endif %}
                 </div>
 
@@ -279,16 +284,22 @@
 
                 <div class="specs-grid">
                     {% if listing.area %}
-                    <div class="spec"><div class="sv">{{ listing.area }} m²</div><div class="sl">Surface</div></div>
+                    <div class="spec"><div class="sv">{{ listing.area|int if listing.area == listing.area|int else listing.area }} m²</div><div class="sl">Surface</div></div>
                     {% endif %}
                     {% if listing.land_area %}
-                    <div class="spec"><div class="sv">{{ listing.land_area }} m²</div><div class="sl">Terrain</div></div>
+                    <div class="spec"><div class="sv">{{ listing.land_area|int if listing.land_area == listing.land_area|int else listing.land_area }} m²</div><div class="sl">Terrain</div></div>
                     {% endif %}
                     {% if listing.rooms %}
                     <div class="spec"><div class="sv">{{ listing.rooms }}</div><div class="sl">Pièces</div></div>
                     {% endif %}
                     {% if listing.bedrooms %}
                     <div class="spec"><div class="sv">{{ listing.bedrooms }}</div><div class="sl">Chambres</div></div>
+                    {% endif %}
+                    {% if listing.bathroom_count %}
+                    <div class="spec"><div class="sv">{{ listing.bathroom_count }}</div><div class="sl">SDB</div></div>
+                    {% endif %}
+                    {% if listing.toilet_count %}
+                    <div class="spec"><div class="sv">{{ listing.toilet_count }}</div><div class="sl">WC</div></div>
                     {% endif %}
                     {% if listing.floor is not none %}
                     <div class="spec"><div class="sv">{{ listing.floor }}{% if listing.total_floors %}/{{ listing.total_floors }}{% endif %}</div><div class="sl">Étage</div></div>
@@ -298,15 +309,57 @@
                     {% endif %}
                 </div>
 
+                <!-- Caractéristiques détaillées -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                    <div class="attr-list">
+                        {% if listing.property_type %}<div class="cost-item"><i class="fa-solid fa-house"></i> Type : <strong>{{ listing.property_type|capitalize }}</strong></div>{% endif %}
+                        {% if listing.condition %}<div class="cost-item"><i class="fa-solid fa-sparkles"></i> État : <strong>{{ listing.condition }}</strong></div>{% endif %}
+                        {% if listing.orientation %}<div class="cost-item"><i class="fa-solid fa-compass"></i> Orientation : <strong>{{ listing.orientation }}</strong></div>{% endif %}
+                        {% if listing.view %}<div class="cost-item"><i class="fa-solid fa-eye"></i> Vue : <strong>{{ listing.view }}</strong></div>{% endif %}
+                    </div>
+                    <div class="attr-list">
+                        {% if listing.kitchen_type %}<div class="cost-item"><i class="fa-solid fa-utensils"></i> Cuisine : <strong>{{ listing.kitchen_type }}</strong></div>{% endif %}
+                        {% if listing.heating_type %}<div class="cost-item"><i class="fa-solid fa-fire"></i> Chauffage : <strong>{{ listing.heating_type }}</strong> ({{ listing.heating_mode or 'N/C' }})</div>{% endif %}
+                        {% if listing.furnished %}<div class="cost-item"><i class="fa-solid fa-couch"></i> <strong>Meublé</strong></div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Équipements & Extérieurs -->
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-layer-group"></i> Équipements & Extérieurs</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.75rem;">
+                    {% if listing.garden %}<div class="cost-item"><i class="fa-solid fa-tree" style="color: var(--green);"></i> Jardin{% if listing.garden_area %} ({{ listing.garden_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.terrace %}<div class="cost-item"><i class="fa-solid fa-sun" style="color: var(--orange);"></i> Terrasse{% if listing.terrace_area %} ({{ listing.terrace_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.balcony %}<div class="cost-item"><i class="fa-solid fa-border-all"></i> Balcon{% if listing.balcony_area %} ({{ listing.balcony_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.pool %}<div class="cost-item"><i class="fa-solid fa-person-swimming" style="color: var(--accent);"></i> Piscine</div>{% endif %}
+                    {% if listing.parking_count %}<div class="cost-item"><i class="fa-solid fa-car"></i> Parking ({{ listing.parking_count }})</div>{% endif %}
+                    {% if listing.cellar %}<div class="cost-item"><i class="fa-solid fa-box-archive"></i> Cave</div>{% endif %}
+                    {% if listing.elevator %}<div class="cost-item"><i class="fa-solid fa-arrow-up-z-a"></i> Ascenseur</div>{% endif %}
+                    {% if listing.guardian %}<div class="cost-item"><i class="fa-solid fa-user-shield"></i> Gardien</div>{% endif %}
+                    {% if listing.interphone %}<div class="cost-item"><i class="fa-solid fa-bell"></i> Interphone</div>{% endif %}
+                </div>
+
+                <!-- Financier & Copropriété -->
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-euro-sign"></i> Financier & Copropriété</div>
+                <div class="costs-row" style="margin-bottom:0;">
+                    {% if listing.land_tax %}<div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> Taxe foncière : <strong>{{ listing.land_tax|int }} €/an</strong></div>{% endif %}
+                    {% if listing.charges %}<div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> Charges : <strong>{{ listing.charges|int }} €/mois</strong></div>{% endif %}
+                    {% if listing.agency_fee %}<div class="cost-item"><i class="fa-solid fa-handshake"></i> Honoraires : <strong>{{ listing.agency_fee|int }} €</strong></div>{% endif %}
+                    {% if listing.copropriete_lots %}<div class="cost-item"><i class="fa-solid fa-list-ol"></i> <strong>{{ listing.copropriete_lots }} lots</strong></div>{% endif %}
+                    {% if listing.procedure_syndic %}<div class="cost-item" style="color: var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> <strong>Procédure en cours</strong></div>{% endif %}
+                    {% if listing.honoraires_a_charge %}<div class="cost-item">Honoraires charge : <strong>{{ listing.honoraires_a_charge }}</strong></div>{% endif %}
+                </div>
+
                 <!-- DPE & GES -->
                 <div class="dpe-block">
                     <div class="dpe-card dpe-{{ listing.dpe_rating or 'NC' }}">
                         <div class="letter">{{ listing.dpe_rating or '?' }}</div>
-                        <div class="dpe-label">DPE</div>
+                        <div class="sv" style="font-size: 0.8rem; font-weight: 700; margin-top: 0.25rem;">{{ listing.dpe_value|int if listing.dpe_value else '' }}</div>
+                        <div class="dpe-label">DPE (kWh/m²/an)</div>
                     </div>
                     <div class="dpe-card dpe-{{ listing.ges_rating or 'NC' }}">
                         <div class="letter">{{ listing.ges_rating or '?' }}</div>
-                        <div class="dpe-label">GES</div>
+                        <div class="sv" style="font-size: 0.8rem; font-weight: 700; margin-top: 0.25rem;">{{ listing.ges_value|int if listing.ges_value else '' }}</div>
+                        <div class="dpe-label">GES (kgCO2/m²/an)</div>
                     </div>
                 </div>
             </div>
@@ -609,7 +662,7 @@
                 thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
                 label.textContent = 'Suppression...';
                 label.style.opacity = 1;
-                confirmDelete();
+                setTimeout(confirmDelete, 400);
             }
         }
         function onEnd() { 
