@@ -57,6 +57,36 @@ _MIGRATIONS = [
     ("search_queries", "created_at", "DATETIME"),
 
     # reviews table is entirely new (handled by create_all)
+
+    # listings — new columns from v3 (LeBonCoin full characteristics)
+    ("listings", "bathroom_count",       "INTEGER"),
+    ("listings", "toilet_count",         "INTEGER"),
+    ("listings", "property_type",        "TEXT"),
+    ("listings", "condition",            "TEXT"),
+    ("listings", "heating_type",         "TEXT"),
+    ("listings", "heating_mode",         "TEXT"),
+    ("listings", "kitchen_type",         "TEXT"),
+    ("listings", "orientation",          "TEXT"),
+    ("listings", "view",                 "TEXT"),
+    ("listings", "cellar",               "INTEGER"),
+    ("listings", "parking_count",        "INTEGER"),
+    ("listings", "balcony",              "INTEGER"),
+    ("listings", "balcony_area",         "REAL"),
+    ("listings", "terrace",              "INTEGER"),
+    ("listings", "terrace_area",         "REAL"),
+    ("listings", "garden",               "INTEGER"),
+    ("listings", "garden_area",          "REAL"),
+    ("listings", "pool",                 "INTEGER"),
+    ("listings", "elevator",             "INTEGER"),
+    ("listings", "interphone",           "INTEGER"),
+    ("listings", "guardian",             "INTEGER"),
+    ("listings", "furnished",            "INTEGER"),
+    ("listings", "dpe_value",            "REAL"),
+    ("listings", "ges_value",            "REAL"),
+    ("listings", "copropriete_lots",     "INTEGER"),
+    ("listings", "procedure_syndic",     "INTEGER"),
+    ("listings", "honoraires_a_charge",  "TEXT"),
+    ("listings", "virtual_tour_url",     "TEXT"),
 ]
 
 

@@ -1,3 +1,5 @@
+name: immo-boussole
+
 services:
 
   # ── Application principale ──────────────────────────────────────────────────
@@ -5,18 +7,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: immo-boussole
+    container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
       - flaresolverr
     ports:
       - "8000:8000"
+    networks:
+      - immo-boussole-net
 
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
       # Utilise le service flaresolverr interne au réseau Docker
-      FLARESOLVERR_URL: "http://flaresolverr:8191"
+      FLARESOLVERR_URL: "http://immo-boussole-flaresolverr:8191"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-false}"
@@ -30,19 +34,30 @@ services:
   # ── Moteur de Scraping (Self-Hosted Cloudflare Bypass) ─────────────────────
   flaresolverr:
     image: flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
+    container_name: immo-boussole-flaresolverr
     restart: unless-stopped
     ports:
       - "8191:8191"
+    networks:
+      - immo-boussole-net
     environment:
       - LOG_LEVEL=info
-      - CAPTCHA_SOLVER=none # We don't have a captcha solver configured by default
+      # Captcha solver : 2captcha (nécessite TWO_CAPTCHA_API_KEY dans .env)
+      # Mettre CAPTCHA_SOLVER=none pour désactiver
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
+      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
 
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+# ── Réseau interne ──────────────────────────────────────────────────────────
+networks:
+  immo-boussole-net:
+    name: immo-boussole-net
+    driver: bridge
 
 # ── Volumes persistants ─────────────────────────────────────────────────────
 volumes:

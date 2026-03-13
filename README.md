@@ -6,7 +6,8 @@
 
 ## 🚀 Fonctionnalités Clés
 
-- **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) via PinchTab (Headless Browser).
+- **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) depuis plus de 10 plateformes :
+  - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
 - **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
 - **Détection de Doublons** : Alerte si un bien similaire (prix, surface, ville) est déjà présent.
 - **Avis Collaboratifs** : Système de notation et de commentaires séparés pour **Jean-Marc** et **Marceline**.
@@ -55,7 +56,13 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
 
-3. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
+3. **Gestion des Captchas (Optionnel)** :
+   Si vous rencontrez des blocages par captcha lors du scraping, vous pouvez activer le solver [2Captcha](https://2captcha.com/) :
+   - Dans votre fichier `.env`, réglez `CAPTCHA_SOLVER=2captcha`.
+   - Renseignez votre clé API dans `TWO_CAPTCHA_API_KEY=votre_cle_ici`.
+   - Redémarrez les conteneurs : `docker compose up -d`.
+
+4. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
 
 ---
 
@@ -80,6 +87,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 - **Backend** : FastAPI (Python)
 - **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
 - **Scraping** : FlareSolverr / BeautifulSoup4 / HTTPX
+- **Scrapers additionnels (Figaro, LogicImmo, etc.) ont été adaptés depuis le projet [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper)
 - **Frontend** : HTML5 / Vanilla CSS / Jinja2
 - **Scheduler** : APScheduler (pour les recherches automatiques)
 
