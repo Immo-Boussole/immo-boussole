@@ -14,6 +14,8 @@ from app.scrapers import (
     NotairesScraper, VinciScraper, ImmobilierFranceScraper
 )
 from app.media import download_listing_photos, photos_to_json
+import httpx
+from bs4 import BeautifulSoup
 
 
 # ─── Duplicate Detection ──────────────────────────────────────────────────────
@@ -64,6 +66,48 @@ def check_duplicate(
     return None
 
 
+# ─── Basic Metadata Extraction ────────────────────────────────────────────────
+
+async def fetch_basic_metadata(url: str) -> dict:
+    """
+    Attempts to retrieve listing metadata (title, description, image) 
+    using basic HTTP requests and OpenGraph meta tags.
+    """
+    details = {}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+    }
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+            resp = await client.get(url, headers=headers)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, "html.parser")
+            og_title = soup.find("meta", attrs={"property": "og:title"})
+            og_desc = soup.find("meta", attrs={"property": "og:description"})
+            og_img = soup.find("meta", attrs={"property": "og:image"})
+            page_title = soup.find("title")
+
+            fb_title = (
+                og_title.get("content") if og_title else
+                page_title.text.strip() if page_title else
+                f"Annonce ({url[:40]}…)"
+            )
+            details["title"] = fb_title
+            if og_desc:
+                details["description_text"] = og_desc.get("content", "")
+            if og_img:
+                details["photo_urls"] = [og_img.get("content")]
+            print(f"[Services] Basic metadata OK: {fb_title!r}")
+        else:
+            details["title"] = f"Annonce ({url[:40]}…)"
+    except Exception as e:
+        print(f"[Services] Error fetching basic metadata for {url}: {e}")
+        details["title"] = f"Annonce ({url[:40]}…)"
+    
+    return details
+
+
 # ─── Listing Creation from Scraped Data ───────────────────────────────────────
 
 async def create_listing_from_details(
@@ -71,6 +115,7 @@ async def create_listing_from_details(
     details: dict,
     source: Source,
     original_url: str,
+    download_photos: bool = True,
 ) -> Tuple[Listing, bool]:
     """
     Creates or updates a listing from scraped details.
@@ -174,7 +219,7 @@ async def create_listing_from_details(
     db.refresh(new_listing)
 
     # Download photos asynchronously in background
-    if photo_urls:
+    if photo_urls and download_photos:
         local_paths = await download_listing_photos(new_listing.id, photo_urls)
         if local_paths:
             new_listing.photos_local = photos_to_json(local_paths)

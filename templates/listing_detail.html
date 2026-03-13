@@ -195,7 +195,7 @@
 <div class="topnav">
     <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
     <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
-    <span class="nav-src" style="margin-left: 1rem;">{{ listing.source }}</span>
+    <span class="nav-src" style="margin-left: 1rem;">{{ listing.source.value|upper }}</span>
     <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="margin-left: auto; color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
         <i class="fa-solid fa-trash-can"></i> Supprimer
     </button>
@@ -387,7 +387,7 @@
 
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>
-                Voir sur {{ listing.source }}
+                Voir sur {{ listing.source.value|upper }}
             </a>
 
             <!-- Jean-Marc Review -->

@@ -5,15 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <meta name="description" content="Tableau de bord collaboratif de suivi des annonces immobilières - Jean-Marc & Marceline">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="description"
+        content="Tableau de bord collaboratif de suivi des annonces immobilières - Jean-Marc & Marceline">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a;
             --surface: #131929;
             --surface-2: #1a2236;
-            --border: rgba(255,255,255,0.07);
+            --border: rgba(255, 255, 255, 0.07);
             --text: #eef2ff;
             --text-2: #8b9cc8;
             --accent: #4f8ef7;
@@ -22,12 +24,18 @@
             --red: #f25c69;
             --orange: #f8a84b;
             --yellow: #f9d04f;
-            --shadow: 0 8px 32px rgba(0,0,0,0.5);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -63,7 +71,11 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+
+        .logo i {
+            -webkit-text-fill-color: var(--accent);
+            font-size: 1.4rem;
+        }
 
         .stat-grid {
             display: grid;
@@ -71,6 +83,7 @@
             gap: 0.75rem;
             margin-bottom: 2rem;
         }
+
         .stat-card {
             background: var(--surface-2);
             border: 1px solid var(--border);
@@ -79,12 +92,37 @@
             text-align: center;
             transition: var(--trans);
         }
-        .stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
-        .stat-card .val { font-size: 1.8rem; font-weight: 800; }
-        .stat-card .lbl { font-size: 0.7rem; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
-        .stat-card.new .val { color: var(--green); }
-        .stat-card.dis .val { color: var(--red); }
-        .stat-card.dup .val { color: var(--orange); }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
+
+        .stat-card.dup .val {
+            color: var(--orange);
+        }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -108,12 +146,17 @@
             transition: var(--trans);
             margin-bottom: 0.25rem;
         }
-        .nav-link:hover, .nav-link.active {
-            background: rgba(79,142,247,0.12);
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(79, 142, 247, 0.12);
             color: var(--accent);
         }
 
-        .query-list { list-style: none; }
+        .query-list {
+            list-style: none;
+        }
+
         .query-item {
             background: var(--surface-2);
             border: 1px solid var(--border);
@@ -122,8 +165,16 @@
             margin-bottom: 0.5rem;
             font-size: 0.8rem;
         }
-        .query-item .name { font-weight: 600; }
-        .query-item .src { color: var(--text-2); font-size: 0.7rem; margin-top: 0.15rem; }
+
+        .query-item .name {
+            font-weight: 600;
+        }
+
+        .query-item .src {
+            color: var(--text-2);
+            font-size: 0.7rem;
+            margin-top: 0.15rem;
+        }
 
         /* ── Main Content ── */
         .main {
@@ -144,9 +195,16 @@
             flex-shrink: 0;
         }
 
-        .topbar h1 { font-size: 1.25rem; font-weight: 700; }
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
 
-        .topbar-right { display: flex; gap: 0.75rem; align-items: center; }
+        .topbar-right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
 
         .btn {
             display: inline-flex;
@@ -163,10 +221,29 @@
             text-decoration: none;
             transition: var(--trans);
         }
-        .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-        .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        .btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .btn.primary:hover {
+            background: var(--accent-2);
+            border-color: var(--accent-2);
+        }
+
+        .btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
 
         .filter-bar {
             display: flex;
@@ -177,9 +254,19 @@
             flex-shrink: 0;
             flex-wrap: wrap;
         }
-        .filter-label { font-size: 0.75rem; color: var(--text-2); font-weight: 600; margin-right: 0.25rem; }
 
-        .content { flex: 1; overflow-y: auto; padding: 1.5rem 2rem 2rem; }
+        .filter-label {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            font-weight: 600;
+            margin-right: 0.25rem;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 2rem 2rem;
+        }
 
         /* ── Listings Grid ── */
         .grid {
@@ -199,12 +286,16 @@
             position: relative;
             cursor: pointer;
         }
+
         .card:hover {
             transform: translateY(-4px);
-            border-color: rgba(79,142,247,0.4);
-            box-shadow: var(--shadow), 0 0 0 1px rgba(79,142,247,0.15);
+            border-color: rgba(79, 142, 247, 0.4);
+            box-shadow: var(--shadow), 0 0 0 1px rgba(79, 142, 247, 0.15);
         }
-        .card:hover .card-overlay { opacity: 1; }
+
+        .card:hover .card-overlay {
+            opacity: 1;
+        }
 
         .card-img {
             height: 190px;
@@ -212,13 +303,18 @@
             position: relative;
             overflow: hidden;
         }
+
         .card-img img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.4s ease;
         }
-        .card:hover .card-img img { transform: scale(1.05); }
+
+        .card:hover .card-img img {
+            transform: scale(1.05);
+        }
+
         .card-img-placeholder {
             width: 100%;
             height: 100%;
@@ -229,10 +325,11 @@
             color: var(--text-2);
             font-size: 2.5rem;
         }
+
         .card-overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.7));
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.7));
             opacity: 0;
             transition: var(--trans);
         }
@@ -250,9 +347,22 @@
             letter-spacing: 0.05em;
             z-index: 1;
         }
-        .badge.nouvelle { background: var(--green); color: #000; }
-        .badge.active { background: var(--accent); color: #fff; }
-        .badge.disparue { background: var(--red); color: #fff; }
+
+        .badge.nouvelle {
+            background: var(--green);
+            color: #000;
+        }
+
+        .badge.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .badge.disparue {
+            background: var(--red);
+            color: #fff;
+        }
+
         .badge-dup {
             position: absolute;
             top: 0.75rem;
@@ -280,17 +390,51 @@
             font-weight: 900;
             font-size: 0.85rem;
             z-index: 1;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
-        .dpe-A { background: #00c950; color: #000; }
-        .dpe-B { background: #50d970; color: #000; }
-        .dpe-C { background: #ccdf30; color: #000; }
-        .dpe-D { background: #f7c948; color: #000; }
-        .dpe-E { background: #f09939; color: #000; }
-        .dpe-F { background: #e8593a; color: #fff; }
-        .dpe-G { background: #c73232; color: #fff; }
 
-        .card-body { padding: 1.1rem 1.25rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+        .dpe-A {
+            background: #00c950;
+            color: #000;
+        }
+
+        .dpe-B {
+            background: #50d970;
+            color: #000;
+        }
+
+        .dpe-C {
+            background: #ccdf30;
+            color: #000;
+        }
+
+        .dpe-D {
+            background: #f7c948;
+            color: #000;
+        }
+
+        .dpe-E {
+            background: #f09939;
+            color: #000;
+        }
+
+        .dpe-F {
+            background: #e8593a;
+            color: #fff;
+        }
+
+        .dpe-G {
+            background: #c73232;
+            color: #fff;
+        }
+
+        .card-body {
+            padding: 1.1rem 1.25rem 1.25rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
         .card-title {
             font-size: 0.95rem;
             font-weight: 700;
@@ -302,17 +446,20 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+
         .card-price {
             font-size: 1.4rem;
             font-weight: 800;
             color: var(--accent);
             margin-bottom: 0.15rem;
         }
+
         .card-ppsqm {
             font-size: 0.75rem;
             color: var(--text-2);
             margin-bottom: 0.75rem;
         }
+
         .card-meta {
             display: flex;
             flex-wrap: wrap;
@@ -321,7 +468,12 @@
             color: var(--text-2);
             margin-bottom: 0.85rem;
         }
-        .card-meta span { display: flex; align-items: center; gap: 0.25rem; }
+
+        .card-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
 
         /* Review mini-indicators */
         .card-reviews {
@@ -329,6 +481,7 @@
             gap: 0.5rem;
             margin-bottom: 0.75rem;
         }
+
         .reviewer-chip {
             display: flex;
             align-items: center;
@@ -340,9 +493,18 @@
             border-radius: 6px;
             padding: 0.2rem 0.5rem;
         }
-        .reviewer-chip .star { color: var(--yellow); }
-        .reviewer-chip.jm { border-color: rgba(79,142,247,0.3); }
-        .reviewer-chip.marceline { border-color: rgba(99,102,241,0.3); }
+
+        .reviewer-chip .star {
+            color: var(--yellow);
+        }
+
+        .reviewer-chip.jm {
+            border-color: rgba(79, 142, 247, 0.3);
+        }
+
+        .reviewer-chip.marceline {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
 
         .card-footer {
             display: flex;
@@ -352,6 +514,7 @@
             border-top: 1px solid var(--border);
             margin-top: auto;
         }
+
         .source-badge {
             font-size: 0.65rem;
             font-weight: 700;
@@ -359,6 +522,7 @@
             letter-spacing: 0.05em;
             color: var(--text-2);
         }
+
         .card-link {
             font-size: 0.78rem;
             font-weight: 600;
@@ -368,7 +532,10 @@
             align-items: center;
             gap: 0.25rem;
         }
-        .card-link:hover { color: var(--text); }
+
+        .card-link:hover {
+            color: var(--text);
+        }
 
         /* ── Empty State ── */
         .empty {
@@ -376,66 +543,146 @@
             text-align: center;
             padding: 5rem 2rem;
             background: var(--surface);
-            border: 1px dashed rgba(255,255,255,0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
             border-radius: var(--radius);
             color: var(--text-2);
         }
-        .empty i { font-size: 3.5rem; margin-bottom: 1.25rem; display: block; opacity: 0.3; }
-        .empty h2 { font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--text); }
+
+        .empty i {
+            font-size: 3.5rem;
+            margin-bottom: 1.25rem;
+            display: block;
+            opacity: 0.3;
+        }
+
+        .empty h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
 
         /* ── Delete Button ── */
         .btn-delete {
-            display: flex; align-items: center; justify-content: center;
-            width: 30px; height: 30px; border-radius: 7px;
-            background: transparent; border: 1px solid rgba(242,92,105,0.25);
-            color: rgba(242,92,105,0.55); font-size: 0.8rem;
-            cursor: pointer; transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 7px;
+            background: transparent;
+            border: 1px solid rgba(242, 92, 105, 0.25);
+            color: rgba(242, 92, 105, 0.55);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
             flex-shrink: 0;
         }
+
         .btn-delete:hover {
-            background: rgba(242,92,105,0.15);
+            background: rgba(242, 92, 105, 0.15);
             border-color: var(--red);
             color: var(--red);
             transform: scale(1.1);
         }
 
         /* ── Delete Modal ── */
-        .delete-modal { max-width: 420px; text-align: center; }
+        .delete-modal {
+            max-width: 420px;
+            text-align: center;
+        }
+
         .delete-icon {
-            width: 60px; height: 60px; border-radius: 50%;
-            background: rgba(242,92,105,0.12); border: 1px solid rgba(242,92,105,0.3);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; color: var(--red); margin: 0 auto 1rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(242, 92, 105, 0.12);
+            border: 1px solid rgba(242, 92, 105, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--red);
+            margin: 0 auto 1rem;
         }
-        .delete-modal h2 { font-size: 1.15rem; margin-bottom: 0.5rem; }
+
+        .delete-modal h2 {
+            font-size: 1.15rem;
+            margin-bottom: 0.5rem;
+        }
+
         .delete-title-preview {
-            font-size: 0.82rem; font-weight: 600; color: var(--accent);
-            background: var(--surface-2); border-radius: 8px; padding: 0.5rem 0.75rem;
-            margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--surface-2);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .delete-warning { font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.25rem; }
+
+        .delete-warning {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-bottom: 1.25rem;
+        }
 
         /* ── Slide-to-confirm ── */
-        .slide-confirm-wrapper { padding: 0.25rem 0 0.75rem; }
-        .slide-track {
-            position: relative; height: 52px; background: var(--surface-2);
-            border: 1px solid rgba(242,92,105,0.3); border-radius: 26px;
-            display: flex; align-items: center; overflow: hidden; user-select: none;
+        .slide-confirm-wrapper {
+            padding: 0.25rem 0 0.75rem;
         }
+
+        .slide-track {
+            position: relative;
+            height: 52px;
+            background: var(--surface-2);
+            border: 1px solid rgba(242, 92, 105, 0.3);
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
         .slide-thumb {
-            position: absolute; left: 4px; width: 44px; height: 44px;
-            background: var(--red); border-radius: 22px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 0.85rem; cursor: grab; touch-action: none;
-            box-shadow: 0 4px 14px rgba(242,92,105,0.4);
-            transition: background 0.2s ease; z-index: 2;
+            position: absolute;
+            left: 4px;
+            width: 44px;
+            height: 44px;
+            background: var(--red);
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.85rem;
+            cursor: grab;
+            touch-action: none;
+            box-shadow: 0 4px 14px rgba(242, 92, 105, 0.4);
+            transition: background 0.2s ease;
+            z-index: 2;
             gap: 1px;
         }
-        .slide-thumb:active { cursor: grabbing; }
-        .slide-thumb.done { background: #10d9a4; cursor: default; }
+
+        .slide-thumb:active {
+            cursor: grabbing;
+        }
+
+        .slide-thumb.done {
+            background: #10d9a4;
+            cursor: default;
+        }
+
         .slide-label {
-            width: 100%; text-align: center; font-size: 0.78rem; font-weight: 600;
-            color: rgba(242,92,105,0.7); letter-spacing: 0.04em; pointer-events: none;
+            width: 100%;
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: rgba(242, 92, 105, 0.7);
+            letter-spacing: 0.04em;
+            pointer-events: none;
         }
 
         /* ── Modal: Submit URL ── */
@@ -443,13 +690,17 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(4px);
             z-index: 100;
             align-items: center;
             justify-content: center;
         }
-        .modal-backdrop.open { display: flex; }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
         .modal {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -460,14 +711,43 @@
             box-shadow: var(--shadow);
             animation: slideUp 0.3s ease;
         }
+
         @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
-        .modal h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.4rem; }
-        .modal p { font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.5rem; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-2); margin-bottom: 0.4rem; }
+
+        .modal h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .modal p {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-2);
+            margin-bottom: 0.4rem;
+        }
+
         .form-group input {
             width: 100%;
             background: var(--surface-2);
@@ -479,19 +759,36 @@
             font-family: inherit;
             transition: var(--trans);
         }
-        .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.15); }
-        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
 
         /* ── Spinner ── */
         .spinner {
-            width: 16px; height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             display: none;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* ── Alert Result ── */
         .alert {
@@ -502,451 +799,494 @@
             margin-top: 1rem;
             display: none;
         }
-        .alert.success { background: rgba(16,217,164,0.1); border: 1px solid rgba(16,217,164,0.3); color: var(--green); }
-        .alert.warning { background: rgba(248,168,75,0.1); border: 1px solid rgba(248,168,75,0.3); color: var(--orange); }
-        .alert.error { background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.3); color: var(--red); }
+
+        .alert.success {
+            background: rgba(16, 217, 164, 0.1);
+            border: 1px solid rgba(16, 217, 164, 0.3);
+            color: var(--green);
+        }
+
+        .alert.warning {
+            background: rgba(248, 168, 75, 0.1);
+            border: 1px solid rgba(248, 168, 75, 0.3);
+            color: var(--orange);
+        }
+
+        .alert.error {
+            background: rgba(242, 92, 105, 0.1);
+            border: 1px solid rgba(242, 92, 105, 0.3);
+            color: var(--red);
+        }
 
         /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+        }
     </style>
 </head>
 
 <body>
 
-<!-- ── Sidebar ── -->
-<aside class="sidebar">
-    <div class="logo">
-        <i class="fa-solid fa-compass-drafting"></i>
-        Immo-Boussole
-    </div>
-
-    {% set total = listings|length %}
-    {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
-    {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
-    {% set dup_cnt = listings|selectattr("is_duplicate")|list|length %}
-
-    <div class="stat-grid">
-        <div class="stat-card" style="grid-column: 1 / -1;">
-            <div class="val">{{ total }}</div>
-            <div class="lbl">Total annonces</div>
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-compass-drafting"></i>
+            Immo-Boussole
         </div>
-        <div class="stat-card new">
-            <div class="val">{{ new_cnt }}</div>
-            <div class="lbl">Nouvelles</div>
-        </div>
-        <div class="stat-card dis">
-            <div class="val">{{ dis_cnt }}</div>
-            <div class="lbl">Disparues</div>
-        </div>
-        {% if dup_cnt > 0 %}
-        <div class="stat-card dup" style="grid-column: 1 / -1;">
-            <div class="val">{{ dup_cnt }}</div>
-            <div class="lbl">⚠ Doublons détectés</div>
-        </div>
-        {% endif %}
-    </div>
 
-    <div class="sidebar-section-title">Navigation</div>
-    <nav>
-        <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> Tableau de bord</a>
-        <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
-        <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
-    </nav>
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
+        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
+        {% set dup_cnt = listings|selectattr("is_duplicate")|list|length %}
 
-    <br>
-    <div class="sidebar-section-title">Recherches actives</div>
-    {% if queries %}
-    <div class="query-list">
-        {% for query in queries %}
-        <div class="query-item">
-            <div class="name">{{ query.name or query.url[:30] }}</div>
-            <div class="src"><i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i> {{ query.source }}</div>
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
-    {% endif %}
-</aside>
-
-<!-- ── Main ── -->
-<div class="main">
-    <div class="topbar">
-        <h1>Annonces immobilières</h1>
-        <div class="topbar-right">
-            <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> Fiche Idéale</a>
-            <button class="btn primary" id="btnAddUrl" onclick="openModal()">
-                <i class="fa-solid fa-plus"></i> Ajouter une annonce
-            </button>
-        </div>
-    </div>
-
-    <div class="filter-bar">
-        <span class="filter-label">Filtrer :</span>
-        <button class="btn active" id="f-all" onclick="filter('all', this)">Toutes</button>
-        <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-            <i class="fa-solid fa-sparkles"></i> Nouvelles
-        </button>
-        <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-            <i class="fa-solid fa-eye"></i> Actives
-        </button>
-        <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-            <i class="fa-solid fa-eye-slash"></i> Disparues
-        </button>
-        <button class="btn" id="f-duplicate" onclick="filter('duplicate', this)" style="color: var(--orange);">
-            <i class="fa-solid fa-copy"></i> Doublons
-        </button>
-    </div>
-
-    <div class="content">
-        <div class="grid" id="grid">
-            {% for listing in listings %}
-            {% set photos = listing._photos if listing._photos is defined else [] %}
-            <div class="card"
-                 data-id="{{ listing.id }}"
-                 data-status="{{ listing.status }}"
-                 data-dup="{{ 'true' if listing.is_duplicate else 'false' }}"
-                 onclick="window.location='/listings/{{ listing.id }}'">
-
-                <div class="card-img">
-                    {% if photos %}
-                    <img src="/{{ photos[0] }}" alt="{{ listing.title }}" loading="lazy">
-                    {% else %}
-                    <div class="card-img-placeholder"><i class="fa-regular fa-image"></i></div>
-                    {% endif %}
-                    <div class="card-overlay"></div>
-                    <span class="badge {{ listing.status }}">{{ listing.status }}</span>
-                    {% if listing.is_duplicate %}<span class="badge-dup"><i class="fa-solid fa-clone"></i> Doublon</span>{% endif %}
-                    {% if listing.dpe_rating %}
-                    <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="card-body">
-                    <div class="card-title">{{ listing.title }}</div>
-                    <div class="card-price">
-                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
-                    </div>
-                    {% if listing.price_per_sqm %}
-                    <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>
-                    {% endif %}
-
-                    <div class="card-meta">
-                        <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</span>
-                        {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
-                        {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }} p.</span>{% endif %}
-                        {% if listing.bedrooms %}<span><i class="fa-solid fa-bed"></i> {{ listing.bedrooms }} ch.</span>{% endif %}
-                        {% if listing.bathroom_count %}<span><i class="fa-solid fa-bath"></i> {{ listing.bathroom_count }} sdb</span>{% endif %}
-                    </div>
-
-                    <div class="card-meta" style="margin-top: -0.4rem; font-size: 0.7rem; opacity: 0.8;">
-                        {% if listing.property_type %}<span><i class="fa-solid fa-house"></i> {{ listing.property_type|capitalize }}</span>{% endif %}
-                        {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> TF: {{ listing.land_tax|int }} €</span>{% endif %}
-                        {% if listing.charges %}<span><i class="fa-solid fa-building"></i> CH: {{ listing.charges|int }} €</span>{% endif %}
-                    </div>
-
-                    <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
-                        {% if listing.garden %}<i class="fa-solid fa-tree" title="Jardin" style="color: var(--green);"></i>{% endif %}
-                        {% if listing.terrace %}<i class="fa-solid fa-sun" title="Terrasse" style="color: var(--orange);"></i>{% endif %}
-                        {% if listing.balcony %}<i class="fa-solid fa-border-all" title="Balcon" style="color: var(--text-2);"></i>{% endif %}
-                        {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="Piscine" style="color: var(--accent);"></i>{% endif %}
-                        {% if listing.parking_count %}<i class="fa-solid fa-car" title="Parking" style="color: var(--text-2);"></i>{% endif %}
-                        {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="Cave" style="color: var(--text-2);"></i>{% endif %}
-                    </div>
-
-                    <!-- Reviews mini-preview -->
-                    {% if listing.reviews %}
-                    <div class="card-reviews">
-                        {% for review in listing.reviews %}
-                        <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-marc' else 'marceline' }}">
-                            <i class="fa-solid fa-user"></i>
-                            {{ "JM" if review.reviewer == "jean-marc" else "M" }}
-                            {% if review.rating %}
-                            <span class="star"><i class="fa-solid fa-star" style="font-size: 0.6rem;"></i> {{ review.rating }}</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-
-                    <div class="card-footer">
-                        <span class="source-badge">{{ listing.source }}</span>
-                        <a href="{{ listing.url }}" target="_blank" class="card-link" onclick="event.stopPropagation()">
-                            Voir <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                        </a>
-                        <button
-                            class="btn-delete"
-                            onclick="event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})"
-                            title="Supprimer cette annonce"
-                            aria-label="Supprimer"
-                        >
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
+        <div class="stat-grid">
+            <div class="stat-card" style="grid-column: 1 / -1;">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">Total annonces</div>
             </div>
-            {% else %}
-            <div class="empty">
-                <i class="fa-regular fa-folder-open"></i>
-                <h2>Aucune annonce trouvée</h2>
-                <p>Ajoutez une annonce avec le bouton "+ Ajouter une annonce" ou configurez une recherche automatique.</p>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">Nouvelles</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">Disparues</div>
+            </div>
+            {% if dup_cnt > 0 %}
+            <div class="stat-card dup" style="grid-column: 1 / -1;">
+                <div class="val">{{ dup_cnt }}</div>
+                <div class="lbl">⚠ Doublons détectés</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="sidebar-section-title">Navigation</div>
+        <nav>
+            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> Tableau de bord</a>
+            <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
+            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
+        </nav>
+
+        <br>
+        <div class="sidebar-section-title">Recherches actives</div>
+        {% if queries %}
+        <div class="query-list">
+            {% for query in queries %}
+            <div class="query-item">
+                <div class="name">{{ query.name or query.url[:30] }}</div>
+                <div class="src"><i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i>
+                    {{ query.source.value|upper }}</div>
             </div>
             {% endfor %}
         </div>
-    </div>
-</div>
+        {% else %}
+        <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
+        {% endif %}
+    </aside>
 
-<!-- ── Modal: Ajouter URL ── -->
-<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-    <div class="modal">
-        <h2><i class="fa-solid fa-link"></i> Ajouter une annonce</h2>
-        <p>Collez l'URL d'une annonce. Le scraping et le téléchargement des photos se lanceront automatiquement.</p>
-
-        <div class="form-group">
-            <label for="urlInput">URL de l'annonce</label>
-            <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
-        </div>
-
-        <div style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
-            <i class="fa-solid fa-circle-info"></i> Recommandé pour <strong>LeBonCoin</strong> afin d'éviter les blocages trop fréquents.
-        </div>
-
-        <div class="alert" id="alertBox"></div>
-
-        <div class="modal-actions" style="flex-wrap: wrap;">
-            <button class="btn" onclick="closeModal()">Annuler</button>
-            <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)" style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
-                <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
-            </button>
-            <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
-                <div class="spinner" id="spinner"></div>
-                <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ── Modal: Confirmation suppression (slide) ── -->
-<div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
-    <div class="modal delete-modal">
-        <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <h2>Supprimer cette annonce ?</h2>
-        <p class="delete-title-preview" id="deleteTitlePreview"></p>
-        <p class="delete-warning">Cette action est <strong>irréversible</strong>. Les avis associés seront également supprimés.</p>
-
-        <div class="slide-confirm-wrapper">
-            <div class="slide-track" id="slideTrack">
-                <div class="slide-thumb" id="slideThumb">
-                    <i class="fa-solid fa-chevron-right"></i>
-                    <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
-                </div>
-                <span class="slide-label" id="slideLabel">Glissez pour confirmer</span>
+    <!-- ── Main ── -->
+    <div class="main">
+        <div class="topbar">
+            <h1>Annonces immobilières</h1>
+            <div class="topbar-right">
+                <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> Fiche Idéale</a>
+                <button class="btn primary" id="btnAddUrl" onclick="openModal()">
+                    <i class="fa-solid fa-plus"></i> Ajouter une annonce
+                </button>
             </div>
         </div>
 
-        <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
-            <i class="fa-solid fa-xmark"></i> Annuler
-        </button>
+        <div class="filter-bar">
+            <span class="filter-label">Filtrer :</span>
+            <button class="btn active" id="f-all" onclick="filter('all', this)">Toutes</button>
+            <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
+                <i class="fa-solid fa-sparkles"></i> Nouvelles
+            </button>
+            <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
+                <i class="fa-solid fa-eye"></i> Actives
+            </button>
+            <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
+                <i class="fa-solid fa-eye-slash"></i> Disparues
+            </button>
+            <button class="btn" id="f-duplicate" onclick="filter('duplicate', this)" style="color: var(--orange);">
+                <i class="fa-solid fa-copy"></i> Doublons
+            </button>
+        </div>
+
+        <div class="content">
+            <div class="grid" id="grid">
+                {% for listing in listings %}
+                {% set photos = listing._photos if listing._photos is defined else [] %}
+                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status }}"
+                    data-dup="{{ 'true' if listing.is_duplicate else 'false' }}"
+                    onclick="window.location='/listings/{{ listing.id }}'">
+
+                    <div class="card-img">
+                        {% if photos %}
+                        <img src="/{{ photos[0] }}" alt="{{ listing.title }}" loading="lazy">
+                        {% else %}
+                        <div class="card-img-placeholder"><i class="fa-regular fa-image"></i></div>
+                        {% endif %}
+                        <div class="card-overlay"></div>
+                        <span class="badge {{ listing.status.value }}">{{ listing.status.value }}</span>
+                        {% if listing.is_duplicate %}<span class="badge-dup"><i class="fa-solid fa-clone"></i>
+                            Doublon</span>{% endif %}
+                        {% if listing.dpe_rating %}
+                        <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-body">
+                        <div class="card-title">{{ listing.title }}</div>
+                        <div class="card-price">
+                            {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else
+                            %}Prix N/C{% endif %}
+                        </div>
+                        {% if listing.price_per_sqm %}
+                        <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>
+                        {% endif %}
+
+                        <div class="card-meta">
+                            <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</span>
+                            {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if
+                                listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
+                            {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }}
+                                p.</span>{% endif %}
+                            {% if listing.bedrooms %}<span><i class="fa-solid fa-bed"></i> {{ listing.bedrooms }}
+                                ch.</span>{% endif %}
+                            {% if listing.bathroom_count %}<span><i class="fa-solid fa-bath"></i> {{
+                                listing.bathroom_count }} sdb</span>{% endif %}
+                        </div>
+
+                        <div class="card-meta" style="margin-top: -0.4rem; font-size: 0.7rem; opacity: 0.8;">
+                            {% if listing.property_type %}<span><i class="fa-solid fa-house"></i> {{
+                                listing.property_type|capitalize }}</span>{% endif %}
+                            {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> TF: {{
+                                listing.land_tax|int }} €</span>{% endif %}
+                            {% if listing.charges %}<span><i class="fa-solid fa-building"></i> CH: {{
+                                listing.charges|int }} €</span>{% endif %}
+                        </div>
+
+                        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
+                            {% if listing.garden %}<i class="fa-solid fa-tree" title="Jardin"
+                                style="color: var(--green);"></i>{% endif %}
+                            {% if listing.terrace %}<i class="fa-solid fa-sun" title="Terrasse"
+                                style="color: var(--orange);"></i>{% endif %}
+                            {% if listing.balcony %}<i class="fa-solid fa-border-all" title="Balcon"
+                                style="color: var(--text-2);"></i>{% endif %}
+                            {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="Piscine"
+                                style="color: var(--accent);"></i>{% endif %}
+                            {% if listing.parking_count %}<i class="fa-solid fa-car" title="Parking"
+                                style="color: var(--text-2);"></i>{% endif %}
+                            {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="Cave"
+                                style="color: var(--text-2);"></i>{% endif %}
+                        </div>
+
+                        <!-- Reviews mini-preview -->
+                        {% if listing.reviews %}
+                        <div class="card-reviews">
+                            {% for review in listing.reviews %}
+                            <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-marc' else 'marceline' }}">
+                                <i class="fa-solid fa-user"></i>
+                                {{ "JM" if review.reviewer == "jean-marc" else "M" }}
+                                {% if review.rating %}
+                                <span class="star"><i class="fa-solid fa-star" style="font-size: 0.6rem;"></i> {{
+                                    review.rating }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="card-footer">
+                            <span class="source-badge">{{ listing.source.value|upper }}</span>
+                            <a href="{{ listing.url }}" target="_blank" class="card-link"
+                                onclick="event.stopPropagation()">
+                                Voir <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                            <button class="btn-delete"
+                                onclick="event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})"
+                                title="Supprimer cette annonce" aria-label="Supprimer">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty">
+                    <i class="fa-regular fa-folder-open"></i>
+                    <h2>Aucune annonce trouvée</h2>
+                    <p>Ajoutez une annonce avec le bouton "+ Ajouter une annonce" ou configurez une recherche
+                        automatique.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-</div>
 
-<script>
-    function openModal() {
-        document.getElementById('modal').classList.add('open');
-        document.getElementById('urlInput').value = '';
-        hideAlert();
-        setTimeout(() => document.getElementById('urlInput').focus(), 100);
-    }
+    <!-- ── Modal: Ajouter URL ── -->
+    <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+        <div class="modal">
+            <h2><i class="fa-solid fa-link"></i> Ajouter une annonce</h2>
+            <p>Collez l'URL d'une annonce. Le scraping et le téléchargement des photos se lanceront automatiquement.</p>
 
-    function closeModal() {
-        document.getElementById('modal').classList.remove('open');
-    }
+            <div class="form-group">
+                <label for="urlInput">URL de l'annonce</label>
+                <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
+            </div>
 
-    function showAlert(msg, type) {
-        const el = document.getElementById('alertBox');
-        el.textContent = msg;
-        el.className = 'alert ' + type;
-        el.style.display = 'block';
-    }
+            <div
+                style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
+                <i class="fa-solid fa-circle-info"></i> '<strong>Ajouter sans scraper</strong>' est recommandé pour
+                LeBonCoin, ou en cas d'erreur lors du précédent import.
+            </div>
 
-    function hideAlert() {
-        document.getElementById('alertBox').style.display = 'none';
-    }
+            <div class="alert" id="alertBox"></div>
 
-    async function submitUrl(skipScraping = false) {
-        const url = document.getElementById('urlInput').value.trim();
-        if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
+            <div class="modal-actions" style="flex-wrap: wrap;">
+                <button class="btn" onclick="closeModal()">Annuler</button>
+                <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)"
+                    style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
+                    <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
+                </button>
+                <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
+                    <div class="spinner" id="spinner"></div>
+                    <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-        const btn = document.getElementById('submitBtn');
-        const btnNoScrape = document.getElementById('submitBtnNoScrape');
-        const spinner = document.getElementById('spinner');
-        const label = document.getElementById('submitLabel');
+    <!-- ── Modal: Confirmation suppression (slide) ── -->
+    <div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
+        <div class="modal delete-modal">
+            <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2>Supprimer cette annonce ?</h2>
+            <p class="delete-title-preview" id="deleteTitlePreview"></p>
+            <p class="delete-warning">Cette action est <strong>irréversible</strong>. Les avis associés seront également
+                supprimés.</p>
 
-        btn.disabled = true;
-        btnNoScrape.disabled = true;
-        if (!skipScraping) {
-            spinner.style.display = 'block';
-            label.style.display = 'none';
+            <div class="slide-confirm-wrapper">
+                <div class="slide-track" id="slideTrack">
+                    <div class="slide-thumb" id="slideThumb">
+                        <i class="fa-solid fa-chevron-right"></i>
+                        <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
+                    </div>
+                    <span class="slide-label" id="slideLabel">Glissez pour confirmer</span>
+                </div>
+            </div>
+
+            <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
+                <i class="fa-solid fa-xmark"></i> Annuler
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('modal').classList.add('open');
+            document.getElementById('urlInput').value = '';
+            hideAlert();
+            setTimeout(() => document.getElementById('urlInput').focus(), 100);
         }
-        hideAlert();
 
-        try {
-            const res = await fetch('/api/listings/submit-url', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url, skip_scraping: skipScraping }),
-            });
-            const data = await res.json();
+        function closeModal() {
+            document.getElementById('modal').classList.remove('open');
+        }
 
-            if (data.status === 'already_exists') {
-                showAlert(`Cette annonce est déjà dans la base (ID #${data.listing_id}).`, 'warning');
-            } else if (data.duplicate_warning) {
-                showAlert(`⚠️ Doublon détecté ! ${data.duplicate_warning.message} Annonce créée quand même (#${data.listing_id}).`, 'warning');
-                setTimeout(() => { closeModal(); window.location.reload(); }, 3500);
-            } else if (data.status === 'success') {
-                showAlert(`✓ Annonce ajoutée ! ${skipScraping ? 'Portez-vous sur la fiche pour l\'édition manuelle.' : (data.title || '')}`, 'success');
-                setTimeout(() => { closeModal(); window.location.reload(); }, 2000);
-            } else {
-                showAlert('Erreur lors du scraping.', 'error');
+        function showAlert(msg, type) {
+            const el = document.getElementById('alertBox');
+            el.textContent = msg;
+            el.className = 'alert ' + type;
+            el.style.display = 'block';
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').style.display = 'none';
+        }
+
+        async function submitUrl(skipScraping = false) {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
+
+            const btn = document.getElementById('submitBtn');
+            const btnNoScrape = document.getElementById('submitBtnNoScrape');
+            const spinner = document.getElementById('spinner');
+            const label = document.getElementById('submitLabel');
+
+            btn.disabled = true;
+            btnNoScrape.disabled = true;
+            if (!skipScraping) {
+                spinner.style.display = 'block';
+                label.style.display = 'none';
             }
-        } catch (err) {
-            showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');
-        } finally {
-            btn.disabled = false;
-            btnNoScrape.disabled = false;
-            spinner.style.display = 'none';
-            label.style.display = 'inline';
-        }
-    }
+            hideAlert();
 
-    function filter(status, btn) {
-        document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+            try {
+                const res = await fetch('/api/listings/submit-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, skip_scraping: skipScraping }),
+                });
+                const data = await res.json();
 
-        document.querySelectorAll('.card').forEach(card => {
-            let show = false;
-            if (status === 'all') show = true;
-            else if (status === 'duplicate') show = card.dataset.dup === 'true';
-            else show = card.dataset.status === status;
-            card.style.display = show ? '' : 'none';
-        });
-    }
-
-    // Keyboard shortcut: Escape to close modal
-    document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
-        if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
-    });
-
-    // ── Delete flow ──────────────────────────────────────────────────────
-    let pendingDeleteId = null;
-
-    function openDeleteModal(id, title) {
-        pendingDeleteId = id;
-        document.getElementById('deleteTitlePreview').textContent = title;
-        document.getElementById('deleteModal').classList.add('open');
-        resetSlider();
-    }
-
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').classList.remove('open');
-        pendingDeleteId = null;
-        resetSlider();
-    }
-
-    function resetSlider() {
-        const thumb = document.getElementById('slideThumb');
-        const label = document.getElementById('slideLabel');
-        const track = document.getElementById('slideTrack');
-        thumb.style.transition = 'left 0.3s ease';
-        thumb.style.left = '4px';
-        thumb.className = 'slide-thumb';
-        thumb.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>';
-        label.textContent = 'Glissez pour confirmer';
-        label.style.color = '';
-        track.style.borderColor = '';
-        setTimeout(() => { thumb.style.transition = ''; }, 300);
-    }
-
-    async function confirmDelete() {
-        if (!pendingDeleteId) return;
-        const id = pendingDeleteId;
-        closeDeleteModal();
-        try {
-            const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
-            if (res.ok) {
-                // Remove card from DOM without full reload
-                const card = document.querySelector(`.card[data-id="${id}"]`);
-                if (card) {
-                    card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(0.9)';
-                    setTimeout(() => card.remove(), 350);
+                if (data.status === 'already_exists') {
+                    showAlert(`Cette annonce est déjà dans la base (ID #${data.listing_id}).`, 'warning');
+                } else if (data.duplicate_warning) {
+                    showAlert(`⚠️ Doublon détecté ! ${data.duplicate_warning.message} Annonce créée quand même (#${data.listing_id}).`, 'warning');
+                    setTimeout(() => { closeModal(); window.location.reload(); }, 3500);
+                } else if (data.status === 'success') {
+                    showAlert(`✓ Annonce ajoutée ! ${skipScraping ? 'Portez-vous sur la fiche pour l\'édition manuelle.' : (data.title || '')}`, 'success');
+                    setTimeout(() => { closeModal(); window.location.reload(); }, 2000);
+                } else {
+                    showAlert('Erreur lors du scraping.', 'error');
                 }
-            } else {
-                alert('Erreur lors de la suppression.');
-            }
-        } catch (e) {
-            alert('Erreur réseau.');
-        }
-    }
-
-    // ── Slider drag logic (mouse + touch) ─────────────────────────────────
-    (() => {
-        let dragging = false, startX = 0, startLeft = 4;
-
-        const getThumb  = () => document.getElementById('slideThumb');
-        const getTrack  = () => document.getElementById('slideTrack');
-        const getLabel  = () => document.getElementById('slideLabel');
-
-        function onStart(e) {
-            const thumb = getThumb();
-            if (thumb.classList.contains('done')) return;
-            dragging = true;
-            startX = (e.touches ? e.touches[0].clientX : e.clientX);
-            startLeft = 4;
-            thumb.style.transition = 'none';
-            e.preventDefault();
-        }
-
-        function onMove(e) {
-            if (!dragging) return;
-            const thumb = getThumb();
-            const track = getTrack();
-            const label = getLabel();
-            const maxLeft = track.clientWidth - thumb.clientWidth - 4;
-            const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
-            const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
-            thumb.style.left = newLeft + 'px';
-            // Progress 0-1
-            const progress = (newLeft - 4) / (maxLeft - 4);
-            label.style.opacity = 1 - progress;
-            track.style.borderColor = `rgba(242,92,105,${0.3 + progress * 0.5})`;
-            if (progress >= 0.95) {
-                dragging = false;
-                thumb.style.transition = 'left 0.2s ease';
-                thumb.style.left = maxLeft + 'px';
-                thumb.classList.add('done');
-                thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
-                label.textContent = 'Suppression...';
-                label.style.color = '#10d9a4';
-                label.style.opacity = 1;
-                setTimeout(confirmDelete, 400);
+            } catch (err) {
+                showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');
+            } finally {
+                btn.disabled = false;
+                btnNoScrape.disabled = false;
+                spinner.style.display = 'none';
+                label.style.display = 'inline';
             }
         }
 
-        function onEnd() { dragging = false; }
+        function filter(status, btn) {
+            document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
 
-        document.addEventListener('mousedown',  e => { if (e.target.closest('#slideThumb')) onStart(e); });
-        document.addEventListener('mousemove',  e => { if (dragging) onMove(e); });
-        document.addEventListener('mouseup',    onEnd);
-        document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); }, { passive: false });
-        document.addEventListener('touchmove',  e => { if (dragging) onMove(e); }, { passive: false });
-        document.addEventListener('touchend',   onEnd);
-    })();
-</script>
+            document.querySelectorAll('.card').forEach(card => {
+                let show = false;
+                if (status === 'all') show = true;
+                else if (status === 'duplicate') show = card.dataset.dup === 'true';
+                else show = card.dataset.status === status;
+                card.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Keyboard shortcut: Escape to close modal
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
+            if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
+        });
+
+        // ── Delete flow ──────────────────────────────────────────────────────
+        let pendingDeleteId = null;
+
+        function openDeleteModal(id, title) {
+            pendingDeleteId = id;
+            document.getElementById('deleteTitlePreview').textContent = title;
+            document.getElementById('deleteModal').classList.add('open');
+            resetSlider();
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('open');
+            pendingDeleteId = null;
+            resetSlider();
+        }
+
+        function resetSlider() {
+            const thumb = document.getElementById('slideThumb');
+            const label = document.getElementById('slideLabel');
+            const track = document.getElementById('slideTrack');
+            thumb.style.transition = 'left 0.3s ease';
+            thumb.style.left = '4px';
+            thumb.className = 'slide-thumb';
+            thumb.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>';
+            label.textContent = 'Glissez pour confirmer';
+            label.style.color = '';
+            track.style.borderColor = '';
+            setTimeout(() => { thumb.style.transition = ''; }, 300);
+        }
+
+        async function confirmDelete() {
+            if (!pendingDeleteId) return;
+            const id = pendingDeleteId;
+            closeDeleteModal();
+            try {
+                const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    // Remove card from DOM without full reload
+                    const card = document.querySelector(`.card[data-id="${id}"]`);
+                    if (card) {
+                        card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.9)';
+                        setTimeout(() => card.remove(), 350);
+                    }
+                } else {
+                    alert('Erreur lors de la suppression.');
+                }
+            } catch (e) {
+                alert('Erreur réseau.');
+            }
+        }
+
+        // ── Slider drag logic (mouse + touch) ─────────────────────────────────
+        (() => {
+            let dragging = false, startX = 0, startLeft = 4;
+
+            const getThumb = () => document.getElementById('slideThumb');
+            const getTrack = () => document.getElementById('slideTrack');
+            const getLabel = () => document.getElementById('slideLabel');
+
+            function onStart(e) {
+                const thumb = getThumb();
+                if (thumb.classList.contains('done')) return;
+                dragging = true;
+                startX = (e.touches ? e.touches[0].clientX : e.clientX);
+                startLeft = 4;
+                thumb.style.transition = 'none';
+                e.preventDefault();
+            }
+
+            function onMove(e) {
+                if (!dragging) return;
+                const thumb = getThumb();
+                const track = getTrack();
+                const label = getLabel();
+                const maxLeft = track.clientWidth - thumb.clientWidth - 4;
+                const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+                const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
+                thumb.style.left = newLeft + 'px';
+                // Progress 0-1
+                const progress = (newLeft - 4) / (maxLeft - 4);
+                label.style.opacity = 1 - progress;
+                track.style.borderColor = `rgba(242,92,105,${0.3 + progress * 0.5})`;
+                if (progress >= 0.95) {
+                    dragging = false;
+                    thumb.style.transition = 'left 0.2s ease';
+                    thumb.style.left = maxLeft + 'px';
+                    thumb.classList.add('done');
+                    thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    label.textContent = 'Suppression...';
+                    label.style.color = '#10d9a4';
+                    label.style.opacity = 1;
+                    setTimeout(confirmDelete, 400);
+                }
+            }
+
+            function onEnd() { dragging = false; }
+
+            document.addEventListener('mousedown', e => { if (e.target.closest('#slideThumb')) onStart(e); });
+            document.addEventListener('mousemove', e => { if (dragging) onMove(e); });
+            document.addEventListener('mouseup', onEnd);
+            document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); }, { passive: false });
+            document.addEventListener('touchmove', e => { if (dragging) onMove(e); }, { passive: false });
+            document.addEventListener('touchend', onEnd);
+        })();
+    </script>
 
 </body>
+
 </html>
