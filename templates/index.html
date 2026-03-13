@@ -551,6 +551,7 @@
     <div class="sidebar-section-title">Navigation</div>
     <nav>
         <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> Tableau de bord</a>
+        <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
         <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
     </nav>
 
@@ -629,14 +630,30 @@
                         {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
                     </div>
                     {% if listing.price_per_sqm %}
-                    <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm) }} €/m²</div>
+                    <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>
                     {% endif %}
 
                     <div class="card-meta">
                         <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</span>
-                        {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area }} m²</span>{% endif %}
+                        {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
                         {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }} p.</span>{% endif %}
-                        {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> {{ listing.land_tax|int }} €/an</span>{% endif %}
+                        {% if listing.bedrooms %}<span><i class="fa-solid fa-bed"></i> {{ listing.bedrooms }} ch.</span>{% endif %}
+                        {% if listing.bathroom_count %}<span><i class="fa-solid fa-bath"></i> {{ listing.bathroom_count }} sdb</span>{% endif %}
+                    </div>
+
+                    <div class="card-meta" style="margin-top: -0.4rem; font-size: 0.7rem; opacity: 0.8;">
+                        {% if listing.property_type %}<span><i class="fa-solid fa-house"></i> {{ listing.property_type|capitalize }}</span>{% endif %}
+                        {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> TF: {{ listing.land_tax|int }} €</span>{% endif %}
+                        {% if listing.charges %}<span><i class="fa-solid fa-building"></i> CH: {{ listing.charges|int }} €</span>{% endif %}
+                    </div>
+
+                    <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
+                        {% if listing.garden %}<i class="fa-solid fa-tree" title="Jardin" style="color: var(--green);"></i>{% endif %}
+                        {% if listing.terrace %}<i class="fa-solid fa-sun" title="Terrasse" style="color: var(--orange);"></i>{% endif %}
+                        {% if listing.balcony %}<i class="fa-solid fa-border-all" title="Balcon" style="color: var(--text-2);"></i>{% endif %}
+                        {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="Piscine" style="color: var(--accent);"></i>{% endif %}
+                        {% if listing.parking_count %}<i class="fa-solid fa-car" title="Parking" style="color: var(--text-2);"></i>{% endif %}
+                        {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="Cave" style="color: var(--text-2);"></i>{% endif %}
                     </div>
 
                     <!-- Reviews mini-preview -->
@@ -661,7 +678,7 @@
                         </a>
                         <button
                             class="btn-delete"
-                            onclick="event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})"
+                            onclick="event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})"
                             title="Supprimer cette annonce"
                             aria-label="Supprimer"
                         >
@@ -685,18 +702,25 @@
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
     <div class="modal">
         <h2><i class="fa-solid fa-link"></i> Ajouter une annonce</h2>
-        <p>Collez l'URL d'une annonce LeBonCoin ou SeLoger. Le scraping et le téléchargement des photos se lanceront automatiquement.</p>
+        <p>Collez l'URL d'une annonce. Le scraping et le téléchargement des photos se lanceront automatiquement.</p>
 
         <div class="form-group">
             <label for="urlInput">URL de l'annonce</label>
             <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
         </div>
 
+        <div style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
+            <i class="fa-solid fa-circle-info"></i> Recommandé pour <strong>LeBonCoin</strong> afin d'éviter les blocages trop fréquents.
+        </div>
+
         <div class="alert" id="alertBox"></div>
 
-        <div class="modal-actions">
+        <div class="modal-actions" style="flex-wrap: wrap;">
             <button class="btn" onclick="closeModal()">Annuler</button>
-            <button class="btn primary" id="submitBtn" onclick="submitUrl()">
+            <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)" style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
+                <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
+            </button>
+            <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
                 <div class="spinner" id="spinner"></div>
                 <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
             </button>
@@ -751,24 +775,28 @@
         document.getElementById('alertBox').style.display = 'none';
     }
 
-    async function submitUrl() {
+    async function submitUrl(skipScraping = false) {
         const url = document.getElementById('urlInput').value.trim();
         if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
 
         const btn = document.getElementById('submitBtn');
+        const btnNoScrape = document.getElementById('submitBtnNoScrape');
         const spinner = document.getElementById('spinner');
         const label = document.getElementById('submitLabel');
 
         btn.disabled = true;
-        spinner.style.display = 'block';
-        label.style.display = 'none';
+        btnNoScrape.disabled = true;
+        if (!skipScraping) {
+            spinner.style.display = 'block';
+            label.style.display = 'none';
+        }
         hideAlert();
 
         try {
             const res = await fetch('/api/listings/submit-url', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url }),
+                body: JSON.stringify({ url, skip_scraping: skipScraping }),
             });
             const data = await res.json();
 
@@ -777,14 +805,17 @@
             } else if (data.duplicate_warning) {
                 showAlert(`⚠️ Doublon détecté ! ${data.duplicate_warning.message} Annonce créée quand même (#${data.listing_id}).`, 'warning');
                 setTimeout(() => { closeModal(); window.location.reload(); }, 3500);
-            } else {
-                showAlert(`✓ Annonce ajoutée avec succès ! (${data.title || 'Sans titre'})`, 'success');
+            } else if (data.status === 'success') {
+                showAlert(`✓ Annonce ajoutée ! ${skipScraping ? 'Portez-vous sur la fiche pour l\'édition manuelle.' : (data.title || '')}`, 'success');
                 setTimeout(() => { closeModal(); window.location.reload(); }, 2000);
+            } else {
+                showAlert('Erreur lors du scraping.', 'error');
             }
         } catch (err) {
             showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');
         } finally {
             btn.disabled = false;
+            btnNoScrape.disabled = false;
             spinner.style.display = 'none';
             label.style.display = 'inline';
         }
