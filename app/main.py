@@ -24,6 +24,7 @@ from app.services import (
     create_listing_from_details,
     check_duplicate,
     get_or_create_review,
+    fetch_basic_metadata,
     generate_ideal_profile,
 )
 from app.media import json_to_photos
@@ -294,74 +295,32 @@ async def submit_listing_url(
         scraper = None
 
     if body.skip_scraping:
-        # Create listing with minimal info immediately
-        new_listing = Listing(
-            url=url,
-            original_url=url,
-            source=source,
-            status=ListingStatus.NEW,
-            title=f"Lien ajouté sans scraping ({source})",
-            date_added=datetime.utcnow()
+        # ── Fast path: fetch only basic metadata ───────────────────────────
+        details = await fetch_basic_metadata(url)
+        # Create listing (includes duplicate check) without photo download
+        listing, is_new = await create_listing_from_details(
+            db, details, source, url, download_photos=False
         )
-        db.add(new_listing)
-        db.commit()
-        db.refresh(new_listing)
-        print(f"[API] Listing #{new_listing.id} ajouté manuellement sans scraping.")
+        print(f"[API] Listing #{listing.id} ajouté via 'sans scraping' (metadatas OK).")
         return {
-            "status": "success",
-            "message": "Annonce ajoutée sans scraping.",
-            "listing_id": new_listing.id,
-            "title": new_listing.title
+            "status": "created" if is_new else "already_exists",
+            "message": "Annonce ajoutée avec informations de base (sans plein scraping).",
+            "listing_id": listing.id,
+            "title": listing.title
         }
 
-    # Scrape details
-    # ── Scrape details ────────────────────────────────────────────────────
+    # ── Full Scrape Path ──────────────────────────────────────────────────
     details = {}
-    scrape_error = None
-
     if scraper:
         try:
             details = await scraper.get_listing_details(url)
         except Exception as e:
-            scrape_error = str(e)
-            print(f"[API] Erreur scraping PinchTab pour {url}: {e}")
+            print(f"[API] Erreur scraping plein pour {url}: {e}")
 
-    # ── Fallback: simple HTTP fetch for page metadata ─────────────────────
-    # If PinchTab failed or returned nothing useful, at least grab
-    # og:title / og:description / og:image from a basic HTTP request.
+    # ── Fallback: basic metadata if full scrape failed ───────────────────
     if not details or not details.get("title"):
-        try:
-            import httpx
-            from bs4 import BeautifulSoup
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept-Language": "fr-FR,fr;q=0.9",
-            }
-            async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-                resp = await client.get(url, headers=headers)
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, "html.parser")
-                og_title = soup.find("meta", attrs={"property": "og:title"})
-                og_desc = soup.find("meta", attrs={"property": "og:description"})
-                og_img = soup.find("meta", attrs={"property": "og:image"})
-                page_title = soup.find("title")
-
-                fb_title = (
-                    og_title.get("content") if og_title else
-                    page_title.text.strip() if page_title else
-                    f"Annonce ({url[:40]}…)"
-                )
-                details.setdefault("title", fb_title)
-                if og_desc:
-                    details.setdefault("description_text", og_desc.get("content", ""))
-                if og_img:
-                    details.setdefault("photo_urls", [og_img.get("content")])
-                print(f"[API] Fallback HTTP OK : titre = {fb_title!r}")
-            else:
-                details.setdefault("title", f"Annonce ({url[:40]}…)")
-        except Exception as fb_err:
-            print(f"[API] Fallback HTTP aussi échoué: {fb_err}")
-            details.setdefault("title", f"Annonce ({url[:40]}…)")
+        fb_details = await fetch_basic_metadata(url)
+        details.update(fb_details)
 
     # Create listing (includes duplicate check + photo download)
     listing, is_new = await create_listing_from_details(db, details, source, url)

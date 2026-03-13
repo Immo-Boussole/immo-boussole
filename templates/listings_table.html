@@ -267,7 +267,7 @@
                         {% for listing in listings %}
                         <tr>
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
-                            <td class="col-source">{{ listing.source }}</td>
+                            <td class="col-source">{{ listing.source.value|upper }}</td>
                             <td class="col-price">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else 'NC' }} €</td>
                             <td>{{ listing.area|round|int if listing.area else 'NC' }} m²</td>
                             <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
@@ -280,8 +280,8 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge-status badge-{{ listing.status }}">
-                                    {{ listing.status }}
+                                <span class="badge-status badge-{{ listing.status.value }}">
+                                    {{ listing.status.value }}
                                 </span>
                             </td>
                             <td>
