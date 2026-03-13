@@ -188,6 +188,9 @@
 
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+
+        .btn.loading i { animation: spin 1s linear infinite; pointer-events: none; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -196,7 +199,10 @@
     <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
     <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
     <span class="nav-src" style="margin-left: 1rem;">{{ listing.source.value|upper }}</span>
-    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="margin-left: auto; color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
+    <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="Relancer le scraping" style="margin-left: auto; margin-right: 0.75rem; color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
+        <i class="fa-solid fa-arrows-rotate"></i> Actualiser
+    </button>
+    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
         <i class="fa-solid fa-trash-can"></i> Supprimer
     </button>
 </div>
@@ -755,5 +761,38 @@
         }
     }
 </script>
+    <script>
+        async function rescrapeListing(listingId, btn) {
+            if (btn.classList.contains('loading')) return;
+            
+            btn.classList.add('loading');
+            const icon = btn.querySelector('i');
+            const originalText = btn.innerHTML;
+            
+            if (btn.classList.contains('btn-refresh-nav')) {
+                btn.innerHTML = '<i class="fa-solid fa-arrows-rotate fa-spin"></i> Actualisation...';
+            }
+            
+            try {
+                const response = await fetch(`/api/listings/${listingId}/rescrape`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));
+                    btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur de connexion au serveur.");
+                btn.innerHTML = originalText;
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+    </script>
 </body>
 </html>

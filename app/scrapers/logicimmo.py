@@ -90,34 +90,45 @@ class LogicimmoScraper(BaseScraper):
         soup = BeautifulSoup(html_content, 'html.parser')
 
         details["url"] = url
-        details["title"] = soup.find('title').text.strip() if soup.find('title') else "Annonce Logic-Immo"
-        
-        og_desc = soup.find('meta', attrs={"property": "og:description"})
-        details["description_text"] = og_desc.get("content", "") if og_desc else ""
+        # Try to find JSON payload
+        match = re.search(r'window\.__INITIAL_STATE__\s*=\s*({.*?});', html_content, re.DOTALL)
+        if match:
+            try:
+                data = json.loads(match.group(1))
+                # LogicImmo (SeLoger group) structure
+                ad = None
+                if "listingDetail" in data:
+                    ad = data["listingDetail"].get("listing")
+                elif "ad" in data:
+                    ad = data["ad"]
+                
+                if ad:
+                    details["title"] = ad.get("title")
+                    details["description_text"] = ad.get("description")
+                    details["price"] = ad.get("price")
+                    details["area"] = ad.get("surface")
+                    details["rooms"] = ad.get("rooms")
+                    
+                    # Photos
+                    photos = []
+                    images = ad.get("photos", ad.get("media", []))
+                    if isinstance(images, list):
+                        for img in images:
+                            if isinstance(img, dict):
+                                url = img.get("url") or img.get("large")
+                                if url: photos.append(url)
+                            elif isinstance(img, str):
+                                photos.append(img)
+                    
+                    if photos:
+                        details["photo_urls"] = photos
+            except Exception as e:
+                print(f"[LogicImmo] Error parsing detail JSON: {e}")
 
-        # Price
-        price_elem = soup.find(text=re.compile(r'\d+[\s\d]*€'))
-        if price_elem:
-            price_str = re.sub(r'[^\d]', '', price_elem)
-            if price_str: details["price"] = float(price_str)
-
-        ext_id = url.split('-')[-1].split('.')[0]
-        details["external_id"] = f"logic_{ext_id}"
-
-        # Attributes
-        chars = soup.get_text().lower()
-        if 'm²' in chars:
-            match = re.search(r'(\d+[\d\s,]*)\s*m²', chars)
-            if match:
-                details["area"] = float(match.group(1).replace(',', '.').replace(' ', ''))
-        if 'pièce' in chars:
-            match = re.search(r'(\d+)\s*pièce', chars)
-            if match:
-                details["rooms"] = int(match.group(1))
-
-        # Photo URLs
-        og_img = soup.find('meta', attrs={"property": "og:image"})
-        if og_img:
-            details["photo_urls"] = [og_img.get("content")]
+        # Photo URLs Fallback
+        if not details.get("photo_urls"):
+            og_img = soup.find('meta', attrs={"property": "og:image"})
+            if og_img:
+                details["photo_urls"] = [og_img.get("content")]
 
         return details

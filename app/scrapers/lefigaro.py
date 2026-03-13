@@ -56,14 +56,31 @@ class LeFigaroScraper(BaseScraper):
                             if price_str: price = float(price_str)
                     
                     ext_id = url.split('-')[-1].split('.')[0]
+                    
+                    # Extract city from title if possible
+                    # Example title: "Vente maison 4 pièces 142.87 m² à Tournon-sur-Rhône (07300), 290 000 €"
+                    city = None
+                    location = "France"
+                    match_loc = re.search(r'à (.*?) \((\d{5})\)', title)
+                    if match_loc:
+                        city_name = match_loc.group(1).strip()
+                        zip_code = match_loc.group(2).strip()
+                        city = self._normalize_city(city_name)
+                        location = f"{city_name} ({zip_code[:2]})"
+                    elif ' à ' in title:
+                        parts = title.split(' à ')
+                        if len(parts) > 1:
+                            potential_city = parts[1].split(',')[0].strip()
+                            city = self._normalize_city(potential_city)
+                            location = potential_city
 
                     listings.append({
                         "external_id": f"figaro_{ext_id}",
                         "title": title,
                         "url": url,
                         "price": price,
-                        "location": "France",
-                        "city": None,
+                        "location": location,
+                        "city": city,
                         "area": None,
                         "rooms": None,
                         "photo_urls": [],
@@ -91,8 +108,24 @@ class LeFigaroScraper(BaseScraper):
 
         # Extract basic info from meta tags
         details["url"] = url
-        details["title"] = soup.find('title').text.strip() if soup.find('title') else "Annonce Le Figaro"
+        og_title = soup.find('meta', attrs={"property": "og:title"})
+        title = og_title.get("content", "") if og_title else (soup.find('title').text.strip() if soup.find('title') else "Annonce Le Figaro")
+        details["title"] = title
         
+        # Extract city and location from title
+        match_loc = re.search(r'à (.*?) \((\d{5})\)', title)
+        if match_loc:
+            city_name = match_loc.group(1).strip()
+            zip_code = match_loc.group(2).strip()
+            details["city"] = self._normalize_city(city_name)
+            details["location"] = f"{city_name} ({zip_code[:2]})"
+        elif ' à ' in title:
+            parts = title.split(' à ')
+            if len(parts) > 1:
+                potential_city = parts[1].split(',')[0].strip()
+                details["city"] = self._normalize_city(potential_city)
+                details["location"] = potential_city
+
         og_desc = soup.find('meta', attrs={"property": "og:description"})
         details["description_text"] = og_desc.get("content", "") if og_desc else ""
 
@@ -108,23 +141,60 @@ class LeFigaroScraper(BaseScraper):
         ext_id = url.split('-')[-1].split('.')[0]
         details["external_id"] = f"figaro_{ext_id}"
 
-        # Look for attributes in the page
-        # Le Figaro often has a 'caracteristiques' section
-        chars = soup.find_all(['li', 'div'], class_=re.compile(r'attribute|feature|char'))
-        for char in chars:
-            text = char.get_text().lower()
-            if 'm²' in text:
-                match = re.search(r'(\d+[\d\s,]*)\s*m²', text)
-                if match:
-                    details["area"] = float(match.group(1).replace(',', '.').replace(' ', ''))
-            elif 'pièce' in text:
-                match = re.search(r'(\d+)\s*pièce', text)
-                if match:
-                    details["rooms"] = int(match.group(1))
+        # ── EXTRACT DATA FROM window.__NUXT__ (Modern Figaro) ──
+        nuxt_match = re.search(r'window\.__NUXT__\s*=\s*(\{.*?\});', html_content, re.DOTALL)
+        if nuxt_match:
+            try:
+                data = json.loads(nuxt_match.group(1))
+                # The path discovered by subagent: data.classifiedDetailResponse.classified
+                # For safety, let's search for it in the nested structure
+                classified = None
+                if "data" in data:
+                    for item in data["data"]:
+                        if isinstance(item, dict) and "classifiedDetailResponse" in item:
+                            classified = item["classifiedDetailResponse"].get("classified")
+                            break
+                
+                if classified:
+                    details["title"] = classified.get("title", details.get("title"))
+                    details["description_text"] = classified.get("description", details.get("description_text"))
+                    details["price"] = classified.get("price", details.get("price"))
+                    
+                    # Location
+                    loc_data = classified.get("location", {})
+                    city_name = loc_data.get("city")
+                    zip_code = loc_data.get("zipCode")
+                    if city_name:
+                        details["city"] = self._normalize_city(city_name)
+                        details["location"] = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
 
-        # Photo URLs
-        og_img = soup.find('meta', attrs={"property": "og:image"})
-        if og_img:
-            details["photo_urls"] = [og_img.get("content")]
+                    # Caracteristics
+                    details["area"] = classified.get("surface", details.get("area"))
+                    details["rooms"] = classified.get("roomCount", details.get("rooms"))
+                    details["bedrooms"] = classified.get("bedroomCount")
+                    
+                    # Photos
+                    photos_list = []
+                    images_data = classified.get("images", {})
+                    raw_photos = images_data.get("photos", classified.get("medias", []))
+                    if isinstance(raw_photos, list):
+                        for p in raw_photos:
+                            urls = p.get("url", {})
+                            best_url = urls.get("extra-large") or urls.get("large") or urls.get("medium") or urls.get("small")
+                            if best_url:
+                                photos_list.append(best_url)
+                    
+                    if photos_list:
+                        details["photo_urls"] = photos_list
+                    
+                    # If we found classified data, we can stop here or continue for fallback
+            except Exception as e:
+                print(f"[LeFigaro] Error parsing NUXT JSON: {e}")
+
+        # Photo URLs Fallback if nothing found in Nuxt
+        if not details.get("photo_urls"):
+            og_img = soup.find('meta', attrs={"property": "og:image"})
+            if og_img:
+                details["photo_urls"] = [og_img.get("content")]
 
         return details

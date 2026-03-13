@@ -216,6 +216,31 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+        .btn-refresh {
+            background: rgba(88, 101, 242, 0.1);
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            color: var(--accent);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-refresh:hover {
+            background: var(--accent);
+            color: white;
+            transform: rotate(180deg);
+        }
+        .btn-refresh.loading i {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 
@@ -252,12 +277,13 @@
                 <table>
                     <thead>
                         <tr>
+                            <th style="width: 40px;"></th>
                             <th>Titre</th>
                             <th>Source</th>
+                            <th>Lieu</th>
                             <th>Prix</th>
                             <th>Surface</th>
                             <th>Pièces</th>
-                            <th>Ville</th>
                             <th>DPE</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -266,12 +292,17 @@
                     <tbody>
                         {% for listing in listings %}
                         <tr>
+                            <td>
+                                <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)" title="Relancer le scraping">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                </button>
+                            </td>
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
+                            <td>{{ listing.location or listing.city or '-' }}</td>
                             <td class="col-price">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else 'NC' }} €</td>
                             <td>{{ listing.area|round|int if listing.area else 'NC' }} m²</td>
                             <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
-                            <td>{{ listing.city or '-' }}</td>
                             <td>
                                 {% if listing.dpe_rating %}
                                 <span class="dpe-tag dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</span>
@@ -295,5 +326,32 @@
         </div>
     </div>
 
+    <script>
+        async function rescrapeListing(listingId, btn) {
+            if (btn.classList.contains('loading')) return;
+            
+            btn.classList.add('loading');
+            const icon = btn.querySelector('i');
+            
+            try {
+                const response = await fetch(`/api/listings/${listingId}/rescrape`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Refresh page to show new data
+                    window.location.reload();
+                } else {
+                    alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur de connexion au serveur.");
+            } finally {
+                btn.classList.remove('loading');
+            }
+        }
+    </script>
 </body>
 </html>
