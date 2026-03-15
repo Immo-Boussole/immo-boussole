@@ -90,38 +90,42 @@ class LogicimmoScraper(BaseScraper):
         soup = BeautifulSoup(html_content, 'html.parser')
 
         details["url"] = url
-        # Try to find JSON payload
-        match = re.search(r'window\.__INITIAL_STATE__\s*=\s*({.*?});', html_content, re.DOTALL)
-        if match:
+        # Try to find JSON payload in INITIAL_STATE
+        initial_script = soup.find('script', text=re.compile(r'window\.__INITIAL_STATE__\s*='))
+        if initial_script and initial_script.string:
             try:
-                data = json.loads(match.group(1))
-                # LogicImmo (SeLoger group) structure
-                ad = None
-                if "listingDetail" in data:
-                    ad = data["listingDetail"].get("listing")
-                elif "ad" in data:
-                    ad = data["ad"]
-                
-                if ad:
-                    details["title"] = ad.get("title")
-                    details["description_text"] = ad.get("description")
-                    details["price"] = ad.get("price")
-                    details["area"] = ad.get("surface")
-                    details["rooms"] = ad.get("rooms")
+                start_idx = initial_script.string.find('{')
+                end_idx = initial_script.string.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = initial_script.string[start_idx:end_idx+1]
+                    data = json.loads(json_text)
+                    # LogicImmo (SeLoger group) structure
+                    ad = None
+                    if "listingDetail" in data:
+                        ad = data["listingDetail"].get("listing")
+                    elif "ad" in data:
+                        ad = data["ad"]
                     
-                    # Photos
-                    photos = []
-                    images = ad.get("photos", ad.get("media", []))
-                    if isinstance(images, list):
-                        for img in images:
-                            if isinstance(img, dict):
-                                url = img.get("url") or img.get("large")
-                                if url: photos.append(url)
-                            elif isinstance(img, str):
-                                photos.append(img)
-                    
-                    if photos:
-                        details["photo_urls"] = photos
+                    if ad:
+                        details["title"] = ad.get("title")
+                        details["description_text"] = ad.get("description")
+                        details["price"] = ad.get("price")
+                        details["area"] = ad.get("surface")
+                        details["rooms"] = ad.get("rooms")
+                        
+                        # Photos
+                        photos = []
+                        images = ad.get("photos", ad.get("media", []))
+                        if isinstance(images, list):
+                            for img in images:
+                                if isinstance(img, dict):
+                                    url = img.get("url") or img.get("large") or img.get("original")
+                                    if url: photos.append(url)
+                                elif isinstance(img, str):
+                                    photos.append(img)
+                        
+                        if photos:
+                            details["photo_urls"] = photos
             except Exception as e:
                 print(f"[LogicImmo] Error parsing detail JSON: {e}")
 

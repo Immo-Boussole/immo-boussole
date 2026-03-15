@@ -91,50 +91,63 @@ class BieniciScraper(BaseScraper):
         details["title"] = soup.find('title').text.strip() if soup.find('title') else "Annonce BienIci"
         
         # Try to find JSON payload which is very common on BienIci
-        match = re.search(r'window\.__INITIAL_STATE__\s*=\s*({.*?});', html_content, re.DOTALL)
-        if match:
+        initial_script = soup.find('script', text=re.compile(r'window\.__INITIAL_STATE__\s*='))
+        if initial_script and initial_script.string:
             try:
-                data = json.loads(match.group(1))
-                # Usually BienIci has ad data under adDetail or similar keys
-                ad = None
-                if "adDetail" in data:
-                    ad = data["adDetail"].get("ad")
-                elif "ads" in data and isinstance(data["ads"], dict):
-                    # Sometimes it's a map of ID -> ad
-                    ad = next(iter(data["ads"].values()), None)
-                
-                if ad:
-                    details["title"] = ad.get("title", details.get("title"))
-                    details["description_text"] = ad.get("description", details.get("description_text"))
-                    details["price"] = ad.get("price")
-                    details["area"] = ad.get("surfaceArea")
-                    details["rooms"] = ad.get("roomsCount")
+                start_idx = initial_script.string.find('{')
+                end_idx = initial_script.string.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = initial_script.string[start_idx:end_idx+1]
+                    data = json.loads(json_text)
+                    # Usually BienIci has ad data under adDetail or similar keys
+                    ad = None
+                    if "adDetail" in data:
+                        ad = data["adDetail"].get("ad")
+                    elif "ads" in data and isinstance(data["ads"], dict):
+                        # Sometimes it's a map of ID -> ad
+                        ad = next(iter(data["ads"].values()), None)
                     
-                    # Photos
-                    photos = []
-                    medias = ad.get("photos", ad.get("media", []))
-                    if isinstance(medias, list):
-                        for m in medias:
-                            if isinstance(m, dict):
-                                url = m.get("url")
-                                if url: photos.append(url)
-                            elif isinstance(m, str):
-                                photos.append(m)
-                    
-                    if photos:
-                        details["photo_urls"] = photos
-                    
-                    city = ad.get("city")
-                    if city:
-                        details["city"] = self._normalize_city(city)
-                        details["location"] = city
+                    if ad:
+                        details["title"] = ad.get("title", details.get("title"))
+                        details["description_text"] = ad.get("description", details.get("description_text"))
+                        details["price"] = ad.get("price")
+                        details["area"] = ad.get("surfaceArea")
+                        details["rooms"] = ad.get("roomsCount")
+                        
+                        # Photos
+                        photos = []
+                        medias = ad.get("photos", ad.get("media", []))
+                        if isinstance(medias, list):
+                            for m in medias:
+                                if isinstance(m, dict):
+                                    url = m.get("url")
+                                    if url: photos.append(url)
+                                elif isinstance(m, str):
+                                    photos.append(m)
+                        
+                        if photos:
+                            details["photo_urls"] = photos
+                        
+                        city = ad.get("city")
+                        if city:
+                            details["city"] = self._normalize_city(city)
+                            details["location"] = city
             except Exception as e:
                 print(f"[BienIci] Error parsing detail JSON: {e}")
 
-        # Photo URLs Fallback
-        if not details.get("photo_urls"):
-            og_img = soup.find('meta', attrs={"property": "og:image"})
-            if og_img:
-                details["photo_urls"] = [og_img.get("content")]
+        # Photo URLs Fallback if nothing found or only one photo
+        if not details.get("photo_urls") or len(details.get("photo_urls", [])) <= 1:
+            fb_photos = []
+            for img in soup.find_all('img', src=re.compile(r'bienici\.com\/image')):
+                src = img.get('src')
+                if src and 'thumbnail' not in src.lower():
+                    fb_photos.append(src)
+            
+            if fb_photos:
+                details["photo_urls"] = list(set(fb_photos + details.get("photo_urls", [])))
+            elif not details.get("photo_urls"):
+                og_img = soup.find('meta', attrs={"property": "og:image"})
+                if og_img:
+                    details["photo_urls"] = [og_img.get("content")]
 
         return details

@@ -96,9 +96,29 @@ async def fetch_basic_metadata(url: str) -> dict:
             details["title"] = fb_title
             if og_desc:
                 details["description_text"] = og_desc.get("content", "")
-            if og_img:
-                details["photo_urls"] = [og_img.get("content")]
-            print(f"[Services] Basic metadata OK: {fb_title!r}")
+            # Multiple photos from OpenGraph and Twitter tags
+            photo_urls = []
+            for og_img in soup.find_all("meta", attrs={"property": "og:image"}):
+                content = og_img.get("content")
+                if content: photo_urls.append(content)
+            
+            for tw_img in soup.find_all("meta", attrs={"name": "twitter:image"}):
+                content = tw_img.get("content")
+                if content: photo_urls.append(content)
+
+            # Fallback to certain <img> tags if no meta images found
+            if not photo_urls:
+                # Common patterns for listing images
+                img_tags = soup.find_all("img", src=re.compile(r'ad-image|listing|property|photo|gallery', re.I))
+                for img in img_tags:
+                    src = img.get("src") or img.get("data-src")
+                    if src and src.startswith("http"):
+                        photo_urls.append(src)
+            
+            if photo_urls:
+                details["photo_urls"] = list(dict.fromkeys(photo_urls)) # Remove duplicates while preserving order
+            
+            print(f"[Services] Basic metadata OK: {fb_title!r} ({len(photo_urls)} photos)")
         else:
             details["title"] = f"Annonce ({url[:40]}…)"
     except Exception as e:

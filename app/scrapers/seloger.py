@@ -106,22 +106,44 @@ class SelogerScraper(BaseScraper):
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # Try to find embedded JSON
+        # 1. Standard application/json tags
         scripts = soup.find_all('script', type='application/json')
         for script in scripts:
             try:
                 data = json.loads(script.string or "")
                 ad_details = self._extract_detail_from_json(data)
-                if ad_details:
+                if ad_details and ad_details.get("photo_urls"):
                     details.update(ad_details)
                     break
             except Exception:
                 continue
 
+        # 2. Modern window.__UFRN_LIFECYCLE_SERVERREQUEST__ (as JS variable)
+        if not details or not details.get("photo_urls"):
+            ufrn_script = soup.find('script', text=re.compile(r'window\.__UFRN_LIFECYCLE_SERVERREQUEST__'))
+            if ufrn_script and ufrn_script.string:
+                try:
+                    start_idx = ufrn_script.string.find('{')
+                    end_idx = ufrn_script.string.rfind('}')
+                    if start_idx != -1 and end_idx != -1:
+                        json_text = ufrn_script.string[start_idx:end_idx+1]
+                        data = json.loads(json_text)
+                        ad_details = self._extract_detail_from_json(data)
+                        if ad_details:
+                            details.update(ad_details)
+                except Exception as e:
+                    print(f"[SeLoger] Error parsing UFRN JSON: {e}")
+
         # Fallback HTML meta
-        if not details:
+        if not details or not details.get("photo_urls"):
             title_tag = soup.find('title')
-            if title_tag:
+            if title_tag and not details.get("title"):
                 details["title"] = title_tag.text.strip()
+            
+            og_img = soup.find('meta', attrs={"property": "og:image"})
+            if og_img:
+                details["photo_urls"] = [og_img.get("content")]
+
             og_desc = soup.find('meta', attrs={"property": "og:description"})
             if og_desc:
                 details["description_text"] = og_desc.get("content", "")
