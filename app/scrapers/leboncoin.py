@@ -161,8 +161,24 @@ class LeboncoinScraper(BaseScraper):
 
                     # Photos: get all images
                     images = ad.get("images", {})
-                    urls = images.get("urls_large", images.get("urls", []))
-                    details["photo_urls"] = urls if isinstance(urls, list) else []
+                    urls = images.get("urls_large") or images.get("urls")
+                    if isinstance(urls, list):
+                        details["photo_urls"] = [u for u in urls if isinstance(u, str)]
+                    elif isinstance(urls, str):
+                        details["photo_urls"] = [urls]
+                    else:
+                        details["photo_urls"] = []
+
+                    # Fallback to HTML if JSON images are missing or only one
+                    if len(details["photo_urls"]) <= 1:
+                        fb_photos = []
+                        # Look for images in the gallery container if possible
+                        for img in soup.find_all('img', src=re.compile(r'img\.leboncoin\.fr')):
+                            src = img.get('src') or img.get('data-src')
+                            if src and 'thumb' not in src.lower() and 'small' not in src.lower():
+                                fb_photos.append(src)
+                        if fb_photos:
+                            details["photo_urls"] = list(set(fb_photos + details["photo_urls"]))
 
                     # Attributes: DPE, GES, rooms, floor, taxes, charges, area
                     attrs = ad.get("attributes", [])

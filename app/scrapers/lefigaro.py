@@ -142,59 +142,93 @@ class LeFigaroScraper(BaseScraper):
         details["external_id"] = f"figaro_{ext_id}"
 
         # ── EXTRACT DATA FROM window.__NUXT__ (Modern Figaro) ──
-        nuxt_match = re.search(r'window\.__NUXT__\s*=\s*(\{.*?\});', html_content, re.DOTALL)
-        if nuxt_match:
+        # ── EXTRACT DATA FROM window.__NUXT__ (Modern Figaro) ──
+        # Search for the script tag containing __NUXT__
+        nuxt_script = None
+        for s in soup.find_all('script'):
+            if s.string and 'window.__NUXT__' in s.string:
+                nuxt_script = s
+                break
+        
+        if nuxt_script and nuxt_script.string:
+            print(f"[LeFigaro] Script __NUXT__ trouvé (taille: {len(nuxt_script.string)})", flush=True)
             try:
-                data = json.loads(nuxt_match.group(1))
-                # The path discovered by subagent: data.classifiedDetailResponse.classified
-                # For safety, let's search for it in the nested structure
-                classified = None
-                if "data" in data:
-                    for item in data["data"]:
-                        if isinstance(item, dict) and "classifiedDetailResponse" in item:
-                            classified = item["classifiedDetailResponse"].get("classified")
-                            break
-                
-                if classified:
-                    details["title"] = classified.get("title", details.get("title"))
-                    details["description_text"] = classified.get("description", details.get("description_text"))
-                    details["price"] = classified.get("price", details.get("price"))
+                # Find the JSON part between the first { and the last }
+                start_idx = nuxt_script.string.find('{')
+                end_idx = nuxt_script.string.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = nuxt_script.string[start_idx:end_idx+1]
+                    data = json.loads(json_text)
                     
-                    # Location
-                    loc_data = classified.get("location", {})
-                    city_name = loc_data.get("city")
-                    zip_code = loc_data.get("zipCode")
-                    if city_name:
-                        details["city"] = self._normalize_city(city_name)
-                        details["location"] = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
+                    classified = None
+                    if "data" in data:
+                        # Case: data is a list (common in Nuxt 3)
+                        if isinstance(data["data"], list):
+                            for item in data["data"]:
+                                if isinstance(item, dict) and "classifiedDetailResponse" in item:
+                                    classified = item["classifiedDetailResponse"].get("classified")
+                                    print("[LeFigaro] Classified trouvé dans data (liste)", flush=True)
+                                    break
+                        # Case: data is a dict (Nuxt 2)
+                        elif isinstance(data["data"], dict):
+                            classified = data["data"].get("classifiedDetailResponse", {}).get("classified")
+                            if classified: print("[LeFigaro] Classified trouvé dans data (dict)", flush=True)
+                    
+                    if classified:
+                        details["title"] = classified.get("title", details.get("title"))
+                        details["description_text"] = classified.get("description", details.get("description_text"))
+                        details["price"] = classified.get("price", details.get("price"))
+                        
+                        # Location
+                        loc_data = classified.get("location", {})
+                        city_name = loc_data.get("city")
+                        zip_code = loc_data.get("zipCode")
+                        if city_name:
+                            details["city"] = self._normalize_city(city_name)
+                            details["location"] = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
 
-                    # Caracteristics
-                    details["area"] = classified.get("surface", details.get("area"))
-                    details["rooms"] = classified.get("roomCount", details.get("rooms"))
-                    details["bedrooms"] = classified.get("bedroomCount")
-                    
-                    # Photos
-                    photos_list = []
-                    images_data = classified.get("images", {})
-                    raw_photos = images_data.get("photos", classified.get("medias", []))
-                    if isinstance(raw_photos, list):
-                        for p in raw_photos:
-                            urls = p.get("url", {})
-                            best_url = urls.get("extra-large") or urls.get("large") or urls.get("medium") or urls.get("small")
-                            if best_url:
-                                photos_list.append(best_url)
-                    
-                    if photos_list:
-                        details["photo_urls"] = photos_list
-                    
-                    # If we found classified data, we can stop here or continue for fallback
+                        # Caracteristics
+                        details["area"] = classified.get("surface", details.get("area"))
+                        details["rooms"] = classified.get("roomCount", details.get("rooms"))
+                        details["bedrooms"] = classified.get("bedroomCount")
+                        
+                        # Photos
+                        photos_list = []
+                        images_data = classified.get("images", {}) or {}
+                        raw_photos = images_data.get("photos") or classified.get("medias") or []
+                        print(f"[LeFigaro] Raw photos found: {len(raw_photos) if isinstance(raw_photos, list) else 'NOT A LIST'}", flush=True)
+                        
+                        if isinstance(raw_photos, list):
+                            for p in raw_photos:
+                                if not isinstance(p, dict): continue
+                                urls = p.get("url", {})
+                                best_url = (urls.get("extra-large") or urls.get("large") or 
+                                           urls.get("medium") or urls.get("small"))
+                                if best_url:
+                                    photos_list.append(best_url)
+                        
+                        if photos_list:
+                            details["photo_urls"] = photos_list
+                            print(f"[LeFigaro] Extrait {len(photos_list)} photos du Nuxt", flush=True)
             except Exception as e:
-                print(f"[LeFigaro] Error parsing NUXT JSON: {e}")
+                print(f"[LeFigaro] Erreur parsing Nuxt : {e}", flush=True)
+        else:
+            print("[LeFigaro] Script __NUXT__ non trouvé dans le HTML", flush=True)
 
-        # Photo URLs Fallback if nothing found in Nuxt
-        if not details.get("photo_urls"):
-            og_img = soup.find('meta', attrs={"property": "og:image"})
-            if og_img:
-                details["photo_urls"] = [og_img.get("content")]
+        # Photo URLs Fallback if nothing found or incomplete
+        if not details.get("photo_urls") or len(details.get("photo_urls", [])) <= 1:
+            # Try to find all picture tags or img tags with certain classes
+            fb_photos = []
+            for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro')):
+                src = img.get('src')
+                if src and 'thumb' not in src.lower():
+                    fb_photos.append(src)
+            
+            if fb_photos:
+                details["photo_urls"] = list(set(fb_photos + details.get("photo_urls", [])))
+            elif not details.get("photo_urls"):
+                og_img = soup.find('meta', attrs={"property": "og:image"})
+                if og_img:
+                    details["photo_urls"] = [og_img.get("content")]
 
         return details
