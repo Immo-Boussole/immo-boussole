@@ -62,6 +62,8 @@ db.sqlite3
 db.sqlite3-journal
 immo_boussole.db
 immo_boussole.db-journal
+*.db-shm
+*.db-wal
 
 # Flask stuff:
 instance/

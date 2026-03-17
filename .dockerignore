@@ -23,6 +23,8 @@ nodes_debug.json
 # Database (stored in Docker volume)
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Local media (stored in Docker volume)
 static/
