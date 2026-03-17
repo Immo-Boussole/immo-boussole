@@ -9,7 +9,6 @@
 - **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) depuis plus de 10 plateformes :
   - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
 - **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
-- **Détection de Doublons** : Alerte si un bien similaire (prix, surface, ville) est déjà présent.
 - **Avis Collaboratifs** : Système de notation et de commentaires séparés pour **Jean-Marc** et **Marceline**.
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
@@ -52,7 +51,12 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
    ```bash
    docker compose up -d --build immo-boussole
    ```
-   Cette commande télécharge et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
+   Cette commande construit (ou reconstruit) l'image à partir du code source local et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
+
+   > [!TIP]
+   > Pour mettre à jour l'application après une modification de code, relancez simplement cette même commande :
+   > `docker compose up -d --build immo-boussole`
+   > L'image sera mise à jour avec vos changements, mais **vos données (base de données et photos) resteront intactes** grâce aux volumes persistants.
 
 2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
 
@@ -69,7 +73,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 ## 📖 Guide d'Utilisation
 
 1. **Ajouter un bien** : Cliquez sur "+ Ajouter une annonce" et collez l'URL LeBonCoin ou SeLoger.
-2. **Évaluer** : Cliquez sur une carte pour voir les détails, puis remplissez votre section (Jean-Marc ou Marceline).
+2. **Évaluer** : Cliquez sur une carte pour voir les détails, puis remplissez votre section.
 3. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
 4. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
 
@@ -91,5 +95,14 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 - **Frontend** : HTML5 / Vanilla CSS / Jinja2
 - **Scheduler** : APScheduler (pour les recherches automatiques)
 
----
-*Développé avec ❤️ pour Jean-Marc & Marceline.*
+
+## Todo
+- [ ] Protéger l'accès à tout le site par un mécanisme d'authentification.
+- [ ] Créer une interface d'administration.
+- [ ] Créer un système de création de compte d'administrateur au premier démarrage.
+- [ ] Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
+- [ ] Ajouter un système de favoris pour les annonces.
+- [ ] Ajouter un système de favoris pour les recherches.
+- [ ] Rendre l'application multilangue (Français et Anglais)
+- [ ] Ajouter un système de notifications (email, push, etc.)
+- [ ] Remettre en place le mécanisme de détection de doublons (alerte si un bien similaire est déjà présent).

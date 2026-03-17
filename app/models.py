@@ -143,3 +143,13 @@ class SearchQuery(Base):
     active = Column(Integer, default=1)
     last_run = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReadySearch(Base):
+    __tablename__ = "ready_searches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    platform = Column(String, nullable=False)
+    criteria = Column(String, nullable=True)
+    url = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

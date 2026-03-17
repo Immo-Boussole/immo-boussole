@@ -831,6 +831,105 @@
             background: rgba(255, 255, 255, 0.12);
             border-radius: 10px;
         }
+
+        /* ── Toggle Switch ── */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--surface-2);
+            transition: .4s;
+            border-radius: 22px;
+            border: 1px solid var(--border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-2);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+            background-color: #fff;
+        }
+
+        /* ── Modal Batch Table ── */
+        .batch-table-wrapper {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-top: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .batch-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .batch-table th {
+            text-align: left;
+            padding: 0.6rem;
+            background: var(--surface-2);
+            color: var(--text-2);
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .batch-table td {
+            padding: 0.5rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .batch-table .url-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .batch-table .status-cell {
+            font-weight: 700;
+        }
+
+        .status-pending { color: var(--text-2); }
+        .status-loading { color: var(--accent); }
+        .status-success { color: var(--green); }
+        .status-error { color: var(--red); }
     </style>
 </head>
 
@@ -846,8 +945,6 @@
         {% set total = listings|length %}
         {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
         {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
-        {% set dup_cnt = listings|selectattr("is_duplicate")|list|length %}
-
         <div class="stat-grid">
             <div class="stat-card" style="grid-column: 1 / -1;">
                 <div class="val">{{ total }}</div>
@@ -861,12 +958,6 @@
                 <div class="val">{{ dis_cnt }}</div>
                 <div class="lbl">Disparues</div>
             </div>
-            {% if dup_cnt > 0 %}
-            <div class="stat-card dup" style="grid-column: 1 / -1;">
-                <div class="val">{{ dup_cnt }}</div>
-                <div class="lbl">⚠ Doublons détectés</div>
-            </div>
-            {% endif %}
         </div>
 
         <div class="sidebar-section-title">Navigation</div>
@@ -877,7 +968,7 @@
         </nav>
 
         <br>
-        <div class="sidebar-section-title">Recherches actives</div>
+        <div class="sidebar-section-title">Recherches Automatiques</div>
         {% if queries %}
         <div class="query-list">
             {% for query in queries %}
@@ -891,6 +982,44 @@
         {% else %}
         <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
         {% endif %}
+
+        <br>
+        <div class="sidebar-section-title">Recherches Manuelles</div>
+        {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list %}
+        {% if manual_listings %}
+        <div class="query-list">
+            {% for listing in manual_listings[:10] %}
+            <a href="/listings/{{ listing.id }}" class="query-item" style="text-decoration: none; display: block; transition: var(--trans);">
+                <div class="name" style="color: var(--text);">{{ listing.title[:30] }}{% if listing.title|length > 30 %}...{% endif %}</div>
+                <div class="src" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> MANUEL</span>
+                    <span style="font-weight: 700; color: var(--accent); font-size: 0.75rem;">
+                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}NC{% endif %}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+            {% if manual_listings|length > 10 %}
+            <div style="font-size: 0.7rem; color: var(--text-2); text-align: center; margin-top: 0.5rem;">
+                + {{ manual_listings|length - 10 }} autres
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="font-size: 0.8rem; color: var(--text-2);">Aucun bien ajouté manuellement</div>
+        {% endif %}
+
+        <br>
+        <div class="sidebar-section-title">Prêt à Rechercher</div>
+        <nav>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> Prêt à rechercher</a>
+        </nav>
+
+        <div style="margin-top: auto; padding-top: 2rem;">
+            <a href="/logout" class="nav-link" style="color: var(--red);">
+                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+            </a>
+        </div>
     </aside>
 
     <!-- ── Main ── -->
@@ -917,9 +1046,6 @@
             <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
                 <i class="fa-solid fa-eye-slash"></i> Disparues
             </button>
-            <button class="btn" id="f-duplicate" onclick="filter('duplicate', this)" style="color: var(--orange);">
-                <i class="fa-solid fa-copy"></i> Doublons
-            </button>
         </div>
 
         <div class="content">
@@ -927,7 +1053,6 @@
                 {% for listing in listings %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
                 <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status }}"
-                    data-dup="{{ 'true' if listing.is_duplicate else 'false' }}"
                     onclick="window.location='/listings/{{ listing.id }}'">
 
                     <div class="card-img">
@@ -938,8 +1063,6 @@
                         {% endif %}
                         <div class="card-overlay"></div>
                         <span class="badge {{ listing.status.value }}">{{ listing.status.value }}</span>
-                        {% if listing.is_duplicate %}<span class="badge-dup"><i class="fa-solid fa-clone"></i>
-                            Doublon</span>{% endif %}
                         {% if listing.dpe_rating %}
                         <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
                         {% endif %}
@@ -1035,33 +1158,79 @@
 
     <!-- ── Modal: Ajouter URL ── -->
     <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-        <div class="modal">
-            <h2><i class="fa-solid fa-link"></i> Ajouter une annonce</h2>
-            <p>Collez l'URL d'une annonce. Le scraping et le téléchargement des photos se lanceront automatiquement.</p>
-
-            <div class="form-group">
-                <label for="urlInput">URL de l'annonce</label>
-                <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
+        <div class="modal" id="modalContainer" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <div>
+                    <h2><i class="fa-solid fa-link"></i> Ajouter des annonces</h2>
+                    <p id="modalMainDesc">Configurez vos annonces à ajouter.</p>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-2); text-transform: uppercase;">Mode Multiple</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggleMultiple" onchange="toggleMode()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
-            <div
-                style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
-                <i class="fa-solid fa-circle-info"></i> '<strong>Ajouter sans scraper</strong>' est recommandé pour
-                LeBonCoin, ou en cas d'erreur lors du précédent import.
+            <!-- Single Mode -->
+            <div id="singleMode">
+                <div class="form-group">
+                    <label for="urlInput">URL de l'annonce</label>
+                    <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
+                    <i class="fa-solid fa-circle-info"></i> '<strong>Ajouter sans scraper</strong>' est recommandé pour LeBonCoin.
+                </div>
+            </div>
+
+            <!-- Multiple Mode -->
+            <div id="multipleMode" style="display: none;">
+                <div class="form-group">
+                    <label for="urlsArea">URLs (une par ligne)</label>
+                    <textarea id="urlsArea" style="width: 100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collez plusieurs URLs ici..."></textarea>
+                </div>
+                <button class="btn sm" onclick="loadUrls()" style="width: 100%; margin-top: -0.5rem; margin-bottom: 1rem;">
+                    <i class="fa-solid fa-list-check"></i> Analyser les URLs
+                </button>
+
+                <div id="batchContainer" style="display: none;">
+                    <div class="batch-table-wrapper">
+                        <table class="batch-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;">#</th>
+                                    <th>URL</th>
+                                    <th style="width: 100px; text-align: center;">Scraper ?</th>
+                                    <th style="width: 80px;">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <div class="alert" id="alertBox"></div>
 
-            <div class="modal-actions" style="flex-wrap: wrap;">
+            <div class="modal-actions" style="flex-wrap: wrap;" id="modalActions">
                 <button class="btn" onclick="closeModal()">Annuler</button>
-                <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)"
-                    style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
-                    <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
-                </button>
-                <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
-                    <div class="spinner" id="spinner"></div>
-                    <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
-                </button>
+                
+                <div id="singleActions" style="display: contents;">
+                    <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)" style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
+                        <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
+                    </button>
+                    <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
+                        <div class="spinner" id="spinner"></div>
+                        <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
+                    </button>
+                </div>
+
+                <div id="multipleActions" style="display: none;">
+                    <button class="btn primary" id="btnRunBatch" onclick="runBatch()" disabled>
+                        <i class="fa-solid fa-play"></i> Lancer l'ajout massif
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1095,8 +1264,100 @@
         function openModal() {
             document.getElementById('modal').classList.add('open');
             document.getElementById('urlInput').value = '';
+            document.getElementById('urlsArea').value = '';
+            document.getElementById('toggleMultiple').checked = false;
+            document.getElementById('batchBody').innerHTML = '';
+            document.getElementById('batchContainer').style.display = 'none';
+            toggleMode();
             hideAlert();
             setTimeout(() => document.getElementById('urlInput').focus(), 100);
+        }
+
+        function toggleMode() {
+            const isMultiple = document.getElementById('toggleMultiple').checked;
+            document.getElementById('singleMode').style.display = isMultiple ? 'none' : 'block';
+            document.getElementById('multipleMode').style.display = isMultiple ? 'block' : 'none';
+            document.getElementById('singleActions').style.display = isMultiple ? 'none' : 'contents';
+            document.getElementById('multipleActions').style.display = isMultiple ? 'flex' : 'none';
+            document.getElementById('modalMainDesc').textContent = isMultiple 
+                ? "Collez plusieurs URLs et choisissez pour chaque ligne si vous voulez scraper."
+                : "Collez l'URL d'une annonce immobilière.";
+        }
+
+        function loadUrls() {
+            const area = document.getElementById('urlsArea');
+            const lines = area.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+            const body = document.getElementById('batchBody');
+            body.innerHTML = '';
+            
+            if (lines.length === 0) {
+                showAlert('Aucune URL valide détectée (doit commencer par http).', 'error');
+                return;
+            }
+
+            lines.forEach((url, i) => {
+                const tr = document.createElement('tr');
+                tr.dataset.url = url;
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td class="url-cell" title="${url}">${url}</td>
+                    <td style="text-align: center;">
+                        <label class="switch" style="transform: scale(0.8);">
+                            <input type="checkbox" class="batch-scrape-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </td>
+                    <td class="status-cell status-pending">En attente</td>
+                `;
+                body.appendChild(tr);
+            });
+
+            document.getElementById('batchContainer').style.display = 'block';
+            document.getElementById('btnRunBatch').disabled = false;
+            hideAlert();
+        }
+
+        async function runBatch() {
+            const rows = document.querySelectorAll('#batchBody tr');
+            const btn = document.getElementById('btnRunBatch');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement en cours...';
+
+            let count = 0;
+            for (const row of rows) {
+                const url = row.dataset.url;
+                const skipScraping = !row.querySelector('.batch-scrape-toggle').checked;
+                const statusCell = row.querySelector('.status-cell');
+                
+                statusCell.textContent = 'En cours...';
+                statusCell.className = 'status-cell status-loading';
+
+                try {
+                    const res = await fetch('/api/listings/submit-url', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, skip_scraping: skipScraping }),
+                    });
+                    const data = await res.json();
+
+                    if (data.status === 'success' || data.status === 'created' || data.status === 'already_exists') {
+                        statusCell.textContent = 'Terminé';
+                        statusCell.className = 'status-cell status-success';
+                        count++;
+                    } else {
+                        statusCell.textContent = 'Erreur';
+                        statusCell.className = 'status-cell status-error';
+                    }
+                } catch (err) {
+                    statusCell.textContent = 'Échec';
+                    statusCell.className = 'status-cell status-error';
+                }
+                // Small delay between calls to be gentle with the scrapers/network
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Terminé (' + count + '/' + rows.length + ')';
+            setTimeout(() => { if (count > 0) window.location.reload(); }, 1500);
         }
 
         function closeModal() {
@@ -1167,7 +1428,6 @@
             document.querySelectorAll('.card').forEach(card => {
                 let show = false;
                 if (status === 'all') show = true;
-                else if (status === 'duplicate') show = card.dataset.dup === 'true';
                 else show = card.dataset.status === status;
                 card.style.display = show ? '' : 'none';
             });
