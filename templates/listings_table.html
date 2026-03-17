@@ -265,6 +265,57 @@
             <a href="/listings/table" class="nav-link active"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
         </nav>
+
+        <br>
+        <div class="sidebar-section-title">Recherches Automatiques</div>
+        {% if queries %}
+        <div class="query-list">
+            {% for query in queries %}
+            <div class="query-item" style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.8rem;">
+                <div class="name" style="font-weight: 600;">{{ query.name or query.url[:30] }}</div>
+                <div class="src" style="color: var(--text-2); font-size: 0.7rem; margin-top: 0.15rem;">
+                    <i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i>
+                    {{ query.source.value|upper }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
+        {% endif %}
+
+        <br>
+        <div class="sidebar-section-title">Recherches Manuelles</div>
+        {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list %}
+        {% if manual_listings %}
+        <div class="query-list">
+            {% for listing in manual_listings[:10] %}
+            <a href="/listings/{{ listing.id }}" class="query-item" style="text-decoration: none; display: block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.8rem; transition: var(--trans);">
+                <div class="name" style="font-weight: 600; color: var(--text);">{{ listing.title[:30] }}{% if listing.title|length > 30 %}...{% endif %}</div>
+                <div class="src" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--text-2); font-size: 0.7rem;">
+                    <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> MANUEL</span>
+                    <span style="font-weight: 700; color: var(--accent); font-size: 0.75rem;">
+                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}NC{% endif %}
+                    </span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="font-size: 0.8rem; color: var(--text-2);">Aucun bien ajouté manuellement</div>
+        {% endif %}
+
+        <br>
+        <div class="sidebar-section-title">Prêt à Rechercher</div>
+        <nav>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> Prêt à rechercher</a>
+        </nav>
+
+        <div style="margin-top: auto; padding-top: 2rem;">
+            <a href="/logout" class="nav-link" style="color: var(--red);">
+                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+            </a>
+        </div>
     </aside>
 
     <div class="main">

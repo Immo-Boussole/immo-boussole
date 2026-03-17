@@ -18,52 +18,6 @@ import httpx
 from bs4 import BeautifulSoup
 
 
-# ─── Duplicate Detection ──────────────────────────────────────────────────────
-
-def check_duplicate(
-    db: Session,
-    price: Optional[float],
-    area: Optional[float],
-    city: Optional[str],
-) -> Optional[Listing]:
-    """
-    Returns an existing listing if a near-match is found based on:
-    - Price within ±5%
-    - Area within ±5 m²
-    - Same normalized city name (case-insensitive)
-
-    Returns None if no duplicate exists.
-    """
-    if not price and not area and not city:
-        return None
-
-    query = db.query(Listing).filter(
-        Listing.status != ListingStatus.DISAPPEARED
-    )
-
-    candidates = query.all()
-
-    for listing in candidates:
-        # Price match (±5%)
-        price_match = True
-        if price and listing.price and listing.price > 0:
-            tolerance = listing.price * 0.05
-            price_match = abs(listing.price - price) <= tolerance
-
-        # Area match (±5 m²)
-        area_match = True
-        if area and listing.area and listing.area > 0:
-            area_match = abs(listing.area - area) <= 5.0
-
-        # City match (case-insensitive)
-        city_match = True
-        if city and listing.city:
-            city_match = listing.city.lower().strip() == city.lower().strip()
-
-        if price_match and area_match and city_match:
-            return listing
-
-    return None
 
 
 # ─── Basic Metadata Extraction ────────────────────────────────────────────────
@@ -174,16 +128,6 @@ async def create_listing_from_details(
     listing.scraped_at = datetime.utcnow()
     listing.status = ListingStatus.NEW
 
-    # ── Duplicate Check (if not already marked) ──
-    if not listing.is_duplicate:
-        price = details.get("price") or listing.price
-        area = details.get("area") or listing.area
-        city = details.get("city") or listing.city
-        duplicate = check_duplicate(db, price, area, city)
-        if duplicate and (not existing or duplicate.id != listing.id):
-            listing.is_duplicate = True
-            listing.duplicate_of_id = duplicate.id
-
     if not existing:
         db.add(listing)
     
@@ -259,14 +203,6 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                 existing.price = item.get("price")
                 existing.date_updated = datetime.utcnow()
             else:
-                # Check for duplicates
-                duplicate = check_duplicate(
-                    db,
-                    item.get("price"),
-                    item.get("area"),
-                    item.get("city"),
-                )
-
                 new_listing = Listing(
                     external_id=ext_id,
                     title=item.get("title", "Sans titre"),
@@ -280,8 +216,8 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                     source=query.source,
                     status=ListingStatus.NEW,
                     scraped_at=datetime.utcnow(),
-                    is_duplicate=(duplicate is not None),
-                    duplicate_of_id=duplicate.id if duplicate else None,
+                    is_duplicate=False,
+                    duplicate_of_id=None,
                 )
                 db.add(new_listing)
                 new_count += 1

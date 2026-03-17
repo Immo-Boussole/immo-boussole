@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     # App
     DEBUG: bool = True
+    APP_PASSWORD: str = "password"  # Default password, should be changed in .env
+    SECRET_KEY: str = "change-me-at-all-costs"  # Used for session cookies
 
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12

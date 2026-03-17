@@ -9,25 +9,26 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
-    check_duplicate,
     get_or_create_review,
     fetch_basic_metadata,
     generate_ideal_profile,
 )
 from app.media import json_to_photos
+from app.config import settings
 
 # Run migrations FIRST (adds missing columns to existing tables)
 run_migrations()
@@ -52,6 +53,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Immo-Boussole", lifespan=lifespan)
 
+# Add session middleware for authentication
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+
 # Mount static files (local media storage)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -70,6 +74,24 @@ class SubmitUrlRequest(BaseModel):
         if not v.startswith("http"):
             raise ValueError("URL must start with http:// or https://")
         return v.strip()
+
+
+class ListingUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    price: Optional[float] = None
+    area: Optional[float] = None
+    rooms: Optional[int] = None
+    bedrooms: Optional[int] = None
+    location: Optional[str] = None
+    description_text: Optional[str] = None
+    dpe_rating: Optional[str] = None
+    ges_rating: Optional[str] = None
+    land_tax: Optional[float] = None
+    charges: Optional[float] = None
+    agency_fee: Optional[float] = None
+    heating_type: Optional[str] = None
+    condition: Optional[str] = None
+    parking_count: Optional[int] = None
 
 
 class ReviewRequest(BaseModel):
@@ -102,10 +124,60 @@ class SearchQueryRequest(BaseModel):
     name: Optional[str] = None
 
 
+class ReadySearchRequest(BaseModel):
+    platform: str
+    custom_platform_name: Optional[str] = None
+    criteria: Optional[str] = None
+    url: str
+
+
+# ─── Auth Logic ───────────────────────────────────────────────────────────────
+
+def is_authenticated(request: Request) -> bool:
+    return request.session.get("authenticated") is True
+
+def login_required(request: Request):
+    if not is_authenticated(request):
+        # For API calls, return 401. For pages, redirect to login.
+        if request.url.path.startswith("/api/"):
+            raise HTTPException(status_code=401, detail="Non authentifié")
+        raise HTTPException(status_code=307, detail="Redirect to login")
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 307 and exc.detail == "Redirect to login":
+        return RedirectResponse(url="/login")
+    return await app.default_exception_handler(request, exc)
+
+
+@app.get("/login")
+def login_page(request: Request):
+    if is_authenticated(request):
+        return RedirectResponse(url="/")
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+def login(request: Request, password: str = Form(...)):
+    if password == settings.APP_PASSWORD:
+        request.session["authenticated"] = True
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "error": "Mot de passe incorrect"
+    })
+
+
+@app.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login")
+
+
 # ─── HTML Pages ───────────────────────────────────────────────────────────────
 
 @app.get("/")
-def read_root(request: Request, db: Session = Depends(get_db)):
+def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     queries = db.query(SearchQuery).all()
 
@@ -122,7 +194,11 @@ def read_root(request: Request, db: Session = Depends(get_db)):
 
 
 @app.get("/listings/table")
-def listings_table_page(request: Request, db: Session = Depends(get_db)):
+def listings_table_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
     listings = db.query(Listing).order_by(Listing.date_added.desc()).all()
     queries = db.query(SearchQuery).all()
 
@@ -142,6 +218,7 @@ def listing_detail_page(
     request: Request,
     listing_id: int,
     db: Session = Depends(get_db),
+    _auth = Depends(login_required)
 ):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -172,12 +249,35 @@ def listing_detail_page(
 
 
 @app.get("/profile/ideal")
-def ideal_profile_page(request: Request, db: Session = Depends(get_db)):
+def ideal_profile_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
     profile = generate_ideal_profile(db)
     return templates.TemplateResponse("ideal_profile.html", {
         "request": request,
         "profile": profile,
         "title": "Fiche de Bien Idéal — Immo-Boussole",
+    })
+
+
+@app.get("/searches/ready")
+def ready_searches_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    ready_searches = db.query(ReadySearch).all()
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).all()
+    
+    return templates.TemplateResponse("ready_searches.html", {
+        "request": request,
+        "ready_searches": ready_searches,
+        "queries": queries,
+        "listings": listings,
+        "title": "Prêt à Rechercher — Immo-Boussole",
     })
 
 
@@ -189,6 +289,7 @@ def get_listings(
     status: Optional[str] = None,
     source: Optional[str] = None,
     limit: int = 100,
+    _auth = Depends(login_required)
 ):
     """Get all listings with optional filters."""
     query = db.query(Listing)
@@ -225,7 +326,7 @@ def get_listings(
 
 
 @app.get("/api/listings/{listing_id}")
-def get_listing(listing_id: int, db: Session = Depends(get_db)):
+def get_listing(listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get a single listing by ID."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -234,7 +335,11 @@ def get_listing(listing_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/api/listings/{listing_id}/rescrape")
-async def rescrape_listing(listing_id: int, db: Session = Depends(get_db)):
+async def rescrape_listing(
+    listing_id: int, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
     """Manually trigger or re-trigger scraping for a specific listing."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -286,6 +391,7 @@ async def submit_listing_url(
     body: SubmitUrlRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    _auth = Depends(login_required)
 ):
     """
     Submit a listing URL for scraping and import.
@@ -396,7 +502,11 @@ async def submit_listing_url(
 
 
 @app.delete("/api/listings/{listing_id}")
-def delete_listing(listing_id: int, db: Session = Depends(get_db)):
+def delete_listing(
+    listing_id: int, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
     """Delete a listing and its reviews."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -406,10 +516,31 @@ def delete_listing(listing_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted", "listing_id": listing_id}
 
 
+@app.put("/api/listings/{listing_id}")
+def update_listing(
+    listing_id: int,
+    body: ListingUpdateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Update listing attributes."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+
+    update_data = body.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(listing, key, value)
+        
+    db.commit()
+    db.refresh(listing)
+    return {"status": "updated", "listing_id": listing.id}
+
+
 # ─── API: Reviews ─────────────────────────────────────────────────────────────
 
 @app.get("/api/listings/{listing_id}/reviews")
-def get_reviews(listing_id: int, db: Session = Depends(get_db)):
+def get_reviews(listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get all reviews for a listing."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
@@ -423,6 +554,7 @@ def create_or_update_review(
     listing_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
+    _auth = Depends(login_required)
 ):
     """Create or update a review for a listing. One review per (listing, reviewer)."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
@@ -453,6 +585,7 @@ def update_review(
     review_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
+    _auth = Depends(login_required)
 ):
     """Update a specific review by ID."""
     review = db.query(Review).filter(Review.id == review_id).first()
@@ -476,7 +609,7 @@ def update_review(
 
 
 @app.delete("/api/reviews/{review_id}")
-def delete_review(review_id: int, db: Session = Depends(get_db)):
+def delete_review(review_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Delete a review."""
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
@@ -489,7 +622,7 @@ def delete_review(review_id: int, db: Session = Depends(get_db)):
 # ─── API: Ideal Profile ───────────────────────────────────────────────────────
 
 @app.get("/api/profile/ideal")
-def get_ideal_profile(db: Session = Depends(get_db)):
+def get_ideal_profile(db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get the dynamically generated ideal property profile."""
     return generate_ideal_profile(db)
 
@@ -497,13 +630,13 @@ def get_ideal_profile(db: Session = Depends(get_db)):
 # ─── API: Search Queries ──────────────────────────────────────────────────────
 
 @app.get("/api/queries")
-def get_queries(db: Session = Depends(get_db)):
+def get_queries(db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get all search queries."""
     return db.query(SearchQuery).all()
 
 
 @app.post("/api/queries")
-def create_query(body: SearchQueryRequest, db: Session = Depends(get_db)):
+def create_query(body: SearchQueryRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Add a new search query to the scheduler."""
     try:
         source_enum = Source(body.source)
@@ -523,7 +656,7 @@ def create_query(body: SearchQueryRequest, db: Session = Depends(get_db)):
 
 
 @app.post("/api/queries/{query_id}/run")
-async def run_query_now(query_id: int, db: Session = Depends(get_db)):
+async def run_query_now(query_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Manually trigger scraping for a specific search query."""
     query = db.query(SearchQuery).filter(SearchQuery.id == query_id).first()
     if not query:
@@ -534,3 +667,56 @@ async def run_query_now(query_id: int, db: Session = Depends(get_db)):
         return {"status": "completed", "query": query.name}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─── API: Ready Searches ──────────────────────────────────────────────────────
+
+@app.post("/api/searches/ready")
+def create_ready_search(body: ReadySearchRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    """Add a new ready search."""
+    platform_name = body.platform
+    if body.platform == "manuel" and body.custom_platform_name:
+        platform_name = f"{body.custom_platform_name} (ajout manuel)"
+    
+    # We no longer strictly enforce Source enum for platform since it can be custom
+    search = ReadySearch(
+        platform=platform_name,
+        criteria=body.criteria,
+        url=body.url,
+    )
+    db.add(search)
+    db.commit()
+    db.refresh(search)
+    return search
+
+
+@app.put("/api/searches/ready/{search_id}")
+def update_ready_search(search_id: int, body: ReadySearchRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    """Update an existing ready search."""
+    search = db.query(ReadySearch).filter(ReadySearch.id == search_id).first()
+    if not search:
+        raise HTTPException(status_code=404, detail="Recherche introuvable")
+
+    platform_name = body.platform
+    if body.platform == "manuel" and body.custom_platform_name:
+        platform_name = f"{body.custom_platform_name} (ajout manuel)"
+
+    search.platform = platform_name
+    search.criteria = body.criteria
+    search.url = body.url
+
+    db.commit()
+    db.refresh(search)
+    return search
+
+
+@app.delete("/api/searches/ready/{search_id}")
+def delete_ready_search(search_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    """Remove a ready search."""
+    search = db.query(ReadySearch).filter(ReadySearch.id == search_id).first()
+    if not search:
+        raise HTTPException(status_code=404, detail="Recherche introuvable")
+    
+    db.delete(search)
+    db.commit()
+    return {"status": "deleted", "id": search_id}
