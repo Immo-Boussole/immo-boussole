@@ -70,6 +70,16 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 ---
 
+## 🔒 Sécurité & Authentification
+
+L'accès à l'ensemble du site est protégé par un mécanisme d'authentification par mot de passe partagé.
+
+- **Configuration** : Définissez votre mot de passe dans le fichier `.env` via la variable `APP_PASSWORD`.
+- **Session** : Les sessions sont sécurisées via une `SECRET_KEY` (générée automatiquement lors de l'installation ou à définir dans `.env`).
+- **Fonctionnement** : Toute tentative d'accès non authentifiée redirige vers la page de connexion. Un bouton "Déconnexion" est disponible dans le menu latéral pour fermer la session.
+
+---
+
 ## 📖 Guide d'Utilisation
 
 1. **Ajouter un bien** : Cliquez sur "+ Ajouter une annonce" et collez l'URL LeBonCoin ou SeLoger.
@@ -97,7 +107,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 
 ## Todo
-- [ ] Protéger l'accès à tout le site par un mécanisme d'authentification.
+- [X] Protéger l'accès à tout le site par un mécanisme d'authentification.
 - [ ] Créer une interface d'administration.
 - [ ] Créer un système de création de compte d'administrateur au premier démarrage.
 - [ ] Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
