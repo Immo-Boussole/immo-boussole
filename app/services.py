@@ -26,20 +26,81 @@ async def fetch_basic_metadata(url: str) -> dict:
     """
     Attempts to retrieve listing metadata (title, description, image) 
     using basic HTTP requests and OpenGraph meta tags.
+    For LeBonCoin, injects WhatsApp User-Agent and extracts full __NEXT_DATA__ payload to bypass Datadome.
     """
     details = {}
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Accept-Language": "fr-FR,fr;q=0.9",
     }
+    
+    # Bypass Datadome for LeBonCoin
+    if "leboncoin.fr" in url:
+        headers["User-Agent"] = "WhatsApp/2.21.19.21 A"
+
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             resp = await client.get(url, headers=headers)
         if resp.status_code == 200:
-            soup = BeautifulSoup(resp.text, "html.parser")
+            html_content = resp.text
+            
+            # ── LeBonCoin __NEXT_DATA__ bypass ──
+            if "leboncoin.fr" in url:
+                import re
+                match = re.search(
+                    r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+                    html_content, re.DOTALL
+                )
+                if match:
+                    try:
+                        data = json.loads(match.group(1))
+                        ad = data.get("props", {}).get("pageProps", {}).get("ad", {})
+                        if ad:
+                            details["title"] = ad.get("subject", "")
+                            details["description_text"] = ad.get("body", "")
+                            price_list = ad.get("price", [0])
+                            details["price"] = float(price_list[0]) if price_list else 0.0
+                            
+                            location = ad.get("location", {})
+                            city = location.get("city", "")
+                            zipcode = location.get("zipcode", "")
+                            details["location"] = f"{city} {zipcode}".strip()
+                            details["city"] = city
+                            
+                            images = ad.get("images", {})
+                            urls = images.get("urls_large") or images.get("urls")
+                            if isinstance(urls, list):
+                                details["photo_urls"] = [u for u in urls if isinstance(u, str)]
+                            elif isinstance(urls, str):
+                                details["photo_urls"] = [urls]
+                                
+                            # Attributes
+                            for attr in ad.get("attributes", []):
+                                key = attr.get("key")
+                                val = attr.get("value")
+                                if key == "square":
+                                    try: details["area"] = float(str(val).replace(",", "."))
+                                    except: pass
+                                elif key == "rooms":
+                                    try: details["rooms"] = int(val)
+                                    except: pass
+                                elif key == "energy_rate":
+                                    details["dpe_rating"] = str(val).upper()[:1] if val else None
+                                elif key == "ges":
+                                    details["ges_rating"] = str(val).upper()[:1] if val else None
+                                elif key in ("annual_charges", "charges"):
+                                    try: details["charges"] = float(str(val).replace(",", "."))
+                                    except: pass
+                            
+                            print(f"[Services] LBC Fast Scrape OK: {details['title']} ({len(details.get('photo_urls', []))} photos)")
+                            return details
+                    except Exception as e:
+                        print(f"[Services] LBC __NEXT_DATA__ fast extraction failed: {e}")
+
+            # ── Fallback standard OpenGraph ──
+            soup = BeautifulSoup(html_content, "html.parser")
             og_title = soup.find("meta", attrs={"property": "og:title"})
             og_desc = soup.find("meta", attrs={"property": "og:description"})
-            og_img = soup.find("meta", attrs={"property": "og:image"})
             page_title = soup.find("title")
 
             fb_title = (
@@ -50,6 +111,7 @@ async def fetch_basic_metadata(url: str) -> dict:
             details["title"] = fb_title
             if og_desc:
                 details["description_text"] = og_desc.get("content", "")
+            
             # Multiple photos from OpenGraph and Twitter tags
             photo_urls = []
             for og_img in soup.find_all("meta", attrs={"property": "og:image"}):
@@ -62,7 +124,7 @@ async def fetch_basic_metadata(url: str) -> dict:
 
             # Fallback to certain <img> tags if no meta images found
             if not photo_urls:
-                # Common patterns for listing images
+                import re
                 img_tags = soup.find_all("img", src=re.compile(r'ad-image|listing|property|photo|gallery', re.I))
                 for img in img_tags:
                     src = img.get("src") or img.get("data-src")
@@ -70,11 +132,11 @@ async def fetch_basic_metadata(url: str) -> dict:
                         photo_urls.append(src)
             
             if photo_urls:
-                details["photo_urls"] = list(dict.fromkeys(photo_urls)) # Remove duplicates while preserving order
+                details["photo_urls"] = list(dict.fromkeys(photo_urls))
             
             print(f"[Services] Basic metadata OK: {fb_title!r} ({len(photo_urls)} photos)")
         else:
-            details["title"] = f"Annonce ({url[:40]}…)"
+            details["title"] = f"Annonce ({url[:40]}…) - Erreur {resp.status_code}"
     except Exception as e:
         print(f"[Services] Error fetching basic metadata for {url}: {e}")
         details["title"] = f"Annonce ({url[:40]}…)"

@@ -1,6 +1,6 @@
 # 🧭 Immo-Boussole
 
-**Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger) de manière structurée entre **Jean-Marc** et **Marceline**.
+**Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger) de manière structurée.
 
 ![Dashboard Preview](static/img/dashboard_preview.png) *(Note: Générez votre propre aperçu après lancement)*
 
@@ -9,7 +9,7 @@
 - **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) depuis plus de 10 plateformes :
   - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
 - **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
-- **Avis Collaboratifs** : Système de notation et de commentaires séparés pour **Jean-Marc** et **Marceline**.
+- **Avis Collaboratifs** : Système de notation et de commentaires séparés.
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
 
@@ -101,15 +101,16 @@ L'accès à l'ensemble du site est protégé par un mécanisme d'authentificatio
 - **Backend** : FastAPI (Python)
 - **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
 - **Scraping** : FlareSolverr / BeautifulSoup4 / HTTPX
-- **Scrapers additionnels (Figaro, LogicImmo, etc.) ont été adaptés depuis le projet [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper)
+- **Scrapers additionnels** : Figaro et LogicImmo adaptés depuis le projet [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper)
 - **Frontend** : HTML5 / Vanilla CSS / Jinja2
 - **Scheduler** : APScheduler (pour les recherches automatiques)
 
 
 ## Todo
 - [X] Protéger l'accès à tout le site par un mécanisme d'authentification.
+- [X] Créer un système de création de compte d'administrateur au premier démarrage.
+- [ ] Crée un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
 - [ ] Créer une interface d'administration.
-- [ ] Créer un système de création de compte d'administrateur au premier démarrage.
 - [ ] Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
 - [ ] Ajouter un système de favoris pour les annonces.
 - [ ] Ajouter un système de favoris pour les recherches.

@@ -8,8 +8,11 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+import hashlib
+import os
 
-from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response
+
+from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -94,6 +97,10 @@ class ListingUpdateRequest(BaseModel):
     parking_count: Optional[int] = None
 
 
+class PhotoImportRequest(BaseModel):
+    urls: list[str]
+
+
 class ReviewRequest(BaseModel):
     reviewer: str
     pros: Optional[str] = None
@@ -136,8 +143,15 @@ class ReadySearchRequest(BaseModel):
 def is_authenticated(request: Request) -> bool:
     return request.session.get("authenticated") is True
 
-def login_required(request: Request):
+def login_required(request: Request, db: Session = Depends(get_db)):
     if not is_authenticated(request):
+        # Check if any user exists
+        user_count = db.query(models.User).count()
+        if user_count == 0:
+            if request.url.path.startswith("/api/"):
+                raise HTTPException(status_code=401, detail="Setup required")
+            raise HTTPException(status_code=307, detail="Redirect to setup-admin")
+            
         # For API calls, return 401. For pages, redirect to login.
         if request.url.path.startswith("/api/"):
             raise HTTPException(status_code=401, detail="Non authentifié")
@@ -145,26 +159,71 @@ def login_required(request: Request):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    if exc.status_code == 307 and exc.detail == "Redirect to login":
-        return RedirectResponse(url="/login")
+    if exc.status_code == 307:
+        if exc.detail == "Redirect to login":
+            return RedirectResponse(url="/login")
+        elif exc.detail == "Redirect to setup-admin":
+            return RedirectResponse(url="/setup-admin")
     return await app.default_exception_handler(request, exc)
 
 
+@app.get("/setup-admin")
+def setup_admin_page(request: Request, db: Session = Depends(get_db)):
+    if db.query(models.User).count() > 0:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse("setup_admin.html", {"request": request})
+
+
+@app.post("/setup-admin")
+def setup_admin(
+    request: Request, 
+    username: str = Form(...), 
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    if db.query(models.User).count() > 0:
+        return RedirectResponse(url="/login")
+        
+    salt = os.urandom(16)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    
+    user = models.User(username=username, password_hash=pwd_hash, salt=salt)
+    db.add(user)
+    db.commit()
+    
+    # Auto-login after creation
+    request.session["authenticated"] = True
+    request.session["username"] = username
+    return RedirectResponse(url="/", status_code=303)
+
+
 @app.get("/login")
-def login_page(request: Request):
+def login_page(request: Request, db: Session = Depends(get_db)):
+    if db.query(models.User).count() == 0:
+        return RedirectResponse(url="/setup-admin")
     if is_authenticated(request):
         return RedirectResponse(url="/")
     return templates.TemplateResponse("login.html", {"request": request})
 
 
 @app.post("/login")
-def login(request: Request, password: str = Form(...)):
-    if password == settings.APP_PASSWORD:
-        request.session["authenticated"] = True
-        return RedirectResponse(url="/", status_code=303)
+def login(
+    request: Request, 
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if user:
+        pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), user.salt, 100000)
+        if pwd_hash == user.password_hash:
+            request.session["authenticated"] = True
+            request.session["username"] = username
+            return RedirectResponse(url="/", status_code=303)
+            
     return templates.TemplateResponse("login.html", {
         "request": request,
-        "error": "Mot de passe incorrect"
+        "error": "Identifiants incorrects"
     })
 
 
@@ -535,6 +594,66 @@ def update_listing(
     db.commit()
     db.refresh(listing)
     return {"status": "updated", "listing_id": listing.id}
+
+
+@app.post("/api/listings/{listing_id}/photos")
+async def import_listing_photos(
+    listing_id: int,
+    body: PhotoImportRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Import and download photos for an existing listing from a list of URLs."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+
+    urls_to_download = [u.strip() for u in body.urls if u.strip().startswith("http")]
+    if not urls_to_download:
+        return {"status": "no_urls", "imported": 0}
+
+    from app.media import download_listing_photos, json_to_photos, photos_to_json
+    local_paths = await download_listing_photos(listing.id, urls_to_download)
+    
+    if local_paths:
+        existing_photos = json_to_photos(listing.photos_local)
+        # Avoid exact duplicates in the local paths list
+        for path in local_paths:
+            if path not in existing_photos:
+                existing_photos.append(path)
+        listing.photos_local = photos_to_json(existing_photos)
+        db.commit()
+
+    return {"status": "success", "imported": len(local_paths)}
+
+
+@app.post("/api/listings/{listing_id}/photos/upload")
+async def upload_listing_photos(
+    listing_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Upload photos directly for a listing via multipart form data."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+
+    if not files:
+        return {"status": "no_files", "imported": 0}
+
+    from app.media import save_uploaded_photos, json_to_photos, photos_to_json
+    local_paths = await save_uploaded_photos(listing.id, files)
+
+    if local_paths:
+        existing_photos = json_to_photos(listing.photos_local)
+        for path in local_paths:
+            if path not in existing_photos:
+                existing_photos.append(path)
+        listing.photos_local = photos_to_json(existing_photos)
+        db.commit()
+
+    return {"status": "success", "imported": len(local_paths)}
 
 
 # ─── API: Reviews ─────────────────────────────────────────────────────────────

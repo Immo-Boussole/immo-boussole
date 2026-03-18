@@ -1016,6 +1016,11 @@
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem;">
+            {% if request.session.get('username') %}
+            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
+                Connecté: <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+            </div>
+            {% endif %}
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
             </a>

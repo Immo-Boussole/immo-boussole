@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Optional
 
 import httpx
+from fastapi import UploadFile
 
 MEDIA_BASE_DIR = Path("static/media")
 
@@ -140,3 +141,35 @@ def json_to_photos(json_str: Optional[str]) -> list[str]:
         return json.loads(json_str)
     except (json.JSONDecodeError, TypeError):
         return []
+
+
+async def save_uploaded_photos(listing_id: int, files: list[UploadFile]) -> list[str]:
+    """
+    Saves uploaded files to the listing's media directory.
+    Returns a list of local relative paths for successfully saved photos.
+    """
+    if not files:
+        return []
+
+    media_dir = get_listing_media_dir(listing_id)
+    local_paths = []
+
+    # Get maximum existing index to prevent overwriting 'photo_0.jpg' etc.
+    existing_photos = get_local_photos(listing_id)
+    start_index = len(existing_photos)
+
+    for i, file in enumerate(files):
+        # We assume the file is an image. We can guess the extension.
+        ext = Path(file.filename).suffix.lower()
+        if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+            ext = ".jpg"  # fallback
+
+        dest_path = media_dir / f"photo_upload_{start_index + i}{ext}"
+        try:
+            content = await file.read()
+            dest_path.write_bytes(content)
+            local_paths.append(str(dest_path).replace("\\", "/"))
+        except Exception as e:
+            print(f"[Media] Failed to save uploaded photo {file.filename}: {e}")
+
+    return local_paths

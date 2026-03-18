@@ -115,7 +115,12 @@ class LogicimmoScraper(BaseScraper):
                         
                         # Photos
                         photos = []
-                        images = ad.get("photos", ad.get("media", []))
+                        images = ad.get("photos", ad.get("media", ad.get("pictures", ad.get("images", []))))
+                        
+                        # Sometimes photos are under 'domains' -> 'medias' -> 'images' (like SeLoger)
+                        if not images and isinstance(ad.get("domains"), dict):
+                            images = ad.get("domains", {}).get("medias", {}).get("images", [])
+
                         if isinstance(images, list):
                             for img in images:
                                 if isinstance(img, dict):
@@ -129,7 +134,32 @@ class LogicimmoScraper(BaseScraper):
             except Exception as e:
                 print(f"[LogicImmo] Error parsing detail JSON: {e}")
 
-        # Photo URLs Fallback
+        # Advanced Photo Extraction Fallback: 
+        # LogicImmo often requires clicking "Afficher les photos", meaning photos are stored in JSON state.
+        if len(details.get("photo_urls", [])) <= 1:
+            all_scripts = soup.find_all('script')
+            extracted_photos = []
+            for script in all_scripts:
+                text = script.string
+                if not text: continue
+                # Unescape JSON URLs
+                text = text.replace('\\/', '/')
+                urls = re.findall(r'https?://[^\s"\'<>{}\\[\\]]+(?:\.jpg|\.jpeg|\.png|\.webp)', text, flags=re.IGNORECASE)
+                for u in urls:
+                    ul = u.lower()
+                    if 'logo' not in ul and 'icon' not in ul and 'avatar' not in ul and 'tracker' not in ul and 'banner' not in ul:
+                        if 'seloger' in ul or 'logic-immo' in ul or 'poliris' in ul or 'medias' in ul or 'photo' in ul or 'aviv' in ul:
+                            # Avoid thumbnails and very small images if possible by checking URL
+                            if '120x' not in ul and 'thumb' not in ul:
+                                extracted_photos.append(u)
+            
+            if extracted_photos:
+                # Deduplicate preserving order
+                unique_photos = list(dict.fromkeys(extracted_photos))
+                if len(unique_photos) > len(details.get("photo_urls", [])):
+                    details["photo_urls"] = unique_photos
+
+        # Final Photo URLs Fallback
         if not details.get("photo_urls"):
             og_img = soup.find('meta', attrs={"property": "og:image"})
             if og_img:
