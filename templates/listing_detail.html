@@ -177,8 +177,54 @@
         .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid var(--green); border-radius: 12px; padding: 0.85rem 1.25rem; font-size: 0.82rem; font-weight: 600; color: var(--green); box-shadow: var(--shadow); transform: translateY(80px); opacity: 0; transition: var(--trans); z-index: 999; }
         .toast.show { transform: translateY(0); opacity: 1; }
 
+        /* ── Fullscreen Gallery Lightbox ── */
+        .gallery-overlay {
+            position: fixed; inset: 0; background: #fff; z-index: 2000;
+            display: none; align-items: stretch; justify-content: center;
+        }
+        .gallery-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
+        .gallery-close {
+            position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; 
+            border: none; font-size: 1.5rem; color: #1a1a1a; cursor: pointer; z-index: 2010;
+            transition: color 0.2s;
+        }
+        .gallery-close:hover { color: var(--accent); }
+        .gallery-content { display: flex; flex: 1; height: 100vh; position: relative; }
+        .gallery-main { 
+            flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #fff;
+            padding: 2rem;
+        }
+        .gallery-main img { max-width: 100%; max-height: calc(100vh - 4rem); object-fit: contain; }
+        .gallery-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: #fff; border: 1px solid #e0e0e0; color: #1a1a1a;
+            width: 48px; height: 48px; border-radius: 50%;
+            font-size: 1.2rem; cursor: pointer; z-index: 5;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: var(--trans);
+        }
+        .gallery-btn:hover { background: #f0f0f0; }
+        .gallery-prev { left: 2rem; }
+        .gallery-next { right: 2rem; }
+        
+        .gallery-sidebar { 
+            width: 380px; background: #fff; border-left: 1px solid #e0e0e0;
+            display: flex; flex-direction: column; overflow-y: auto; color: #1a1a1a;
+            flex-shrink: 0;
+        }
+        .gallery-header { padding: 2rem 1.5rem 1rem; }
+        .gallery-idx { font-size: 0.75rem; font-weight: 700; color: #666; margin-bottom: 0.5rem; }
+        .gallery-title { font-size: 1rem; font-weight: 800; line-height: 1.3; margin-bottom: 1.5rem; }
+        
+        .gallery-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 1.5rem 2rem; }
+        .gallery-thumb { width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 4px; overflow: hidden; opacity: 0.3; transition: var(--trans); }
+        .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-thumb:hover { opacity: 0.8; }
+        .gallery-thumb.active { opacity: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
+
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+        .gallery-sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
 
         .btn.loading i { animation: spin 1s linear infinite; pointer-events: none; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -195,6 +241,9 @@
     </button>
     <button class="btn btn-edit-nav" onclick="openEditModal()" title="Éditer l'annonce" style="margin-right: 0.75rem; color: var(--text); border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05);">
         <i class="fa-solid fa-pen"></i> Éditer
+    </button>
+    <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="Importer des photos par URL" style="margin-right: 0.75rem; color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.05);">
+        <i class="fa-solid fa-images"></i> Photos
     </button>
     <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
         <i class="fa-solid fa-trash-can"></i> Supprimer
@@ -215,7 +264,7 @@
                     {% if photos %}
                     {% for photo in photos %}
                     <div class="carousel-slide">
-                        <img src="/{{ photo }}" alt="Photo {{ loop.index }}" loading="{{ 'eager' if loop.index == 1 else 'lazy' }}">
+                        <img src="/{{ photo }}" alt="Photo {{ loop.index }}" loading="{{ 'eager' if loop.index == 1 else 'lazy' }}" onclick="openGallery({{ loop.index0 }})" style="cursor: zoom-in;">
                     </div>
                     {% endfor %}
                     <span class="photo-count">{{ photos|length }} photo{{ 's' if photos|length > 1 }}</span>
@@ -631,6 +680,33 @@
     </div>
 </div>
 
+<!-- ── Modal: Photo Import ── -->
+<div class="modal-backdrop" id="photoModal" onclick="if(event.target===this)closePhotoModal()">
+    <div class="modal" style="max-width: 500px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-images" style="color: var(--accent);"></i> Importer des photos</h2>
+            <button class="btn sm" onclick="closePhotoModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-2); margin-bottom: 1.5rem;">Glissez-déposez vos images ci-dessous ou collez leurs URLs.</p>
+        
+        <div class="drop-zone" id="drop-zone" style="border: 2px dashed var(--border); border-radius: 9px; padding: 2rem; text-align: center; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; background: var(--surface-2);">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-2); margin-bottom: 0.5rem; pointer-events: none;"></i>
+            <p style="font-size: 0.82rem; color: var(--text-2); pointer-events: none; margin-bottom: 0;">Glissez-déposez vos images ici ou cliquez pour parcourir</p>
+            <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 1rem; color: var(--text-2); font-size: 0.8rem; font-weight: 600;">OU</div>
+
+        <div class="form-row">
+            <textarea id="photo-urls" style="min-height: 100px; width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collage d'URLs : https://.../img1.jpg&#10;https://.../img2.jpg"></textarea>
+        </div>
+        <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
+            <button class="btn" onclick="closePhotoModal()">Annuler</button>
+            <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> Importer</button>
+        </div>
+    </div>
+</div>
+
 <!-- Extra styles for deletion modal on this page -->
 <style>
     .modal-backdrop {
@@ -654,6 +730,116 @@
 </style>
 
 <script>
+    // ── Photo Import Logic ───────────────────────────────────────────────────
+    function openPhotoModal() {
+        document.getElementById('photoModal').classList.add('open');
+        document.getElementById('photo-urls').value = '';
+    }
+    function closePhotoModal() {
+        document.getElementById('photoModal').classList.remove('open');
+    }
+    async function submitPhotos(listingId) {
+        const urlsText = document.getElementById('photo-urls').value;
+        const urls = urlsText.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+        
+        if (urls.length === 0) {
+            showToast('Veuillez entrer au moins une URL valide.', false);
+            return;
+        }
+
+        const btn = document.getElementById('btn-submit-photos');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Importation...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/listings/${listingId}/photos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ urls }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`✓ ${data.imported} photo(s) importée(s) avec succès !`);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Erreur lors de l\'importation.', false);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (e) {
+            showToast('Erreur réseau.', false);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    // ── Drag & Drop Logic ────────────────────────────────────────────────────
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--accent)';
+        dropZone.style.background = 'rgba(79, 142, 247, 0.05)';
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--surface-2)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--surface-2)';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUploads(files, {{ listing.id }});
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUploads(e.target.files, {{ listing.id }});
+        }
+    });
+
+    async function handleFileUploads(files, listingId) {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        
+        const btn = document.getElementById('btn-submit-photos');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Envoi...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/listings/${listingId}/photos/upload`, {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`✓ ${data.imported} photo(s) envoyée(s) avec succès !`);
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Erreur lors de l\'envoi des fichiers.', false);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch(e) {
+            showToast('Erreur réseau.', false);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
     // ── Deletion Logic ────────────────────────────────────────────────────────
     let pendingDeleteId = null;
 
@@ -769,9 +955,17 @@
 
     // Keyboard navigation
     document.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft') slide(-1);
-        if (e.key === 'ArrowRight') slide(1);
-        if (e.key === 'Escape') { closeDeleteModal(); }
+        const isGalleryOpen = document.getElementById('galleryOverlay') && document.getElementById('galleryOverlay').classList.contains('open');
+        
+        if (isGalleryOpen) {
+            if (e.key === 'ArrowLeft') gallerySlide(-1);
+            if (e.key === 'ArrowRight') gallerySlide(1);
+            if (e.key === 'Escape') closeGallery();
+        } else {
+            if (e.key === 'ArrowLeft') slide(-1);
+            if (e.key === 'ArrowRight') slide(1);
+            if (e.key === 'Escape') { closeDeleteModal(); }
+        }
     });
 
     // ── Description toggle ────────────────────────────────────────────────────
@@ -924,6 +1118,73 @@
             } finally {
                 btn.classList.remove('loading');
             }
+        }
+    </script>
+
+    <!-- ── Fullscreen Gallery Lightbox ── -->
+    <div class="gallery-overlay" id="galleryOverlay">
+        <button class="gallery-close" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+        <div class="gallery-content">
+            <div class="gallery-main">
+                <button class="gallery-btn gallery-prev" onclick="gallerySlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                <img id="galleryMainImage" src="" alt="Main photo">
+                <button class="gallery-btn gallery-next" onclick="gallerySlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="gallery-sidebar">
+                <div class="gallery-header">
+                    <div class="gallery-idx" id="galleryIdx">1/1</div>
+                    <div class="gallery-title">{{ listing.title }}</div>
+                </div>
+                <div class="gallery-thumbs" id="galleryThumbs">
+                    {% for photo in photos %}
+                    <div class="gallery-thumb" onclick="galleryGoTo({{ loop.index0 }})">
+                        <img src="/{{ photo }}" loading="lazy" alt="Thumbnail {{ loop.index }}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Photo Gallery Lightbox Logic ────────────────────────────────────────
+        let currentGalleryIdx = 0;
+        const galleryPhotos = [
+            {% for photo in photos %}
+            "/{{ photo }}"{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        const totalGalleryPhotos = galleryPhotos.length;
+
+        function openGallery(idx) {
+            if (totalGalleryPhotos === 0) return;
+            document.getElementById('galleryOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            galleryGoTo(idx);
+        }
+
+        function closeGallery() {
+            document.getElementById('galleryOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function galleryGoTo(idx) {
+            if (totalGalleryPhotos === 0) return;
+            currentGalleryIdx = (idx + totalGalleryPhotos) % totalGalleryPhotos;
+            document.getElementById('galleryMainImage').src = galleryPhotos[currentGalleryIdx];
+            document.getElementById('galleryIdx').textContent = `${currentGalleryIdx + 1}/${totalGalleryPhotos}`;
+            
+            const thumbs = document.querySelectorAll('#galleryThumbs .gallery-thumb');
+            thumbs.forEach((t, i) => {
+                t.classList.toggle('active', i === currentGalleryIdx);
+                if (i === currentGalleryIdx) {
+                    t.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        }
+
+        function gallerySlide(dir) {
+            galleryGoTo(currentGalleryIdx + dir);
         }
     </script>
 </body>

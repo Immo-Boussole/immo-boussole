@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion — Immo-Boussole</title>
+    <title>Création Administrateur — Immo-Boussole</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -44,9 +44,29 @@
             border-radius: 20px;
             padding: 2.5rem;
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             box-shadow: var(--shadow);
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Add a nice glow effect for this special setup page */
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(79, 142, 247, 0.1) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .login-card > * {
+            position: relative;
+            z-index: 1;
         }
 
         .logo {
@@ -56,7 +76,7 @@
             gap: 0.6rem;
             font-size: 1.8rem;
             font-weight: 800;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             background: linear-gradient(135deg, var(--accent), var(--accent-2));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -77,10 +97,11 @@
             font-size: 0.875rem;
             color: var(--text-2);
             margin-bottom: 2rem;
+            line-height: 1.5;
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             text-align: left;
         }
 
@@ -145,20 +166,17 @@
         .btn:active {
             transform: translateY(0);
         }
-
-        .error-message {
-            background: rgba(242, 92, 105, 0.1);
-            border: 1px solid rgba(242, 92, 105, 0.2);
-            color: #f25c69;
-            padding: 0.75rem;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            margin-bottom: 1.5rem;
-            display: none;
-        }
-
-        .error-message.visible {
-            display: block;
+        
+        .badge {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
         }
     </style>
 </head>
@@ -168,31 +186,29 @@
             <i class="fas fa-compass"></i>
             Immo-Boussole
         </div>
-        <h1>Connexion</h1>
-        <p>Veuillez entrer vos identifiants pour accéder au site.</p>
+        
+        <div class="badge">Configuration Initiale</div>
+        <h1>Création Administrateur</h1>
+        <p>Bienvenue sur Immo-Boussole. C'est votre première connexion ! Veuillez créer votre compte administrateur sécurisé.</p>
 
-        {% if error %}
-        <div class="error-message visible">
-            <i class="fas fa-exclamation-circle"></i> {{ error }}
-        </div>
-        {% endif %}
-
-        <form method="POST">
+        <form method="POST" id="setupForm">
             <div class="form-group">
                 <label for="username">Nom d'utilisateur</label>
                 <div class="input-wrapper">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user-shield"></i>
                     <input type="text" id="username" name="username" placeholder="admin" required autofocus>
                 </div>
             </div>
+            
             <div class="form-group">
-                <label for="password">Mot de passe</label>
+                <label for="password">Nouveau mot de passe</label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
                     <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
             </div>
-            <button type="submit" class="btn">Se connecter</button>
+            
+            <button type="submit" class="btn">Créer le compte et accéder</button>
         </form>
     </div>
 </body>
