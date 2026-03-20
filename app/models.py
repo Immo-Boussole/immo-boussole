@@ -130,7 +130,7 @@ class Review(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     listing_id = Column(Integer, ForeignKey("listings.id"), nullable=False)
-    reviewer = Column(String(50), nullable=False)  # "jean-marc" ou "marceline"
+    reviewer = Column(String(50), nullable=False)  # "jean-dupont" ou "marie-martin"
     pros = Column(Text, nullable=True)             # Points positifs
     cons = Column(Text, nullable=True)             # Points négatifs
     rating = Column(Float, nullable=True)          # Note globale 0-10

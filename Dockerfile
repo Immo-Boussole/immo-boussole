@@ -19,7 +19,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-LABEL maintainer="Jean-Marc & Marceline"
+LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
 
 # Copy installed packages from builder

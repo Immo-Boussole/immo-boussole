@@ -112,7 +112,7 @@ class ReviewRequest(BaseModel):
     @field_validator("reviewer")
     @classmethod
     def validate_reviewer(cls, v):
-        allowed = ["jean-marc", "marceline"]
+        allowed = ["jean-dupont", "marie-martin"]
         if v.lower() not in allowed:
             raise ValueError(f"reviewer must be one of: {allowed}")
         return v.lower()
@@ -426,14 +426,17 @@ async def rescrape_listing(
 
     # ── Scrape ──
     details = {}
+    scraping_success = True
     if scraper:
         try:
             details = await scraper.get_listing_details(url)
         except Exception as e:
             print(f"[API] Re-scrape error for {url}: {e}")
+            scraping_success = False
     
     if not details or not details.get("title"):
         details = await fetch_basic_metadata(url)
+        scraping_success = False
 
     # ── Update via service ──
     updated_listing, _ = await create_listing_from_details(db, details, source, url)
@@ -441,7 +444,8 @@ async def rescrape_listing(
     return {
         "status": "updated",
         "listing_id": updated_listing.id,
-        "title": updated_listing.title
+        "title": updated_listing.title,
+        "scraping_success": scraping_success
     }
 
 
@@ -524,16 +528,19 @@ async def submit_listing_url(
 
     # ── Full Scrape Path ──────────────────────────────────────────────────
     details = {}
+    scraping_success = True
     if scraper:
         try:
             details = await scraper.get_listing_details(url)
         except Exception as e:
             print(f"[API] Erreur scraping plein pour {url}: {e}")
+            scraping_success = False
 
     # ── Fallback: basic metadata if full scrape failed ───────────────────
     if not details or not details.get("title"):
         fb_details = await fetch_basic_metadata(url)
         details.update(fb_details)
+        scraping_success = False
 
     # Create listing (includes duplicate check + photo download)
     listing, is_new = await create_listing_from_details(db, details, source, url)
@@ -546,6 +553,7 @@ async def submit_listing_url(
         "area": listing.area,
         "dpe_rating": listing.dpe_rating,
         "is_duplicate": listing.is_duplicate,
+        "scraping_success": scraping_success,
     }
 
     if listing.is_duplicate and listing.duplicate_of_id:
