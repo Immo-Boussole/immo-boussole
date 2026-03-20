@@ -16,6 +16,46 @@
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
 
+---
+
+## ✨ Démonstration des fonctionnalités
+
+L'application est conçue pour optimiser la recherche collaborative. Voici un aperçu des fonctionnalités principales :
+
+### 📥 1. Importation d'Annonces Haute Qualité
+Importez des annonces actives de **LeBonCoin** et **SeLoger**. Le scraper récupère automatiquement les titres, descriptions, prix, surfaces et photos haute résolution.
+
+![Tableau de Bord avec Annonces](static/media/demo/demo_dashboard.png)
+*État initial du tableau de bord après l'importation de 4 annonces.*
+
+### 📸 2. Galerie Photo Interactive
+La page de détail comprend un carrousel réactif et une galerie "lightbox" premium pour une vue immersive des biens.
+
+![Démo Galerie Photo](static/media/demo/demo_features.webp)
+
+*Démonstration interactive du carrousel et de la galerie.*
+
+### 👥 3. Système d'Avis Collaboratif
+L'application permet à plusieurs examinateurs (ex: **Jean DUPONT** et **Marie MARTIN**) de donner des avis indépendants, des notes et des remarques sur chaque bien.
+
+![Démo Avis Collaboratifs](static/media/demo/demo_features.webp)
+
+*Ajout d'avis collaboratifs et attribution de notes.*
+
+### 🌟 4. Profil Dynamique "Bien Idéal"
+L'application synthétise automatiquement tous les avis bien notés pour créer le profil de votre "Bien Idéal", soulignant les points positifs et négatifs récurrents.
+
+![Profil Bien Idéal](static/media/demo/demo_ideal_profile.png)
+
+*Synthèse dynamique des avis en un profil de 'Correspondance Parfaite'.*
+
+### 🛡️ 5. Suppression Sécurisée par "Glisser pour Supprimer"
+Pour éviter les suppressions accidentelles, l'interface utilise une interaction premium de glissement pour confirmer.
+
+![Démo Suppression](static/media/demo/demo_deletion.webp)
+
+*Démonstration de la fonctionnalité sécurisée de glissement pour supprimer.*
+
 ## 🛠️ Installation & Lancement
 
 ### Prérequis
