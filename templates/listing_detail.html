@@ -130,7 +130,7 @@
             font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
         }
         .avatar.jm { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
-        .avatar.marceline { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff; }
+        .avatar.marie-martin { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff; }
         .reviewer-name { font-weight: 700; font-size: 0.9rem; }
         .reviewer-role { font-size: 0.7rem; color: var(--text-2); }
         .rating-display { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; font-size: 1.1rem; font-weight: 800; color: var(--yellow); }
@@ -245,7 +245,7 @@
     <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="Importer des photos par URL" style="margin-right: 0.75rem; color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.05);">
         <i class="fa-solid fa-images"></i> Photos
     </button>
-    <button class="btn btn-delete-nav" onclick="openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})" title="Supprimer cette annonce" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
+    <button class="btn btn-delete-nav" onclick='openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})' title="Supprimer cette annonce" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
         <i class="fa-solid fa-trash-can"></i> Supprimer
     </button>
 </div>
@@ -429,13 +429,13 @@
                 Voir sur {{ listing.source.value|upper }}
             </a>
 
-            <!-- Jean-Marc Review -->
-            {% set jm_review = reviews_by_reviewer.get('jean-marc') %}
+            <!-- Jean DUPONT Review -->
+            {% set jm_review = reviews_by_reviewer.get('jean-dupont') %}
             <div class="review-card">
                 <div class="reviewer-header">
                     <div class="avatar jm">JM</div>
                     <div>
-                        <div class="reviewer-name">Jean-Marc</div>
+                        <div class="reviewer-name">Jean DUPONT</div>
                         <div class="reviewer-role">Propriétaire</div>
                     </div>
                     {% if jm_review %}
@@ -464,7 +464,7 @@
                 </div>
                 {% endif %}
                 {% else %}
-                <div class="no-review">Pas encore d'avis de Jean-Marc.</div>
+                <div class="no-review">Pas encore d'avis de Jean DUPONT.</div>
                 {% endif %}
 
                 <button class="btn btn-toggle" onclick="toggleForm('form-jm')">
@@ -490,75 +490,75 @@
                     </div>
                     <div class="form-actions">
                         <button class="btn sm" onclick="toggleForm('form-jm')">Annuler</button>
-                        <button class="btn primary sm" onclick="submitReview('jean-marc', {{ listing.id }})">
+                        <button class="btn primary sm" onclick="submitReview('jean-dupont', {{ listing.id }})">
                             <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Marceline Review -->
-            {% set marceline_review = reviews_by_reviewer.get('marceline') %}
+            <!-- Marie MARTIN Review -->
+            {% set marie_martin_review = reviews_by_reviewer.get('marie-martin') %}
             <div class="review-card">
                 <div class="reviewer-header">
-                    <div class="avatar marceline">M</div>
+                    <div class="avatar marie-martin">M</div>
                     <div>
-                        <div class="reviewer-name">Marceline</div>
+                        <div class="reviewer-name">Marie MARTIN</div>
                         <div class="reviewer-role">Propriétaire</div>
                     </div>
-                    {% if marceline_review %}
+                    {% if marie_martin_review %}
                     <div class="rating-badge rating-display">
-                        <i class="fa-solid fa-star"></i> {{ marceline_review.rating or '—' }}
+                        <i class="fa-solid fa-star"></i> {{ marie_martin_review.rating or '—' }}
                     </div>
                     {% endif %}
-                    {% if marceline_review and marceline_review.visit_done %}
+                    {% if marie_martin_review and marie_martin_review.visit_done %}
                     <span class="visit-badge done"><i class="fa-solid fa-check"></i> Visité</span>
                     {% endif %}
                 </div>
 
-                {% if marceline_review %}
+                {% if marie_martin_review %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> Points positifs</div>
-                    <div class="review-text pros-text">{{ marceline_review.pros or '—' }}</div>
+                    <div class="review-text pros-text">{{ marie_martin_review.pros or '—' }}</div>
                 </div>
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> Points négatifs</div>
-                    <div class="review-text cons-text">{{ marceline_review.cons or '—' }}</div>
+                    <div class="review-text cons-text">{{ marie_martin_review.cons or '—' }}</div>
                 </div>
-                {% if marceline_review.notes %}
+                {% if marie_martin_review.notes %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> Notes</div>
-                    <div class="review-text">{{ marceline_review.notes }}</div>
+                    <div class="review-text">{{ marie_martin_review.notes }}</div>
                 </div>
                 {% endif %}
                 {% else %}
-                <div class="no-review">Pas encore d'avis de Marceline.</div>
+                <div class="no-review">Pas encore d'avis de Marie MARTIN.</div>
                 {% endif %}
 
-                <button class="btn btn-toggle" onclick="toggleForm('form-marceline')">
-                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if marceline_review else 'Donner mon avis' }}
+                <button class="btn btn-toggle" onclick="toggleForm('form-marie-martin')">
+                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if marie_martin_review else 'Donner mon avis' }}
                 </button>
 
-                <div class="review-form" id="form-marceline">
+                <div class="review-form" id="form-marie-martin">
                     <div class="form-row">
                         <label>Points positifs</label>
-                        <textarea id="marceline-pros" placeholder="Beau quartier, cuisine moderne...">{{ marceline_review.pros or '' }}</textarea>
+                        <textarea id="marie-martin-pros" placeholder="Beau quartier, cuisine moderne...">{{ marie_martin_review.pros or '' }}</textarea>
                     </div>
                     <div class="form-row">
                         <label>Points négatifs</label>
-                        <textarea id="marceline-cons" placeholder="Bruyant, sans cave...">{{ marceline_review.cons or '' }}</textarea>
+                        <textarea id="marie-martin-cons" placeholder="Bruyant, sans cave...">{{ marie_martin_review.cons or '' }}</textarea>
                     </div>
                     <div class="form-row">
                         <label>Note / 10</label>
-                        <input type="number" id="marceline-rating" min="0" max="10" step="0.5" value="{{ marceline_review.rating or '' }}" placeholder="8">
+                        <input type="number" id="marie-martin-rating" min="0" max="10" step="0.5" value="{{ marie_martin_review.rating or '' }}" placeholder="8">
                     </div>
                     <div class="form-row">
                         <label>Notes libres</label>
-                        <textarea id="marceline-notes" placeholder="Remarques supplémentaires...">{{ marceline_review.notes or '' }}</textarea>
+                        <textarea id="marie-martin-notes" placeholder="Remarques supplémentaires...">{{ marie_martin_review.notes or '' }}</textarea>
                     </div>
                     <div class="form-actions">
-                        <button class="btn sm" onclick="toggleForm('form-marceline')">Annuler</button>
-                        <button class="btn primary sm" onclick="submitReview('marceline', {{ listing.id }})">
+                        <button class="btn sm" onclick="toggleForm('form-marie-martin')">Annuler</button>
+                        <button class="btn primary sm" onclick="submitReview('marie-martin', {{ listing.id }})">
                             <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
                         </button>
                     </div>
@@ -906,6 +906,7 @@
 
         function onMove(e) {
             if (!dragging) return;
+            if (e.cancelable) e.preventDefault(); // Prevent scrolling while dragging
             const thumb = getThumb();
             const track = getTrack();
             const label = getLabel();
@@ -936,8 +937,8 @@
         document.addEventListener('mousedown',  e => { if (e.target.closest('#slideThumb')) onStart(e); });
         document.addEventListener('mousemove',  e => onMove(e));
         document.addEventListener('mouseup',    onEnd);
-        document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); });
-        document.addEventListener('touchmove',  e => onMove(e));
+        document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); }, { passive: false });
+        document.addEventListener('touchmove',  e => onMove(e), { passive: false });
         document.addEventListener('touchend',   onEnd);
     })();
 
@@ -996,7 +997,7 @@
     }
 
     async function submitReview(reviewer, listingId) {
-        const prefix = reviewer === 'jean-marc' ? 'jm' : 'marceline';
+        const prefix = reviewer === 'jean-dupont' ? 'jm' : 'marie-martin';
         const body = {
             reviewer,
             pros: document.getElementById(`${prefix}-pros`).value,
@@ -1106,6 +1107,9 @@
                 const result = await response.json();
                 
                 if (response.ok) {
+                    if (result.scraping_success === false) {
+                        alert("Erreur de scraping, importation sans scraping en cours. La page va s'actualiser.");
+                    }
                     window.location.reload();
                 } else {
                     alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <meta name="description"
-        content="Tableau de bord collaboratif de suivi des annonces immobilières - Jean-Marc & Marceline">
+        content="Tableau de bord collaboratif de suivi des annonces immobilières - Jean DUPONT & Marie MARTIN">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -502,7 +502,7 @@
             border-color: rgba(79, 142, 247, 0.3);
         }
 
-        .reviewer-chip.marceline {
+        .reviewer-chip.marie-martin {
             border-color: rgba(99, 102, 241, 0.3);
         }
 
@@ -1123,9 +1123,9 @@
                         {% if listing.reviews %}
                         <div class="card-reviews">
                             {% for review in listing.reviews %}
-                            <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-marc' else 'marceline' }}">
+                            <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-dupont' else 'marie-martin' }}">
                                 <i class="fa-solid fa-user"></i>
-                                {{ "JM" if review.reviewer == "jean-marc" else "M" }}
+                                {{ "JM" if review.reviewer == "jean-dupont" else "M" }}
                                 {% if review.rating %}
                                 <span class="star"><i class="fa-solid fa-star" style="font-size: 0.6rem;"></i> {{
                                     review.rating }}</span>
@@ -1142,7 +1142,7 @@
                                 Voir <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                             <button class="btn-delete"
-                                onclick="event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|e }})"
+                                onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})'
                                 title="Supprimer cette annonce" aria-label="Supprimer">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
@@ -1407,12 +1407,19 @@
 
                 if (data.status === 'already_exists') {
                     showAlert(`Cette annonce est déjà dans la base (ID #${data.listing_id}).`, 'warning');
-                } else if (data.duplicate_warning) {
-                    showAlert(`⚠️ Doublon détecté ! ${data.duplicate_warning.message} Annonce créée quand même (#${data.listing_id}).`, 'warning');
-                    setTimeout(() => { closeModal(); window.location.reload(); }, 3500);
-                } else if (data.status === 'success') {
-                    showAlert(`✓ Annonce ajoutée ! ${skipScraping ? 'Portez-vous sur la fiche pour l\'édition manuelle.' : (data.title || '')}`, 'success');
-                    setTimeout(() => { closeModal(); window.location.reload(); }, 2000);
+                    if (data.listing_id) {
+                        setTimeout(() => { window.location.href = `/listings/${data.listing_id}`; }, 2500);
+                    }
+                } else if (data.status === 'created' || data.status === 'updated' || data.status === 'success') {
+                    if (data.scraping_success === false) {
+                        showAlert('Erreur de scraping, importation sans scraping en cours.', 'warning');
+                    } else {
+                        showAlert(`✓ Annonce ajoutée ! ${data.title || ''}`, 'success');
+                    }
+                    setTimeout(() => {
+                        closeModal();
+                        window.location.href = `/listings/${data.listing_id}`;
+                    }, 2500);
                 } else {
                     showAlert('Erreur lors du scraping.', 'error');
                 }
@@ -1517,6 +1524,7 @@
 
             function onMove(e) {
                 if (!dragging) return;
+                if (e.cancelable) e.preventDefault(); // Prevent scrolling while dragging
                 const thumb = getThumb();
                 const track = getTrack();
                 const label = getLabel();
@@ -1541,7 +1549,15 @@
                 }
             }
 
-            function onEnd() { dragging = false; }
+            function onEnd() { 
+                if (dragging) {
+                    dragging = false; 
+                    const thumb = getThumb();
+                    if (!thumb.classList.contains('done')) {
+                        resetSlider();
+                    }
+                }
+            }
 
             document.addEventListener('mousedown', e => { if (e.target.closest('#slideThumb')) onStart(e); });
             document.addEventListener('mousemove', e => { if (dragging) onMove(e); });

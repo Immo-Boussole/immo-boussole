@@ -1,7 +1,8 @@
 import requests
 import sys
 
-API_KEY = "KDEXSTSIPW9CLCP9WRRK1MSSODKTYJIUQ9HACKLEW83WP6DLE5ZXOUZXHSF18N1XARNJM3HY6U5X7P19"
+import os
+API_KEY = os.getenv("SCRAPINGBEE_API_KEY", "YOUR_API_KEY_HERE")
 URL_TO_SCRAPE = "https://www.leboncoin.fr/recherche?category=9&locations=Tain-l%27Hermitage_26600__45.07028_4.83761_5000_5000&price=200000-500000&square=100-500&rooms=4-max&real_estate_type=1&outside_access=garden&global_condition=3,2,1,4"
 
 # Test 1: Simple GET sans aucun paramètre avancé
