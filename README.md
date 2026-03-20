@@ -149,14 +149,15 @@ L'accès à l'ensemble du site est protégé par un mécanisme d'authentificatio
 - **Scheduler** : APScheduler (pour les recherches automatiques)
 
 
-## Todo
-- [X] Protéger l'accès à tout le site par un mécanisme d'authentification.
-- [X] Créer un système de création de compte d'administrateur au premier démarrage.
-- [ ] Crée un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
-- [ ] Créer une interface d'administration.
-- [ ] Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
-- [ ] Ajouter un système de favoris pour les annonces.
-- [ ] Ajouter un système de favoris pour les recherches.
-- [ ] Rendre l'application multilangue (Français et Anglais)
-- [ ] Ajouter un système de notifications (email, push, etc.)
-- [ ] Remettre en place le mécanisme de détection de doublons (alerte si un bien similaire est déjà présent).
+## 🚀 Prochaines évolutions
+
+- ✅ Protéger l'accès à tout le site par un mécanisme d'authentification.
+- ✅ Créer un système de création de compte d'administrateur au premier démarrage.
+- ⬜ Créer un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
+- ⬜ Créer une interface d'administration.
+- ⬜ Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
+- ⬜ Ajouter un système de favoris pour les annonces.
+- ⬜ Ajouter un système de favoris pour les recherches.
+- ⬜ Rendre l'application multilangue (Français et Anglais).
+- ⬜ Ajouter un système de notifications (email, push, etc.).
+- ⬜ Remettre en place le mécanisme de détection de doublons (alerte si un bien similaire est déjà présent).
