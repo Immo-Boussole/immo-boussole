@@ -2,7 +2,10 @@
 
 **Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger) de manière structurée.
 
-![Dashboard Preview](static/img/dashboard_preview.png) *(Note: Générez votre propre aperçu après lancement)*
+![Tableau de Bord](static/media/demo/exemple_tableaudebord.png)
+![Tableau des Annonces](static/media/demo/exemple_tableaudesannonces.png)
+![Détail Annonce](static/media/demo/exemple_annonce.png)
+
 
 ## 🚀 Fonctionnalités Clés
 
