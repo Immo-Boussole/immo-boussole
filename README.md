@@ -31,14 +31,14 @@ Importez des annonces actives de **LeBonCoin** et **SeLoger**. Le scraper récup
 ### 📸 2. Galerie Photo Interactive
 La page de détail comprend un carrousel réactif et une galerie "lightbox" premium pour une vue immersive des biens.
 
-![Démo Galerie Photo](static/media/demo/demo_features.webp)
+![Démo Galerie Photo](static/media/demo/demo_gallery.png)
 
 *Démonstration interactive du carrousel et de la galerie.*
 
 ### 👥 3. Système d'Avis Collaboratif
 L'application permet à plusieurs examinateurs (ex: **Jean DUPONT** et **Marie MARTIN**) de donner des avis indépendants, des notes et des remarques sur chaque bien.
 
-![Démo Avis Collaboratifs](static/media/demo/demo_features.webp)
+![Démo Avis Collaboratifs](static/media/demo/demo_reviews.png)
 
 *Ajout d'avis collaboratifs et attribution de notes.*
 
