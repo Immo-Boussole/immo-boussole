@@ -111,6 +111,12 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 4. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
 
+### 🌐 Déploiement Avancé (Portainer & Cloudflare)
+
+Pour une mise en production sécurisée sur un serveur distant, vous pouvez utiliser **Portainer** pour gérer vos conteneurs et **Cloudflared** (Tunnels Cloudflare Zero Trust) pour exposer l'application sur Internet de manière sécurisée sans ouvrir de ports.
+
+👉 **Consultez le guide détaillé : [Installation via Docker, Portainer et Cloudflared](INSTALL_Docker+Portainer+Cloudflared.md)**
+
 ---
 
 ## 🔒 Sécurité & Authentification
