@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     SCRAPING_INTERVAL_HOURS: int = 12
 
     # Optional ScrapingBee API key (legacy / fallback)
-    SCRAPINGBEE_API_KEY: str = None
+    SCRAPINGBEE_API_KEY: str | None = None
 
     # FlareSolverr URL (for self-hosted bypass)
     FLARESOLVERR_URL: str = "http://127.0.0.1:8191"
