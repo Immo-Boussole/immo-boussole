@@ -56,6 +56,13 @@ Pour éviter les suppressions accidentelles, l'interface utilise une interaction
 
 *Démonstration de la fonctionnalité sécurisée de glissement pour supprimer.*
 
+### 🔔 6. Alerte de Nouvelle Version
+Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une nouvelle version du code source est disponible sur GitHub. Ce mécanisme compare discrètement le hash du commit local avec celui de la branche principale afin de toujours vous informer des dernières fonctionnalités et mises à jour.
+
+![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
+
+*Aperçu de la bannière indiquant une mise à jour disponible.*
+
 ## 🛠️ Installation & Lancement
 
 ### Prérequis
@@ -136,6 +143,35 @@ L'accès à l'ensemble du site est protégé par un mécanisme d'authentificatio
 3. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
 4. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
 
+## 🔌 Documentation de l'API (REST)
+
+L'application expose une API REST complète construite avec **FastAPI**. Tous les endpoints nécessitent une authentification (session active) et retournent un code HTTP 401 en cas d'accès non autorisé.
+
+### Annonces (Listings)
+- `GET /api/listings` : Récupère la liste des annonces (filtres de recherche optionnels : `status`, `source`, `limit`).
+- `GET /api/listings/{listing_id}` : Récupère les détails complets d'une annonce spécifique.
+- `POST /api/listings/submit-url` : Ajoute une nouvelle annonce via une URL (lance automatiquement le scraping). Accepte `url` et `skip_scraping` (booléen) en JSON.
+- `POST /api/listings/{listing_id}/rescrape` : Relance le scraping manuel pour mettre à jour une annonce existante.
+- `PUT /api/listings/{listing_id}` : Met à jour manuellement les attributs d'une annonce (titre, prix, surface, DPE, etc.).
+- `DELETE /api/listings/{listing_id}` : Supprime une annonce et ses avis associés.
+- `POST /api/listings/{listing_id}/photos` : Importe de nouvelles photos à partir d'une liste d'URLs.
+- `POST /api/listings/{listing_id}/photos/upload` : Télécharge directement des photos (Multipart Form).
+
+### Avis (Reviews)
+- `GET /api/listings/{listing_id}/reviews` : Liste tous les avis laissés sur une annonce.
+- `POST /api/listings/{listing_id}/reviews` : Ajoute ou met à jour un avis collaboratif (notes, positifs, négatifs).
+- `PUT /api/reviews/{review_id}` : Modifie un avis spécifique existant.
+- `DELETE /api/reviews/{review_id}` : Supprime un avis existant.
+
+### Profil Idéal
+- `GET /api/profile/ideal` : Retourne la synthèse dynamique du bien idéal, calculée à partir des annonces les mieux notées.
+
+### Recherches Enregistrées (Queries)
+- `GET /api/queries` : Retourne la liste des recherches automatiques planifiées.
+- `POST /api/queries` : Ajoute une nouvelle recherche à planifier (URL, nom, source).
+
+L'API est également entièrement documentée et testable via l'interface Swagger intégrée, accessible sur [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (ou `/redoc`) lorsque l'application est lancée.
+
 ## 🏗️ Structure du Projet
 
 - `app/` : Logique backend (scrapers, modèles, services API).
@@ -159,7 +195,6 @@ L'accès à l'ensemble du site est protégé par un mécanisme d'authentificatio
 
 - ✅ Protéger l'accès à tout le site par un mécanisme d'authentification.
 - ✅ Créer un système de création de compte d'administrateur au premier démarrage.
-- ✅ Créer un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
 - ⬜ Créer une interface d'administration.
 - ⬜ Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
 - ⬜ Créer un système de création de compte conseiller immobilier (possibilité de regarder les annonces importées dans l'application, et les retours faits par les utilisateurs, ainsi que la la fiche de bien idéal).
