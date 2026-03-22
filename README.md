@@ -1,205 +1,228 @@
 # 🧭 Immo-Boussole
 
-**Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger) de manière structurée.
+*Note: At its core, this project targets French platforms for property search. / Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens.*
 
-![Tableau de Bord](static/media/demo/exemple_tableaudebord.png)
-![Tableau des Annonces](static/media/demo/exemple_tableaudesannonces.png)
-![Détail Annonce](static/media/demo/exemple_annonce.png)
+[Version française disponible ici](README.fr.md)
 
+**Immo-Boussole** is a collaborative web application designed to centralize, catalog, and evaluate real estate listings (LeBonCoin, SeLoger) in a structured manner.
 
-## 🚀 Fonctionnalités Clés
+![Dashboard](static/media/demo/exemple_tableaudebord.png)
+![Listings Table](static/media/demo/exemple_tableaudesannonces.png)
+![Listing Detail](static/media/demo/exemple_annonce.png)
 
-- **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) depuis plus de 10 plateformes :
+## 🚀 Key Features
+
+- **Smart Scraping**: Automatic extraction of details (price, area, DPE, taxes, charges, photos) from over 10 platforms:
   - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
-- **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
-- **Avis Collaboratifs** : Système de notation et de commentaires séparés.
-- **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
-- **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
+- **Local Media Management**: Photos are downloaded and served locally to avoid dead links.
+- **Collaborative Reviews**: Separate rating and comment system.
+- **Ideal Property Profile**: Generation of a dynamic profile based on top-rated listings (average price, area, recurring pros/cons).
+- **Premium Interface**: Modern dark design, descriptive cards, photo carousels, and a secure delete button with confirmation (slide).
 
 ---
 
-## ✨ Démonstration des fonctionnalités
+## ✨ Features Demonstration
 
-L'application est conçue pour optimiser la recherche collaborative. Voici un aperçu des fonctionnalités principales :
+The application is designed to optimize collaborative searching. Here is an overview of the main features:
 
-### 📥 1. Importation d'Annonces Haute Qualité
-Importez des annonces actives de **LeBonCoin** et **SeLoger**. Le scraper récupère automatiquement les titres, descriptions, prix, surfaces et photos haute résolution.
+### 📥 1. High-Quality Listings Import
+Import active listings from **LeBonCoin** and **SeLoger**. The scraper automatically retrieves titles, descriptions, prices, areas, and high-resolution photos.
 
-![Tableau de Bord avec Annonces](static/media/demo/demo_dashboard.png)
-*État initial du tableau de bord après l'importation de 4 annonces.*
+![Dashboard with Listings](static/media/demo/demo_dashboard.png)
+*Initial state of the dashboard after importing 4 listings.*
 
-### 📸 2. Galerie Photo Interactive
-La page de détail comprend un carrousel réactif et une galerie "lightbox" premium pour une vue immersive des biens.
+### 📸 2. Interactive Photo Gallery
+The detail page includes a responsive carousel and a premium "lightbox" gallery for an immersive view of the properties.
 
-![Démo Galerie Photo](static/media/demo/demo_gallery.png)
+![Photo Gallery Demo](static/media/demo/demo_gallery.png)
 
-*Démonstration interactive du carrousel et de la galerie.*
+*Interactive demonstration of the carousel and gallery.*
 
-### 👥 3. Système d'Avis Collaboratif
-L'application permet à plusieurs examinateurs (ex: **Jean DUPONT** et **Marie MARTIN**) de donner des avis indépendants, des notes et des remarques sur chaque bien.
+### 👥 3. Collaborative Review System
+The application allows multiple reviewers (e.g., **Jean DUPONT** and **Marie MARTIN**) to provide independent reviews, ratings, and notes on each property.
 
-![Démo Avis Collaboratifs](static/media/demo/demo_reviews.png)
+![Collaborative Reviews Demo](static/media/demo/demo_reviews.png)
 
-*Ajout d'avis collaboratifs et attribution de notes.*
+*Adding collaborative reviews and assigning ratings.*
 
-### 🌟 4. Profil Dynamique "Bien Idéal"
-L'application synthétise automatiquement tous les avis bien notés pour créer le profil de votre "Bien Idéal", soulignant les points positifs et négatifs récurrents.
+### 🌟 4. "Ideal Property" Dynamic Profile
+The application automatically synthesizes all highly-rated reviews to create your "Ideal Property" profile, highlighting recurring positive and negative points.
 
-![Profil Bien Idéal](static/media/demo/demo_ideal_profile.png)
+![Ideal Property Profile](static/media/demo/demo_ideal_profile.png)
 
-*Synthèse dynamique des avis en un profil de 'Correspondance Parfaite'.*
+*Dynamic synthesis of reviews into a 'Perfect Match' profile.*
 
-### 🛡️ 5. Suppression Sécurisée par "Glisser pour Supprimer"
-Pour éviter les suppressions accidentelles, l'interface utilise une interaction premium de glissement pour confirmer.
+### 🛡️ 5. Secure "Slide to Delete"
+To prevent accidental deletions, the interface uses a premium slide-to-confirm interaction.
 
-![Démo Suppression](static/media/demo/demo_deletion.webp)
+![Deletion Demo](static/media/demo/demo_deletion.webp)
 
-*Démonstration de la fonctionnalité sécurisée de glissement pour supprimer.*
+*Demonstration of the secure slide-to-delete feature.*
 
-### 🔔 6. Alerte de Nouvelle Version
-Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une nouvelle version du code source est disponible sur GitHub. Ce mécanisme compare discrètement le hash du commit local avec celui de la branche principale afin de toujours vous informer des dernières fonctionnalités et mises à jour.
+### 🔔 6. New Version Alert
+A banner automatically appears at the bottom of the home screen when a new version of the source code is available on GitHub. This mechanism discreetly compares the local commit hash with that of the main branch to keep you informed of the latest features and updates.
 
-![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
+![Version Alert Demo](static/media/demo/demo_alert_banner.png)
 
-*Aperçu de la bannière indiquant une mise à jour disponible.*
+*Preview of the banner indicating an available update.*
 
-## 🛠️ Installation & Lancement
+## 🛠️ Installation & Launch
 
-### Prérequis
+### Prerequisites
 - Python 3.10+
-- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) lancé localement (port 8191 par défaut) pour le scraping.
+- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) running locally (port 8191 by default) for scraping.
 
-### Installation Locale
-1. **Cloner le projet**
-2. **Créer un environnement virtuel** :
+### Local Installation
+1. **Clone the project**
+2. **Create a virtual environment**:
    ```bash
    python -m venv venv
    .\venv\Scripts\activate  # Windows
    ```
-3. **Installer les dépendances** :
+3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
-4. **Configurer l'environnement** :
+4. **Configure the environment**:
    ```bash
    cp .env.example .env
-   # Renseigner votre SCRAPINGBEE_API_KEY (optionnel) ou ajuster FLARESOLVERR_URL
+   # Enter your SCRAPINGBEE_API_KEY (optional) or adjust FLARESOLVERR_URL
    ```
-5. **Lancer le serveur** :
+5. **Start the server**:
    ```bash
    python -m uvicorn app.main:app --reload
    ```
-   L'application est accessible sur [http://127.0.0.1:8000](http://127.0.0.1:8000).
+   The application is accessible at [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ---
 
-## 🐳 Utilisation avec Docker
+## 🐳 Running with Docker
 
-Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **FlareSolverr**.
+The project is fully containerized, automatically including the **FlareSolverr** scraping engine.
 
-1. **Lancer l'ensemble des services** :
+1. **Launch all services**:
    ```bash
    docker compose up -d --build immo-boussole
    ```
-   Cette commande construit (ou reconstruit) l'image à partir du code source local et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
+   This command builds (or rebuilds) the image from the local source code and launches two containers: `immo-boussole` (the app) and `flaresolverr` (Cloudflare bypass).
 
    > [!TIP]
-   > Pour mettre à jour l'application après une modification de code, relancez simplement cette même commande :
+   > To update the application after a code change, simply re-run this same command:
    > `docker compose up -d --build immo-boussole`
-   > L'image sera mise à jour avec vos changements, mais **vos données (base de données et photos) resteront intactes** grâce aux volumes persistants.
+   > The image will be updated with your changes, but **your data (database and photos) will remain intact** thanks to persistent volumes.
 
-2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
+2. **Access**: The interface is available at [http://localhost:8000](http://localhost:8000).
 
-3. **Gestion des Captchas (Optionnel)** :
-   Si vous rencontrez des blocages par captcha lors du scraping, vous pouvez activer le solver [2Captcha](https://2captcha.com/) :
-   - Dans votre fichier `.env`, réglez `CAPTCHA_SOLVER=2captcha`.
-   - Renseignez votre clé API dans `TWO_CAPTCHA_API_KEY=votre_cle_ici`.
-   - Redémarrez les conteneurs : `docker compose up -d`.
+3. **Captcha Management (Optional)**:
+   If you encounter captcha blocks during scraping, you can enable the [2Captcha](https://2captcha.com/) solver:
+   - In your `.env` file, set `CAPTCHA_SOLVER=2captcha`.
+   - Enter your API key in `TWO_CAPTCHA_API_KEY=your_key_here`.
+   - Restart the containers: `docker compose up -d`.
 
-4. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
+4. **Persistence**: The database and media are stored in named volumes (`immo-boussole-db` and `immo-boussole-media`).
 
-### 🌐 Déploiement Avancé (Portainer & Cloudflare)
+### 🌐 Advanced Deployment (Portainer & Cloudflared)
 
-Pour une mise en production sécurisée sur un serveur distant, vous pouvez utiliser **Portainer** pour gérer vos conteneurs et **Cloudflared** (Tunnels Cloudflare Zero Trust) pour exposer l'application sur Internet de manière sécurisée sans ouvrir de ports.
+For secure production deployment on a remote server, you can use **Portainer** to manage your containers and **Cloudflared** (Cloudflare Zero Trust Tunnels) to securely expose the application to the Internet without opening ports.
 
-👉 **Consultez le guide détaillé : [Installation via Docker, Portainer et Cloudflared](INSTALL_Docker+Portainer+Cloudflared.md)**
-
----
-
-## 🔒 Sécurité & Authentification
-
-L'accès à l'ensemble du site est protégé par un mécanisme d'authentification par mot de passe partagé.
-
-- **Configuration** : Définissez votre mot de passe dans le fichier `.env` via la variable `APP_PASSWORD`.
-- **Session** : Les sessions sont sécurisées via une `SECRET_KEY` (générée automatiquement lors de l'installation ou à définir dans `.env`).
-- **Fonctionnement** : Toute tentative d'accès non authentifiée redirige vers la page de connexion. Un bouton "Déconnexion" est disponible dans le menu latéral pour fermer la session.
+👉 **See the detailed guide: [Installation via Docker, Portainer, and Cloudflared](INSTALL_Docker+Portainer+Cloudflared.md)**
 
 ---
 
-## 📖 Guide d'Utilisation
+## 🔒 Security & Authentication
 
-1. **Ajouter un bien** : Cliquez sur "+ Ajouter une annonce" et collez l'URL LeBonCoin ou SeLoger.
-2. **Évaluer** : Cliquez sur une carte pour voir les détails, puis remplissez votre section.
-3. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
-4. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
+Access to the application is protected by a multi-user authentication system with roles.
 
-## 🔌 Documentation de l'API (REST)
+- **Initial Setup**: On the first run, the application redirects to `/setup-admin` to create the primary administrator account.
+- **Session**: Sessions are secured using a `SECRET_KEY` (automatically generated or defined in `.env`).
+- **Access Control**: Any unauthenticated access attempt redirects to the login page.
 
-L'application expose une API REST complète construite avec **FastAPI**. Tous les endpoints nécessitent une authentification (session active) et retournent un code HTTP 401 en cas d'accès non autorisé.
+---
 
-### Annonces (Listings)
-- `GET /api/listings` : Récupère la liste des annonces (filtres de recherche optionnels : `status`, `source`, `limit`).
-- `GET /api/listings/{listing_id}` : Récupère les détails complets d'une annonce spécifique.
-- `POST /api/listings/submit-url` : Ajoute une nouvelle annonce via une URL (lance automatiquement le scraping). Accepte `url` et `skip_scraping` (booléen) en JSON.
-- `POST /api/listings/{listing_id}/rescrape` : Relance le scraping manuel pour mettre à jour une annonce existante.
-- `PUT /api/listings/{listing_id}` : Met à jour manuellement les attributs d'une annonce (titre, prix, surface, DPE, etc.).
-- `DELETE /api/listings/{listing_id}` : Supprime une annonce et ses avis associés.
-- `POST /api/listings/{listing_id}/photos` : Importe de nouvelles photos à partir d'une liste d'URLs.
-- `POST /api/listings/{listing_id}/photos/upload` : Télécharge directement des photos (Multipart Form).
+## 👥 User Roles & Permissions
 
-### Avis (Reviews)
-- `GET /api/listings/{listing_id}/reviews` : Liste tous les avis laissés sur une annonce.
-- `POST /api/listings/{listing_id}/reviews` : Ajoute ou met à jour un avis collaboratif (notes, positifs, négatifs).
-- `PUT /api/reviews/{review_id}` : Modifie un avis spécifique existant.
-- `DELETE /api/reviews/{review_id}` : Supprime un avis existant.
+The system distinguishes between two primary roles:
 
-### Profil Idéal
-- `GET /api/profile/ideal` : Retourne la synthèse dynamique du bien idéal, calculée à partir des annonces les mieux notées.
+- **ADMIN**:
+  - Access to the **User Management** interface (`/admin/users`).
+  - Ability to create and delete user accounts.
+  - **Restriction**: Cannot import or scrape new listings (to maintain focus on management).
+- **USER**:
+  - Full access to property searching and evaluation.
+  - Ability to import listings via URLs or manual entry.
+  - **Restriction**: No access to the administration panel.
 
-### Recherches Enregistrées (Queries)
-- `GET /api/queries` : Retourne la liste des recherches automatiques planifiées.
-- `POST /api/queries` : Ajoute une nouvelle recherche à planifier (URL, nom, source).
+---
 
-L'API est également entièrement documentée et testable via l'interface Swagger intégrée, accessible sur [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (ou `/redoc`) lorsque l'application est lancée.
+## 📖 User Guide
 
-## 🏗️ Structure du Projet
+1. **Add a property**: Click on "+ Add Listing" and paste the LeBonCoin or SeLoger URL.
+2. **Review**: Click on a card to view details, then fill out your section.
+3. **Delete**: On the dashboard, click the trash can icon on a card and slide to confirm.
+4. **Ideal Profile**: Check the global synthesis via the sidebar to see what type of property fits you best.
 
-- `app/` : Logique backend (scrapers, modèles, services API).
-- `templates/` : Pages HTML (Jinja2).
-- `static/` : Assets CSS et médias téléchargés (photos des annonces).
-- `tests/` : Scripts de tests unitaires et d'intégration.
-- `debug/` : Outils de débogage et logs de scraping temporaires.
-- `Dockerfile` & `docker-compose.yml` : Configuration Docker.
-- `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
+## 🔌 API Documentation (REST)
 
-## 🏗️ Stack Technique
-- **Backend** : FastAPI (Python)
-- **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses)
-- **Scraping** : FlareSolverr / BeautifulSoup4 / HTTPX
-- **Scrapers additionnels** : Figaro et LogicImmo adaptés depuis le projet [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper)
-- **Frontend** : HTML5 / Vanilla CSS / Jinja2
-- **Scheduler** : APScheduler (pour les recherches automatiques)
+The application exposes a comprehensive REST API built with **FastAPI**. All endpoints require authentication (active session) and return an HTTP 401 code in case of unauthorized access.
+
+### Listings
+- `GET /api/listings`: Retrieves the list of listings (optional search filters: `status`, `source`, `limit`).
+- `GET /api/listings/{listing_id}`: Retrieves full details of a specific listing.
+- `POST /api/listings/submit-url`: Adds a new listing via a URL (automatically starts scraping). Accepts `url` and `skip_scraping` (boolean) in JSON.
+- `POST /api/listings/{listing_id}/rescrape`: Manually triggers a scrape to update an existing listing.
+- `PUT /api/listings/{listing_id}`: Manually updates the attributes of a listing (title, price, area, DPE, etc.).
+- `DELETE /api/listings/{listing_id}`: Deletes a listing and its associated reviews.
+- `POST /api/listings/{listing_id}/photos`: Imports new photos from a list of URLs.
+- `POST /api/listings/{listing_id}/photos/upload`: Directly uploads photos (Multipart Form).
+
+### Administration (Admin only)
+- `GET /admin/users`: Interface for managing users.
+- `POST /api/admin/users`: Creates a new user account (JSON body: `username`, `password`, `role`).
+- `DELETE /api/admin/users/{user_id}`: Deletes a user account (prevents self-deletion).
+
+### Reviews
+- `GET /api/listings/{listing_id}/reviews`: Lists all reviews left on a listing.
+- `POST /api/listings/{listing_id}/reviews`: Adds or updates a collaborative review (ratings, pros, cons).
+- `PUT /api/reviews/{review_id}`: Modifies an existing specific review.
+- `DELETE /api/reviews/{review_id}`: Deletes an existing review.
+
+### Ideal Profile
+- `GET /api/profile/ideal`: Returns the dynamic synthesis of the ideal property, calculated from the highest-rated listings.
+
+### Saved Searches (Queries)
+- `GET /api/queries`: Returns the list of scheduled automatic searches.
+- `POST /api/queries`: Adds a new search to be scheduled (URL, name, source).
+
+The API is also fully documented and testable via the integrated Swagger interface, accessible at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (or `/redoc`) when the application is running.
+
+## 🏗️ Project Structure
+
+- `app/`: Backend logic (scrapers, models, API services).
+- `templates/`: HTML pages (Jinja2).
+- `static/`: CSS assets and downloaded media (listing photos).
+- `tests/`: Unit and integration test scripts.
+- `debug/`: Debugging tools and temporary scraping logs.
+- `Dockerfile` & `docker-compose.yml`: Docker configuration.
+- `immo_boussole.db`: SQLite database (managed automatically).
+
+## 🏗️ Technical Stack
+- **Backend**: FastAPI (Python)
+- **Database**: SQLite + SQLAlchemy (Automatic migrations included)
+- **Scraping**: FlareSolverr / BeautifulSoup4 / HTTPX
+- **Additional Scrapers**: Figaro and LogicImmo adapted from the [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper) project
+- **Frontend**: HTML5 / Vanilla CSS / Jinja2
+- **Scheduler**: APScheduler (for automatic searches)
 
 
-## 🚀 Prochaines évolutions
+## 🚀 Upcoming Features
 
-- ✅ Protéger l'accès à tout le site par un mécanisme d'authentification.
-- ✅ Créer un système de création de compte d'administrateur au premier démarrage.
-- ⬜ Créer une interface d'administration.
-- ⬜ Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
-- ⬜ Créer un système de création de compte conseiller immobilier (possibilité de regarder les annonces importées dans l'application, et les retours faits par les utilisateurs, ainsi que la la fiche de bien idéal).
-- ⬜ Ajouter un système de favoris pour les annonces.
-- ⬜ Ajouter un système de favoris pour les recherches.
-- ⬜ Rendre l'application multilangue (Français et Anglais).
-- ⬜ Ajouter un système de notifications (email, push, etc.).
-- ⬜ Remettre en place le mécanisme de détection de doublons (alerte si un bien similaire est déjà présent).
+- ✅ Protect access to the entire site with an authentication mechanism.
+- ✅ Create an admin account setup system on first run.
+- ✅ Create an administration interface.
+- ✅ Create a user account system (at least one default user account, the admin should not be able to import listings).
+- ⬜ Create a real estate agent account system (ability to view imported listings in the app, user feedback, and the ideal property profile).
+- ⬜ Add a favorite system for listings.
+- ⬜ Add a favorite system for searches.
+- ✅ Make the application multilingual (French and English).
+- ⬜ Add a notification system (email, push, etc.).
+- ⬜ Re-implement the duplicate detection mechanism (alert if a similar property is already present).

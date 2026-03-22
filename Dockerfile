@@ -33,6 +33,7 @@ RUN useradd -m -u 1000 boussole \
 # Copy application source
 COPY --chown=boussole:boussole app/ ./app/
 COPY --chown=boussole:boussole templates/ ./templates/
+COPY --chown=boussole:boussole locales/ ./locales/
 
 USER boussole
 

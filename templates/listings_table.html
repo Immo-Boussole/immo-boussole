@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ request.session.get('lang', 'fr') }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>{{ t(request, 'nav.listings_table') }} — {{ t(request, 'app.title') }}</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -247,27 +248,33 @@
 <body>
 
     <aside class="sidebar">
+        <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
+            <a href="/lang/fr" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'fr' else '0.4' }}; transition: opacity 0.2s;">🇫🇷</a>
+            <a href="/lang/en" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'en' else '0.4' }}; transition: opacity 0.2s;">🇬🇧</a>
+        </div>
         <div class="logo">
             <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+            {{ t(request, 'app.title') }}
         </div>
 
         <div class="stat-grid">
             <div class="stat-card" style="grid-column: 1 / -1;">
                 <div class="val">{{ listings|length }}</div>
-                <div class="lbl">Total annonces</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
+
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
-            <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> Tableau de bord</a>
-            <a href="/listings/table" class="nav-link active"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
-            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
+            <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/listings/table" class="nav-link active"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
+            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
         </nav>
 
         <br>
-        <div class="sidebar-section-title">Recherches Automatiques</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.auto_searches') }}</div>
+
         {% if queries %}
         <div class="query-list">
             {% for query in queries %}
@@ -281,11 +288,12 @@
             {% endfor %}
         </div>
         {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
+        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_searches') }}</div>
         {% endif %}
 
         <br>
-        <div class="sidebar-section-title">Recherches Manuelles</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.manual_searches') }}</div>
+
         {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list %}
         {% if manual_listings %}
         <div class="query-list">
@@ -295,37 +303,43 @@
                 <div class="src" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--text-2); font-size: 0.7rem;">
                     <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> MANUEL</span>
                     <span style="font-weight: 700; color: var(--accent); font-size: 0.75rem;">
-                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}NC{% endif %}
+                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}
                     </span>
                 </div>
             </a>
             {% endfor %}
         </div>
         {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">Aucun bien ajouté manuellement</div>
+        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_manual') }}</div>
         {% endif %}
 
         <br>
-        <div class="sidebar-section-title">Prêt à Rechercher</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
-            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> Prêt à rechercher</a>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready') }}</a>
+            {% if request.session.get('role') == 'admin' %}
+            <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            {% endif %}
         </nav>
+
 
         <div style="margin-top: auto; padding-top: 2rem;">
             {% if request.session.get('username') %}
             <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
-                Connecté: <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
             </div>
             {% endif %}
             <a href="/logout" class="nav-link" style="color: var(--red);">
-                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
+
         </div>
     </aside>
 
     <div class="main">
         <div class="topbar">
-            <h1>Toutes les annonces</h1>
+            <h1>{{ t(request, 'nav.listings_table') }}</h1>
         </div>
 
         <div class="content">
@@ -334,30 +348,33 @@
                     <thead>
                         <tr>
                             <th style="width: 40px;"></th>
-                            <th>Titre</th>
-                            <th>Source</th>
-                            <th>Lieu</th>
-                            <th>Prix</th>
-                            <th>Surface</th>
-                            <th>Pièces</th>
-                            <th>DPE</th>
-                            <th>Status</th>
-                            <th>Action</th>
+                            <th>{{ t(request, 'table.title') }}</th>
+                            <th>{{ t(request, 'table.source') }}</th>
+                            <th>{{ t(request, 'table.location') }}</th>
+                            <th>{{ t(request, 'table.price') }}</th>
+                            <th>{{ t(request, 'table.area') }}</th>
+                            <th>{{ t(request, 'table.rooms') }}</th>
+                            <th>{{ t(request, 'table.dpe') }}</th>
+                            <th>{{ t(request, 'table.status') }}</th>
+                            <th>{{ t(request, 'table.action') }}</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for listing in listings %}
                         <tr>
                             <td>
-                                <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)" title="Relancer le scraping">
+                                {% if request.session.get('role') == 'user' %}
+                                <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'table.reload') }}">
                                     <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
+                                {% endif %}
                             </td>
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
                             <td>{{ listing.location or listing.city or '-' }}</td>
-                            <td class="col-price">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else 'NC' }} €</td>
-                            <td>{{ listing.area|round|int if listing.area else 'NC' }} m²</td>
+                            <td class="col-price">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
+                            <td>{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
                             <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
                             <td>
                                 {% if listing.dpe_rating %}
@@ -368,13 +385,14 @@
                             </td>
                             <td>
                                 <span class="badge-status badge-{{ listing.status.value }}">
-                                    {{ listing.status.value }}
+                                    {{ t(request, 'misc.' + listing.status.value) | default(listing.status.value|upper) }}
                                 </span>
                             </td>
                             <td>
-                                <a href="/listings/{{ listing.id }}" class="row-link">Détails <i class="fa-solid fa-arrow-right"></i></a>
+                                <a href="/listings/{{ listing.id }}" class="row-link">{{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
                             </td>
                         </tr>
+
                         {% endfor %}
                     </tbody>
                 </table>

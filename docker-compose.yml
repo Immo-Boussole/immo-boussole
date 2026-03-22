@@ -30,6 +30,10 @@ services:
       - db-data:/app/data
       # Persistance des photos téléchargées
       - media-data:/app/static
+      # Mappage pour le développement (réflexion immédiate des changements)
+      - ./templates:/app/templates
+      - ./app:/app/app
+      - ./locales:/app/locales
 
   # ── Moteur de Scraping (Self-Hosted Cloudflare Bypass) ─────────────────────
   flaresolverr:

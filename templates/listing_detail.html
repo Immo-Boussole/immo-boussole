@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ request.session.get('lang', 'fr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>{{ listing.title|default(t(request, 'listing.details')) }} — {{ t(request, 'app.title') }}</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -233,22 +234,36 @@
 <body>
 
 <div class="topnav">
-    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour</a>
+    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> {{ t(request, 'listing.back') }}</a>
     <div class="nav-title">{{ listing.title[:60] }}{% if listing.title|length > 60 %}…{% endif %}</div>
     <span class="nav-src" style="margin-left: 1rem;">{{ listing.source.value|upper }}</span>
-    <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="Relancer le scraping" style="margin-left: auto; margin-right: 0.75rem; color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
-        <i class="fa-solid fa-arrows-rotate"></i> Actualiser
-    </button>
-    <button class="btn btn-edit-nav" onclick="openEditModal()" title="Éditer l'annonce" style="margin-right: 0.75rem; color: var(--text); border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05);">
-        <i class="fa-solid fa-pen"></i> Éditer
-    </button>
-    <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="Importer des photos par URL" style="margin-right: 0.75rem; color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.05);">
-        <i class="fa-solid fa-images"></i> Photos
-    </button>
-    <button class="btn btn-delete-nav" onclick='openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})' title="Supprimer cette annonce" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
-        <i class="fa-solid fa-trash-can"></i> Supprimer
-    </button>
+    <div style="display: flex; gap: 0.5rem; justify-content: center; margin-left: 1rem;">
+        <a href="/lang/fr" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'fr' else '0.4' }}; transition: opacity 0.2s;">🇫🇷</a>
+        <a href="/lang/en" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'en' else '0.4' }}; transition: opacity 0.2s;">🇬🇧</a>
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 0.75rem;">
+        {% if request.session.get('role') == 'admin' %}
+        <a href="/users" class="btn" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
+            <i class="fa-solid fa-users"></i> {{ t(request, 'nav.users') }}
+        </a>
+        {% endif %}
+        {% if request.session.get('role') == 'user' %}
+        <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'listing.refresh') }}" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
+            <i class="fa-solid fa-arrows-rotate"></i> {{ t(request, 'listing.refresh') }}
+        </button>
+        <button class="btn btn-edit-nav" onclick="openEditModal()" title="{{ t(request, 'listing.edit') }}" style="color: var(--text); border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05);">
+            <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit') }}
+        </button>
+        <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.05);">
+            <i class="fa-solid fa-images"></i> {{ t(request, 'listing.photos_btn') }}
+        </button>
+        <button class="btn btn-delete-nav" onclick='openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); border-color: rgba(242,92,105,0.3); background: rgba(242,92,105,0.05);">
+            <i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_btn') }}
+        </button>
+        {% endif %}
+    </div>
 </div>
+
 
 <div class="container">
 
@@ -267,7 +282,8 @@
                         <img src="/{{ photo }}" alt="Photo {{ loop.index }}" loading="{{ 'eager' if loop.index == 1 else 'lazy' }}" onclick="openGallery({{ loop.index0 }})" style="cursor: zoom-in;">
                     </div>
                     {% endfor %}
-                    <span class="photo-count">{{ photos|length }} photo{{ 's' if photos|length > 1 }}</span>
+                    <span class="photo-count">{{ photos|length }} {{ t(request, 'listing.photos_btn')|lower }}</span>
+
                     {% else %}
                     <div class="carousel-slide">
                         <div class="carousel-placeholder"><i class="fa-regular fa-image"></i></div>
@@ -297,95 +313,98 @@
 
                 <div class="price-block">
                     <span class="price-main">
-                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
+                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}
+
                     </span>
                     {% if listing.price_per_sqm %}
                     <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</span>
                     {% endif %}
                     {% if listing.virtual_tour_url %}
                     <a href="{{ listing.virtual_tour_url }}" target="_blank" class="btn sm primary" style="margin-left: auto;">
-                        <i class="fa-solid fa-vr-cardboard"></i> Visite Virtuelle
+                        <i class="fa-solid fa-vr-cardboard"></i> {{ t(request, 'listing.virtual_tour') }}
                     </a>
                     {% endif %}
                 </div>
 
                 <div class="costs-row">
                     {% if listing.land_tax %}
-                    <div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> Taxe foncière : <strong>{{ listing.land_tax|int }} €/an</strong></div>
+                    <div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> {{ t(request, 'listing.property_tax') }} : <strong>{{ listing.land_tax|int }} {{ t(request, 'listing.per_year') }}</strong></div>
                     {% endif %}
                     {% if listing.charges %}
-                    <div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> Charges : <strong>{{ listing.charges|int }} €/mois</strong></div>
+                    <div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> {{ t(request, 'listing.charges') }} : <strong>{{ listing.charges|int }} {{ t(request, 'listing.per_month') }}</strong></div>
                     {% endif %}
                     {% if listing.agency_fee %}
-                    <div class="cost-item"><i class="fa-solid fa-handshake"></i> Honoraires : <strong>{{ listing.agency_fee|int }} €</strong></div>
+                    <div class="cost-item"><i class="fa-solid fa-handshake"></i> {{ t(request, 'listing.agency_fee') }} : <strong>{{ listing.agency_fee|int }} €</strong></div>
                     {% endif %}
                 </div>
 
+
                 <div class="specs-grid">
                     {% if listing.area %}
-                    <div class="spec"><div class="sv">{{ listing.area|int if listing.area == listing.area|int else listing.area }} m²</div><div class="sl">Surface</div></div>
+                    <div class="spec"><div class="sv">{{ listing.area|int if listing.area == listing.area|int else listing.area }} m²</div><div class="sl">{{ t(request, 'listing.area') }}</div></div>
                     {% endif %}
                     {% if listing.land_area %}
-                    <div class="spec"><div class="sv">{{ listing.land_area|int if listing.land_area == listing.land_area|int else listing.land_area }} m²</div><div class="sl">Terrain</div></div>
+                    <div class="spec"><div class="sv">{{ listing.land_area|int if listing.land_area == listing.land_area|int else listing.land_area }} m²</div><div class="sl">{{ t(request, 'listing.land') }}</div></div>
                     {% endif %}
                     {% if listing.rooms %}
-                    <div class="spec"><div class="sv">{{ listing.rooms }}</div><div class="sl">Pièces</div></div>
+                    <div class="spec"><div class="sv">{{ listing.rooms }}</div><div class="sl">{{ t(request, 'listing.rooms') }}</div></div>
                     {% endif %}
                     {% if listing.bedrooms %}
-                    <div class="spec"><div class="sv">{{ listing.bedrooms }}</div><div class="sl">Chambres</div></div>
+                    <div class="spec"><div class="sv">{{ listing.bedrooms }}</div><div class="sl">{{ t(request, 'listing.bedrooms') }}</div></div>
                     {% endif %}
                     {% if listing.bathroom_count %}
-                    <div class="spec"><div class="sv">{{ listing.bathroom_count }}</div><div class="sl">SDB</div></div>
+                    <div class="spec"><div class="sv">{{ listing.bathroom_count }}</div><div class="sl">{{ t(request, 'listing.baths') }}</div></div>
                     {% endif %}
                     {% if listing.toilet_count %}
-                    <div class="spec"><div class="sv">{{ listing.toilet_count }}</div><div class="sl">WC</div></div>
+                    <div class="spec"><div class="sv">{{ listing.toilet_count }}</div><div class="sl">{{ t(request, 'listing.wc') }}</div></div>
                     {% endif %}
                     {% if listing.floor is not none %}
-                    <div class="spec"><div class="sv">{{ listing.floor }}{% if listing.total_floors %}/{{ listing.total_floors }}{% endif %}</div><div class="sl">Étage</div></div>
+                    <div class="spec"><div class="sv">{{ listing.floor }}{% if listing.total_floors %}/{{ listing.total_floors }}{% endif %}</div><div class="sl">{{ t(request, 'listing.floor') }}</div></div>
                     {% endif %}
                     {% if listing.building_year %}
-                    <div class="spec"><div class="sv">{{ listing.building_year }}</div><div class="sl">Année</div></div>
+                    <div class="spec"><div class="sv">{{ listing.building_year }}</div><div class="sl">{{ t(request, 'listing.build_year') }}</div></div>
                     {% endif %}
                 </div>
+
 
                 <!-- Caractéristiques détaillées -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
                     <div class="attr-list">
-                        {% if listing.property_type %}<div class="cost-item"><i class="fa-solid fa-house"></i> Type : <strong>{{ listing.property_type|capitalize }}</strong></div>{% endif %}
-                        {% if listing.condition %}<div class="cost-item"><i class="fa-solid fa-sparkles"></i> État : <strong>{{ listing.condition }}</strong></div>{% endif %}
-                        {% if listing.orientation %}<div class="cost-item"><i class="fa-solid fa-compass"></i> Orientation : <strong>{{ listing.orientation }}</strong></div>{% endif %}
-                        {% if listing.view %}<div class="cost-item"><i class="fa-solid fa-eye"></i> Vue : <strong>{{ listing.view }}</strong></div>{% endif %}
+                        {% if listing.property_type %}<div class="cost-item"><i class="fa-solid fa-house"></i> {{ t(request, 'listing.type') }} <strong>{{ listing.property_type|capitalize }}</strong></div>{% endif %}
+                        {% if listing.condition %}<div class="cost-item"><i class="fa-solid fa-sparkles"></i> {{ t(request, 'listing.condition') }} <strong>{{ listing.condition }}</strong></div>{% endif %}
+                        {% if listing.orientation %}<div class="cost-item"><i class="fa-solid fa-compass"></i> {{ t(request, 'listing.orientation') }} <strong>{{ listing.orientation }}</strong></div>{% endif %}
+                        {% if listing.view %}<div class="cost-item"><i class="fa-solid fa-eye"></i> {{ t(request, 'listing.view') }} <strong>{{ listing.view }}</strong></div>{% endif %}
                     </div>
                     <div class="attr-list">
-                        {% if listing.kitchen_type %}<div class="cost-item"><i class="fa-solid fa-utensils"></i> Cuisine : <strong>{{ listing.kitchen_type }}</strong></div>{% endif %}
-                        {% if listing.heating_type %}<div class="cost-item"><i class="fa-solid fa-fire"></i> Chauffage : <strong>{{ listing.heating_type }}</strong> ({{ listing.heating_mode or 'N/C' }})</div>{% endif %}
-                        {% if listing.furnished %}<div class="cost-item"><i class="fa-solid fa-couch"></i> <strong>Meublé</strong></div>{% endif %}
+                        {% if listing.kitchen_type %}<div class="cost-item"><i class="fa-solid fa-utensils"></i> {{ t(request, 'listing.kitchen') }} <strong>{{ listing.kitchen_type }}</strong></div>{% endif %}
+                        {% if listing.heating_type %}<div class="cost-item"><i class="fa-solid fa-fire"></i> {{ t(request, 'listing.heating') }} <strong>{{ listing.heating_type }}</strong> ({{ listing.heating_mode or '-' }})</div>{% endif %}
+                        {% if listing.furnished %}<div class="cost-item"><i class="fa-solid fa-couch"></i> <strong>{{ t(request, 'listing.furnished') }}</strong></div>{% endif %}
                     </div>
                 </div>
 
                 <!-- Équipements & Extérieurs -->
-                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-layer-group"></i> Équipements & Extérieurs</div>
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-layer-group"></i> {{ t(request, 'listing.features') }}</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.75rem;">
-                    {% if listing.garden %}<div class="cost-item"><i class="fa-solid fa-tree" style="color: var(--green);"></i> Jardin{% if listing.garden_area %} ({{ listing.garden_area|int }}m²){% endif %}</div>{% endif %}
-                    {% if listing.terrace %}<div class="cost-item"><i class="fa-solid fa-sun" style="color: var(--orange);"></i> Terrasse{% if listing.terrace_area %} ({{ listing.terrace_area|int }}m²){% endif %}</div>{% endif %}
-                    {% if listing.balcony %}<div class="cost-item"><i class="fa-solid fa-border-all"></i> Balcon{% if listing.balcony_area %} ({{ listing.balcony_area|int }}m²){% endif %}</div>{% endif %}
-                    {% if listing.pool %}<div class="cost-item"><i class="fa-solid fa-person-swimming" style="color: var(--accent);"></i> Piscine</div>{% endif %}
-                    {% if listing.parking_count %}<div class="cost-item"><i class="fa-solid fa-car"></i> Parking ({{ listing.parking_count }})</div>{% endif %}
-                    {% if listing.cellar %}<div class="cost-item"><i class="fa-solid fa-box-archive"></i> Cave</div>{% endif %}
-                    {% if listing.elevator %}<div class="cost-item"><i class="fa-solid fa-arrow-up-z-a"></i> Ascenseur</div>{% endif %}
-                    {% if listing.guardian %}<div class="cost-item"><i class="fa-solid fa-user-shield"></i> Gardien</div>{% endif %}
-                    {% if listing.interphone %}<div class="cost-item"><i class="fa-solid fa-bell"></i> Interphone</div>{% endif %}
+                    {% if listing.garden %}<div class="cost-item"><i class="fa-solid fa-tree" style="color: var(--green);"></i> {{ t(request, 'listing.garden') }}{% if listing.garden_area %} ({{ listing.garden_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.terrace %}<div class="cost-item"><i class="fa-solid fa-sun" style="color: var(--orange);"></i> {{ t(request, 'listing.terrace') }}{% if listing.terrace_area %} ({{ listing.terrace_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.balcony %}<div class="cost-item"><i class="fa-solid fa-border-all"></i> {{ t(request, 'listing.balcony') }}{% if listing.balcony_area %} ({{ listing.balcony_area|int }}m²){% endif %}</div>{% endif %}
+                    {% if listing.pool %}<div class="cost-item"><i class="fa-solid fa-person-swimming" style="color: var(--accent);"></i> {{ t(request, 'listing.pool') }}</div>{% endif %}
+                    {% if listing.parking_count %}<div class="cost-item"><i class="fa-solid fa-car"></i> {{ t(request, 'listing.parking') }} ({{ listing.parking_count }})</div>{% endif %}
+                    {% if listing.cellar %}<div class="cost-item"><i class="fa-solid fa-box-archive"></i> {{ t(request, 'listing.cellar') }}</div>{% endif %}
+                    {% if listing.elevator %}<div class="cost-item"><i class="fa-solid fa-arrow-up-z-a"></i> {{ t(request, 'listing.elevator') }}</div>{% endif %}
+                    {% if listing.guardian %}<div class="cost-item"><i class="fa-solid fa-user-shield"></i> {{ t(request, 'listing.guardian') }}</div>{% endif %}
+                    {% if listing.interphone %}<div class="cost-item"><i class="fa-solid fa-bell"></i> {{ t(request, 'listing.intercom') }}</div>{% endif %}
                 </div>
 
                 <!-- Financier & Copropriété -->
-                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-euro-sign"></i> Financier & Copropriété</div>
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-euro-sign"></i> {{ t(request, 'listing.finance') }}</div>
                 <div class="costs-row" style="margin-bottom:0;">
-                    {% if listing.land_tax %}<div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> Taxe foncière : <strong>{{ listing.land_tax|int }} €/an</strong></div>{% endif %}
-                    {% if listing.charges %}<div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> Charges : <strong>{{ listing.charges|int }} €/mois</strong></div>{% endif %}
-                    {% if listing.agency_fee %}<div class="cost-item"><i class="fa-solid fa-handshake"></i> Honoraires : <strong>{{ listing.agency_fee|int }} €</strong></div>{% endif %}
-                    {% if listing.copropriete_lots %}<div class="cost-item"><i class="fa-solid fa-list-ol"></i> <strong>{{ listing.copropriete_lots }} lots</strong></div>{% endif %}
-                    {% if listing.procedure_syndic %}<div class="cost-item" style="color: var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> <strong>Procédure en cours</strong></div>{% endif %}
-                    {% if listing.honoraires_a_charge %}<div class="cost-item">Honoraires charge : <strong>{{ listing.honoraires_a_charge }}</strong></div>{% endif %}
+                    {% if listing.land_tax %}<div class="cost-item"><i class="fa-solid fa-receipt" style="color: var(--orange);"></i> {{ t(request, 'listing.property_tax') }} : <strong>{{ listing.land_tax|int }} {{ t(request, 'listing.per_year') }}</strong></div>{% endif %}
+                    {% if listing.charges %}<div class="cost-item"><i class="fa-solid fa-building" style="color: var(--accent);"></i> {{ t(request, 'listing.charges') }} : <strong>{{ listing.charges|int }} {{ t(request, 'listing.per_month') }}</strong></div>{% endif %}
+                    {% if listing.agency_fee %}<div class="cost-item"><i class="fa-solid fa-handshake"></i> {{ t(request, 'listing.agency_fee') }} : <strong>{{ listing.agency_fee|int }} €</strong></div>{% endif %}
+                    {% if listing.copropriete_lots %}<div class="cost-item"><i class="fa-solid fa-list-ol"></i> <strong>{{ listing.copropriete_lots }} {{ t(request, 'listing.lots') }}</strong></div>{% endif %}
+                    {% if listing.procedure_syndic %}<div class="cost-item" style="color: var(--red);"><i class="fa-solid fa-triangle-exclamation"></i> <strong>{{ t(request, 'listing.procedure') }}</strong></div>{% endif %}
+                    {% if listing.honoraires_a_charge %}<div class="cost-item">{{ t(request, 'listing.fee_charge') }} <strong>{{ listing.honoraires_a_charge }}</strong></div>{% endif %}
                 </div>
 
                 <!-- DPE & GES -->
@@ -406,19 +425,26 @@
             <!-- Description -->
             {% if listing.description_text %}
             <div class="info-card">
-                <div class="section-title"><i class="fa-solid fa-align-left"></i> Description</div>
+                <div class="section-title"><i class="fa-solid fa-align-left"></i> {{ t(request, 'listing.description') }}</div>
                 <div class="description" id="desc">{{ listing.description_text }}</div>
-                <div class="read-more" id="readMore" onclick="toggleDesc()">Lire la suite <i class="fa-solid fa-chevron-down"></i></div>
+                <div class="read-more" id="readMore" onclick="toggleDesc()">{{ t(request, 'listing.read_more') }} <i class="fa-solid fa-chevron-down"></i></div>
             </div>
             {% endif %}
 
+            {% if request.session.get('username') %}
+            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
+            </div>
+            {% endif %}
             <!-- Scraped at info -->
             <div style="font-size: 0.72rem; color: var(--text-2); text-align: right; padding: 0 0.25rem;">
                 {% if listing.scraped_at %}
-                Données extraites le {{ listing.scraped_at.strftime('%d/%m/%Y à %H:%M') }}
+                {{ t(request, 'listing.data_extracted') }} {{ listing.scraped_at.strftime('%d/%m/%Y %H:%M') }}
                 {% endif %}
-                — <a href="{{ listing.url }}" target="_blank" style="color: var(--accent);">Voir l'annonce originale <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                — <a href="{{ listing.url }}" target="_blank" style="color: var(--accent);">{{ t(request, 'listing.view_original') }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
             </div>
+
         </div>
 
         <!-- ── Right Panel: Reviews ── -->
@@ -426,11 +452,12 @@
 
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>
-                Voir sur {{ listing.source.value|upper }}
+                {{ t(request, 'listing.open_source') }}
             </a>
 
             <!-- Jean DUPONT Review -->
             {% set jm_review = reviews_by_reviewer.get('jean-dupont') %}
+
             <div class="review-card">
                 <div class="reviewer-header">
                     <div class="avatar jm">JM</div>
@@ -444,22 +471,22 @@
                     </div>
                     {% endif %}
                     {% if jm_review and jm_review.visit_done %}
-                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> Visité</span>
+                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> {{ t(request, 'listing.visit_done') }}</span>
                     {% endif %}
                 </div>
 
                 {% if jm_review %}
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> Points positifs</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> {{ t(request, 'listing.pros') }}</div>
                     <div class="review-text pros-text">{{ jm_review.pros or '—' }}</div>
                 </div>
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> Points négatifs</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> {{ t(request, 'listing.cons') }}</div>
                     <div class="review-text cons-text">{{ jm_review.cons or '—' }}</div>
                 </div>
                 {% if jm_review.notes %}
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> {{ t(request, 'listing.general_notes') }}</div>
                     <div class="review-text">{{ jm_review.notes }}</div>
                 </div>
                 {% endif %}
@@ -467,34 +494,36 @@
                 <div class="no-review">Pas encore d'avis de Jean DUPONT.</div>
                 {% endif %}
 
+
                 <button class="btn btn-toggle" onclick="toggleForm('form-jm')">
-                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if jm_review else 'Donner mon avis' }}
+                    <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit_review') if jm_review else t(request, 'listing.leave_review') }}
                 </button>
 
                 <div class="review-form" id="form-jm">
                     <div class="form-row">
-                        <label>Points positifs</label>
-                        <textarea id="jm-pros" placeholder="Lumineux, beau jardin, quartier calme...">{{ jm_review.pros or '' }}</textarea>
+                        <label>{{ t(request, 'listing.pros') }}</label>
+                        <textarea id="jm-pros" placeholder="...">{{ jm_review.pros or '' }}</textarea>
                     </div>
                     <div class="form-row">
-                        <label>Points négatifs</label>
-                        <textarea id="jm-cons" placeholder="Cuisine trop petite, pas de garage...">{{ jm_review.cons or '' }}</textarea>
+                        <label>{{ t(request, 'listing.cons') }}</label>
+                        <textarea id="jm-cons" placeholder="...">{{ jm_review.cons or '' }}</textarea>
                     </div>
                     <div class="form-row">
-                        <label>Note / 10</label>
+                        <label>{{ t(request, 'listing.rating') }}</label>
                         <input type="number" id="jm-rating" min="0" max="10" step="0.5" value="{{ jm_review.rating or '' }}" placeholder="7.5">
                     </div>
                     <div class="form-row">
-                        <label>Notes libres</label>
-                        <textarea id="jm-notes" placeholder="Remarques complémentaires...">{{ jm_review.notes or '' }}</textarea>
+                        <label>{{ t(request, 'listing.general_notes') }}</label>
+                        <textarea id="jm-notes" placeholder="...">{{ jm_review.notes or '' }}</textarea>
                     </div>
                     <div class="form-actions">
-                        <button class="btn sm" onclick="toggleForm('form-jm')">Annuler</button>
+                        <button class="btn sm" onclick="toggleForm('form-jm')">{{ t(request, 'listing.cancel') }}</button>
                         <button class="btn primary sm" onclick="submitReview('jean-dupont', {{ listing.id }})">
-                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+                            <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}
                         </button>
                     </div>
                 </div>
+
             </div>
 
             <!-- Marie MARTIN Review -->
@@ -512,22 +541,22 @@
                     </div>
                     {% endif %}
                     {% if marie_martin_review and marie_martin_review.visit_done %}
-                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> Visité</span>
+                    <span class="visit-badge done"><i class="fa-solid fa-check"></i> {{ t(request, 'listing.visit_done') }}</span>
                     {% endif %}
                 </div>
 
                 {% if marie_martin_review %}
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> Points positifs</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> {{ t(request, 'listing.pros') }}</div>
                     <div class="review-text pros-text">{{ marie_martin_review.pros or '—' }}</div>
                 </div>
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> Points négatifs</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> {{ t(request, 'listing.cons') }}</div>
                     <div class="review-text cons-text">{{ marie_martin_review.cons or '—' }}</div>
                 </div>
                 {% if marie_martin_review.notes %}
                 <div class="review-section">
-                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+                    <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> {{ t(request, 'listing.general_notes') }}</div>
                     <div class="review-text">{{ marie_martin_review.notes }}</div>
                 </div>
                 {% endif %}
@@ -536,30 +565,30 @@
                 {% endif %}
 
                 <button class="btn btn-toggle" onclick="toggleForm('form-marie-martin')">
-                    <i class="fa-solid fa-pen"></i> {{ 'Modifier mon avis' if marie_martin_review else 'Donner mon avis' }}
+                    <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit_review') if marie_martin_review else t(request, 'listing.leave_review') }}
                 </button>
 
                 <div class="review-form" id="form-marie-martin">
                     <div class="form-row">
-                        <label>Points positifs</label>
-                        <textarea id="marie-martin-pros" placeholder="Beau quartier, cuisine moderne...">{{ marie_martin_review.pros or '' }}</textarea>
+                        <label>{{ t(request, 'listing.pros') }}</label>
+                        <textarea id="marie-martin-pros" placeholder="...">{{ marie_martin_review.pros or '' }}</textarea>
                     </div>
                     <div class="form-row">
-                        <label>Points négatifs</label>
-                        <textarea id="marie-martin-cons" placeholder="Bruyant, sans cave...">{{ marie_martin_review.cons or '' }}</textarea>
+                        <label>{{ t(request, 'listing.cons') }}</label>
+                        <textarea id="marie-martin-cons" placeholder="...">{{ marie_martin_review.cons or '' }}</textarea>
                     </div>
                     <div class="form-row">
-                        <label>Note / 10</label>
+                        <label>{{ t(request, 'listing.rating') }}</label>
                         <input type="number" id="marie-martin-rating" min="0" max="10" step="0.5" value="{{ marie_martin_review.rating or '' }}" placeholder="8">
                     </div>
                     <div class="form-row">
-                        <label>Notes libres</label>
-                        <textarea id="marie-martin-notes" placeholder="Remarques supplémentaires...">{{ marie_martin_review.notes or '' }}</textarea>
+                        <label>{{ t(request, 'listing.general_notes') }}</label>
+                        <textarea id="marie-martin-notes" placeholder="...">{{ marie_martin_review.notes or '' }}</textarea>
                     </div>
                     <div class="form-actions">
-                        <button class="btn sm" onclick="toggleForm('form-marie-martin')">Annuler</button>
+                        <button class="btn sm" onclick="toggleForm('form-marie-martin')">{{ t(request, 'listing.cancel') }}</button>
                         <button class="btn primary sm" onclick="submitReview('marie-martin', {{ listing.id }})">
-                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+                            <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}
                         </button>
                     </div>
                 </div>
@@ -572,10 +601,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- ── Modal: Edition ── -->
+
 <div class="modal-backdrop" id="editModal" onclick="if(event.target===this)closeEditModal()">
     <div class="modal" style="max-width: 700px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-pen" style="color: var(--accent);"></i> Éditer l'annonce</h2>
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-pen" style="color: var(--accent);"></i> {{ t(request, 'listing.edit') }}</h2>
             <button class="btn sm" onclick="closeEditModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
@@ -587,9 +617,10 @@
                     <input type="text" id="edit-title" value="{{ listing.title or '' }}" required>
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Prix (€)</label>
+                    <label>Prix</label>
                     <input type="number" step="0.01" id="edit-price" value="{{ listing.price or '' }}">
                 </div>
+
                 <div class="form-row" style="margin-bottom: 0;">
                     <label>Surface (m²)</label>
                     <input type="number" step="0.01" id="edit-area" value="{{ listing.area or '' }}">
@@ -648,9 +679,10 @@
             </div>
             
             <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
-                <button type="button" class="btn" onclick="closeEditModal()">Annuler</button>
-                <button type="submit" class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Sauvegarder</button>
+                <button type="button" class="btn" onclick="closeEditModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button type="submit" class="btn primary"><i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}</button>
             </div>
+
         </form>
     </div>
 </div>
@@ -660,9 +692,9 @@
 <div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
     <div class="modal delete-modal">
         <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        <h2 style="color: var(--text); margin-bottom: 0.5rem;">Supprimer cette annonce ?</h2>
+        <h2 style="color: var(--text); margin-bottom: 0.5rem;">{{ t(request, 'listing.delete_confirm') }}</h2>
         <p class="delete-title-preview" id="deleteTitlePreview" style="font-size: 0.82rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
-        <p class="delete-warning" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.25rem;">Cette action est <strong>irréversible</strong>. Les avis associés seront également supprimés.</p>
+        <p class="delete-warning" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.25rem;">{{ t(request, 'listing.delete_warning') }}</p>
 
         <div class="slide-confirm-wrapper" style="padding: 0.25rem 0 0.75rem;">
             <div class="slide-track" id="slideTrack" style="position: relative; height: 52px; background: var(--surface-2); border: 1px solid rgba(242,92,105,0.3); border-radius: 26px; display: flex; align-items: center; overflow: hidden; user-select: none;">
@@ -670,13 +702,15 @@
                     <i class="fa-solid fa-chevron-right"></i>
                     <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
                 </div>
-                <span class="slide-label" id="slideLabel" style="width: 100%; text-align: center; font-size: 0.78rem; font-weight: 600; color: rgba(242,92,105,0.7); letter-spacing: 0.04em; pointer-events: none;">Glissez pour confirmer</span>
+                <span class="slide-label" id="slideLabel" style="width: 100%; text-align: center; font-size: 0.78rem; font-weight: 600; color: rgba(242,92,105,0.7); letter-spacing: 0.04em; pointer-events: none;">{{ t(request, 'listing.slide_confirm') }}</span>
             </div>
         </div>
 
+
         <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
-            <i class="fa-solid fa-xmark"></i> Annuler
+            <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel') }}
         </button>
+
     </div>
 </div>
 
@@ -701,9 +735,10 @@
             <textarea id="photo-urls" style="min-height: 100px; width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collage d'URLs : https://.../img1.jpg&#10;https://.../img2.jpg"></textarea>
         </div>
         <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
-            <button class="btn" onclick="closePhotoModal()">Annuler</button>
-            <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> Importer</button>
+            <button class="btn" onclick="closePhotoModal()">{{ t(request, 'listing.cancel') }}</button>
+            <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> Import</button>
         </div>
+
     </div>
 </div>
 

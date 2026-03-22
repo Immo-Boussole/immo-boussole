@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ request.session.get('lang', 'fr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Création Administrateur — Immo-Boussole</title>
+    <title>{{ t(request, 'setup.title') }} — {{ t(request, 'app.title') }}</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -178,22 +179,77 @@
             margin-bottom: 1rem;
             border: 1px solid rgba(99, 102, 241, 0.3);
         }
+
+        /* Language Selector */
+        .lang-selector {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 3px;
+            gap: 2px;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+
+        .lang-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .lang-item:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .lang-item.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .lang-item.active:hover {
+            background: var(--accent-2);
+        }
+
+        .lang-item span {
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
+    <div class="lang-selector">
+        <a href="/lang/fr" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'fr' else '' }}">
+            <span>🇫🇷</span> FR
+        </a>
+        <a href="/lang/en" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'en' else '' }}">
+            <span>🇬🇧</span> EN
+        </a>
+    </div>
     <div class="login-card">
         <div class="logo">
             <i class="fas fa-compass"></i>
-            Immo-Boussole
+            {{ t(request, 'app.title') }}
         </div>
         
-        <div class="badge">Configuration Initiale</div>
-        <h1>Création Administrateur</h1>
-        <p>Bienvenue sur Immo-Boussole. C'est votre première connexion ! Veuillez créer votre compte administrateur sécurisé.</p>
+        <div class="badge">{{ t(request, 'setup.subtitle') }}</div>
+        <h1>{{ t(request, 'setup.title') }}</h1>
+        <p>{{ t(request, 'setup.welcome') }}</p>
+
 
         <form method="POST" id="setupForm">
             <div class="form-group">
-                <label for="username">Nom d'utilisateur</label>
+                <label for="username">{{ t(request, 'setup.username') }}</label>
                 <div class="input-wrapper">
                     <i class="fas fa-user-shield"></i>
                     <input type="text" id="username" name="username" placeholder="admin" required autofocus>
@@ -201,15 +257,16 @@
             </div>
             
             <div class="form-group">
-                <label for="password">Nouveau mot de passe</label>
+                <label for="password">{{ t(request, 'setup.new_password') }}</label>
                 <div class="input-wrapper">
                     <i class="fas fa-lock"></i>
                     <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
             </div>
             
-            <button type="submit" class="btn">Créer le compte et accéder</button>
+            <button type="submit" class="btn">{{ t(request, 'setup.create_account') }}</button>
         </form>
+
     </div>
 </body>
 </html>

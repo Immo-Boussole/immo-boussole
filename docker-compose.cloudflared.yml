@@ -1,0 +1,56 @@
+# 🐳 Dedicated Docker Compose for Cloudflared + Portainer
+# This file is designed for secure deployment without exposed ports.
+# All external communication passes through the Cloudflare Tunnel.
+
+version: '3.8'
+
+services:
+  # ── 1. Immo-Boussole Application ──────────────────────────────────────────
+  immo-boussole:
+    # Option A: Local Build (if you cloned the repository)
+    build: .
+    # Option B: Build from GitHub (useful for Portainer Stacks)
+    # build: https://github.com/YOUR_PROFILE/immo-boussole.git#main
+    container_name: immo-boussole
+    restart: unless-stopped
+    environment:
+      # Internal URL for FlareSolverr
+      - FLARESOLVERR_URL=http://flaresolverr:8191
+      # Optional Captcha configuration
+      # - CAPTCHA_SOLVER=2captcha
+      # - TWO_CAPTCHA_API_KEY=your_2captcha_key
+    volumes:
+      # SQLite database persistence
+      - immo-boussole-db:/app/data
+      # Downloaded photos persistence
+      - immo-boussole-media:/app/static/media/uploads
+    depends_on:
+      - flaresolverr
+    # NOTE: No "ports:" block is present.
+    # The application is only accessible via the Docker network or the Tunnel.
+
+  # ── 2. FlareSolverr (Cloudflare/DDoS Bypass) ────────────────────────────────
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=info
+      - TZ=Europe/Paris
+
+  # ── 3. Cloudflare Tunnel Connector ─────────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      # Replace with your Zero Trust token or use a .env file
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
+
+# ── Persistent Volumes ──────────────────────────────────────────────────────
+volumes:
+  immo-boussole-db:
+    name: immo-boussole-db
+  immo-boussole-media:
+    name: immo-boussole-media

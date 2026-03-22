@@ -12,6 +12,7 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     password_hash = Column(LargeBinary, nullable=False)
     salt = Column(LargeBinary, nullable=False)
+    role = Column(String(20), nullable=False, default="user") # "admin" or "user"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
