@@ -159,9 +159,10 @@ L'accès à l'ensemble du site est protégé par un mécanisme d'authentificatio
 
 - ✅ Protéger l'accès à tout le site par un mécanisme d'authentification.
 - ✅ Créer un système de création de compte d'administrateur au premier démarrage.
-- ⬜ Créer un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
+- ✅ Créer un mécanisme d'alerte en cas de nouvelle version disponible (basée sur un hash du code source hébergé sur GitHub).
 - ⬜ Créer une interface d'administration.
 - ⬜ Créer un système de création de compte utilisateur (au moins un compte utilisateur par défaut, l'administrateur ne devrait pas pouvoir importer d'annonces).
+- ⬜ Créer un système de création de compte conseiller immobilier (possibilité de regarder les annonces importées dans l'application, et les retours faits par les utilisateurs, ainsi que la la fiche de bien idéal).
 - ⬜ Ajouter un système de favoris pour les annonces.
 - ⬜ Ajouter un système de favoris pour les recherches.
 - ⬜ Rendre l'application multilangue (Français et Anglais).
