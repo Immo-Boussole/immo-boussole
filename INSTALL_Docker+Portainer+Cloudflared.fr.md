@@ -37,63 +37,11 @@ Nous allons déployer Immo-Boussole, FlareSolverr (pour le scraping) et le conne
 2. Sélectionnez votre environnement (généralement `local`) et allez dans **Stacks**.
 3. Cliquez sur **Add stack** en haut à droite.
 4. Nommez votre stack (ex: `immo-boussole-stack`).
-5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier [docker-compose.cloudflared.yml](docker-compose.cloudflared.yml) suivant :
-
-```yaml
-# 🐳 Dedicated Docker Compose for Cloudflared + Portainer
-version: '3.8'
-
-services:
-  # 1. Immo-Boussole Application
-  immo-boussole:
-    # Option A: Local Build (if you cloned the repository)
-    build: .
-    # Option B: Build from GitHub (useful for Portainer Stacks)
-    # build: https://github.com/YOUR_PROFILE/immo-boussole.git#main
-    container_name: immo-boussole
-    restart: unless-stopped
-    environment:
-      - FLARESOLVERR_URL=http://flaresolverr:8191
-      # - CAPTCHA_SOLVER=2captcha
-      # - TWO_CAPTCHA_API_KEY=your_2captcha_key
-    volumes:
-      - immo-boussole-db:/app/data
-      - immo-boussole-media:/app/static/media/uploads
-    depends_on:
-      - flaresolverr
-    # IMPORTANT: No "ports:" block is present.
-    # The application is only accessible via the Docker network or the Tunnel.
-
-  # 2. FlareSolverr (Cloudflare/DDoS Bypass)
-  flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
-    restart: unless-stopped
-    environment:
-      - LOG_LEVEL=info
-      - TZ=Europe/Paris
-
-  # 3. Cloudflare Tunnel Connector
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    restart: unless-stopped
-    command: tunnel run
-    environment:
-      # Replace with your Zero Trust token
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
-
-volumes:
-  immo-boussole-db:
-    name: immo-boussole-db
-  immo-boussole-media:
-    name: immo-boussole-media
-```
-
+5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier [docker-compose.cloudflared.yml](docker-compose.cloudflared.yml).
 6. **Modifications requises** :
    - Remplacez `VOTRE_TOKEN_CLOUDFLARE_ICI` par votre token Zero Trust.
    - **Configuration initiale** : Au premier démarrage, l'application vous redirigera vers `/setup-admin` pour créer votre compte administrateur. Plus besoin de `APP_PASSWORD` dans le fichier compose.
-   - Modifiez la ligne `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main` pour correspondre à l'URL de **votre propre fork** (ou clone) de dépôt GitHub si l'image n'est pas publiée.
+   - Modifiez la ligne `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main` pour correspondre à l'URL de **votre propre fork** (ou clone) de dépôt GitHub si l'image n'est pas publiée. Vous pouvez également utiliser l'adresse du projet, donc la valeur `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main`.
    
 7. Descendez en bas de la page et cliquez sur **Deploy the stack**. Patientez quelques minutes pendant que Portainer télécharge les images, construit l'application et lance les conteneurs.
 
