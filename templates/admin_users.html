@@ -125,6 +125,19 @@
             color: white;
         }
 
+        .btn.secondary {
+            background: rgba(79, 142, 247, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(79, 142, 247, 0.2);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .btn.secondary:hover {
+            background: var(--accent);
+            color: white;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -216,11 +229,16 @@
                         <td>{{ user.username }}</td>
                         <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
                         <td>
-                            {% if user.username != request.session.get('username') %}
-                            <button class="btn danger" onclick="deleteUser({{ user.id }})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            {% endif %}
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn secondary" onclick="changePassword({{ user.id }}, '{{ user.username }}')">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                {% if user.username != request.session.get('username') %}
+                                <button class="btn danger" onclick="deleteUser({{ user.id }})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -272,6 +290,28 @@
                 if (res.ok) {
                     showAlert('Utilisateur supprimé', 'success');
                     setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            }
+        }
+
+        async function changePassword(id, username) {
+            const newPassword = prompt(`Nouveau mot de passe pour ${username} :`);
+            if (!newPassword) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${id}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPassword })
+                });
+
+                if (res.ok) {
+                    showAlert(`Mot de passe de ${username} mis à jour`, 'success');
                 } else {
                     const err = await res.json();
                     showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
