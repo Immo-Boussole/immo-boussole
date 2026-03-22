@@ -1,3 +1,8 @@
+# ⚠️ LOCAL DEVELOPMENT ONLY
+# Note: This file contains bind mounts (./app, ./templates, etc.) that will fail
+# in most cloud/Portainer environments unless files are already present on the host.
+# For Portainer/Cloud deployment, please use: docker-compose.cloudflared.yml
+
 name: immo-boussole
 
 services:
