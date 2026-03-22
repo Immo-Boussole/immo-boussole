@@ -25,7 +25,7 @@ La méthode la plus sécurisée pour exposer votre application sans ouvrir de po
    - **Service** :
      - Type : `HTTP`
      - URL : `immo-boussole:8000` (c'est le nom du service Docker que nous allons créer et son port interne)
-7. Cliquez sur **Save tunnel**.
+7. Cliquez sur **Complete setup**.
 
 ---
 
