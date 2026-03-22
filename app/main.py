@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, field_validator
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import models, database
@@ -185,12 +186,22 @@ def user_required(request: Request, _auth = Depends(login_required)):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Custom handler for HTTPExceptions.
+    Handles 307 redirects for auth flow and provides a safe fallback for others
+    to avoid crashing if app.default_exception_handler is missing.
+    """
     if exc.status_code == 307:
         if exc.detail == "Redirect to login":
             return RedirectResponse(url="/login")
         elif exc.detail == "Redirect to setup-admin":
             return RedirectResponse(url="/setup-admin")
-    return await app.default_exception_handler(request, exc)
+    
+    # Return JSON for API/Health errors, or use default standard response
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
 
 
 @app.get("/setup-admin")
@@ -259,6 +270,27 @@ def login(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login")
+
+
+# ─── System: Health & Maintenance ─────────────────────────────────────────────
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    """
+    Public health check endpoint for Docker/Orchestrators.
+    Verifies database connectivity.
+    """
+    try:
+        # Simple query to verify DB is alive and reachable
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "ok", 
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.1.0"
+        }
+    except Exception as e:
+        # If DB is down, return 500 so container becomes "unhealthy"
+        raise HTTPException(status_code=500, detail=f"Database unreachable: {str(e)}")
 
 
 # ─── Administration: User Management ──────────────────────────────────────────
