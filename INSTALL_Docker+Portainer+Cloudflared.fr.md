@@ -35,18 +35,20 @@ Nous allons déployer Immo-Boussole, FlareSolverr (pour le scraping) et le conne
 
 1. Connectez-vous à votre interface **Portainer**.
 2. Sélectionnez votre environnement (généralement `local`) et allez dans **Stacks**.
-3. Cliquez sur **Add stack** en haut à droite.
-4. Nommez votre stack (ex: `immo-boussole-stack`).
-5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier **[docker-compose.cloudflared.yml](docker-compose.cloudflared.yml)**.
-   > [!IMPORTANT]
-   > Ne pas utiliser le fichier `docker-compose.yml` standard pour Portainer, car il contient des mappages de dossiers locaux (bind mounts) qui provoqueront des erreurs.
+5. Sélectionnez la méthode **Repository**.
+   > [!TIP]
+   > Cette méthode est recommandée car Portainer gère lui-même le clonage de Git, évitant ainsi les erreurs `git not found` sur les NAS (comme Synology).
 
-6. **Modifications requises** :
-   - Remplacez `${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}` par votre token Zero Trust.
-   - **Configuration initiale** : Au premier démarrage, l'application vous redirigera vers `/setup-admin` pour créer votre compte administrateur. Plus besoin de `APP_PASSWORD` dans le fichier compose.
-   - **Build depuis GitHub** : Par défaut, le fichier utilise `build: https://github.com/Immo-Boussole/immo-boussole.git#main`. Si vous avez fait des modifications sur votre propre fork, remplacez cette URL par celle de votre dépôt GitHub.
-   
-7. Descendez en bas de la page et cliquez sur **Deploy the stack**. Patientez quelques minutes pendant que Portainer télécharge les images, construit l'application et lance les conteneurs.
+6. **Configuration du dépôt** :
+   - **Repository URL** : `https://github.com/Immo-Boussole/immo-boussole.git` (ou l'URL de **votre propre fork**)
+   - **Repository Reference** : `refs/heads/main`
+   - **Compose file path** : `docker-compose.cloudflared.yml`
+
+7. **Variables d'environnement** (en bas de page) :
+   - **Modifications requises** : Ajoutez une variable nommée `TUNNEL_TOKEN` et collez votre token Zero Trust.
+   - **Configuration initiale** : Au premier démarrage, l'application vous redirigera vers `/setup-admin` pour créer votre compte administrateur. 
+
+8. Cliquez sur **Deploy the stack**. Patientez quelques minutes pendant que Portainer télécharge les images, construit l'application et lance les conteneurs.
 
 Une fois la stack déployée, le conteneur `cloudflared` établira la connexion sécurisée vers Cloudflare. Votre application sera alors accessible partout sur l'URL configurée à l'étape 1 (ex: `https://immo.votre-domaine.com`), le tout sécurisé en HTTPS managé par Cloudflare !
 

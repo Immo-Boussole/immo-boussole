@@ -35,18 +35,20 @@ We will deploy Immo-Boussole, FlareSolverr (for scraping), and the Cloudflared c
 
 1. Log in to your **Portainer** interface.
 2. Select your environment (usually `local`) and go to **Stacks**.
-3. Click **Add stack** at the top right.
-4. Name your stack (e.g., `immo-boussole-stack`).
-5. Select the **Web editor** method and use the content of the file **[docker-compose.cloudflared.yml](docker-compose.cloudflared.yml)**.
-   > [!IMPORTANT]
-   > Do not use the standard `docker-compose.yml` file for Portainer, as it contains local directory mappings (bind mounts) that will cause errors.
+5. Select the **Repository** method.
+   > [!TIP]
+   > This method is recommended because Portainer handles Git cloning internally, avoiding `git not found` errors on NAS systems (like Synology).
 
-6. **Required changes**:
-   - Replace `${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}` with your Zero Trust token.
-   - **Initial setup**: On the first run, the application will redirect you to `/setup-admin` to create your administrator account. No more need for `APP_PASSWORD` in the compose file.
-   - **Build from GitHub**: By default, the file uses `build: https://github.com/Immo-Boussole/immo-boussole.git#main`. If you have made changes to your own fork, replace this URL with your GitHub repository URL.
-   
-7. Scroll to the bottom of the page and click **Deploy the stack**. Wait a few minutes while Portainer downloads the images, builds the application, and starts the containers.
+6. **Repository configuration**:
+   - **Repository URL**: `https://github.com/Immo-Boussole/immo-boussole.git` (or your **own fork** URL)
+   - **Repository Reference**: `refs/heads/main`
+   - **Compose file path**: `docker-compose.cloudflared.yml`
+
+7. **Environment variables** (at the bottom of the page):
+   - **Required changes**: Add a variable named `TUNNEL_TOKEN` and paste your Zero Trust token.
+   - **Initial setup**: On the first run, the application will redirect you to `/setup-admin` to create your administrator account.
+
+8. Click **Deploy the stack**. Wait a few minutes while Portainer downloads the images, builds the application, and starts the containers.
 
 Once the stack is deployed, the `cloudflared` container will establish the secure connection to Cloudflare. Your application will then be accessible anywhere at the URL configured in Step 1 (e.g., `https://immo.your-domain.com`), all secured via HTTPS managed by Cloudflare!
 

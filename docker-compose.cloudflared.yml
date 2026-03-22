@@ -7,12 +7,12 @@ version: '3.8'
 services:
   # ── 1. Immo-Boussole Application ──────────────────────────────────────────
   immo-boussole:
-    # Option A: Build from GitHub (RECOMMENDED for Portainer Stacks / Web Editor)
-    # Replace YOUR_PROFILE with your actual GitHub username.
-    build: https://github.com/Immo-Boussole/immo-boussole.git#main
+    # Use "build: ." when deploying via Portainer "Repository" method
+    # or when building from a local clone.
+    build: .
 
-    # Option B: Local Build (if you cloned the repository locally)
-    # build: .
+    # Note: Building directly from a remote GitHub URL (e.g., build: https://...)
+    # may fail on some NAS systems if 'git' is not installed on the host.
     container_name: immo-boussole
     restart: unless-stopped
     environment:
