@@ -16,6 +16,7 @@ from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, F
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.exception_handlers import http_exception_handler as default_http_exception_handler
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, field_validator
 from sqlalchemy import text
@@ -197,11 +198,9 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         elif exc.detail == "Redirect to setup-admin":
             return RedirectResponse(url="/setup-admin")
     
-    # Return JSON for API/Health errors, or use default standard response
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail}
-    )
+    # Use the default FastAPI exception handler for everything else (404, 401, etc.)
+    # This avoids the AttributeError: 'FastAPI' object has no attribute 'default_exception_handler'
+    return await default_http_exception_handler(request, exc)
 
 
 @app.get("/setup-admin")
