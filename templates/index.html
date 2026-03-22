@@ -1566,7 +1566,52 @@
             document.addEventListener('touchmove', e => { if (dragging) onMove(e); }, { passive: false });
             document.addEventListener('touchend', onEnd);
         })();
+
+        // ── Version Update Alert ─────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', async () => {
+            const localHash = "{{ local_hash }}";
+            if (!localHash || localHash === "dummy-test-hash") {
+                // Allows us to test the banner with a fake hash
+                if (localHash !== "dummy-test-hash" && !localHash) return;
+            }
+
+            try {
+                const res = await fetch('https://api.github.com/repos/Immo-Boussole/immo-boussole/commits/main');
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                if (data.sha && data.sha !== localHash) {
+                    const banner = document.getElementById('updateBanner');
+                    if (banner) {
+                        banner.style.display = 'flex';
+                        // Force reflow and transition
+                        setTimeout(() => banner.style.transform = 'translateY(0)', 100);
+                    }
+                }
+            } catch (err) {
+                console.error("Checking for updates failed", err);
+            }
+        });
     </script>
+
+    <!-- ── Update Banner ── -->
+    <div id="updateBanner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; padding: 1.25rem 2.5rem; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 -8px 32px rgba(0,0,0,0.4); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.8rem; opacity: 0.9;"></i>
+            <div>
+                <strong style="font-size: 1.05rem; letter-spacing: 0.02em;">Nouvelle version disponible !</strong>
+                <div style="font-size: 0.85rem; margin-top: 0.2rem; opacity: 0.9;">Une mise à jour d'Immo-Boussole est disponible sur GitHub avec de nouvelles fonctionnalités et corrections.</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="https://github.com/Immo-Boussole/immo-boussole" target="_blank" class="btn" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); color: #fff; border-radius: 8px; font-weight: 600;">
+                <i class="fa-brands fa-github"></i> Voir la mise à jour
+            </a>
+            <button onclick="document.getElementById('updateBanner').style.transform = 'translateY(100%)'; setTimeout(()=>document.getElementById('updateBanner').style.display='none', 400);" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.25rem; opacity: 0.7; padding: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="Fermer">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
 
 </body>
 

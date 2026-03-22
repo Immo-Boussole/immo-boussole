@@ -233,6 +233,26 @@ def logout(request: Request):
     return RedirectResponse(url="/login")
 
 
+def get_local_commit_hash() -> str:
+    """Attempt to safely read the local git commit hash."""
+    try:
+        git_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".git")
+        head_file = os.path.join(git_dir, "HEAD")
+        if os.path.exists(head_file):
+            with open(head_file, "r") as f:
+                head_content = f.read().strip()
+                if head_content.startswith("ref: "):
+                    ref_path = os.path.join(git_dir, head_content.split(" ")[1])
+                    if os.path.exists(ref_path):
+                        with open(ref_path, "r") as ref_f:
+                            return ref_f.read().strip()
+                else:
+                    return head_content
+    except Exception:
+        pass
+    return ""
+
+
 # ─── HTML Pages ───────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -244,10 +264,13 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
     for listing in listings:
         listing._photos = json_to_photos(listing.photos_local)
 
+    local_hash = get_local_commit_hash()
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "listings": listings,
         "queries": queries,
+        "local_hash": local_hash,
         "title": "Tableau de Bord — Immo-Boussole",
     })
 
