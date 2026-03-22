@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ request.session.get('lang', 'fr') }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>{{ t(request, 'nav.dashboard') }} — {{ t(request, 'app.title') }}</title>
     <meta name="description"
-        content="Tableau de bord collaboratif de suivi des annonces immobilières - Jean DUPONT & Marie MARTIN">
+        content="{{ t(request, 'app.description') }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -939,7 +940,7 @@
     <aside class="sidebar">
         <div class="logo">
             <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+            {{ t(request, 'app.title') }}
         </div>
 
         {% set total = listings|length %}
@@ -948,27 +949,27 @@
         <div class="stat-grid">
             <div class="stat-card" style="grid-column: 1 / -1;">
                 <div class="val">{{ total }}</div>
-                <div class="lbl">Total annonces</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
             <div class="stat-card new">
                 <div class="val">{{ new_cnt }}</div>
-                <div class="lbl">Nouvelles</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
             </div>
             <div class="stat-card dis">
                 <div class="val">{{ dis_cnt }}</div>
-                <div class="lbl">Disparues</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
             </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
-            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> Tableau de bord</a>
-            <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> Tableau des annonces</a>
-            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> Fiche Bien Idéal</a>
+            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
+            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
         </nav>
 
         <br>
-        <div class="sidebar-section-title">Recherches Automatiques</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.auto_searches') }}</div>
         {% if queries %}
         <div class="query-list">
             {% for query in queries %}
@@ -980,11 +981,12 @@
             {% endfor %}
         </div>
         {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">Aucune recherche configurée</div>
+        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_searches') }}</div>
         {% endif %}
 
         <br>
-        <div class="sidebar-section-title">Recherches Manuelles</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.manual_searches') }}</div>
+
         {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list %}
         {% if manual_listings %}
         <div class="query-list">
@@ -1006,52 +1008,61 @@
             {% endif %}
         </div>
         {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">Aucun bien ajouté manuellement</div>
+        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_manual') }}</div>
         {% endif %}
 
         <br>
-        <div class="sidebar-section-title">Prêt à Rechercher</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
-            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> Prêt à rechercher</a>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            {% if request.session.get('role') == 'admin' %}
+            <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            {% endif %}
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem;">
             {% if request.session.get('username') %}
             <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
-                Connecté: <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
             </div>
             {% endif %}
             <a href="/logout" class="nav-link" style="color: var(--red);">
-                <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+                <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
+
         </div>
     </aside>
 
     <!-- ── Main ── -->
     <div class="main">
         <div class="topbar">
-            <h1>Annonces immobilières</h1>
+            <h1>{{ t(request, 'dashboard.all_listings') }}</h1>
             <div class="topbar-right">
-                <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> Fiche Idéale</a>
+                <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+                {% if request.session.get('role') == 'user' %}
                 <button class="btn primary" id="btnAddUrl" onclick="openModal()">
-                    <i class="fa-solid fa-plus"></i> Ajouter une annonce
+                    <i class="fa-solid fa-plus"></i> {{ t(request, 'dashboard.add_listing') }}
                 </button>
+                {% endif %}
             </div>
         </div>
 
+
         <div class="filter-bar">
-            <span class="filter-label">Filtrer :</span>
-            <button class="btn active" id="f-all" onclick="filter('all', this)">Toutes</button>
+            <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
+            <button class="btn active" id="f-all" onclick="filter('all', this)">{{ t(request, 'dashboard.filters.all') }}</button>
             <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-                <i class="fa-solid fa-sparkles"></i> Nouvelles
+                <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
             </button>
             <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-                <i class="fa-solid fa-eye"></i> Actives
+                <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
             </button>
             <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-                <i class="fa-solid fa-eye-slash"></i> Disparues
+                <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
             </button>
         </div>
+
 
         <div class="content">
             <div class="grid" id="grid">
@@ -1077,7 +1088,7 @@
                         <div class="card-title">{{ listing.title }}</div>
                         <div class="card-price">
                             {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else
-                            %}Prix N/C{% endif %}
+                            %}{{ t(request, 'misc.price_nc') }}{% endif %}
                         </div>
                         {% if listing.price_per_sqm %}
                         <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>
@@ -1088,34 +1099,34 @@
                             {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if
                                 listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
                             {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }}
-                                p.</span>{% endif %}
+                                {{ t(request, 'misc.rooms_short') }}</span>{% endif %}
                             {% if listing.bedrooms %}<span><i class="fa-solid fa-bed"></i> {{ listing.bedrooms }}
-                                ch.</span>{% endif %}
+                                {{ t(request, 'misc.bed_short') }}</span>{% endif %}
                             {% if listing.bathroom_count %}<span><i class="fa-solid fa-bath"></i> {{
-                                listing.bathroom_count }} sdb</span>{% endif %}
+                                listing.bathroom_count }} {{ t(request, 'misc.bath_short') }}</span>{% endif %}
                         </div>
 
                         <div class="card-meta" style="margin-top: -0.4rem; font-size: 0.7rem; opacity: 0.8;">
                             {% if listing.property_type %}<span><i class="fa-solid fa-house"></i> {{
                                 listing.property_type|capitalize }}</span>{% endif %}
-                            {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> TF: {{
+                            {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> {{ t(request, 'misc.tf') }} {{
                                 listing.land_tax|int }} €</span>{% endif %}
-                            {% if listing.charges %}<span><i class="fa-solid fa-building"></i> CH: {{
+                            {% if listing.charges %}<span><i class="fa-solid fa-building"></i> {{ t(request, 'misc.ch') }} {{
                                 listing.charges|int }} €</span>{% endif %}
                         </div>
 
                         <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
-                            {% if listing.garden %}<i class="fa-solid fa-tree" title="Jardin"
+                            {% if listing.garden %}<i class="fa-solid fa-tree" title="{{ t(request, 'listing.garden') }}"
                                 style="color: var(--green);"></i>{% endif %}
-                            {% if listing.terrace %}<i class="fa-solid fa-sun" title="Terrasse"
+                            {% if listing.terrace %}<i class="fa-solid fa-sun" title="{{ t(request, 'listing.terrace') }}"
                                 style="color: var(--orange);"></i>{% endif %}
-                            {% if listing.balcony %}<i class="fa-solid fa-border-all" title="Balcon"
+                            {% if listing.balcony %}<i class="fa-solid fa-border-all" title="{{ t(request, 'listing.balcony') }}"
                                 style="color: var(--text-2);"></i>{% endif %}
-                            {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="Piscine"
+                            {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="{{ t(request, 'listing.pool') }}"
                                 style="color: var(--accent);"></i>{% endif %}
-                            {% if listing.parking_count %}<i class="fa-solid fa-car" title="Parking"
+                            {% if listing.parking_count %}<i class="fa-solid fa-car" title="{{ t(request, 'listing.parking') }}"
                                 style="color: var(--text-2);"></i>{% endif %}
-                            {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="Cave"
+                            {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="{{ t(request, 'listing.cellar') }}"
                                 style="color: var(--text-2);"></i>{% endif %}
                         </div>
 
@@ -1139,11 +1150,11 @@
                             <span class="source-badge">{{ listing.source.value|upper }}</span>
                             <a href="{{ listing.url }}" target="_blank" class="card-link"
                                 onclick="event.stopPropagation()">
-                                Voir <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                {{ t(request, 'dashboard.see') }} <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                             <button class="btn-delete"
                                 onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})'
-                                title="Supprimer cette annonce" aria-label="Supprimer">
+                                title="{{ t(request, 'dashboard.delete_title') }}" aria-label="{{ t(request, 'listing.delete_btn') }}">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -1152,11 +1163,11 @@
                 {% else %}
                 <div class="empty">
                     <i class="fa-regular fa-folder-open"></i>
-                    <h2>Aucune annonce trouvée</h2>
-                    <p>Ajoutez une annonce avec le bouton "+ Ajouter une annonce" ou configurez une recherche
-                        automatique.</p>
+                    <h2>{{ t(request, 'dashboard.empty_state.title') }}</h2>
+                    <p>{{ t(request, 'dashboard.empty_state.subtitle') }}</p>
                 </div>
                 {% endfor %}
+
             </div>
         </div>
     </div>
@@ -1166,11 +1177,11 @@
         <div class="modal" id="modalContainer" style="max-width: 600px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                 <div>
-                    <h2><i class="fa-solid fa-link"></i> Ajouter des annonces</h2>
-                    <p id="modalMainDesc">Configurez vos annonces à ajouter.</p>
+                    <h2><i class="fa-solid fa-link"></i> {{ t(request, 'dashboard.add_listings_title') }}</h2>
+                    <p id="modalMainDesc">{{ t(request, 'dashboard.add_listings_desc_single') }}</p>
                 </div>
                 <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
-                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-2); text-transform: uppercase;">Mode Multiple</span>
+                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-2); text-transform: uppercase;">{{ t(request, 'dashboard.mode_multiple') }}</span>
                     <label class="switch">
                         <input type="checkbox" id="toggleMultiple" onchange="toggleMode()">
                         <span class="slider"></span>
@@ -1181,22 +1192,22 @@
             <!-- Single Mode -->
             <div id="singleMode">
                 <div class="form-group">
-                    <label for="urlInput">URL de l'annonce</label>
+                    <label for="urlInput">{{ t(request, 'dashboard.url_label') }}</label>
                     <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
                 </div>
                 <div style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
-                    <i class="fa-solid fa-circle-info"></i> '<strong>Ajouter sans scraper</strong>' est recommandé pour LeBonCoin.
+                    <i class="fa-solid fa-circle-info"></i> '<strong>{{ t(request, 'dashboard.add_without_scrape') }}</strong>' {{ t(request, 'dashboard.add_without_scrape_hint') }}
                 </div>
             </div>
 
             <!-- Multiple Mode -->
             <div id="multipleMode" style="display: none;">
                 <div class="form-group">
-                    <label for="urlsArea">URLs (une par ligne)</label>
+                    <label for="urlsArea">{{ t(request, 'dashboard.urls_label') }}</label>
                     <textarea id="urlsArea" style="width: 100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collez plusieurs URLs ici..."></textarea>
                 </div>
                 <button class="btn sm" onclick="loadUrls()" style="width: 100%; margin-top: -0.5rem; margin-bottom: 1rem;">
-                    <i class="fa-solid fa-list-check"></i> Analyser les URLs
+                    <i class="fa-solid fa-list-check"></i> {{ t(request, 'dashboard.analyze_urls') }}
                 </button>
 
                 <div id="batchContainer" style="display: none;">
@@ -1206,8 +1217,8 @@
                                 <tr>
                                     <th style="width: 30px;">#</th>
                                     <th>URL</th>
-                                    <th style="width: 100px; text-align: center;">Scraper ?</th>
-                                    <th style="width: 80px;">Statut</th>
+                                    <th style="width: 100px; text-align: center;">{{ t(request, 'dashboard.scrape_q') }}</th>
+                                    <th style="width: 80px;">{{ t(request, 'dashboard.status') }}</th>
                                 </tr>
                             </thead>
                             <tbody id="batchBody"></tbody>
@@ -1219,21 +1230,21 @@
             <div class="alert" id="alertBox"></div>
 
             <div class="modal-actions" style="flex-wrap: wrap;" id="modalActions">
-                <button class="btn" onclick="closeModal()">Annuler</button>
+                <button class="btn" onclick="closeModal()">{{ t(request, 'dashboard.cancel') }}</button>
                 
                 <div id="singleActions" style="display: contents;">
                     <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)" style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
-                        <i class="fa-solid fa-bolt"></i> Ajouter sans scraper
+                        <i class="fa-solid fa-bolt"></i> {{ t(request, 'dashboard.add_without_scrape') }}
                     </button>
                     <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
                         <div class="spinner" id="spinner"></div>
-                        <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> Scraper & Ajouter</span>
+                        <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> {{ t(request, 'dashboard.scrape_and_add') }}</span>
                     </button>
                 </div>
 
                 <div id="multipleActions" style="display: none;">
                     <button class="btn primary" id="btnRunBatch" onclick="runBatch()" disabled>
-                        <i class="fa-solid fa-play"></i> Lancer l'ajout massif
+                        <i class="fa-solid fa-play"></i> {{ t(request, 'dashboard.run_batch') }}
                     </button>
                 </div>
             </div>
@@ -1244,10 +1255,9 @@
     <div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
         <div class="modal delete-modal">
             <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <h2>Supprimer cette annonce ?</h2>
+            <h2>{{ t(request, 'dashboard.delete_title') }}</h2>
             <p class="delete-title-preview" id="deleteTitlePreview"></p>
-            <p class="delete-warning">Cette action est <strong>irréversible</strong>. Les avis associés seront également
-                supprimés.</p>
+            <p class="delete-warning">{{ t(request, 'dashboard.delete_warn')|safe }}</p>
 
             <div class="slide-confirm-wrapper">
                 <div class="slide-track" id="slideTrack">
@@ -1255,12 +1265,12 @@
                         <i class="fa-solid fa-chevron-right"></i>
                         <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
                     </div>
-                    <span class="slide-label" id="slideLabel">Glissez pour confirmer</span>
+                    <span class="slide-label" id="slideLabel">{{ t(request, 'listing.slide_confirm') }}</span>
                 </div>
             </div>
 
             <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
-                <i class="fa-solid fa-xmark"></i> Annuler
+                <i class="fa-solid fa-xmark"></i> {{ t(request, 'dashboard.cancel') }}
             </button>
         </div>
     </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ request.session.get('lang', 'fr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>{{ title|default(t(request, 'ideal_profile.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -101,30 +101,45 @@
 <body>
 
 <div class="topnav">
-    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> Retour au tableau de bord</a>
+    <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> {{ t(request, 'ideal_profile.back') }}</a>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 1rem;">
+        {% if request.session.get('username') %}
+        <div style="font-size: 0.85rem; color: var(--text-2);">
+            {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+            <span style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
+        </div>
+        {% endif %}
+        {% if request.session.get('role') == 'admin' %}
+        <a href="/admin/users" class="btn sm" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
+            <i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="hero">
     <div class="hero-icon">⭐</div>
-    <h1>Fiche de Bien Idéal</h1>
-    <p>Synthèse dynamique basée sur vos avis combinés à ≥ 7/10</p>
+    <h1>{{ t(request, 'ideal_profile.title') }}</h1>
+    <p>{{ t(request, 'ideal_profile.subtitle') }}</p>
     {% if profile.based_on > 0 %}
-    <span class="hero-based"><i class="fa-solid fa-chart-bar"></i> Basé sur {{ profile.based_on }} avis positifs</span>
+    <span class="hero-based"><i class="fa-solid fa-chart-bar"></i> {{ t(request, 'ideal_profile.based_on') }} {{ profile.based_on }} {{ t(request, 'ideal_profile.positive_reviews') }}</span>
     {% endif %}
 </div>
+
 
 <div class="container">
 
     {% if profile.based_on == 0 %}
     <div class="no-data">
         <i class="fa-solid fa-star-half-stroke"></i>
-        <h2>Pas encore assez de données</h2>
-        <p>Notez des biens avec au moins <strong>7/10</strong> pour que la fiche idéale se construise automatiquement.</p>
+        <h2>{{ t(request, 'ideal_profile.no_data') }}</h2>
+        <p>{{ t(request, 'ideal_profile.no_data_desc')|safe }}</p>
         <br>
         <a href="/" style="color: var(--accent); text-decoration: none; font-weight: 600;">
-            <i class="fa-solid fa-arrow-left"></i> Retour aux annonces
+            <i class="fa-solid fa-arrow-left"></i> {{ t(request, 'ideal_profile.back_listings') }}
         </a>
     </div>
+
 
     {% else %}
 
@@ -133,35 +148,36 @@
         {% if profile.avg_price %}
         <div class="stat-item">
             <div class="val acc">{{ "{:,.0f}".format(profile.avg_price).replace(",", " ") }} €</div>
-            <div class="lbl">Budget moyen</div>
+            <div class="lbl">{{ t(request, 'ideal_profile.avg_budget') }}</div>
         </div>
         {% endif %}
         {% if profile.avg_area %}
         <div class="stat-item">
             <div class="val gr">{{ profile.avg_area }} m²</div>
-            <div class="lbl">Surface idéale</div>
+            <div class="lbl">{{ t(request, 'ideal_profile.ideal_area') }}</div>
         </div>
         {% endif %}
         {% if profile.avg_price_per_sqm %}
         <div class="stat-item">
             <div class="val">{{ "{:,.0f}".format(profile.avg_price_per_sqm) }} €</div>
-            <div class="lbl">Prix/m² moyen</div>
+            <div class="lbl">{{ t(request, 'ideal_profile.avg_price_sqm') }}</div>
         </div>
         {% endif %}
         {% if profile.avg_rooms %}
         <div class="stat-item">
             <div class="val">{{ profile.avg_rooms }}</div>
-            <div class="lbl">Pièces (moy.)</div>
+            <div class="lbl">{{ t(request, 'ideal_profile.avg_rooms') }}</div>
         </div>
         {% endif %}
     </div>
+
 
     <div class="section-grid">
 
         <!-- Points positifs -->
         <div class="panel">
             <div class="panel-title" style="color: var(--green);">
-                <i class="fa-solid fa-thumbs-up"></i> Ce qu'on aime
+                <i class="fa-solid fa-thumbs-up"></i> {{ t(request, 'ideal_profile.what_we_like') }}
             </div>
             <div class="feedback-list">
                 {% if profile.common_pros %}
@@ -169,15 +185,16 @@
                 <div class="feedback-item pro">{{ pro }}</div>
                 {% endfor %}
                 {% else %}
-                <div class="empty-feedback">Aucun point positif enregistré.</div>
+                <div class="empty-feedback">{{ t(request, 'ideal_profile.no_pros') }}</div>
                 {% endif %}
             </div>
         </div>
 
+
         <!-- Points négatifs -->
         <div class="panel">
             <div class="panel-title" style="color: var(--red);">
-                <i class="fa-solid fa-thumbs-down"></i> À éviter
+                <i class="fa-solid fa-thumbs-down"></i> {{ t(request, 'ideal_profile.what_to_avoid') }}
             </div>
             <div class="feedback-list">
                 {% if profile.common_cons %}
@@ -185,15 +202,17 @@
                 <div class="feedback-item con">{{ con }}</div>
                 {% endfor %}
                 {% else %}
-                <div class="empty-feedback">Aucun point négatif enregistré.</div>
+                <div class="empty-feedback">{{ t(request, 'ideal_profile.no_cons') }}</div>
                 {% endif %}
             </div>
         </div>
 
+
         <!-- DPE Distribution -->
         {% if profile.dpe_distribution %}
         <div class="panel">
-            <div class="panel-title"><i class="fa-solid fa-bolt"></i> Distribution DPE</div>
+            <div class="panel-title"><i class="fa-solid fa-bolt"></i> {{ t(request, 'ideal_profile.dpe_dist') }}</div>
+
             {% set total_dpe = profile.dpe_distribution.values()|sum %}
             <div class="dpe-bars">
                 {% for letter in ['A', 'B', 'C', 'D', 'E', 'F', 'G'] %}
@@ -215,7 +234,8 @@
         <!-- Top listings -->
         {% if profile.top_listings %}
         <div class="panel">
-            <div class="panel-title"><i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> Meilleures annonces</div>
+            <div class="panel-title"><i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> {{ t(request, 'ideal_profile.top_listings') }}</div>
+
             {% for listing in profile.top_listings[:6] %}
             <a href="/listings/{{ listing.id }}" class="top-listing">
                 <div class="tl-dpe dpe-{{ listing.dpe_rating or 'NC' }}" title="DPE {{ listing.dpe_rating or '?' }}">

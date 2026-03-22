@@ -87,6 +87,8 @@ _MIGRATIONS = [
     ("listings", "procedure_syndic",     "INTEGER"),
     ("listings", "honoraires_a_charge",  "TEXT"),
     ("listings", "virtual_tour_url",     "TEXT"),
+    # users — new columns from v4
+    ("users", "role",                    "TEXT DEFAULT 'user'"),
 ]
 
 

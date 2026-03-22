@@ -15,7 +15,7 @@ Ce guide explique comment déployer **Immo-Boussole** sur un serveur en utilisan
 La méthode la plus sécurisée pour exposer votre application sans ouvrir de ports sur votre routeur ou pare-feu (NAT) est d'utiliser un tunnel Cloudflare. Votre serveur établira une connexion sortante vers Cloudflare, masquant ainsi son adresse IP publique.
 
 1. Connectez-vous à votre tableau de bord Cloudflare et accédez à **Zero Trust** (menu de gauche).
-2. Allez dans **Networks** > **Tunnels** et cliquez sur **Create a tunnel**.
+2. Allez dans **Networks** > **Connectors** et cliquez sur **Create a tunnel**.
 3. Choisissez **Cloudflared** comme connecteur et donnez un nom à votre tunnel (ex: `immo-boussole-tunnel`).
 4. Sur l'écran d'installation, choisissez votre environnement (Docker) et **copiez le token** fourni dans la commande (la chaîne de caractères après `--token`). Vous en aurez besoin pour le déploiement sur Portainer.
 5. Cliquez sur **Next**.
@@ -37,34 +37,34 @@ Nous allons déployer Immo-Boussole, FlareSolverr (pour le scraping) et le conne
 2. Sélectionnez votre environnement (généralement `local`) et allez dans **Stacks**.
 3. Cliquez sur **Add stack** en haut à droite.
 4. Nommez votre stack (ex: `immo-boussole-stack`).
-5. Sélectionnez la méthode **Web editor** et collez le fichier `docker-compose.yml` suivant :
+5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier [docker-compose.cloudflared.yml](docker-compose.cloudflared.yml) suivant :
 
 ```yaml
+# 🐳 Dedicated Docker Compose for Cloudflared + Portainer
 version: '3.8'
 
 services:
-  # 1. L'application Immo-Boussole
+  # 1. Immo-Boussole Application
   immo-boussole:
-    # Option A : Utiliser l'image construite localement ou depuis un registre.
-    # Ex: image: ghcr.io/votre-compte/immo-boussole:latest
-    # Option B : Dire à Portainer de construire l'image directement depuis le repo GitHub :
-    build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main
+    # Option A: Local Build (if you cloned the repository)
+    build: .
+    # Option B: Build from GitHub (useful for Portainer Stacks)
+    # build: https://github.com/YOUR_PROFILE/immo-boussole.git#main
     container_name: immo-boussole
     restart: unless-stopped
     environment:
-      - APP_PASSWORD=votre_mot_de_passe_ultra_securise
       - FLARESOLVERR_URL=http://flaresolverr:8191
       # - CAPTCHA_SOLVER=2captcha
-      # - TWO_CAPTCHA_API_KEY=votre_cle_2captcha
+      # - TWO_CAPTCHA_API_KEY=your_2captcha_key
     volumes:
       - immo-boussole-db:/app/data
       - immo-boussole-media:/app/static/media/uploads
     depends_on:
       - flaresolverr
-    # IMPORTANT : Aucun port "ports:" n'est exposé vers l'hôte. 
-    # La communication vers l'extérieur passe uniquement par Cloudflared.
+    # IMPORTANT: No "ports:" block is present.
+    # The application is only accessible via the Docker network or the Tunnel.
 
-  # 2. FlareSolverr pour le contournement Cloudflare/DDoS (Scraping)
+  # 2. FlareSolverr (Cloudflare/DDoS Bypass)
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
@@ -73,24 +73,26 @@ services:
       - LOG_LEVEL=info
       - TZ=Europe/Paris
 
-  # 3. Connecteur Tunnel Cloudflare
+  # 3. Cloudflare Tunnel Connector
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel run
     environment:
-      # Remplacez par le token copié à l'étape 1
-      - TUNNEL_TOKEN=VOTRE_TOKEN_CLOUDFLARE_ICI
+      # Replace with your Zero Trust token
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
 
 volumes:
   immo-boussole-db:
+    name: immo-boussole-db
   immo-boussole-media:
+    name: immo-boussole-media
 ```
 
 6. **Modifications requises** :
    - Remplacez `VOTRE_TOKEN_CLOUDFLARE_ICI` par votre token Zero Trust.
-   - Remplacez `votre_mot_de_passe_ultra_securise` par un mot de passe fort pour l'accès à l'application.
+   - **Configuration initiale** : Au premier démarrage, l'application vous redirigera vers `/setup-admin` pour créer votre compte administrateur. Plus besoin de `APP_PASSWORD` dans le fichier compose.
    - Modifiez la ligne `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main` pour correspondre à l'URL de **votre propre fork** (ou clone) de dépôt GitHub si l'image n'est pas publiée.
    
 7. Descendez en bas de la page et cliquez sur **Deploy the stack**. Patientez quelques minutes pendant que Portainer télécharge les images, construit l'application et lance les conteneurs.
@@ -101,7 +103,7 @@ Une fois la stack déployée, le conteneur `cloudflared` établira la connexion 
 
 ## 🛡️ Étape 3 : Configurations de Sécurité (Cloudflare Free Tier)
 
-Même si l'accès à Immo-Boussole est protégé en interne par un mot de passe partagé (`APP_PASSWORD`), il est crucial d'ajouter des couches de sécurité au niveau de Cloudflare pour éviter d'éventuelles attaques par force brute ou l'exploitation de failles, d'autant plus que l'application est en ligne.
+Même si l'accès à Immo-Boussole est protégé en interne par un système de comptes (ADMIN/USER), il est crucial d'ajouter des couches de sécurité au niveau de Cloudflare pour éviter d'éventuelles attaques par force brute ou l'exploitation de failles, d'autant plus que l'application est en ligne.
 
 Dans le tableau de bord Cloudflare classique (Website > Votre domaine) :
 

@@ -32,6 +32,7 @@ from app.services import (
 )
 from app.media import json_to_photos
 from app.config import settings
+from app.translations import get_text
 
 # Run migrations FIRST (adds missing columns to existing tables)
 run_migrations()
@@ -63,6 +64,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["t"] = get_text
 
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
@@ -138,10 +140,26 @@ class ReadySearchRequest(BaseModel):
     url: str
 
 
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        if v not in ["admin", "user"]:
+            raise ValueError("Role must be 'admin' or 'user'")
+        return v
+
+
 # ─── Auth Logic ───────────────────────────────────────────────────────────────
 
 def is_authenticated(request: Request) -> bool:
     return request.session.get("authenticated") is True
+
+def get_current_user_role(request: Request) -> Optional[str]:
+    return request.session.get("role")
 
 def login_required(request: Request, db: Session = Depends(get_db)):
     if not is_authenticated(request):
@@ -154,8 +172,16 @@ def login_required(request: Request, db: Session = Depends(get_db)):
             
         # For API calls, return 401. For pages, redirect to login.
         if request.url.path.startswith("/api/"):
-            raise HTTPException(status_code=401, detail="Non authentifié")
+            raise HTTPException(status_code=401, detail=get_text(request, "api.unauthenticated"))
         raise HTTPException(status_code=307, detail="Redirect to login")
+
+def admin_required(request: Request, _auth = Depends(login_required)):
+    if get_current_user_role(request) != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+def user_required(request: Request, _auth = Depends(login_required)):
+    if get_current_user_role(request) != "user":
+        raise HTTPException(status_code=403, detail="User access required (Admins cannot perform this action)")
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -187,13 +213,14 @@ def setup_admin(
     salt = os.urandom(16)
     pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     
-    user = models.User(username=username, password_hash=pwd_hash, salt=salt)
+    user = models.User(username=username, password_hash=pwd_hash, salt=salt, role="admin")
     db.add(user)
     db.commit()
     
     # Auto-login after creation
     request.session["authenticated"] = True
     request.session["username"] = username
+    request.session["role"] = "admin"
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -219,11 +246,12 @@ def login(
         if pwd_hash == user.password_hash:
             request.session["authenticated"] = True
             request.session["username"] = username
+            request.session["role"] = user.role
             return RedirectResponse(url="/", status_code=303)
             
     return templates.TemplateResponse("login.html", {
         "request": request,
-        "error": "Identifiants incorrects"
+        "error": get_text(request, "api.invalid_credentials")
     })
 
 
@@ -231,6 +259,68 @@ def login(
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login")
+
+
+# ─── Administration: User Management ──────────────────────────────────────────
+
+@app.get("/admin/users")
+def admin_users_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    users = db.query(models.User).all()
+    return templates.TemplateResponse("admin_users.html", {
+        "request": request,
+        "users": users,
+        "title": "Gestion des Utilisateurs — Immo-Boussole",
+    })
+
+
+@app.post("/api/admin/users")
+def create_user(
+    body: UserCreateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    # Check if username exists
+    existing = db.query(models.User).filter(models.User.username == body.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    salt = os.urandom(16)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', body.password.encode('utf-8'), salt, 100000)
+    
+    user = models.User(
+        username=body.username, 
+        password_hash=pwd_hash, 
+        salt=salt, 
+        role=body.role
+    )
+    db.add(user)
+    db.commit()
+    return {"status": "created", "username": user.username}
+
+
+@app.delete("/api/admin/users/{user_id}")
+def delete_user(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    # Don't allow deleting yourself
+    current_username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.username == current_username:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    db.delete(user)
+    db.commit()
+    return {"status": "deleted"}
 
 
 def get_local_commit_hash() -> str:
@@ -254,6 +344,14 @@ def get_local_commit_hash() -> str:
 
 
 # ─── HTML Pages ───────────────────────────────────────────────────────────────
+
+@app.get("/lang/{lang}")
+def set_language(request: Request, lang: str):
+    if lang in ["fr", "en"]:
+        request.session["lang"] = lang
+    referer = request.headers.get("referer", "/")
+    return RedirectResponse(url=referer, status_code=303)
+
 
 @app.get("/")
 def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
@@ -304,7 +402,7 @@ def listing_detail_page(
 ):
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     photos = json_to_photos(listing.photos_local)
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
@@ -408,24 +506,25 @@ def get_listings(
 
 
 @app.get("/api/listings/{listing_id}")
-def get_listing(listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def get_listing(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get a single listing by ID."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     return listing
 
 
 @app.post("/api/listings/{listing_id}/rescrape")
 async def rescrape_listing(
+    request: Request,
     listing_id: int, 
     db: Session = Depends(get_db), 
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
     """Manually trigger or re-trigger scraping for a specific listing."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     url = listing.url
     # ── Determine source ──
@@ -474,10 +573,11 @@ async def rescrape_listing(
 
 @app.post("/api/listings/submit-url")
 async def submit_listing_url(
+    request: Request,
     body: SubmitUrlRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
     """
     Submit a listing URL for scraping and import.
@@ -491,7 +591,7 @@ async def submit_listing_url(
     if existing:
         return {
             "status": "already_exists",
-            "message": "Cette annonce est déjà dans la base.",
+            "message": get_text(request, "api.already_exists"),
             "listing_id": existing.id,
             "is_duplicate": existing.is_duplicate,
         }
@@ -544,7 +644,7 @@ async def submit_listing_url(
         print(f"[API] Listing #{listing.id} ajouté via 'sans scraping' (metadatas OK).")
         return {
             "status": "created" if is_new else "already_exists",
-            "message": "Annonce ajoutée avec informations de base (sans plein scraping).",
+            "message": get_text(request, "api.added_without_scraping"),
             "listing_id": listing.id,
             "title": listing.title
         }
@@ -582,7 +682,7 @@ async def submit_listing_url(
     if listing.is_duplicate and listing.duplicate_of_id:
         original = db.query(Listing).filter(Listing.id == listing.duplicate_of_id).first()
         response["duplicate_warning"] = {
-            "message": "⚠️ Un bien similaire (même prix, surface et ville) existe déjà !",
+            "message": get_text(request, "api.duplicate_warning"),
             "original_listing_id": listing.duplicate_of_id,
             "original_title": original.title if original else None,
             "original_url": f"/listings/{listing.duplicate_of_id}",
@@ -593,6 +693,7 @@ async def submit_listing_url(
 
 @app.delete("/api/listings/{listing_id}")
 def delete_listing(
+    request: Request,
     listing_id: int, 
     db: Session = Depends(get_db), 
     _auth = Depends(login_required)
@@ -600,7 +701,7 @@ def delete_listing(
     """Delete a listing and its reviews."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     db.delete(listing)
     db.commit()
     return {"status": "deleted", "listing_id": listing_id}
@@ -608,6 +709,7 @@ def delete_listing(
 
 @app.put("/api/listings/{listing_id}")
 def update_listing(
+    request: Request,
     listing_id: int,
     body: ListingUpdateRequest,
     db: Session = Depends(get_db),
@@ -616,7 +718,7 @@ def update_listing(
     """Update listing attributes."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     update_data = body.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -629,15 +731,16 @@ def update_listing(
 
 @app.post("/api/listings/{listing_id}/photos")
 async def import_listing_photos(
+    request: Request,
     listing_id: int,
     body: PhotoImportRequest,
     db: Session = Depends(get_db),
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
     """Import and download photos for an existing listing from a list of URLs."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     urls_to_download = [u.strip() for u in body.urls if u.strip().startswith("http")]
     if not urls_to_download:
@@ -660,15 +763,16 @@ async def import_listing_photos(
 
 @app.post("/api/listings/{listing_id}/photos/upload")
 async def upload_listing_photos(
+    request: Request,
     listing_id: int,
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
     """Upload photos directly for a listing via multipart form data."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     if not files:
         return {"status": "no_files", "imported": 0}
@@ -690,17 +794,18 @@ async def upload_listing_photos(
 # ─── API: Reviews ─────────────────────────────────────────────────────────────
 
 @app.get("/api/listings/{listing_id}/reviews")
-def get_reviews(listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def get_reviews(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Get all reviews for a listing."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
     return reviews
 
 
 @app.post("/api/listings/{listing_id}/reviews")
 def create_or_update_review(
+    request: Request,
     listing_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
@@ -709,7 +814,7 @@ def create_or_update_review(
     """Create or update a review for a listing. One review per (listing, reviewer)."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
-        raise HTTPException(status_code=404, detail="Annonce introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     review, is_new = get_or_create_review(
         db=db,
@@ -732,6 +837,7 @@ def create_or_update_review(
 
 @app.put("/api/reviews/{review_id}")
 def update_review(
+    request: Request,
     review_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
@@ -740,7 +846,7 @@ def update_review(
     """Update a specific review by ID."""
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
-        raise HTTPException(status_code=404, detail="Avis introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.review_not_found"))
 
     if body.pros is not None:
         review.pros = body.pros
@@ -759,11 +865,11 @@ def update_review(
 
 
 @app.delete("/api/reviews/{review_id}")
-def delete_review(review_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def delete_review(request: Request, review_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Delete a review."""
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
-        raise HTTPException(status_code=404, detail="Avis introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.review_not_found"))
     db.delete(review)
     db.commit()
     return {"status": "deleted"}
@@ -786,12 +892,12 @@ def get_queries(db: Session = Depends(get_db), _auth = Depends(login_required)):
 
 
 @app.post("/api/queries")
-def create_query(body: SearchQueryRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def create_query(request: Request, body: SearchQueryRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Add a new search query to the scheduler."""
     try:
         source_enum = Source(body.source)
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Source inconnue: {body.source}")
+        raise HTTPException(status_code=400, detail=f"{get_text(request, 'api.unknown_source')} {body.source}")
 
     query = SearchQuery(
         url=body.url,
@@ -806,11 +912,11 @@ def create_query(body: SearchQueryRequest, db: Session = Depends(get_db), _auth 
 
 
 @app.post("/api/queries/{query_id}/run")
-async def run_query_now(query_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+async def run_query_now(request: Request, query_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Manually trigger scraping for a specific search query."""
     query = db.query(SearchQuery).filter(SearchQuery.id == query_id).first()
     if not query:
-        raise HTTPException(status_code=404, detail="Recherche introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.search_not_found"))
 
     try:
         await scrape_and_diff(query, db)
@@ -841,11 +947,11 @@ def create_ready_search(body: ReadySearchRequest, db: Session = Depends(get_db),
 
 
 @app.put("/api/searches/ready/{search_id}")
-def update_ready_search(search_id: int, body: ReadySearchRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def update_ready_search(request: Request, search_id: int, body: ReadySearchRequest, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Update an existing ready search."""
     search = db.query(ReadySearch).filter(ReadySearch.id == search_id).first()
     if not search:
-        raise HTTPException(status_code=404, detail="Recherche introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.search_not_found"))
 
     platform_name = body.platform
     if body.platform == "manuel" and body.custom_platform_name:
@@ -861,11 +967,11 @@ def update_ready_search(search_id: int, body: ReadySearchRequest, db: Session = 
 
 
 @app.delete("/api/searches/ready/{search_id}")
-def delete_ready_search(search_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+def delete_ready_search(request: Request, search_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
     """Remove a ready search."""
     search = db.query(ReadySearch).filter(ReadySearch.id == search_id).first()
     if not search:
-        raise HTTPException(status_code=404, detail="Recherche introuvable")
+        raise HTTPException(status_code=404, detail=get_text(request, "api.search_not_found"))
     
     db.delete(search)
     db.commit()
