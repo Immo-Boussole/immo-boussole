@@ -109,13 +109,10 @@
             <span style="font-size: 0.7rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
         </div>
         {% endif %}
-        {% if request.session.get('role') == 'admin' %}
-        <a href="/admin/users" class="btn sm" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
-            <i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs
-        </a>
-        {% endif %}
     </div>
 </div>
+
+
 
 <div class="hero">
     <div class="hero-icon">⭐</div>
