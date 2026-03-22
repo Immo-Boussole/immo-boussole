@@ -7,10 +7,12 @@ version: '3.8'
 services:
   # ── 1. Immo-Boussole Application ──────────────────────────────────────────
   immo-boussole:
-    # Option A: Local Build (if you cloned the repository)
-    build: .
-    # Option B: Build from GitHub (useful for Portainer Stacks)
-    # build: https://github.com/YOUR_PROFILE/immo-boussole.git#main
+    # Option A: Build from GitHub (RECOMMENDED for Portainer Stacks / Web Editor)
+    # Replace YOUR_PROFILE with your actual GitHub username.
+    build: https://github.com/Immo-Boussole/immo-boussole.git#main
+
+    # Option B: Local Build (if you cloned the repository locally)
+    # build: .
     container_name: immo-boussole
     restart: unless-stopped
     environment:

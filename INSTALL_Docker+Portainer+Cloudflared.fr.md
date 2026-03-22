@@ -37,11 +37,14 @@ Nous allons déployer Immo-Boussole, FlareSolverr (pour le scraping) et le conne
 2. Sélectionnez votre environnement (généralement `local`) et allez dans **Stacks**.
 3. Cliquez sur **Add stack** en haut à droite.
 4. Nommez votre stack (ex: `immo-boussole-stack`).
-5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier [docker-compose.cloudflared.yml](docker-compose.cloudflared.yml).
+5. Sélectionnez la méthode **Web editor** et utilisez le contenu du fichier **[docker-compose.cloudflared.yml](docker-compose.cloudflared.yml)**.
+   > [!IMPORTANT]
+   > Ne pas utiliser le fichier `docker-compose.yml` standard pour Portainer, car il contient des mappages de dossiers locaux (bind mounts) qui provoqueront des erreurs.
+
 6. **Modifications requises** :
-   - Remplacez `VOTRE_TOKEN_CLOUDFLARE_ICI` par votre token Zero Trust.
+   - Remplacez `${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}` par votre token Zero Trust.
    - **Configuration initiale** : Au premier démarrage, l'application vous redirigera vers `/setup-admin` pour créer votre compte administrateur. Plus besoin de `APP_PASSWORD` dans le fichier compose.
-   - Modifiez la ligne `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main` pour correspondre à l'URL de **votre propre fork** (ou clone) de dépôt GitHub si l'image n'est pas publiée. Vous pouvez également utiliser l'adresse du projet, donc la valeur `build: https://github.com/VOTRE_PROFIL/immo-boussole.git#main`.
+   - **Build depuis GitHub** : Par défaut, le fichier utilise `build: https://github.com/Immo-Boussole/immo-boussole.git#main`. Si vous avez fait des modifications sur votre propre fork, remplacez cette URL par celle de votre dépôt GitHub.
    
 7. Descendez en bas de la page et cliquez sur **Deploy the stack**. Patientez quelques minutes pendant que Portainer télécharge les images, construit l'application et lance les conteneurs.
 
