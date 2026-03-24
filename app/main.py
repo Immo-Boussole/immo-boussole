@@ -193,8 +193,8 @@ def user_required(request: Request, _auth = Depends(login_required)):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """
     Custom handler for HTTPExceptions.
-    Handles 307 redirects for auth flow and provides a safe fallback for others
-    to avoid crashing if app.default_exception_handler is missing.
+    Handles 307 redirects for authentication flow and delegates others 
+    to the default FastAPI exception handler.
     """
     if exc.status_code == 307:
         if exc.detail == "Redirect to login":
@@ -202,8 +202,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         elif exc.detail == "Redirect to setup-admin":
             return RedirectResponse(url="/setup-admin")
     
-    # Use the default FastAPI exception handler for everything else (404, 401, etc.)
-    # This avoids the AttributeError: 'FastAPI' object has no attribute 'default_exception_handler'
+    # Return 401 for API calls instead of redirecting if the exception came from login_required
+    if exc.status_code == 401 and request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": exc.detail}
+        )
+
+    # Use the default FastAPI exception handler for everything else (404, 401 for pages, etc.)
     return await default_http_exception_handler(request, exc)
 
 
