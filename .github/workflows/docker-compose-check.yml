@@ -1,0 +1,49 @@
+name: Docker Compose Quality Check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Validate docker-compose.yml
+        run: docker-compose -f docker-compose.yml config --quiet
+
+      - name: Validate docker-compose.cloudflared.yml
+        run: docker-compose -f docker-compose.cloudflared.yml config --quiet
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run yamllint
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: "docker-compose*.yml"
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 120
+                allow-non-breakable-words: true
+              braces:
+                min-spaces-inside: 0
+                max-spaces-inside: 1
+              brackets:
+                min-spaces-inside: 0
+                max-spaces-inside: 1

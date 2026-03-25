@@ -2,7 +2,10 @@
 # This file is designed for secure deployment without exposed ports.
 # All external communication passes through the Cloudflare Tunnel.
 
-version: '3.8'
+
+# docker-compose.cloudflared.yml
+name: immo-boussole-cloudflared
+
 
 services:
   # ── 1. Immo-Boussole Application ──────────────────────────────────────────
