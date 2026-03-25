@@ -12,6 +12,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: immo-boussole-app:latest
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
