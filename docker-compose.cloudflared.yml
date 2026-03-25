@@ -10,22 +10,26 @@ services:
     # Use "build: ." when deploying via Portainer "Repository" method
     # or when building from a local clone.
     build: .
-
-    # Note: Building directly from a remote GitHub URL (e.g., build: https://...)
-    # may fail on some NAS systems if 'git' is not installed on the host.
     container_name: immo-boussole
     restart: unless-stopped
     environment:
+      # Database connection (SQLite)
+      - DATABASE_URL=sqlite:////app/data/immo_boussole.db
       # Internal URL for FlareSolverr
       - FLARESOLVERR_URL=http://flaresolverr:8191
-      # Optional Captcha configuration
-      # - CAPTCHA_SOLVER=2captcha
-      # - TWO_CAPTCHA_API_KEY=your_2captcha_key
+      # Scraping configuration
+      - SCRAPING_INTERVAL_HOURS=${SCRAPING_INTERVAL_HOURS:-12}
+      - SCRAPINGBEE_API_KEY=${SCRAPINGBEE_API_KEY:-}
+      # Captcha solver configuration
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
+      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
+      # App debug mode
+      - DEBUG=${DEBUG:-false}
     volumes:
       # SQLite database persistence
       - immo-boussole-db:/app/data
-      # Downloaded photos persistence
-      - immo-boussole-media:/app/static/media/uploads
+      # Static files persistence (photos, etc.)
+      - immo-boussole-media:/app/static
     depends_on:
       - flaresolverr
     # NOTE: No "ports:" block is present.
@@ -33,12 +37,14 @@ services:
 
   # ── 2. FlareSolverr (Cloudflare/DDoS Bypass) ────────────────────────────────
   flaresolverr:
-    image: ghcr.io/flaresolverr/flaresolverr:latest
+    image: flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     restart: unless-stopped
     environment:
       - LOG_LEVEL=info
       - TZ=Europe/Paris
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
+      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
 
   # ── 3. Cloudflare Tunnel Connector ─────────────────────────────────────────
   cloudflared:
