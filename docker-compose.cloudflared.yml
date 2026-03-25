@@ -13,6 +13,7 @@ services:
     # Use "build: ." when deploying via Portainer "Repository" method
     # or when building from a local clone.
     build: .
+    image: immo-boussole-app:latest
     container_name: immo-boussole
     restart: unless-stopped
     environment:
