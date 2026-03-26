@@ -7,6 +7,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
@@ -368,7 +369,7 @@
 
 
                 <!-- Caractéristiques détaillées -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
                     <div class="attr-list">
                         {% if listing.property_type %}<div class="cost-item"><i class="fa-solid fa-house"></i> {{ t(request, 'listing.type') }} <strong>{{ listing.property_type|capitalize }}</strong></div>{% endif %}
                         {% if listing.condition %}<div class="cost-item"><i class="fa-solid fa-sparkles"></i> {{ t(request, 'listing.condition') }} <strong>{{ listing.condition }}</strong></div>{% endif %}
