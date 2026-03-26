@@ -7,6 +7,7 @@
     <title>{{ title|default(t(request, 'ready_searches.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -255,6 +256,7 @@
 </head>
 
 <body>
+    <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
         <div class="logo">
@@ -335,13 +337,19 @@
     </aside>
 
     <div class="main">
-        <div class="topbar">
-            <h1>{{ t(request, 'ready_searches.title') }}</h1>
-            {% if request.session.get('role') == 'user' %}
-            <button class="btn primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> {{ t(request, 'ready_searches.add_btn') }}</button>
-            {% endif %}
-        </div>
-
+        <header class="topbar">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>{{ t(request, 'ready_searches.title') }}</h1>
+            </div>
+            <div class="topbar-right">
+                {% if request.session.get('role') == 'user' %}
+                <button class="btn primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> {{ t(request, 'ready_searches.add_btn') }}</button>
+                {% endif %}
+            </div>
+        </header>
 
         <div class="content">
             <div class="table-container">

@@ -8,6 +8,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -246,6 +247,7 @@
 </head>
 
 <body>
+    <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
         <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
@@ -338,9 +340,14 @@
     </aside>
 
     <div class="main">
-        <div class="topbar">
-            <h1>{{ t(request, 'nav.listings_table') }}</h1>
-        </div>
+        <header class="topbar">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>{{ t(request, 'nav.listings_table') }}</h1>
+            </div>
+        </header>
 
         <div class="content">
             <div class="table-container">
