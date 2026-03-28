@@ -456,144 +456,118 @@
                 {{ t(request, 'listing.open_source') }}
             </a>
 
-            <!-- Jean DUPONT Review -->
-            {% set jm_review = reviews_by_reviewer.get('jean-dupont') %}
+            {# ── Reviews des autres utilisateurs (lecture seule) ── #}
+            {% set current_user = request.session.get('username', '') %}
+            {% set current_role = request.session.get('role', '') %}
 
+            {% for review in reviews %}
+            {% if review.reviewer != current_user.lower() %}
+            {# Avis d'un autre utilisateur : lecture seule #}
             <div class="review-card">
                 <div class="reviewer-header">
-                    <div class="avatar jm">JM</div>
+                    <div class="avatar jm">{{ review.reviewer[0]|upper }}</div>
                     <div>
-                        <div class="reviewer-name">Jean DUPONT</div>
-                        <div class="reviewer-role">Propriétaire</div>
+                        <div class="reviewer-name">{{ review.reviewer }}</div>
                     </div>
-                    {% if jm_review %}
+                    {% if review.rating %}
                     <div class="rating-badge rating-display">
-                        <i class="fa-solid fa-star"></i> {{ jm_review.rating or '—' }}
+                        <i class="fa-solid fa-star"></i> {{ review.rating }}
                     </div>
                     {% endif %}
-                    {% if jm_review and jm_review.visit_done %}
+                    {% if review.visit_done %}
                     <span class="visit-badge done"><i class="fa-solid fa-check"></i> {{ t(request, 'listing.visit_done') }}</span>
                     {% endif %}
                 </div>
-
-                {% if jm_review %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> {{ t(request, 'listing.pros') }}</div>
-                    <div class="review-text pros-text">{{ jm_review.pros or '—' }}</div>
+                    <div class="review-text pros-text">{{ review.pros or '—' }}</div>
                 </div>
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> {{ t(request, 'listing.cons') }}</div>
-                    <div class="review-text cons-text">{{ jm_review.cons or '—' }}</div>
+                    <div class="review-text cons-text">{{ review.cons or '—' }}</div>
                 </div>
-                {% if jm_review.notes %}
+                {% if review.notes %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> {{ t(request, 'listing.general_notes') }}</div>
-                    <div class="review-text">{{ jm_review.notes }}</div>
+                    <div class="review-text">{{ review.notes }}</div>
                 </div>
                 {% endif %}
-                {% else %}
-                <div class="no-review">Pas encore d'avis de Jean DUPONT.</div>
-                {% endif %}
-
-
-                <button class="btn btn-toggle" onclick="toggleForm('form-jm')">
-                    <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit_review') if jm_review else t(request, 'listing.leave_review') }}
-                </button>
-
-                <div class="review-form" id="form-jm">
-                    <div class="form-row">
-                        <label>{{ t(request, 'listing.pros') }}</label>
-                        <textarea id="jm-pros" placeholder="...">{{ jm_review.pros or '' }}</textarea>
-                    </div>
-                    <div class="form-row">
-                        <label>{{ t(request, 'listing.cons') }}</label>
-                        <textarea id="jm-cons" placeholder="...">{{ jm_review.cons or '' }}</textarea>
-                    </div>
-                    <div class="form-row">
-                        <label>{{ t(request, 'listing.rating') }}</label>
-                        <input type="number" id="jm-rating" min="0" max="10" step="0.5" value="{{ jm_review.rating or '' }}" placeholder="7.5">
-                    </div>
-                    <div class="form-row">
-                        <label>{{ t(request, 'listing.general_notes') }}</label>
-                        <textarea id="jm-notes" placeholder="...">{{ jm_review.notes or '' }}</textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button class="btn sm" onclick="toggleForm('form-jm')">{{ t(request, 'listing.cancel') }}</button>
-                        <button class="btn primary sm" onclick="submitReview('jean-dupont', {{ listing.id }})">
-                            <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}
-                        </button>
-                    </div>
-                </div>
-
             </div>
+            {% endif %}
+            {% endfor %}
 
-            <!-- Marie MARTIN Review -->
-            {% set marie_martin_review = reviews_by_reviewer.get('marie-martin') %}
+            {# ── Avis de l'utilisateur connecté (éditable) — uniquement si rôle 'user' ── #}
+            {% if current_role == 'user' %}
+            {% set my_review = reviews_by_reviewer.get(current_user.lower()) %}
             <div class="review-card">
                 <div class="reviewer-header">
-                    <div class="avatar marie-martin">M</div>
+                    <div class="avatar jm">{{ current_user[0]|upper if current_user else '?' }}</div>
                     <div>
-                        <div class="reviewer-name">Marie MARTIN</div>
-                        <div class="reviewer-role">Propriétaire</div>
+                        <div class="reviewer-name">{{ current_user }} <span style="font-size:0.7rem;font-weight:400;color:var(--text-2);">(vous)</span></div>
                     </div>
-                    {% if marie_martin_review %}
+                    {% if my_review and my_review.rating %}
                     <div class="rating-badge rating-display">
-                        <i class="fa-solid fa-star"></i> {{ marie_martin_review.rating or '—' }}
+                        <i class="fa-solid fa-star"></i> {{ my_review.rating }}
                     </div>
                     {% endif %}
-                    {% if marie_martin_review and marie_martin_review.visit_done %}
+                    {% if my_review and my_review.visit_done %}
                     <span class="visit-badge done"><i class="fa-solid fa-check"></i> {{ t(request, 'listing.visit_done') }}</span>
                     {% endif %}
                 </div>
 
-                {% if marie_martin_review %}
+                {% if my_review %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-up"></i> {{ t(request, 'listing.pros') }}</div>
-                    <div class="review-text pros-text">{{ marie_martin_review.pros or '—' }}</div>
+                    <div class="review-text pros-text">{{ my_review.pros or '—' }}</div>
                 </div>
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-thumbs-down"></i> {{ t(request, 'listing.cons') }}</div>
-                    <div class="review-text cons-text">{{ marie_martin_review.cons or '—' }}</div>
+                    <div class="review-text cons-text">{{ my_review.cons or '—' }}</div>
                 </div>
-                {% if marie_martin_review.notes %}
+                {% if my_review.notes %}
                 <div class="review-section">
                     <div class="review-section-lbl"><i class="fa-solid fa-note-sticky"></i> {{ t(request, 'listing.general_notes') }}</div>
-                    <div class="review-text">{{ marie_martin_review.notes }}</div>
+                    <div class="review-text">{{ my_review.notes }}</div>
                 </div>
                 {% endif %}
                 {% else %}
-                <div class="no-review">Pas encore d'avis de Marie MARTIN.</div>
+                <div class="no-review">Pas encore d'avis de votre part.</div>
                 {% endif %}
 
-                <button class="btn btn-toggle" onclick="toggleForm('form-marie-martin')">
-                    <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit_review') if marie_martin_review else t(request, 'listing.leave_review') }}
+                <button class="btn btn-toggle" onclick="toggleForm('form-me')">
+                    <i class="fa-solid fa-pen"></i> {{ t(request, 'listing.edit_review') if my_review else t(request, 'listing.leave_review') }}
                 </button>
 
-                <div class="review-form" id="form-marie-martin">
+                <div class="review-form" id="form-me">
                     <div class="form-row">
                         <label>{{ t(request, 'listing.pros') }}</label>
-                        <textarea id="marie-martin-pros" placeholder="...">{{ marie_martin_review.pros or '' }}</textarea>
+                        <textarea id="me-pros" placeholder="...">{{ my_review.pros or '' if my_review else '' }}</textarea>
                     </div>
                     <div class="form-row">
                         <label>{{ t(request, 'listing.cons') }}</label>
-                        <textarea id="marie-martin-cons" placeholder="...">{{ marie_martin_review.cons or '' }}</textarea>
+                        <textarea id="me-cons" placeholder="...">{{ my_review.cons or '' if my_review else '' }}</textarea>
                     </div>
                     <div class="form-row">
                         <label>{{ t(request, 'listing.rating') }}</label>
-                        <input type="number" id="marie-martin-rating" min="0" max="10" step="0.5" value="{{ marie_martin_review.rating or '' }}" placeholder="8">
+                        <input type="number" id="me-rating" min="0" max="10" step="0.5" value="{{ my_review.rating or '' if my_review else '' }}" placeholder="7.5">
                     </div>
                     <div class="form-row">
                         <label>{{ t(request, 'listing.general_notes') }}</label>
-                        <textarea id="marie-martin-notes" placeholder="...">{{ marie_martin_review.notes or '' }}</textarea>
+                        <textarea id="me-notes" placeholder="...">{{ my_review.notes or '' if my_review else '' }}</textarea>
+                    </div>
+                    <div class="form-row" style="flex-direction:row;align-items:center;gap:0.5rem;">
+                        <input type="checkbox" id="me-visit" {% if my_review and my_review.visit_done %}checked{% endif %} style="width:auto;">
+                        <label for="me-visit" style="margin:0;font-size:0.82rem;">{{ t(request, 'listing.visit_done') }}</label>
                     </div>
                     <div class="form-actions">
-                        <button class="btn sm" onclick="toggleForm('form-marie-martin')">{{ t(request, 'listing.cancel') }}</button>
-                        <button class="btn primary sm" onclick="submitReview('marie-martin', {{ listing.id }})">
+                        <button class="btn sm" onclick="toggleForm('form-me')">{{ t(request, 'listing.cancel') }}</button>
+                        <button class="btn primary sm" onclick="submitReview({{ listing.id }})">
                             <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}
                         </button>
                     </div>
                 </div>
             </div>
+            {% endif %}
 
         </div><!-- end right-panel -->
     </div><!-- end layout -->
@@ -1032,15 +1006,13 @@
         setTimeout(() => { t.classList.remove('show'); }, 3000);
     }
 
-    async function submitReview(reviewer, listingId) {
-        const prefix = reviewer === 'jean-dupont' ? 'jm' : 'marie-martin';
+    async function submitReview(listingId) {
         const body = {
-            reviewer,
-            pros: document.getElementById(`${prefix}-pros`).value,
-            cons: document.getElementById(`${prefix}-cons`).value,
-            rating: parseFloat(document.getElementById(`${prefix}-rating`).value) || null,
-            notes: document.getElementById(`${prefix}-notes`).value,
-            visit_done: false,
+            pros:       document.getElementById('me-pros').value,
+            cons:       document.getElementById('me-cons').value,
+            rating:     parseFloat(document.getElementById('me-rating').value) || null,
+            notes:      document.getElementById('me-notes').value,
+            visit_done: document.getElementById('me-visit').checked,
         };
 
         try {

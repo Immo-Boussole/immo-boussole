@@ -106,20 +106,11 @@ class PhotoImportRequest(BaseModel):
 
 
 class ReviewRequest(BaseModel):
-    reviewer: str
     pros: Optional[str] = None
     cons: Optional[str] = None
     rating: Optional[float] = None
     visit_done: bool = False
     notes: Optional[str] = None
-
-    @field_validator("reviewer")
-    @classmethod
-    def validate_reviewer(cls, v):
-        allowed = ["jean-dupont", "marie-martin"]
-        if v.lower() not in allowed:
-            raise ValueError(f"reviewer must be one of: {allowed}")
-        return v.lower()
 
     @field_validator("rating")
     @classmethod
@@ -871,17 +862,23 @@ def create_or_update_review(
     listing_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
-    """Create or update a review for a listing. One review per (listing, reviewer)."""
+    """Create or update a review for a listing. One review per (listing, reviewer).
+    The reviewer is always the currently logged-in user — cannot post on behalf of another."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
+    # Force reviewer = current user's username (prevents impersonation)
+    reviewer = request.session.get("username")
+    if not reviewer:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     review, is_new = get_or_create_review(
         db=db,
         listing_id=listing_id,
-        reviewer=body.reviewer,
+        reviewer=reviewer.lower(),
         pros=body.pros,
         cons=body.cons,
         rating=body.rating,
@@ -903,12 +900,17 @@ def update_review(
     review_id: int,
     body: ReviewRequest,
     db: Session = Depends(get_db),
-    _auth = Depends(login_required)
+    _auth = Depends(user_required)
 ):
-    """Update a specific review by ID."""
+    """Update a specific review by ID. A user can only update their own review."""
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
         raise HTTPException(status_code=404, detail=get_text(request, "api.review_not_found"))
+
+    # Verify ownership
+    current_username = request.session.get("username", "").lower()
+    if review.reviewer != current_username:
+        raise HTTPException(status_code=403, detail="You can only edit your own reviews")
 
     if body.pros is not None:
         review.pros = body.pros
@@ -927,11 +929,17 @@ def update_review(
 
 
 @app.delete("/api/reviews/{review_id}")
-def delete_review(request: Request, review_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
-    """Delete a review."""
+def delete_review(request: Request, review_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    """Delete a review. A user can only delete their own review."""
     review = db.query(Review).filter(Review.id == review_id).first()
     if not review:
         raise HTTPException(status_code=404, detail=get_text(request, "api.review_not_found"))
+
+    # Verify ownership
+    current_username = request.session.get("username", "").lower()
+    if review.reviewer != current_username:
+        raise HTTPException(status_code=403, detail="You can only delete your own reviews")
+
     db.delete(review)
     db.commit()
     return {"status": "deleted"}
