@@ -16,7 +16,8 @@
         "no_manual": "No manual listings",
         "ready": "Ready to Search",
         "connected": "Connected:",
-        "total_listings": "Total listings"
+        "total_listings": "Total listings",
+        "users": "Users"
     },
     "dashboard": {
         "all_listings": "All listings",

@@ -16,7 +16,8 @@
         "no_manual": "Aucun bien ajouté manuellement",
         "ready": "Prêt à Rechercher",
         "connected": "Connecté:",
-        "total_listings": "Total annonces"
+        "total_listings": "Total annonces",
+        "users": "Utilisateurs"
     },
     "dashboard": {
         "all_listings": "Toutes les annonces",
