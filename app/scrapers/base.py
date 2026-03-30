@@ -1,5 +1,5 @@
 import abc
-import requests
+
 import asyncio
 from typing import List, Dict, Optional
 from app.config import settings
@@ -28,52 +28,33 @@ class BaseScraper(abc.ABC):
 
     async def extract_page_content(self, url: str) -> Dict:
         """
-        Fetches page content via a self-hosted FlareSolverr instance.
-        Handles Cloudflare challenges and returns the rendered HTML.
+        Fetches page content via a self-hosted Browserless instance using Playwright.
+        Handles dynamic rendering and returns the HTML.
         """
-        print(f"[Scraper] Extraction via FlareSolverr pour : {url}")
+        print(f"[Scraper] Extraction via Browserless/Playwright pour : {url}")
 
-        def fetch():
-            import time
-            api_url = settings.FLARESOLVERR_URL
-            
-            payload = {
-                "cmd": "request.get",
-                "url": url,
-                "maxTimeout": 60000,
-                "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0"
-            }
-
-            try:
-                # Call FlareSolverr
-                response = requests.post(
-                    f"{api_url}/v1",
-                    json=payload,
-                    timeout=70  # Slightly longer than maxTimeout
-                )
-                response.raise_for_status()
-                data = response.json()
-
-                if data.get("status") == "ok":
-                    solution = data.get("solution", {})
-                    html = solution.get("response", "")
-                    print(f"[Scraper] Succès FlareSolverr pour {url}")
-                    return {"html": html}
-                else:
-                    print(f"[Scraper] FlareSolverr erreur : {data.get('message')}")
-                    return {}
-
-            except Exception as e:
-                print(f"[Scraper] Erreur FlareSolverr : {e}")
-                # Fallback to direct HTTP if FlareSolverr fails/is missing? 
-                # Better to return empty so calling code knows it failed.
-                return {}
+        from playwright.async_api import async_playwright
+        from playwright_stealth import stealth_async
 
         try:
-            content = await asyncio.to_thread(fetch)
-            return content
+            async with async_playwright() as p:
+                browser = await p.chromium.connect_over_cdp(settings.BROWSERLESS_URL)
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+                page = await context.new_page()
+                await stealth_async(page)
+                
+                await page.goto(url, wait_until="networkidle", timeout=60000)
+                html = await page.content()
+                
+                await browser.close()
+                
+                print(f"[Scraper] Succès Browserless pour {url}")
+                return {"html": html}
+
         except Exception as e:
-            print(f"[Scraper] Erreur async FlareSolverr : {e}")
+            print(f"[Scraper] Erreur async Browserless : {e}")
             return {}
 
     def _normalize_city(self, location_str: Optional[str]) -> Optional[str]:

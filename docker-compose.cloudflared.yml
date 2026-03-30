@@ -19,8 +19,8 @@ services:
     environment:
       # Database connection (SQLite)
       - DATABASE_URL=sqlite:////app/data/immo_boussole.db
-      # Internal URL for FlareSolverr
-      - FLARESOLVERR_URL=http://flaresolverr:8191
+      # Internal URL for Browserless
+      - BROWSERLESS_URL=ws://browserless:3000
       # Scraping configuration
       - SCRAPING_INTERVAL_HOURS=${SCRAPING_INTERVAL_HOURS:-12}
       - SCRAPINGBEE_API_KEY=${SCRAPINGBEE_API_KEY:-}
@@ -35,20 +35,20 @@ services:
       # Static files persistence (photos, etc.)
       - immo-boussole-media:/app/static
     depends_on:
-      - flaresolverr
+      - browserless
     # NOTE: No "ports:" block is present.
     # The application is only accessible via the Docker network or the Tunnel.
 
-  # ── 2. FlareSolverr (Cloudflare/DDoS Bypass) ────────────────────────────────
-  flaresolverr:
-    image: flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
+  # ── 2. Headless Browser (Playwright / Chrome) ────────────────────────────────
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
     restart: unless-stopped
     environment:
-      - LOG_LEVEL=info
-      - TZ=Europe/Paris
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
-      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
+      - TIMEOUT=60000
+      - CONCURRENT=10
+      - MAX_CONCURRENT_SESSIONS=10
+      - MAX_QUEUE_LENGTH=10
 
   # ── 3. Cloudflare Tunnel Connector ─────────────────────────────────────────
   cloudflared:

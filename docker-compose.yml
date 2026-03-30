@@ -16,7 +16,7 @@ services:
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
-      - flaresolverr
+      - browserless
     ports:
       - "8000:8000"
     networks:
@@ -25,8 +25,8 @@ services:
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
-      # Utilise le service flaresolverr interne au réseau Docker
-      FLARESOLVERR_URL: "http://flaresolverr:8191"
+      # Utilise le service browserless interne au réseau Docker
+      BROWSERLESS_URL: "ws://browserless:3000"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-true}"
@@ -44,21 +44,20 @@ services:
       - ./app:/app/app
       - ./locales:/app/locales
 
-  # ── Moteur de Scraping (Self-Hosted Cloudflare Bypass) ─────────────────────
-  flaresolverr:
-    image: flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
+  # ── Headless Browser (Playwright / Chrome) ─────────────────────────────────
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
     restart: unless-stopped
     ports:
-      - "8191:8191"
+      - "3000:3000"
     networks:
       - immo-boussole-net
     environment:
-      - LOG_LEVEL=info
-      - TZ=Europe/Paris
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
-      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
-
+      - TIMEOUT=60000
+      - CONCURRENT=10
+      - MAX_CONCURRENT_SESSIONS=10
+      - MAX_QUEUE_LENGTH=10
     logging:
       driver: "json-file"
       options:
