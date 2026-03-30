@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     # Optional ScrapingBee API key (legacy / fallback)
     SCRAPINGBEE_API_KEY: str = ""
 
-    # FlareSolverr URL (for self-hosted bypass)
-    FLARESOLVERR_URL: str = "http://127.0.0.1:8191"
+    # Browserless URL (for headless scraping)
+    BROWSERLESS_URL: str = "ws://127.0.0.1:3000"
 
     # Deprecated: PinchTab URL
     PINCHTAB_URL: str = "http://127.0.0.1:9867"
