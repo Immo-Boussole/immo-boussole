@@ -44,7 +44,7 @@ VOLUME ["/app/data", "/app/static"]
 
 # ── Environment defaults ──────────────────────────────────────────────────────
 ENV DATABASE_URL="sqlite:////app/data/immo_boussole.db" \
-    FLARESOLVERR_URL="http://flaresolverr:8191" \
+    BROWSERLESS_URL="ws://browserless:3000" \
     SCRAPING_INTERVAL_HOURS=12 \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
