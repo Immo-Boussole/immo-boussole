@@ -11,5 +11,4 @@ python-multipart
 beautifulsoup4
 httpx
 aiofiles
-requests
 itsdangerous

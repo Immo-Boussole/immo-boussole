@@ -208,7 +208,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 def setup_admin_page(request: Request, db: Session = Depends(get_db)):
     if db.query(models.User).count() > 0:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse("setup_admin.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="setup_admin.html")
 
 
 @app.post("/setup-admin")
@@ -241,7 +241,7 @@ def login_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/setup-admin")
     if is_authenticated(request):
         return RedirectResponse(url="/")
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="login.html")
 
 
 @app.post("/login")
@@ -260,8 +260,7 @@ def login(
             request.session["role"] = user.role
             return RedirectResponse(url="/", status_code=303)
             
-    return templates.TemplateResponse("login.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="login.html", context={
         "error": get_text(request, "api.invalid_credentials")
     })
 
@@ -302,8 +301,7 @@ def admin_users_page(
     _auth = Depends(admin_required)
 ):
     users = db.query(models.User).all()
-    return templates.TemplateResponse("admin_users.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="admin_users.html", context={
         "users": users,
         "title": "Gestion des Utilisateurs — Immo-Boussole",
     })
@@ -417,8 +415,7 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
 
     local_hash = get_local_commit_hash()
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="index.html", context={
         "listings": listings,
         "queries": queries,
         "local_hash": local_hash,
@@ -438,8 +435,7 @@ def listings_table_page(
     for listing in listings:
         listing._photos = json_to_photos(listing.photos_local)
 
-    return templates.TemplateResponse("listings_table.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="listings_table.html", context={
         "listings": listings,
         "queries": queries,
         "title": "Tableau des Annonces — Immo-Boussole",
@@ -470,8 +466,7 @@ def listing_detail_page(
             Listing.id == listing.duplicate_of_id
         ).first()
 
-    return templates.TemplateResponse("listing_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
         "reviews": reviews,
@@ -488,8 +483,7 @@ def ideal_profile_page(
     _auth = Depends(login_required)
 ):
     profile = generate_ideal_profile(db)
-    return templates.TemplateResponse("ideal_profile.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="ideal_profile.html", context={
         "profile": profile,
         "title": "Fiche de Bien Idéal — Immo-Boussole",
     })
@@ -505,8 +499,7 @@ def ready_searches_page(
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).all()
     
-    return templates.TemplateResponse("ready_searches.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="ready_searches.html", context={
         "ready_searches": ready_searches,
         "queries": queries,
         "listings": listings,

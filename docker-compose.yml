@@ -16,7 +16,7 @@ services:
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
-      - flaresolverr
+      - browserless
     ports:
       - "8000:8000"
     networks:
@@ -25,14 +25,11 @@ services:
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
-      # Utilise le service flaresolverr interne au réseau Docker
-      FLARESOLVERR_URL: "http://flaresolverr:8191"
+      # Headless browser (Playwright via CDP → Browserless)
+      BROWSERLESS_URL: "ws://browserless:3000"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-true}"
-      # Captcha solver : 2captcha (nécessite TWO_CAPTCHA_API_KEY dans .env)
-      CAPTCHA_SOLVER: "${CAPTCHA_SOLVER:-2captcha}"
-      TWO_CAPTCHA_API_KEY: "${TWO_CAPTCHA_API_KEY:-}"
 
     volumes:
       # Persistance de la base de données SQLite
@@ -44,20 +41,23 @@ services:
       - ./app:/app/app
       - ./locales:/app/locales
 
-  # ── Moteur de Scraping (Self-Hosted Cloudflare Bypass) ─────────────────────
-  flaresolverr:
-    image: flaresolverr/flaresolverr:latest
-    container_name: flaresolverr
+  # ── Moteur de Scraping (Headless Chrome via Browserless) ───────────────────
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
     restart: unless-stopped
     ports:
-      - "8191:8191"
+      - "3000:3000"
     networks:
       - immo-boussole-net
     environment:
-      - LOG_LEVEL=info
+      - MAX_CONCURRENT_SESSIONS=5
+      - CONNECTION_TIMEOUT=120000
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
+      - PREBOOT_CHROME=true
+      - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-2captcha}
-      - TWO_CAPTCHA_API_KEY=${TWO_CAPTCHA_API_KEY:-}
 
     logging:
       driver: "json-file"
