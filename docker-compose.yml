@@ -25,7 +25,11 @@ services:
     environment:
       # Base de données SQLite (chemin dans le volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+<<<<<<< HEAD
       # Headless browser (Playwright via CDP → Browserless)
+=======
+      # Utilise le service browserless interne au réseau Docker
+>>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
       BROWSERLESS_URL: "ws://browserless:3000"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
@@ -41,7 +45,11 @@ services:
       - ./app:/app/app
       - ./locales:/app/locales
 
+<<<<<<< HEAD
   # ── Moteur de Scraping (Headless Chrome via Browserless) ───────────────────
+=======
+  # ── Headless Browser (Playwright / Chrome) ─────────────────────────────────
+>>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
   browserless:
     image: browserless/chrome:latest
     container_name: browserless
@@ -51,6 +59,7 @@ services:
     networks:
       - immo-boussole-net
     environment:
+<<<<<<< HEAD
       - MAX_CONCURRENT_SESSIONS=5
       - CONNECTION_TIMEOUT=120000
       - DEFAULT_BLOCK_ADS=true
@@ -59,6 +68,12 @@ services:
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
 
+=======
+      - TIMEOUT=60000
+      - CONCURRENT=10
+      - MAX_CONCURRENT_SESSIONS=10
+      - MAX_QUEUE_LENGTH=10
+>>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
     logging:
       driver: "json-file"
       options:
