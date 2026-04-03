@@ -1,6 +1,6 @@
 import re
 import json
-import httpx
+
 from app.scrapers.base import BaseScraper
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
