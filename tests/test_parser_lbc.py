@@ -6,7 +6,7 @@ async def test_lbc_parser():
     scraper = LeboncoinScraper()
     # Simple search for Paris
     scraper = LeboncoinScraper()
-    listings = await scraper.get_listings("https://www.leboncoin.fr/recherche?category=9&text=paris")
+    listings = await scraper.get_listings("https://www.leboncoin.fr/recherche?category=9&text=lyon")
     
     print(f"Parsed {len(listings)} listings:")
     for l in listings[:10]:

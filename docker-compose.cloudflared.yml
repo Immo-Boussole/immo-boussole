@@ -2,10 +2,8 @@
 # This file is designed for secure deployment without exposed ports.
 # All external communication passes through the Cloudflare Tunnel.
 
-
 # docker-compose.cloudflared.yml
 name: immo-boussole-cloudflared
-
 
 services:
   # ── 1. Immo-Boussole Application ──────────────────────────────────────────
@@ -23,7 +21,6 @@ services:
       - BROWSERLESS_URL=ws://browserless:3000
       # Scraping configuration
       - SCRAPING_INTERVAL_HOURS=${SCRAPING_INTERVAL_HOURS:-12}
-      - SCRAPINGBEE_API_KEY=${SCRAPINGBEE_API_KEY:-}
       # App debug mode
       - DEBUG=${DEBUG:-false}
     volumes:
@@ -36,7 +33,7 @@ services:
     # NOTE: No "ports:" block is present.
     # The application is only accessible via the Docker network or the Tunnel.
 
-  # ── 2. Browserless (Headless Chrome via CDP) ───────────────────────────────
+    # ── 2. Browserless (Headless Chrome via CDP) ───────────────────────────────
   browserless:
     image: browserless/chrome:latest
     container_name: browserless
