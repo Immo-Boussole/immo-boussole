@@ -1,0 +1,42 @@
+# 🧭 Immo-Boussole
+
+## Project Overview
+**Immo-Boussole** (Real Estate Compass) is a collaborative property aggregator and evaluation tool. It automates listing discovery, enriches raw data through developer-defined scraping logic, and provides a premium, data-focused dashboard for decision-making.
+
+- **Stack**: Python 3.12 (FastAPI), SQLAlchemy (SQLite), Playwright (Browserless), Jinja2 (Vanilla CSS).
+- **Architecture**: Docker-first, persistent volumes for DB and media, i18n support (EN/FR).
+- **Design DNA**: Deep-dark dashboard aesthetic (`#0b0f1a`), Inter font, premium transitions, high-contrast accents.
+
+---
+
+## 🧠 Project Brain Index (./ai/)
+
+This directory contains the core intelligence and architectural guidelines for AI agents and developers.
+
+### 1. [DESIGN.md](./ai/DESIGN.md)
+**Source of Truth** for the UI/UX. Contains the color palette, typography scales, component specifications (buttons, cards, badges), and movement philosophy (`cubic-bezier`).
+- *Use when*: Creating new UI components or modifying layouts.
+
+### 2. [CONTEXT.md](./ai/CONTEXT.md)
+Defines the **Mission Statement** and **Core Values**. Outlines the "Boussole DNA" and non-negotiable development constraints (Privacy, I18N parity).
+- *Use when*: Planning new features or deciding on project orientation.
+
+### 3. [TECH_STACK.md](./ai/TECH_STACK.md)
+Maps the **Architecture Layer by Layer**. Details the service communication (App ↔ Browserless), environment requirements, and core dependencies.
+- *Use when*: Debugging infra, adding new services, or updating dependencies.
+
+### 4. [ADR.md](./ai/ADR.md)
+**Architecture Decision Records**. Chronicles why specific technologies (FastAPI, SQLite, Browserless) were chosen and their current status.
+- *Use when*: Understanding the "Why" behind the "What".
+
+### 5. [ROADMAP.md](./ai/ROADMAP.md)
+The **Future Vision**. Lists proposed features (Price Trend Analysis, Map View, PDF Reports) and technical optimizations.
+- *Use when*: Seeking high-value tasks or suggesting improvements.
+
+---
+
+## 🌐 Related Files
+- `Dockerfile`: Multi-stage Python build.
+- `docker-compose.yml`: Local development orchestration.
+- `locales/*.json`: I18n translations.
+- `requirements.txt`: Python package manifest.
