@@ -13,9 +13,6 @@ class Settings(BaseSettings):
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12
 
-    # Optional ScrapingBee API key (legacy / fallback)
-    SCRAPINGBEE_API_KEY: str = ""
-
     # Browserless URL (headless Chrome via CDP)
     BROWSERLESS_URL: str = "ws://localhost:3000"
 

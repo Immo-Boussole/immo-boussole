@@ -7,7 +7,7 @@ name: immo-boussole
 
 services:
 
-  # ── Application principale ──────────────────────────────────────────────────
+  # ── Main Application ─────────────────────────────────────────────────────────
   immo-boussole:
     build:
       context: .
@@ -23,25 +23,24 @@ services:
       - immo-boussole-net
 
     environment:
-      # Base de données SQLite (chemin dans le volume)
+      # SQLite database (path within the volume)
       DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
       # Headless browser (Playwright via CDP → Browserless)
       BROWSERLESS_URL: "ws://browserless:3000"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
-      SCRAPINGBEE_API_KEY: "${SCRAPINGBEE_API_KEY:-}"
       DEBUG: "${DEBUG:-true}"
 
     volumes:
-      # Persistance de la base de données SQLite
+      # SQLite database persistence
       - db-data:/app/data
-      # Persistance des photos téléchargées
+      # Persistent storage for downloaded photos
       - media-data:/app/static
-      # Mappage pour le développement (réflexion immédiate des changements)
+      # Development mapping (hot-reloading of changes)
       - ./templates:/app/templates
       - ./app:/app/app
       - ./locales:/app/locales
 
-  # ── Moteur de Scraping (Headless Chrome via Browserless) ───────────────────
+  # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
     image: browserless/chrome:latest
     container_name: browserless
@@ -65,13 +64,13 @@ services:
         max-size: "10m"
         max-file: "3"
 
-# ── Réseau interne ──────────────────────────────────────────────────────────
+# ── Internal Network ─────────────────────────────────────────────────────────
 networks:
   immo-boussole-net:
     name: immo-boussole-net
     driver: bridge
 
-# ── Volumes persistants ─────────────────────────────────────────────────────
+# ── Persistent Volumes ───────────────────────────────────────────────────────
 volumes:
   db-data:
     name: immo-boussole-db

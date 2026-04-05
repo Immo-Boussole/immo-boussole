@@ -87,7 +87,6 @@ Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une 
 4. **Configurer l'environnement** :
    ```bash
    cp .env.example .env
-   # Renseigner votre SCRAPINGBEE_API_KEY (optionnel) ou ajuster FLARESOLVERR_URL
    ```
 5. **Lancer le serveur** :
    ```bash

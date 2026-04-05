@@ -86,7 +86,6 @@ A banner automatically appears at the bottom of the home screen when a new versi
 4. **Configure the environment**:
    ```bash
    cp .env.example .env
-   # Enter your SCRAPINGBEE_API_KEY (optional) or adjust FLARESOLVERR_URL
    ```
 5. **Start the server**:
    ```bash

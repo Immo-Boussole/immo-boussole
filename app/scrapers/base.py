@@ -6,7 +6,7 @@ from app.config import settings
 
 class BaseScraper(abc.ABC):
     def __init__(self):
-        self.api_key = settings.SCRAPINGBEE_API_KEY
+        pass
 
     @abc.abstractmethod
     async def get_listings(self, search_url: str) -> List[Dict]:
