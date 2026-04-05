@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ listing.title|default(t(request, 'listing.details')) }} — {{ t(request, 'app.title') }}</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
         :root {
@@ -244,7 +244,7 @@
     </div>
     <div style="margin-left: auto; display: flex; gap: 0.75rem;">
         {% if request.session.get('role') == 'admin' %}
-        <a href="/users" class="btn" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
+        <a href="/admin/users" class="btn" style="color: var(--accent); border-color: rgba(88, 101, 242, 0.3); background: rgba(88, 101, 242, 0.05);">
             <i class="fa-solid fa-users"></i> {{ t(request, 'nav.users') }}
         </a>
         {% endif %}
@@ -503,7 +503,7 @@
                 <div class="reviewer-header">
                     <div class="avatar jm">{{ current_user[0]|upper if current_user else '?' }}</div>
                     <div>
-                        <div class="reviewer-name">{{ current_user }} <span style="font-size:0.7rem;font-weight:400;color:var(--text-2);">(vous)</span></div>
+                        <div class="reviewer-name">{{ current_user }} <span style="font-size:0.7rem;font-weight:400;color:var(--text-2);">{{ t(request, 'listing.you_label') }}</span></div>
                     </div>
                     {% if my_review and my_review.rating %}
                     <div class="rating-badge rating-display">
@@ -531,7 +531,7 @@
                 </div>
                 {% endif %}
                 {% else %}
-                <div class="no-review">Pas encore d'avis de votre part.</div>
+                <div class="no-review">{{ t(request, 'listing.no_review_yet') }}</div>
                 {% endif %}
 
                 <button class="btn btn-toggle" onclick="toggleForm('form-me')">
@@ -588,67 +588,67 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <!-- Main Info -->
                 <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
-                    <label>Titre</label>
+                    <label>{{ t(request, 'listing.edit_title') }}</label>
                     <input type="text" id="edit-title" value="{{ listing.title or '' }}" required>
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Prix</label>
+                    <label>{{ t(request, 'listing.edit_price') }}</label>
                     <input type="number" step="0.01" id="edit-price" value="{{ listing.price or '' }}">
                 </div>
 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Surface (m²)</label>
+                    <label>{{ t(request, 'listing.edit_area') }}</label>
                     <input type="number" step="0.01" id="edit-area" value="{{ listing.area or '' }}">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Pièces</label>
+                    <label>{{ t(request, 'listing.edit_rooms') }}</label>
                     <input type="number" id="edit-rooms" value="{{ listing.rooms or '' }}">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Chambres</label>
+                    <label>{{ t(request, 'listing.edit_bedrooms') }}</label>
                     <input type="number" id="edit-bedrooms" value="{{ listing.bedrooms or '' }}">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Localisation</label>
+                    <label>{{ t(request, 'listing.edit_location') }}</label>
                     <input type="text" id="edit-location" value="{{ listing.location or '' }}">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>État</label>
+                    <label>{{ t(request, 'listing.edit_condition') }}</label>
                     <input type="text" id="edit-condition" value="{{ listing.condition or '' }}">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>DPE (Lettre)</label>
+                    <label>{{ t(request, 'listing.edit_dpe') }}</label>
                     <input type="text" id="edit-dpe" value="{{ listing.dpe_rating or '' }}" maxlength="1" style="text-transform: uppercase;">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>GES (Lettre)</label>
+                    <label>{{ t(request, 'listing.edit_ges') }}</label>
                     <input type="text" id="edit-ges" value="{{ listing.ges_rating or '' }}" maxlength="1" style="text-transform: uppercase;">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Taxe Foncière (€/an)</label>
+                    <label>{{ t(request, 'listing.edit_tax') }}</label>
                     <input type="number" step="0.01" id="edit-tax" value="{{ listing.land_tax or '' }}">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Charges (€/mois)</label>
+                    <label>{{ t(request, 'listing.edit_charges') }}</label>
                     <input type="number" step="0.01" id="edit-charges" value="{{ listing.charges or '' }}">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Honoraires Agence (€)</label>
+                    <label>{{ t(request, 'listing.edit_fees') }}</label>
                     <input type="number" step="0.01" id="edit-fees" value="{{ listing.agency_fee or '' }}">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
-                    <label>Places de Parking</label>
+                    <label>{{ t(request, 'listing.edit_parking') }}</label>
                     <input type="number" id="edit-parking" value="{{ listing.parking_count or '' }}">
                 </div>
                 
                 <!-- Full width Description -->
                 <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
-                    <label>Description Complète</label>
+                    <label>{{ t(request, 'listing.edit_description') }}</label>
                     <textarea id="edit-desc" style="min-height: 150px;">{{ listing.description_text or '' }}</textarea>
                 </div>
             </div>
@@ -693,25 +693,25 @@
 <div class="modal-backdrop" id="photoModal" onclick="if(event.target===this)closePhotoModal()">
     <div class="modal" style="max-width: 500px; text-align: left;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-images" style="color: var(--accent);"></i> Importer des photos</h2>
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-images" style="color: var(--accent);"></i> {{ t(request, 'listing.import_photos') }}</h2>
             <button class="btn sm" onclick="closePhotoModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <p style="font-size: 0.82rem; color: var(--text-2); margin-bottom: 1.5rem;">Glissez-déposez vos images ci-dessous ou collez leurs URLs.</p>
+        <p style="font-size: 0.82rem; color: var(--text-2); margin-bottom: 1.5rem;">{{ t(request, 'listing.import_photos_desc') }}</p>
         
         <div class="drop-zone" id="drop-zone" style="border: 2px dashed var(--border); border-radius: 9px; padding: 2rem; text-align: center; margin-bottom: 1rem; cursor: pointer; transition: all 0.2s; background: var(--surface-2);">
             <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--text-2); margin-bottom: 0.5rem; pointer-events: none;"></i>
-            <p style="font-size: 0.82rem; color: var(--text-2); pointer-events: none; margin-bottom: 0;">Glissez-déposez vos images ici ou cliquez pour parcourir</p>
+            <p style="font-size: 0.82rem; color: var(--text-2); pointer-events: none; margin-bottom: 0;">{{ t(request, 'listing.drop_zone_text') }}</p>
             <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
         </div>
         
-        <div style="text-align: center; margin-bottom: 1rem; color: var(--text-2); font-size: 0.8rem; font-weight: 600;">OU</div>
+        <div style="text-align: center; margin-bottom: 1rem; color: var(--text-2); font-size: 0.8rem; font-weight: 600;">{{ t(request, 'listing.or_separator') }}</div>
 
         <div class="form-row">
             <textarea id="photo-urls" style="min-height: 100px; width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collage d'URLs : https://.../img1.jpg&#10;https://.../img2.jpg"></textarea>
         </div>
         <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
             <button class="btn" onclick="closePhotoModal()">{{ t(request, 'listing.cancel') }}</button>
-            <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> Import</button>
+            <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> {{ t(request, 'listing.import_btn') }}</button>
         </div>
 
     </div>

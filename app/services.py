@@ -2,7 +2,7 @@
 Business logic services: scraping, duplicate detection, listing creation.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -80,17 +80,17 @@ async def fetch_basic_metadata(url: str) -> dict:
                                 val = attr.get("value")
                                 if key == "square":
                                     try: details["area"] = float(str(val).replace(",", "."))
-                                    except: pass
+                                    except (ValueError, TypeError): pass
                                 elif key == "rooms":
                                     try: details["rooms"] = int(val)
-                                    except: pass
+                                    except (ValueError, TypeError): pass
                                 elif key == "energy_rate":
                                     details["dpe_rating"] = str(val).upper()[:1] if val else None
                                 elif key == "ges":
                                     details["ges_rating"] = str(val).upper()[:1] if val else None
                                 elif key in ("annual_charges", "charges"):
                                     try: details["charges"] = float(str(val).replace(",", "."))
-                                    except: pass
+                                    except (ValueError, TypeError): pass
                             
                             print(f"[Services] LBC Fast Scrape OK: {details['title']} ({len(details.get('photo_urls', []))} photos)")
                             return details
@@ -171,7 +171,7 @@ async def create_listing_from_details(
         external_id=external_id,
         url=original_url,
         original_url=original_url,
-        date_added=datetime.utcnow()
+        date_added=datetime.now(timezone.utc)
     )
 
     # ── Update / Set Fields ──────────────────────────────────────────────
@@ -187,7 +187,7 @@ async def create_listing_from_details(
 
     # Store source and update timestamp
     listing.source = source
-    listing.scraped_at = datetime.utcnow()
+    listing.scraped_at = datetime.now(timezone.utc)
     listing.status = ListingStatus.NEW
 
     if not existing:
@@ -200,7 +200,7 @@ async def create_listing_from_details(
     photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
         # Avoid re-downloading if already present (unless it's a re-scrape with different photos?)
-        if not listing.photos_local or len(photo_urls) > 0: 
+        if not listing.photos_local:
             local_paths = await download_listing_photos(listing.id, photo_urls)
             if local_paths:
                 listing.photos_local = photos_to_json(local_paths)
@@ -263,7 +263,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
             if existing:
                 existing.status = ListingStatus.NEW
                 existing.price = item.get("price")
-                existing.date_updated = datetime.utcnow()
+                existing.date_updated = datetime.now(timezone.utc)
             else:
                 new_listing = Listing(
                     external_id=ext_id,
@@ -277,7 +277,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                     rooms=item.get("rooms"),
                     source=query.source,
                     status=ListingStatus.NEW,
-                    scraped_at=datetime.utcnow(),
+                    scraped_at=datetime.now(timezone.utc),
                     is_duplicate=False,
                     duplicate_of_id=None,
                 )
@@ -287,7 +287,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
     db.commit()
 
     # Update last_run timestamp
-    query.last_run = datetime.utcnow()
+    query.last_run = datetime.now(timezone.utc)
     db.commit()
 
     print(

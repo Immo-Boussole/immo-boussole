@@ -19,11 +19,7 @@ services:
     environment:
       # Database connection (SQLite)
       - DATABASE_URL=sqlite:////app/data/immo_boussole.db
-<<<<<<< HEAD
       # Headless browser (Playwright via CDP → Browserless)
-=======
-      # Internal URL for Browserless
->>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
       - BROWSERLESS_URL=ws://browserless:3000
       # Scraping configuration
       - SCRAPING_INTERVAL_HOURS=${SCRAPING_INTERVAL_HOURS:-12}
@@ -40,17 +36,12 @@ services:
     # NOTE: No "ports:" block is present.
     # The application is only accessible via the Docker network or the Tunnel.
 
-<<<<<<< HEAD
   # ── 2. Browserless (Headless Chrome via CDP) ───────────────────────────────
-=======
-  # ── 2. Headless Browser (Playwright / Chrome) ────────────────────────────────
->>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
   browserless:
     image: browserless/chrome:latest
     container_name: browserless
     restart: unless-stopped
     environment:
-<<<<<<< HEAD
       - MAX_CONCURRENT_SESSIONS=5
       - CONNECTION_TIMEOUT=120000
       - DEFAULT_BLOCK_ADS=true
@@ -58,12 +49,6 @@ services:
       - PREBOOT_CHROME=true
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
-=======
-      - TIMEOUT=60000
-      - CONCURRENT=10
-      - MAX_CONCURRENT_SESSIONS=10
-      - MAX_QUEUE_LENGTH=10
->>>>>>> 16b15c06962da86941aae50b5f0adf15a6b01549
 
   # ── 3. Cloudflare Tunnel Connector ─────────────────────────────────────────
   cloudflared:
