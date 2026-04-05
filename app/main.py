@@ -6,10 +6,9 @@ import json
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import hashlib
-import os
 
 
 from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File
@@ -148,6 +147,37 @@ class UserCreateRequest(BaseModel):
 
 class UserPasswordUpdateRequest(BaseModel):
     password: str
+
+
+# ─── Scraper Resolution Helper ────────────────────────────────────────────
+
+def _resolve_scraper(url: str):
+    """
+    Determines the Source and Scraper instance for a given listing URL.
+    Returns (Source, BaseScraper|None).
+    """
+    from app.scrapers import (
+        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
+        LogicimmoScraper, BieniciScraper, IadfranceScraper,
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    )
+
+    _SCRAPER_MAP = [
+        ("leboncoin.fr",         Source.LEBONCOIN,         LeboncoinScraper),
+        ("seloger.com",          Source.SELOGER,           SelogerScraper),
+        ("lefigaro.fr",          Source.LEFIGARO,          LeFigaroScraper),
+        ("logic-immo.com",       Source.LOGICIMMO,         LogicimmoScraper),
+        ("bienici.com",          Source.BIENICI,           BieniciScraper),
+        ("iadfrance.fr",         Source.IADFRANCE,         IadfranceScraper),
+        ("immobilier.notaires.fr", Source.NOTAIRES,        NotairesScraper),
+        ("vinci-immobilier.com", Source.VINCI,             VinciScraper),
+        ("immobilier-france.fr", Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper),
+    ]
+
+    for domain, source, scraper_cls in _SCRAPER_MAP:
+        if domain in url:
+            return source, scraper_cls()
+    return Source.MANUAL, None
 
 
 # ─── Auth Logic ───────────────────────────────────────────────────────────────
@@ -574,23 +604,7 @@ async def rescrape_listing(
 
     url = listing.url
     # ── Determine source ──
-    from app.scrapers import (
-        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
-        LogicimmoScraper, BieniciScraper, IadfranceScraper,
-        NotairesScraper, VinciScraper, ImmobilierFranceScraper
-    )
-    
-    scraper = None
-    if "leboncoin.fr" in url: source, scraper = Source.LEBONCOIN, LeboncoinScraper()
-    elif "seloger.com" in url: source, scraper = Source.SELOGER, SelogerScraper()
-    elif "lefigaro.fr" in url: source, scraper = Source.LEFIGARO, LeFigaroScraper()
-    elif "logic-immo.com" in url: source, scraper = Source.LOGICIMMO, LogicimmoScraper()
-    elif "bienici.com" in url: source, scraper = Source.BIENICI, BieniciScraper()
-    elif "iadfrance.fr" in url: source, scraper = Source.IADFRANCE, IadfranceScraper()
-    elif "immobilier.notaires.fr" in url: source, scraper = Source.NOTAIRES, NotairesScraper()
-    elif "vinci-immobilier.com" in url: source, scraper = Source.VINCI, VinciScraper()
-    elif "immobilier-france.fr" in url: source, scraper = Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper()
-    else: source, scraper = Source.MANUAL, None
+    source, scraper = _resolve_scraper(url)
 
     # ── Scrape ──
     details = {}
@@ -643,42 +657,7 @@ async def submit_listing_url(
         }
 
     # Determine source and scraper
-    from app.scrapers import (
-        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
-        LogicimmoScraper, BieniciScraper, IadfranceScraper,
-        NotairesScraper, VinciScraper, ImmobilierFranceScraper
-    )
-
-    if "leboncoin.fr" in url:
-        source = Source.LEBONCOIN
-        scraper = LeboncoinScraper()
-    elif "seloger.com" in url:
-        source = Source.SELOGER
-        scraper = SelogerScraper()
-    elif "lefigaro.fr" in url:
-        source = Source.LEFIGARO
-        scraper = LeFigaroScraper()
-    elif "logic-immo.com" in url:
-        source = Source.LOGICIMMO
-        scraper = LogicimmoScraper()
-    elif "bienici.com" in url:
-        source = Source.BIENICI
-        scraper = BieniciScraper()
-    elif "iadfrance.fr" in url:
-        source = Source.IADFRANCE
-        scraper = IadfranceScraper()
-    elif "immobilier.notaires.fr" in url:
-        source = Source.NOTAIRES
-        scraper = NotairesScraper()
-    elif "vinci-immobilier.com" in url:
-        source = Source.VINCI
-        scraper = VinciScraper()
-    elif "immobilier-france.fr" in url:
-        source = Source.IMMOBILIER_FRANCE
-        scraper = ImmobilierFranceScraper()
-    else:
-        source = Source.MANUAL
-        scraper = None
+    source, scraper = _resolve_scraper(url)
 
     if body.skip_scraping:
         # ── Fast path: fetch only basic metadata ───────────────────────────
