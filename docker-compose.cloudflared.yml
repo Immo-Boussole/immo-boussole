@@ -2,42 +2,44 @@
 # This file is designed for secure deployment without exposed ports.
 # All external communication passes through the Cloudflare Tunnel.
 
-# docker-compose.cloudflared.yml
 name: immo-boussole-cloudflared
 
 services:
-  # ── 1. Immo-Boussole Application ──────────────────────────────────────────
+
+  # ── Main Application ─────────────────────────────────────────────────────────
   immo-boussole:
-    # Use "build: ." when deploying via Portainer "Repository" method
-    # or when building from a local clone.
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: immo-boussole-app:latest
-    container_name: immo-boussole
+    container_name: immo-boussole-app
     restart: unless-stopped
-    environment:
-      # Database connection (SQLite)
-      - DATABASE_URL=sqlite:////app/data/immo_boussole.db
-      # Headless browser (Playwright via CDP → Browserless)
-      - BROWSERLESS_URL=ws://browserless:3000
-      # Scraping configuration
-      - SCRAPING_INTERVAL_HOURS=${SCRAPING_INTERVAL_HOURS:-12}
-      # App debug mode
-      - DEBUG=${DEBUG:-false}
-    volumes:
-      # SQLite database persistence
-      - immo-boussole-db:/app/data
-      # Static files persistence (photos, etc.)
-      - immo-boussole-media:/app/static
     depends_on:
       - browserless
+    networks:
+      - immo-boussole-net
+    environment:
+      # SQLite database (path within the volume)
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+      # Headless browser (Playwright via CDP → Browserless)
+      BROWSERLESS_URL: "ws://browserless:3000"
+      SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
+      DEBUG: "${DEBUG:-false}"
+    volumes:
+      # SQLite database persistence
+      - db-data:/app/data
+      # Persistent storage for downloaded photos
+      - media-data:/app/static
     # NOTE: No "ports:" block is present.
     # The application is only accessible via the Docker network or the Tunnel.
 
-    # ── 2. Browserless (Headless Chrome via CDP) ───────────────────────────────
+  # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
     image: browserless/chrome:latest
     container_name: browserless
     restart: unless-stopped
+    networks:
+      - immo-boussole-net
     environment:
       - MAX_CONCURRENT_SESSIONS=5
       - CONNECTION_TIMEOUT=120000
@@ -46,20 +48,33 @@ services:
       - PREBOOT_CHROME=true
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ── 3. Cloudflare Tunnel Connector ─────────────────────────────────────────
+  # ── Cloudflare Tunnel Connector ──────────────────────────────────────────────
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel run
+    networks:
+      - immo-boussole-net
     environment:
       # Replace with your Zero Trust token or use a .env file
       - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
 
-# ── Persistent Volumes ──────────────────────────────────────────────────────
+# ── Internal Network ─────────────────────────────────────────────────────────
+networks:
+  immo-boussole-net:
+    name: immo-boussole-net
+    driver: bridge
+
+# ── Persistent Volumes ───────────────────────────────────────────────────────
 volumes:
-  immo-boussole-db:
+  db-data:
     name: immo-boussole-db
-  immo-boussole-media:
+  media-data:
     name: immo-boussole-media

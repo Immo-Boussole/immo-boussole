@@ -3,6 +3,7 @@
 # in most cloud/Portainer environments unless files are already present on the host.
 # For Portainer/Cloud deployment, please use: docker-compose.cloudflared.yml
 
+# docker-compose.yml
 name: immo-boussole
 
 services:
