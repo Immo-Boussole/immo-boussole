@@ -1006,39 +1006,25 @@
 
     // ── Review Forms ──────────────────────────────────────────────────────────
     // ── Keywords System ───────────────────────────────────────────────────────
-    const REVIEWS_KEYWORDS = {
-        pros: [
-            "Aucun travaux à prévoir",
-            "Grands volumes",
-            "Piscine",
-            "Climatisation",
-            "Jardin sécurisable",
-            "Lumineux",
-            "Calme",
-            "Bon état général",
-            "Proche commodités"
-        ],
-        cons: [
-            "Travaux à prévoir",
-            "Jardin non sécurisé",
-            "Pas de clim",
-            "Bruyant",
-            "Mauvaise isolation",
-            "Vis-à-vis",
-            "Éloigné des commodités"
-        ]
-    };
-
-    function initKeywords() {
+    let keywordsLoaded = false;
+    async function initKeywords() {
         const prosChips = document.getElementById('pros-chips');
         const consChips = document.getElementById('cons-chips');
-        if (!prosChips || !consChips || prosChips.children.length > 0) return; // already initialized
+        if (!prosChips || !consChips || keywordsLoaded) return;
+        keywordsLoaded = true;
+
+        let REVIEWS_KEYWORDS = { pros: [], cons: [] };
+        try {
+            const res = await fetch('/api/keywords');
+            if (res.ok) REVIEWS_KEYWORDS = await res.json();
+        } catch(e) { console.error('Failed to load keywords', e); }
 
         function renderChips(container, type, activeClass, targetId) {
+            container.innerHTML = ''; // clear loading state if any
             const textarea = document.getElementById(targetId);
-            const currentText = (textarea.value || '').toLowerCase();
-
-            REVIEWS_KEYWORDS[type].forEach(kw => {
+            
+            const renderSingleChip = (kw) => {
+                const currentText = (textarea.value || '').toLowerCase();
                 const span = document.createElement('span');
                 span.className = 'chip';
                 span.textContent = kw;
@@ -1049,30 +1035,65 @@
 
                 span.onclick = () => {
                     let val = textarea.value.trim();
-                    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     const kwRegex = new RegExp(`(- )?${escapeRegExp(kw)}(\\s|$)`, 'i');
 
                     if (span.classList.contains(activeClass)) {
                         span.classList.remove(activeClass);
                         val = val.replace(kwRegex, '').trim();
                         // clean up dangling lines
-                        val = val.split('\\n').filter(l => l.trim().length > 0 && l.trim() !== '-').join('\\n');
+                        val = val.split('\n').filter(l => l.trim().length > 0 && l.trim() !== '-').join('\n');
                         textarea.value = val;
                     } else {
                         span.classList.add(activeClass);
-                        if (val.length > 0 && !val.endsWith('\\n')) {
-                            val += '\\n';
+                        if (val.length > 0 && !val.endsWith('\n')) {
+                            val += '\n';
                         }
                         val += `- ${kw}`;
                         textarea.value = val;
                     }
                 };
-                container.appendChild(span);
-            });
+                // insert before the Add button
+                container.insertBefore(span, addBtn);
+            };
+
+            const addBtn = document.createElement('span');
+            addBtn.className = 'chip btn-add-chip';
+            addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter';
+            addBtn.style.borderStyle = 'dashed';
+            addBtn.style.opacity = '0.7';
+            addBtn.onmouseenter = () => addBtn.style.opacity = '1';
+            addBtn.onmouseleave = () => addBtn.style.opacity = '0.7';
+            addBtn.onclick = async () => {
+                const newKw = prompt("Nouveau mot-clé :");
+                if (!newKw || !newKw.trim()) return;
+                try {
+                    const res = await fetch('/api/keywords', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: newKw, keyword_type: type })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Only add if not already present
+                        if (data.status === 'created' || data.status === 'exists') {
+                            let exists = false;
+                            Array.from(container.children).forEach(c => {
+                                if (c.textContent === data.text) exists = true;
+                            });
+                            if (!exists) renderSingleChip(data.text);
+                        }
+                    }
+                } catch(e) { console.error(e); }
+            };
+            container.appendChild(addBtn);
+
+            REVIEWS_KEYWORDS[type].forEach(kw => renderSingleChip(kw));
             
             textarea.addEventListener('input', () => {
                 const valLc = textarea.value.toLowerCase();
                 Array.from(container.children).forEach(chip => {
+                    if (chip === addBtn) return;
                     if (valLc.includes(chip.textContent.toLowerCase())) {
                         chip.classList.add(activeClass);
                     } else {

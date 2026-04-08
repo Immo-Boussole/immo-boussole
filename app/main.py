@@ -132,6 +132,18 @@ class ReadySearchRequest(BaseModel):
     url: str
 
 
+class KeywordCreateRequest(BaseModel):
+    text: str
+    keyword_type: str  # "pros" or "cons"
+    
+    @field_validator("keyword_type")
+    @classmethod
+    def validate_type(cls, v):
+        if v not in ["pros", "cons"]:
+            raise ValueError("Type must be 'pros' or 'cons'")
+        return v
+
+
 class UserCreateRequest(BaseModel):
     username: str
     password: str
@@ -714,6 +726,51 @@ async def submit_listing_url(
         }
 
     return response
+
+
+# ─── API: Keywords ────────────────────────────────────────────────────────────
+
+@app.get("/api/keywords")
+def get_keywords(db: Session = Depends(get_db), _auth = Depends(login_required)):
+    """Get all review keywords."""
+    keywords = db.query(models.ReviewKeyword).all()
+    # Initial seed if empty
+    if not keywords:
+        default_keywords = [
+            ("Aucun travaux à prévoir", "pros"), ("Grands volumes", "pros"), ("Piscine", "pros"),
+            ("Climatisation", "pros"), ("Jardin sécurisable", "pros"), ("Lumineux", "pros"),
+            ("Calme", "pros"), ("Bon état général", "pros"), ("Proche commodités", "pros"),
+            ("Travaux à prévoir", "cons"), ("Jardin non sécurisé", "cons"), ("Pas de clim", "cons"),
+            ("Bruyant", "cons"), ("Mauvaise isolation", "cons"), ("Vis-à-vis", "cons"), ("Éloigné des commodités", "cons")
+        ]
+        for text, type_ in default_keywords:
+            kw = models.ReviewKeyword(text=text, keyword_type=type_)
+            db.add(kw)
+        db.commit()
+        keywords = db.query(models.ReviewKeyword).all()
+        
+    return {
+        "pros": [k.text for k in keywords if k.keyword_type == "pros"],
+        "cons": [k.text for k in keywords if k.keyword_type == "cons"]
+    }
+
+
+@app.post("/api/keywords")
+def add_keyword(
+    body: KeywordCreateRequest, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    """Add a new review keyword to the global pool."""
+    kw = db.query(models.ReviewKeyword).filter(models.ReviewKeyword.text.ilike(body.text.strip())).first()
+    if kw:
+        # If it already exists, just return it
+        return {"status": "exists", "text": kw.text, "keyword_type": kw.keyword_type}
+        
+    new_kw = models.ReviewKeyword(text=body.text.strip(), keyword_type=body.keyword_type)
+    db.add(new_kw)
+    db.commit()
+    return {"status": "created", "text": new_kw.text, "keyword_type": new_kw.keyword_type}
 
 
 @app.delete("/api/listings/{listing_id}")
