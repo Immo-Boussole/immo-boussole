@@ -27,7 +27,7 @@ nodes_debug.json
 *.db-wal
 
 # Local media (stored in Docker volume)
-static/
+static/media/
 
 # Environment files (passed via docker-compose)
 .env
