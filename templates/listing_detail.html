@@ -418,6 +418,17 @@
                     {% if listing.honoraires_a_charge %}<div class="cost-item">{{ t(request, 'listing.fee_charge') }} <strong>{{ listing.honoraires_a_charge }}</strong></div>{% endif %}
                 </div>
 
+                {% if listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND" %}
+                <!-- Mobilité / Transports (SNCF) -->
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-train"></i> Temps de trajet SNCF</div>
+                <div class="cost-item" style="margin-bottom: 0.75rem;"><i class="fa-solid fa-location-dot"></i> <strong>{{ listing.nearest_sncf_station }}</strong></div>
+                <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                    {% if listing.walk_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf }} min</div><div class="sl">À pied</div></div>{% endif %}
+                    {% if listing.bike_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-bicycle" style="color:var(--green);"></i> {{ listing.bike_time_sncf }} min</div><div class="sl">À vélo</div></div>{% endif %}
+                    {% if listing.car_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-car" style="color:var(--orange);"></i> {{ listing.car_time_sncf }} min</div><div class="sl">En voiture</div></div>{% endif %}
+                </div>
+                {% endif %}
+
                 <!-- DPE & GES -->
                 <div class="dpe-block">
                     <div class="dpe-card dpe-{{ listing.dpe_rating or 'NC' }}">

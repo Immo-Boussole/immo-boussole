@@ -87,6 +87,13 @@ _MIGRATIONS = [
     ("listings", "procedure_syndic",     "INTEGER"),
     ("listings", "honoraires_a_charge",  "TEXT"),
     ("listings", "virtual_tour_url",     "TEXT"),
+    
+    # listings — SNCF Routing
+    ("listings", "nearest_sncf_station", "TEXT"),
+    ("listings", "walk_time_sncf",       "INTEGER"),
+    ("listings", "bike_time_sncf",       "INTEGER"),
+    ("listings", "car_time_sncf",        "INTEGER"),
+
     # users — new columns from v4
     ("users", "role",                    "TEXT DEFAULT 'user'"),
 ]

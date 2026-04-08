@@ -14,6 +14,7 @@ from app.scrapers import (
     NotairesScraper, VinciScraper, ImmobilierFranceScraper
 )
 from app.media import download_listing_photos, photos_to_json
+from app.geo import fetch_sncf_times_for_city
 import httpx
 from bs4 import BeautifulSoup
 
@@ -205,6 +206,18 @@ async def create_listing_from_details(
             if local_paths:
                 listing.photos_local = photos_to_json(local_paths)
                 db.commit()
+
+    # ── Pre-calculate SNCF Distances ──
+    if listing.city and listing.nearest_sncf_station is None:
+        sncf_data = fetch_sncf_times_for_city(listing.city)
+        if sncf_data:
+            listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
+            listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
+            listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
+            listing.car_time_sncf = sncf_data.get('car_time_sncf')
+        else:
+            listing.nearest_sncf_station = "NOT_FOUND"
+        db.commit()
 
     return listing, (not existing)
 

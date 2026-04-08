@@ -122,6 +122,12 @@ class Listing(Base):
     is_duplicate = Column(Boolean, default=False)
     duplicate_of_id = Column(Integer, ForeignKey("listings.id"), nullable=True)
 
+    # SNCF Station routing
+    nearest_sncf_station = Column(String, nullable=True)
+    walk_time_sncf = Column(Integer, nullable=True) # in minutes
+    bike_time_sncf = Column(Integer, nullable=True) # in minutes
+    car_time_sncf = Column(Integer, nullable=True)  # in minutes
+
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
 

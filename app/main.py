@@ -31,6 +31,7 @@ from app.services import (
     fetch_basic_metadata,
     generate_ideal_profile,
 )
+from app.geo import fetch_sncf_times_for_city
 from app.media import json_to_photos
 from app.config import settings
 from app.translations import get_text
@@ -494,6 +495,21 @@ def listing_detail_page(
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+        
+    # Lazy geocoding backfill
+    if listing.city and listing.nearest_sncf_station is None:
+        sncf_data = fetch_sncf_times_for_city(listing.city)
+        if sncf_data is not None:
+            listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
+            listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
+            listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
+            listing.car_time_sncf = sncf_data.get('car_time_sncf')
+            db.commit()
+            
+    # Mark it as 'None' instead of NULL if we already tried so we don't try again
+    if listing.city and listing.nearest_sncf_station is None:
+        listing.nearest_sncf_station = "NOT_FOUND" 
+        db.commit()
 
     photos = json_to_photos(listing.photos_local)
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
