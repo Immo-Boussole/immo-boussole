@@ -38,13 +38,14 @@ RUN useradd -m -u 1000 boussole \
 COPY --chown=boussole:boussole app/ ./app/
 COPY --chown=boussole:boussole templates/ ./templates/
 COPY --chown=boussole:boussole locales/ ./locales/
+COPY --chown=boussole:boussole static/ ./static/
 
 USER boussole
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
 # /app/data      → SQLite database (persistent)
-# /app/static    → Downloaded media files (persistent)
-VOLUME ["/app/data", "/app/static"]
+# /app/static/media → Downloaded media files (persistent)
+VOLUME ["/app/data", "/app/static/media"]
 
 # ── Environment defaults ──────────────────────────────────────────────────────
 ENV DATABASE_URL="sqlite:////app/data/immo_boussole.db" \
