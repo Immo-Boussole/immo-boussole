@@ -750,8 +750,8 @@ def get_keywords(db: Session = Depends(get_db), _auth = Depends(login_required))
         keywords = db.query(models.ReviewKeyword).all()
         
     return {
-        "pros": [k.text for k in keywords if k.keyword_type == "pros"],
-        "cons": [k.text for k in keywords if k.keyword_type == "cons"]
+        "pros": [{"id": k.id, "text": k.text} for k in keywords if k.keyword_type == "pros"],
+        "cons": [{"id": k.id, "text": k.text} for k in keywords if k.keyword_type == "cons"]
     }
 
 
@@ -765,12 +765,29 @@ def add_keyword(
     kw = db.query(models.ReviewKeyword).filter(models.ReviewKeyword.text.ilike(body.text.strip())).first()
     if kw:
         # If it already exists, just return it
-        return {"status": "exists", "text": kw.text, "keyword_type": kw.keyword_type}
+        return {"status": "exists", "id": kw.id, "text": kw.text, "keyword_type": kw.keyword_type}
         
     new_kw = models.ReviewKeyword(text=body.text.strip(), keyword_type=body.keyword_type)
     db.add(new_kw)
     db.commit()
-    return {"status": "created", "text": new_kw.text, "keyword_type": new_kw.keyword_type}
+    db.refresh(new_kw)
+    return {"status": "created", "id": new_kw.id, "text": new_kw.text, "keyword_type": new_kw.keyword_type}
+
+
+@app.delete("/api/keywords/{keyword_id}")
+def delete_keyword(
+    keyword_id: int, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    """Delete a review keyword from the global pool."""
+    kw = db.query(models.ReviewKeyword).filter(models.ReviewKeyword.id == keyword_id).first()
+    if not kw:
+        raise HTTPException(status_code=404, detail="Keyword not found")
+    
+    db.delete(kw)
+    db.commit()
+    return {"status": "deleted", "id": keyword_id}
 
 
 @app.delete("/api/listings/{listing_id}")

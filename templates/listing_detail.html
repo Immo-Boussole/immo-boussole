@@ -1023,20 +1023,24 @@
             container.innerHTML = ''; // clear loading state if any
             const textarea = document.getElementById(targetId);
             
-            const renderSingleChip = (kw) => {
+            const renderSingleChip = (kwObj) => {
+                const kwId = kwObj.id;
+                const kwText = kwObj.text;
+                
                 const currentText = (textarea.value || '').toLowerCase();
                 const span = document.createElement('span');
                 span.className = 'chip';
-                span.textContent = kw;
+                span.textContent = kwText;
+                span.dataset.id = kwId;
                 
-                if (currentText.includes(kw.toLowerCase())) {
+                if (currentText.includes(kwText.toLowerCase())) {
                     span.classList.add(activeClass);
                 }
 
                 span.onclick = () => {
                     let val = textarea.value.trim();
                     const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    const kwRegex = new RegExp(`(- )?${escapeRegExp(kw)}(\\s|$)`, 'i');
+                    const kwRegex = new RegExp(`(- )?${escapeRegExp(kwText)}(\\s|$)`, 'i');
 
                     if (span.classList.contains(activeClass)) {
                         span.classList.remove(activeClass);
@@ -1049,10 +1053,44 @@
                         if (val.length > 0 && !val.endsWith('\n')) {
                             val += '\n';
                         }
-                        val += `- ${kw}`;
+                        val += `- ${kwText}`;
                         textarea.value = val;
                     }
                 };
+
+                // Add delete button
+                const delBtn = document.createElement('i');
+                delBtn.className = 'fa-solid fa-xmark';
+                delBtn.title = "Supprimer ce tag globalement";
+                delBtn.style.paddingLeft = '6px';
+                delBtn.style.fontSize = '0.9em';
+                delBtn.style.opacity = '0.5';
+                delBtn.onmouseenter = () => delBtn.style.opacity = '1';
+                delBtn.onmouseleave = () => delBtn.style.opacity = '0.5';
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation(); // prevent adding/removing text
+                    if (confirm(`Voulez-vous supprimer le tag "${kwText}" pour tous les utilisateurs ?`)) {
+                        try {
+                            const res = await fetch(`/api/keywords/${kwId}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                span.remove();
+                                // Clean it from the active text area if present
+                                if (span.classList.contains(activeClass)) {
+                                    let val = textarea.value.trim();
+                                    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    const kwRegex = new RegExp(`(- )?${escapeRegExp(kwText)}(\\s|$)`, 'i');
+                                    val = val.replace(kwRegex, '').trim();
+                                    val = val.split('\n').filter(l => l.trim().length > 0 && l.trim() !== '-').join('\n');
+                                    textarea.value = val;
+                                }
+                            } else {
+                                alert("Erreur lors de la suppression du tag.");
+                            }
+                        } catch(err) { console.error('Delete error:', err); }
+                    }
+                };
+                span.appendChild(delBtn);
+
                 // insert before the Add button
                 container.insertBefore(span, addBtn);
             };
@@ -1079,22 +1117,31 @@
                         if (data.status === 'created' || data.status === 'exists') {
                             let exists = false;
                             Array.from(container.children).forEach(c => {
-                                if (c.textContent === data.text) exists = true;
+                                if (c.textContent.replace(' Ajouter', '').replace('', '').trim() === data.text || c.textContent.trim().startsWith(data.text)) {
+                                    exists = true; 
+                                }
                             });
-                            if (!exists) renderSingleChip(data.text);
+                            if (!exists) {
+                                renderSingleChip({id: data.id, text: data.text});
+                            }
                         }
                     }
                 } catch(e) { console.error(e); }
             };
             container.appendChild(addBtn);
 
-            REVIEWS_KEYWORDS[type].forEach(kw => renderSingleChip(kw));
+            REVIEWS_KEYWORDS[type].forEach(kwObj => renderSingleChip(kwObj));
             
             textarea.addEventListener('input', () => {
                 const valLc = textarea.value.toLowerCase();
                 Array.from(container.children).forEach(chip => {
                     if (chip === addBtn) return;
-                    if (valLc.includes(chip.textContent.toLowerCase())) {
+                    // Chip string has the "X" char content because of innerText, use nodeValue instead?
+                    // actually textContent contains kwText + whatever text the <i> has (usually none for fa-solid)
+                    // but let's be safe:
+                    const kwNodes = Array.from(chip.childNodes).filter(n => n.nodeType === Node.TEXT_NODE);
+                    const kTextLc = (kwNodes.length > 0 ? kwNodes[0].nodeValue : chip.textContent).trim().toLowerCase();
+                    if (valLc.includes(kTextLc)) {
                         chip.classList.add(activeClass);
                     } else {
                         chip.classList.remove(activeClass);
