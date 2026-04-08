@@ -11,7 +11,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: immo-boussole-app:latest
+    image: immo-boussole-app:${APP_VERSION:-latest}
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
@@ -29,7 +29,7 @@ services:
       # SQLite database persistence
       - db-data:/app/data
       # Persistent storage for downloaded photos
-      - media-data:/app/static
+      - media-data:/app/static/media
     # NOTE: No "ports:" block is present.
     # The application is only accessible via the Docker network or the Tunnel.
 

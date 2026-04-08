@@ -13,7 +13,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: immo-boussole-app:latest
+    image: immo-boussole-app:${APP_VERSION:-latest}
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
@@ -35,8 +35,9 @@ services:
       # SQLite database persistence
       - db-data:/app/data
       # Persistent storage for downloaded photos
-      - media-data:/app/static
+      - media-data:/app/static/media
       # Development mapping (hot-reloading of changes)
+      - ./static:/app/static
       - ./templates:/app/templates
       - ./app:/app/app
       - ./locales:/app/locales
