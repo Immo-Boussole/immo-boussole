@@ -164,3 +164,13 @@ class ReadySearch(Base):
     criteria = Column(String, nullable=True)
     url = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewKeyword(Base):
+    __tablename__ = "review_keywords"
+
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(String, nullable=False, unique=True, index=True)
+    keyword_type = Column(String, nullable=False) # 'pros' or 'cons'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

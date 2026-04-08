@@ -34,8 +34,6 @@ services:
     volumes:
       # SQLite database persistence
       - db-data:/app/data
-      # Persistent storage for downloaded photos
-      - media-data:/app/static/media
       # Development mapping (hot-reloading of changes)
       - ./static:/app/static
       - ./templates:/app/templates
