@@ -315,7 +315,7 @@ def health_check(db: Session = Depends(get_db)):
         return {
             "status": "ok", 
             "timestamp": datetime.now().isoformat(),
-            "version": "1.1.0"
+            "version": os.getenv("APP_VERSION", "1.1.1")
         }
     except Exception as e:
         # If DB is down, return 500 so container becomes "unhealthy"
