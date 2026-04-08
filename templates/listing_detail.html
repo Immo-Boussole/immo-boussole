@@ -160,6 +160,16 @@
         .form-row textarea { min-height: 70px; }
         .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.75rem; }
 
+        .keyword-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+        .chip { 
+            background: var(--surface); color: var(--text-2); border: 1px solid var(--border); 
+            padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; 
+            cursor: pointer; transition: var(--trans); user-select: none;
+        }
+        .chip:hover { border-color: var(--accent); color: var(--text); }
+        .chip.active-pro { background: rgba(16,217,164,0.1); border-color: var(--green); color: var(--green); }
+        .chip.active-con { background: rgba(242,92,105,0.1); border-color: var(--red); color: var(--red); }
+
         .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: var(--trans); font-family: inherit; }
         .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
         .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -541,10 +551,12 @@
                 <div class="review-form" id="form-me">
                     <div class="form-row">
                         <label>{{ t(request, 'listing.pros') }}</label>
+                        <div class="keyword-chips" id="pros-chips"></div>
                         <textarea id="me-pros" placeholder="...">{{ my_review.pros or '' if my_review else '' }}</textarea>
                     </div>
                     <div class="form-row">
                         <label>{{ t(request, 'listing.cons') }}</label>
+                        <div class="keyword-chips" id="cons-chips"></div>
                         <textarea id="me-cons" placeholder="...">{{ my_review.cons or '' if my_review else '' }}</textarea>
                     </div>
                     <div class="form-row">
@@ -993,8 +1005,92 @@
     }
 
     // ── Review Forms ──────────────────────────────────────────────────────────
+    // ── Keywords System ───────────────────────────────────────────────────────
+    const REVIEWS_KEYWORDS = {
+        pros: [
+            "Aucun travaux à prévoir",
+            "Grands volumes",
+            "Piscine",
+            "Climatisation",
+            "Jardin sécurisable",
+            "Lumineux",
+            "Calme",
+            "Bon état général",
+            "Proche commodités"
+        ],
+        cons: [
+            "Travaux à prévoir",
+            "Jardin non sécurisé",
+            "Pas de clim",
+            "Bruyant",
+            "Mauvaise isolation",
+            "Vis-à-vis",
+            "Éloigné des commodités"
+        ]
+    };
+
+    function initKeywords() {
+        const prosChips = document.getElementById('pros-chips');
+        const consChips = document.getElementById('cons-chips');
+        if (!prosChips || !consChips || prosChips.children.length > 0) return; // already initialized
+
+        function renderChips(container, type, activeClass, targetId) {
+            const textarea = document.getElementById(targetId);
+            const currentText = (textarea.value || '').toLowerCase();
+
+            REVIEWS_KEYWORDS[type].forEach(kw => {
+                const span = document.createElement('span');
+                span.className = 'chip';
+                span.textContent = kw;
+                
+                if (currentText.includes(kw.toLowerCase())) {
+                    span.classList.add(activeClass);
+                }
+
+                span.onclick = () => {
+                    let val = textarea.value.trim();
+                    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                    const kwRegex = new RegExp(`(- )?${escapeRegExp(kw)}(\\s|$)`, 'i');
+
+                    if (span.classList.contains(activeClass)) {
+                        span.classList.remove(activeClass);
+                        val = val.replace(kwRegex, '').trim();
+                        // clean up dangling lines
+                        val = val.split('\\n').filter(l => l.trim().length > 0 && l.trim() !== '-').join('\\n');
+                        textarea.value = val;
+                    } else {
+                        span.classList.add(activeClass);
+                        if (val.length > 0 && !val.endsWith('\\n')) {
+                            val += '\\n';
+                        }
+                        val += `- ${kw}`;
+                        textarea.value = val;
+                    }
+                };
+                container.appendChild(span);
+            });
+            
+            textarea.addEventListener('input', () => {
+                const valLc = textarea.value.toLowerCase();
+                Array.from(container.children).forEach(chip => {
+                    if (valLc.includes(chip.textContent.toLowerCase())) {
+                        chip.classList.add(activeClass);
+                    } else {
+                        chip.classList.remove(activeClass);
+                    }
+                });
+            });
+        }
+
+        renderChips(prosChips, 'pros', 'active-pro', 'me-pros');
+        renderChips(consChips, 'cons', 'active-con', 'me-cons');
+    }
+
     function toggleForm(id) {
         document.getElementById(id).classList.toggle('open');
+        if (id === 'form-me') {
+            initKeywords();
+        }
     }
 
     function showToast(msg, ok = true) {
