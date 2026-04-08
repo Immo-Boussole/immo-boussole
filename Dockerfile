@@ -21,6 +21,10 @@ WORKDIR /app
 
 LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
+LABEL version="1.1.1"
+LABEL org.opencontainers.image.version="1.1.1"
+
+ENV APP_VERSION="1.1.1"
 
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
