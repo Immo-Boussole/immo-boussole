@@ -66,7 +66,7 @@ The typography relies on **Inter**, a highly legible geometric sans-serif that s
 - **Typography**: `0.65rem` size, `800` weight, uppercase with `0.05em` letter-spacing.
 - **Colors**: Typically pure black or white text sitting confidently on a semantic background color (`var(--green)`, `var(--red)`).
 
-- **Global Layout System**: Full height CSS grid/flex hybrid (`100vh` layouts, locked scroll body).
+- **Global Layout System**: Full height CSS grid/flex hybrid (`100vh` layouts, locked scroll body). The application utilizes a **Universal Sidebar Navigation** pattern where every page consists of a fixed Sidebar (`aside.sidebar`) and a scrollable Main Content area (`main.main`). The body is set to `overflow: hidden` to enable independent scrolling for both the sidebar and the content area.
 - **Spacing Scale**: Usually proportional by `rem` (`0.25rem`, `0.5rem`, `0.75rem`, `1rem`, `1.25rem`, `1.5rem`).
 - **Gaps**: Grid layouts employ `1.25rem` gaps between display cards. Flex clusters use tighter `0.5rem` to `1rem` spacing.
 - **CSS Custom Properties**: Hardcoded colors shouldn't exist in markup. Everything references standard custom props from `:root` (e.g. `var(--surface)`).
@@ -88,9 +88,9 @@ The typography relies on **Inter**, a highly legible geometric sans-serif that s
   - Standard flex layouts shift to `flex-direction: column`.
   - Multi-column grids (like the `.stat-grid` and `.grid`) collapse uniformly into single `1fr` columns.
   - Sidebars transition into animated off-canvas drawers (`left: -280px` hiding) with a backdrop overlay.
-  - Generous internal container padding drops universally to `1rem` to preserve screen real-estate. Note that the `body` itself remains unpadded to allow `.topbar` and full-width elements to touch the screen edges.
-  - Topbars (`.topbar`, `.topnav`) employ `flex-wrap: wrap` and their sub-sections (`.topbar-left`, `.topbar-right`) expand to `width: 100%` stack internal elements cleanly.
-  - Full-screen modals like the photo gallery stack vertically, shifting sidebars below the main image area.
+  - Generous internal container padding drops universally to `1rem`. The `body` remains locked at `100vh` to allow internal scrolling.
+  - Topbars (`.topbar`) employ `flex-wrap: wrap` and their sub-sections expand to `width: 100%` where necessary.
+  - Full-screen modals like the photo gallery stack vertically.
 
 - *"Implement a new dashboard metric card featuring a dark background (`var(--surface-2)`), unified border (`var(--border)`), and a 12px radius. Feature a large stat value at 1.8rem bold."*
 - *"Create a standard interactive table row layout. Background rests at `var(--surface)`. On hover, the row should shift to `rgba(79, 142, 247, 0.12)`."*

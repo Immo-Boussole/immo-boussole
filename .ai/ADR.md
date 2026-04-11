@@ -50,3 +50,13 @@ This document tracks significant design and architectural choices for Immo-Bouss
 - Easy to maintain and translate via AI or human experts.
 - Simple integration with Jinja2 via a custom filter or context processor.
 - Lightweight and avoids the overhead of `.mo`/`.po` binary files.
+
+## 006: Universal Sidebar Navigation
+**Status**: Accepted
+**Decision**: Adopt a **Universal Sidebar Layout** across all application views.
+**Context**: Previously, the application used a mix of Sidebar and Topnav layouts, leading to inconsistent user experiences and scrolling issues.
+**Justification**:
+- **Consistency**: Provides a unified navigation experience regardless of the current view (Dashboard, Detail, Profile, Admin).
+- **Accessibility**: Standardizes the position of the Language Selector and User Session info in a persistent footer.
+- **Scroll Management**: Centralizing the sidebar allows for locked body scrolling (`height: 100vh; overflow: hidden`) with internal scrolling for both sidebar and main content, solving previous layout "cutoff" issues.
+- **Mobile First**: Standardizes the responsive "off-canvas" drawer behavior for all pages.

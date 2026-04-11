@@ -43,3 +43,9 @@ The future of Immo-Boussole is to evolve from a simple aggregator to an **Intell
 ### 🧪 Design Polish (Ongoing)
 - Implement subtle micro-interactions on the `.card` hover state using `Lottie` or custom SVG animations for "Boussole" (Compass) themes.
 - Expand the `mobile.css` to support tablet-specific multi-column layouts.
+
+## ✅ Completed Milestones
+### 🗺️ Navigation Harmonization (April 2026)
+- **Universal Sidebar**: Replaced hybrid navigation with a persistent sidebar across all views.
+- **Scrolling Fixes**: Implemented 100vh locked-body layouts with internal scrolling.
+- **I18N Access**: Centralized language switching in the sidebar footer.
