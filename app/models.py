@@ -128,6 +128,12 @@ class Listing(Base):
     bike_time_sncf = Column(Integer, nullable=True) # in minutes
     car_time_sncf = Column(Integer, nullable=True)  # in minutes
 
+    # Second SNCF Station routing
+    second_sncf_station = Column(String, nullable=True)
+    walk_time_sncf_2 = Column(Integer, nullable=True) # in minutes
+    bike_time_sncf_2 = Column(Integer, nullable=True) # in minutes
+    car_time_sncf_2 = Column(Integer, nullable=True)  # in minutes
+
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
 

@@ -160,7 +160,17 @@
         "edit_description": "Description Complète",
         "no_review_yet": "Pas encore d'avis de votre part.",
         "you_label": "(vous)",
-        "scrape_error_fallback": "Erreur de scraping, importation sans scraping en cours. La page va s'actualiser."
+        "scrape_error_fallback": "Erreur de scraping, importation sans scraping en cours. La page va s'actualiser.",
+        "transport_title": "Mobilité / Transports",
+        "station_primary": "Gare principale",
+        "station_secondary": "Gare secondaire",
+        "edit_stations": "Modifier les gares",
+        "no_station": "Aucune gare trouvée",
+        "select_stations_modal": "Configurer les gares",
+        "station_1": "Plus proche",
+        "station_2": "Seconde plus proche",
+        "loading_stations": "Recherche des gares à proximité...",
+        "save_stations": "Enregistrer la sélection"
     },
     "setup": {
         "title": "Création Administrateur",

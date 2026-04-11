@@ -31,7 +31,7 @@ from app.services import (
     fetch_basic_metadata,
     generate_ideal_profile,
 )
-from app.geo import fetch_sncf_times_for_city
+from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates
 from app.media import json_to_photos
 from app.config import settings
 from app.translations import get_text
@@ -160,6 +160,16 @@ class UserCreateRequest(BaseModel):
 
 class UserPasswordUpdateRequest(BaseModel):
     password: str
+
+
+class StationChoice(BaseModel):
+    name: str
+    lat: float
+    lon: float
+
+class StationsUpdateRequest(BaseModel):
+    station_1: StationChoice
+    station_2: Optional[StationChoice] = None
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -509,6 +519,11 @@ def listing_detail_page(
             listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
             listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
             listing.car_time_sncf = sncf_data.get('car_time_sncf')
+            
+            listing.second_sncf_station = sncf_data.get('second_sncf_station')
+            listing.walk_time_sncf_2 = sncf_data.get('walk_time_sncf_2')
+            listing.bike_time_sncf_2 = sncf_data.get('bike_time_sncf_2')
+            listing.car_time_sncf_2 = sncf_data.get('car_time_sncf_2')
             db.commit()
             
     # Mark it as 'None' instead of NULL if we already tried so we don't try again
@@ -632,6 +647,61 @@ def get_listing(request: Request, listing_id: int, db: Session = Depends(get_db)
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     return listing
+
+
+@app.get("/api/listings/{listing_id}/nearby-stations")
+async def get_nearby_stations(listing_id: int, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing or not (listing.location or listing.city):
+        return []
+    
+    # Geocode the location
+    loc = listing.location or listing.city
+    coords = get_coordinates(loc)
+    if not coords:
+        return []
+    
+    stations = find_nearby_stations(coords[0], coords[1])
+    return stations
+
+
+@app.post("/api/listings/{listing_id}/stations")
+async def update_listing_stations(
+    listing_id: int, 
+    body: StationsUpdateRequest, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(user_required)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing or not (listing.location or listing.city):
+        raise HTTPException(status_code=404, detail="Annonce ou localisation introuvable")
+
+    coords = get_coordinates(listing.location or listing.city)
+    if not coords:
+        raise HTTPException(status_code=400, detail="Impossible de géolocaliser le bien")
+
+    # Update Station 1
+    listing.nearest_sncf_station = body.station_1.name
+    t1 = calculate_station_times(coords[0], coords[1], body.station_1.lat, body.station_1.lon)
+    listing.walk_time_sncf = t1.get('walk')
+    listing.bike_time_sncf = t1.get('bike')
+    listing.car_time_sncf = t1.get('car')
+
+    # Update Station 2
+    if body.station_2:
+        listing.second_sncf_station = body.station_2.name
+        t2 = calculate_station_times(coords[0], coords[1], body.station_2.lat, body.station_2.lon)
+        listing.walk_time_sncf_2 = t2.get('walk')
+        listing.bike_time_sncf_2 = t2.get('bike')
+        listing.car_time_sncf_2 = t2.get('car')
+    else:
+        listing.second_sncf_station = None
+        listing.walk_time_sncf_2 = None
+        listing.bike_time_sncf_2 = None
+        listing.car_time_sncf_2 = None
+
+    db.commit()
+    return {"status": "updated"}
 
 
 @app.post("/api/listings/{listing_id}/rescrape")

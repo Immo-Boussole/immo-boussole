@@ -215,6 +215,11 @@ async def create_listing_from_details(
             listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
             listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
             listing.car_time_sncf = sncf_data.get('car_time_sncf')
+            
+            listing.second_sncf_station = sncf_data.get('second_sncf_station')
+            listing.walk_time_sncf_2 = sncf_data.get('walk_time_sncf_2')
+            listing.bike_time_sncf_2 = sncf_data.get('bike_time_sncf_2')
+            listing.car_time_sncf_2 = sncf_data.get('car_time_sncf_2')
         else:
             listing.nearest_sncf_station = "NOT_FOUND"
         db.commit()

@@ -634,14 +634,48 @@
                     {% if listing.honoraires_a_charge %}<div class="cost-item">{{ t(request, 'listing.fee_charge') }} <strong>{{ listing.honoraires_a_charge }}</strong></div>{% endif %}
                 </div>
 
-                {% if listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND" %}
                 <!-- Mobilité / Transports (SNCF) -->
-                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;"><i class="fa-solid fa-train"></i> Temps de trajet SNCF</div>
-                <div class="cost-item" style="margin-bottom: 0.75rem;"><i class="fa-solid fa-location-dot"></i> <strong>{{ listing.nearest_sncf_station }}</strong></div>
-                <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
-                    {% if listing.walk_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf }} min</div><div class="sl">À pied</div></div>{% endif %}
-                    {% if listing.bike_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-bicycle" style="color:var(--green);"></i> {{ listing.bike_time_sncf }} min</div><div class="sl">À vélo</div></div>{% endif %}
-                    {% if listing.car_time_sncf %}<div class="spec" style="padding: 0.5rem;"><div class="sv" style="font-size:1.1rem; color:var(--text);"><i class="fa-solid fa-car" style="color:var(--orange);"></i> {{ listing.car_time_sncf }} min</div><div class="sl">En voiture</div></div>{% endif %}
+                {% if (listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND") or (listing.second_sncf_station) %}
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fa-solid fa-train"></i> {{ t(request, 'listing.transport_title') }}</span>
+                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: auto;" onclick="openStationModal()">
+                        <i class="fa-solid fa-pen-to-square"></i> {{ t(request, 'listing.edit_stations') }}
+                    </button>
+                </div>
+
+                {# Station 1 #}
+                {% if listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND" %}
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_primary') }} : <strong style="color: var(--text);">{{ listing.nearest_sncf_station }}</strong>
+                </div>
+                <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                    {% if listing.walk_time_sncf is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf }} min</div><div class="sl">À pied</div></div>{% endif %}
+                    {% if listing.bike_time_sncf is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-bicycle" style="color:var(--green);"></i> {{ listing.bike_time_sncf }} min</div><div class="sl">À vélo</div></div>{% endif %}
+                    {% if listing.car_time_sncf is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-car" style="color:var(--orange);"></i> {{ listing.car_time_sncf }} min</div><div class="sl">En voiture</div></div>{% endif %}
+                </div>
+                {% endif %}
+
+                {# Station 2 #}
+                {% if listing.second_sncf_station %}
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_secondary') }} : <strong style="color: var(--text);">{{ listing.second_sncf_station }}</strong>
+                </div>
+                <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                    {% if listing.walk_time_sncf_2 is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf_2 }} min</div><div class="sl">À pied</div></div>{% endif %}
+                    {% if listing.bike_time_sncf_2 is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-bicycle" style="color:var(--green);"></i> {{ listing.bike_time_sncf_2 }} min</div><div class="sl">À vélo</div></div>{% endif %}
+                    {% if listing.car_time_sncf_2 is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-car" style="color:var(--orange);"></i> {{ listing.car_time_sncf_2 }} min</div><div class="sl">En voiture</div></div>{% endif %}
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fa-solid fa-train"></i> {{ t(request, 'listing.transport_title') }}</span>
+                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: auto;" onclick="openStationModal()">
+                        <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.edit_stations') }}
+                    </button>
+                </div>
+                <div class="cost-item" style="color: var(--text-2); font-style: italic; font-size: 0.8rem;">
+                    {{ t(request, 'listing.no_station') }}
                 </div>
                 {% endif %}
 
@@ -1551,7 +1585,193 @@
         </div>
     </div>
 
+    <!-- Modal Select Stations -->
+    <div id="stationOverlay" class="overlay">
+        <div class="modal card" style="max-width: 500px; width: 90%; max-height: 85vh; padding: 1.5rem; display: flex; flex-direction: column;">
+            <div class="section-title" style="margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-map-location-dot" style="color: var(--accent);"></i> {{ t(request, 'listing.select_stations_modal') }}</span>
+                <i class="fa-solid fa-xmark" style="cursor: pointer; opacity: 0.5;" onclick="closeStationModal()"></i>
+            </div>
+            
+            <div id="loadingStations" style="text-align: center; padding: 2rem 0;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent); margin-bottom: 1rem;"></i>
+                <div style="color: var(--text-2);">{{ t(request, 'listing.loading_stations') }}</div>
+            </div>
+
+            <div id="stationsListContainer" style="display: none; flex: 1; overflow-y: auto;">
+                <!-- Station 1 selection -->
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+                        {{ t(request, 'listing.station_1') }}
+                    </div>
+                    <div id="station1Options" class="station-options-grid" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+
+                <!-- Station 2 selection -->
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; color: var(--accent-2); text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+                        {{ t(request, 'listing.station_2') }}
+                    </div>
+                    <div id="station2Options" class="station-options-grid" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                <button class="btn" style="flex: 1;" onclick="closeStationModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button id="saveStationsBtn" class="btn primary" style="flex: 1; display: none;" onclick="saveStationsSelection()">
+                    <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save_stations') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            z-index: 2000; display: none; align-items: center; justify-content: center;
+        }
+        .overlay.open { display: flex; }
+        .station-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 9px; padding: 0.75rem; cursor: pointer;
+            transition: var(--trans); position: relative;
+        }
+        .station-card:hover { border-color: rgba(79, 142, 247, 0.4); }
+        .station-card.selected-1 { border-color: var(--accent); background: rgba(79, 142, 247, 0.1); }
+        .station-card.selected-1::after {
+            content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            position: absolute; top: 0.5rem; right: 0.75rem; color: var(--accent);
+        }
+        .station-card.selected-2 { border-color: var(--accent-2); background: rgba(99, 102, 241, 0.1); }
+        .station-card.selected-2::after {
+            content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900;
+            position: absolute; top: 0.5rem; right: 0.75rem; color: var(--accent-2);
+        }
+        .station-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.1rem; }
+        .station-meta { font-size: 0.7rem; color: var(--text-2); }
+    </style>
+
     <script>
+        // ── SNCF Station Selection Logic ────────────────────────────────────────
+        let nearbyStations = [];
+        let selectedStation1 = null;
+        let selectedStation2 = null;
+
+        async function openStationModal() {
+            document.getElementById('stationOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            
+            // Show loading
+            document.getElementById('loadingStations').style.display = 'block';
+            document.getElementById('stationsListContainer').style.display = 'none';
+            document.getElementById('saveStationsBtn').style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/listings/{{ listing.id }}/nearby-stations`);
+                nearbyStations = await res.json();
+                
+                renderStationOptions();
+                
+                document.getElementById('loadingStations').style.display = 'none';
+                document.getElementById('stationsListContainer').style.display = 'block';
+                document.getElementById('saveStationsBtn').style.display = 'block';
+            } catch (err) {
+                console.error("Error fetching stations:", err);
+                document.getElementById('loadingStations').innerHTML = '<div style="color:var(--red);">Error loading stations.</div>';
+            }
+        }
+
+        function closeStationModal() {
+            document.getElementById('stationOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function renderStationOptions() {
+            const container1 = document.getElementById('station1Options');
+            const container2 = document.getElementById('station2Options');
+            
+            container1.innerHTML = '';
+            container2.innerHTML = '';
+
+            nearbyStations.forEach(s => {
+                const card1 = createStationCard(s, 1);
+                const card2 = createStationCard(s, 2);
+                container1.appendChild(card1);
+                container2.appendChild(card2);
+            });
+        }
+
+        function createStationCard(s, type) {
+            const card = document.createElement('div');
+            card.className = 'station-card';
+            
+            // Check if selected
+            if (type === 1 && selectedStation1 && selectedStation1.id === s.id) card.classList.add('selected-1');
+            if (type === 2 && selectedStation2 && selectedStation2.id === s.id) card.classList.add('selected-2');
+
+            card.innerHTML = `
+                <div class="station-name">${s.name}</div>
+                <div class="station-meta">ID: ${s.id}</div>
+            `;
+            
+            card.onclick = () => {
+                if (type === 1) {
+                    selectedStation1 = s;
+                    if (selectedStation2 && selectedStation2.id === s.id) selectedStation2 = null;
+                } else {
+                    selectedStation2 = s;
+                    if (selectedStation1 && selectedStation1.id === s.id) selectedStation1 = null;
+                }
+                renderStationOptions();
+            };
+            
+            return card;
+        }
+
+        async function saveStationsSelection() {
+            if (!selectedStation1) {
+                alert("Veuillez sélectionner au moins la gare principale.");
+                return;
+            }
+
+            const btn = document.getElementById('saveStationsBtn');
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
+
+            try {
+                const body = {
+                    station_1: { name: selectedStation1.name, lat: selectedStation1.lat, lon: selectedStation1.lon },
+                    station_2: selectedStation2 ? { name: selectedStation2.name, lat: selectedStation2.lat, lon: selectedStation2.lon } : null
+                };
+
+                const res = await fetch(`/api/listings/{{ listing.id }}/stations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Inconnue"));
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            } catch (err) {
+                console.error("Error saving stations:", err);
+                alert("Erreur réseau");
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
+        }
+
         // ── Photo Gallery Lightbox Logic ────────────────────────────────────────
         let currentGalleryIdx = 0;
         const galleryPhotos = [

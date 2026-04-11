@@ -7,10 +7,86 @@ from functools import lru_cache
 GEO_CACHE: Dict[str, Dict] = {}
 
 
+def get_coordinates(location_str: str) -> Optional[Tuple[float, float]]:
+    """Geocodes a location string into (lat, lon)."""
+    if not location_str:
+        return None
+    
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+    geocode_url = f"https://nominatim.openstreetmap.org/search"
+    try:
+        res = httpx.get(geocode_url, params={"q": location_str, "format": "json", "limit": 1}, headers=headers, timeout=10.0)
+        res.raise_for_status()
+        data = res.json()
+        if not data:
+            return None
+        return float(data[0]['lat']), float(data[0]['lon'])
+    except Exception as e:
+        print(f"[Geo] Geocoding failed for {location_str}: {e}")
+        return None
+
+def find_nearby_stations(lat: float, lon: float, radius: int = 20000) -> list:
+    """Finds SNCF stations within radius via Overpass API."""
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+    query = f"""
+    [out:json];
+    (
+      node["railway"="station"](around:{radius},{lat},{lon});
+      way["railway"="station"](around:{radius},{lat},{lon});
+    );
+    out center;
+    """
+    try:
+        res_overpass = httpx.post("https://overpass-api.de/api/interpreter", data={"data": query}, headers=headers, timeout=15.0)
+        res_overpass.raise_for_status()
+        data_overpass = res_overpass.json()
+        
+        elements = data_overpass.get('elements', [])
+        stations = []
+        for el in elements:
+            s_lat = el.get('lat') or el.get('center', {}).get('lat')
+            s_lon = el.get('lon') or el.get('center', {}).get('lon')
+            s_name = el.get('tags', {}).get('name', 'Gare SNCF')
+            if s_lat and s_lon:
+                stations.append({
+                    "name": s_name,
+                    "lat": s_lat,
+                    "lon": s_lon,
+                    "id": el.get('id')
+                })
+        return stations
+    except Exception as e:
+        print(f"[Geo] Overpass API failed: {e}")
+        return []
+
+def calculate_station_times(start_lat: float, start_lon: float, end_lat: float, end_lon: float) -> Dict[str, Optional[int]]:
+    """Calculates walk, bike, and car times between two points via OSRM."""
+    times = {}
+    for mode, key in [('foot', 'walk'), ('bike', 'bike'), ('car', 'car')]:
+        profile = mode
+        if mode == 'car': profile = 'driving'
+        elif mode == 'bike': profile = 'cycling'
+        elif mode == 'foot': profile = 'walking'
+
+        url_osrm = f"http://router.project-osrm.org/route/v1/{profile}/{start_lon},{start_lat};{end_lon},{end_lat}?overview=false"
+        try:
+            res_osrm = httpx.get(url_osrm, timeout=5.0)
+            res_osrm.raise_for_status()
+            data_osrm = res_osrm.json()
+            if data_osrm.get('code') == 'Ok' and data_osrm.get('routes'):
+                duration_seconds = data_osrm['routes'][0]['duration']
+                times[key] = int(duration_seconds / 60)
+            else:
+                times[key] = None
+        except Exception as e:
+            print(f"[Geo] OSRM {mode} routing failed: {e}")
+            times[key] = None
+    return times
+
 def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
     """
-    Geocodes a city/location, finds the nearest SNCF station via Overpass API,
-    and returns travel times using OSRM for walking, cycling, and driving.
+    Geocodes a city/location, finds the 2 nearest stations,
+    and returns their names and travel times.
     """
     if not city_or_location:
         return None
@@ -19,90 +95,44 @@ def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
     if city_key in GEO_CACHE:
         return GEO_CACHE[city_key]
 
-    headers = {"User-Agent": "ImmoBoussole/1.0"}
-
-    # 1. Geocode the city
-    geocode_url = f"https://nominatim.openstreetmap.org/search"
-    try:
-        res = httpx.get(geocode_url, params={"q": city_key, "format": "json", "limit": 1}, headers=headers, timeout=10.0)
-        res.raise_for_status()
-        data = res.json()
-        if not data:
-            GEO_CACHE[city_key] = None
-            return None
-        
-        lat = data[0]['lat']
-        lon = data[0]['lon']
-    except Exception as e:
-        print(f"[Geo] Geocoding failed for {city_key}: {e}")
+    # 1. Geocode
+    coords = get_coordinates(city_key)
+    if not coords:
+        GEO_CACHE[city_key] = None
         return None
+    lat, lon = coords
 
-    # 2. Find nearest SNCF station using Overpass
-    # We look for nodes or ways with railway=station and network~SNCF or name containing "Gare"
-    # To keep it robust, we search for railway=station within 20km.
-    query = f"""
-    [out:json];
-    (
-      node["railway"="station"](around:20000,{lat},{lon});
-      way["railway"="station"](around:20000,{lat},{lon});
-    );
-    out center 1;
-    """
-    try:
-        res_overpass = httpx.post("https://overpass-api.de/api/interpreter", data={"data": query}, headers=headers, timeout=10.0)
-        res_overpass.raise_for_status()
-        data_overpass = res_overpass.json()
-        
-        elements = data_overpass.get('elements', [])
-        if not elements:
-            GEO_CACHE[city_key] = None
-            return None
-
-        station = elements[0]
-        # For 'way' elements, the coordinate is 'center', for 'node', it's 'lat'/'lon' directly.
-        s_lat = station.get('lat') or station.get('center', {}).get('lat')
-        s_lon = station.get('lon') or station.get('center', {}).get('lon')
-        s_name = station.get('tags', {}).get('name', 'Gare SNCF')
-        
-    except Exception as e:
-        print(f"[Geo] Overpass API failed for {city_key}: {e}")
-        return None
-
-    if not s_lat or not s_lon:
+    # 2. Find stations
+    stations = find_nearby_stations(lat, lon)
+    if not stations:
         GEO_CACHE[city_key] = None
         return None
 
-    # 3. Calculate OSRM routes
-    times = {}
-    for mode, key in [('foot', 'walk_time_sncf'), ('bike', 'bike_time_sncf'), ('car', 'car_time_sncf')]:
-        # osrm profiles: foot, bike (or bicycle), car
-        profile = mode
-        if mode == 'car': profile = 'driving'
-        elif mode == 'bike': profile = 'cycling'
-        elif mode == 'foot': profile = 'walking'
+    # Sort stations by simple straight-line distance to get the 2 nearest
+    # (Simplified: using squared diffs is enough for sorting)
+    def dist_sq(s):
+        return (lat - s['lat'])**2 + (lon - s['lon'])**2
+    stations.sort(key=dist_sq)
 
-        url_osrm = f"http://router.project-osrm.org/route/v1/{profile}/{lon},{lat};{s_lon},{s_lat}?overview=false"
-        try:
-            res_osrm = httpx.get(url_osrm, timeout=5.0)
-            res_osrm.raise_for_status()
-            data_osrm = res_osrm.json()
-            if data_osrm.get('code') == 'Ok' and data_osrm.get('routes'):
-                duration_seconds = data_osrm['routes'][0]['duration']
-                times[key] = int(duration_seconds / 60)
-        except Exception as e:
-            print(f"[Geo] OSRM {mode} routing failed for {city_key}: {e}")
-            pass
+    result = {}
+    
+    # Process Station 1
+    s1 = stations[0]
+    t1 = calculate_station_times(lat, lon, s1['lat'], s1['lon'])
+    result["nearest_sncf_station"] = s1['name']
+    result["walk_time_sncf"] = t1.get('walk')
+    result["bike_time_sncf"] = t1.get('bike')
+    result["car_time_sncf"] = t1.get('car')
 
-    if 'walk_time_sncf' not in times and 'car_time_sncf' not in times:
-        GEO_CACHE[city_key] = None
-        return None
+    # Process Station 2
+    if len(stations) > 1:
+        s2 = stations[1]
+        t2 = calculate_station_times(lat, lon, s2['lat'], s2['lon'])
+        result["second_sncf_station"] = s2['name']
+        result["walk_time_sncf_2"] = t2.get('walk')
+        result["bike_time_sncf_2"] = t2.get('bike')
+        result["car_time_sncf_2"] = t2.get('car')
 
-    result = {
-        "nearest_sncf_station": s_name,
-        "walk_time_sncf": times.get('walk_time_sncf'),
-        "bike_time_sncf": times.get('bike_time_sncf'),
-        "car_time_sncf": times.get('car_time_sncf')
-    }
     GEO_CACHE[city_key] = result
     print(f"[Geo] Fetched SNCF data for {city_key}: {result}")
     return result

@@ -160,7 +160,17 @@
         "edit_description": "Full Description",
         "no_review_yet": "No review from you yet.",
         "you_label": "(you)",
-        "scrape_error_fallback": "Scraping error, importing without scraping. The page will refresh."
+        "scrape_error_fallback": "Scraping error, import without scraping in progress. The page will refresh.",
+        "transport_title": "Mobility / Transport",
+        "station_primary": "Primary station",
+        "station_secondary": "Secondary station",
+        "edit_stations": "Modify stations",
+        "no_station": "No station found",
+        "select_stations_modal": "Configure Stations",
+        "station_1": "Closest",
+        "station_2": "Second closest",
+        "loading_stations": "Searching for nearby stations...",
+        "save_stations": "Save Selection"
     },
     "setup": {
         "title": "Admin Setup",
