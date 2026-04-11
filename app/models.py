@@ -15,6 +15,12 @@ class User(Base):
     role = Column(String(20), nullable=False, default="user") # "admin" or "user"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # User Addresses & POIs
+    work_address = Column(String, nullable=True)
+    work_lat = Column(Float, nullable=True)
+    work_lon = Column(Float, nullable=True)
+    poi_json = Column(Text, nullable=True)  # JSON-encoded list of dicts: [{"name": "...", "address": "...", "lat": ..., "lon": ...}]
+
 
 class ListingStatus(str, enum.Enum):
     NEW = "nouvelle"
@@ -133,6 +139,10 @@ class Listing(Base):
     walk_time_sncf_2 = Column(Integer, nullable=True) # in minutes
     bike_time_sncf_2 = Column(Integer, nullable=True) # in minutes
     car_time_sncf_2 = Column(Integer, nullable=True)  # in minutes
+
+    # Geolocation coordinates
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")

@@ -14,7 +14,7 @@ from app.scrapers import (
     NotairesScraper, VinciScraper, ImmobilierFranceScraper
 )
 from app.media import download_listing_photos, photos_to_json
-from app.geo import fetch_sncf_times_for_city
+from app.geo import fetch_sncf_times_for_city, get_coordinates
 import httpx
 from bs4 import BeautifulSoup
 
@@ -201,11 +201,17 @@ async def create_listing_from_details(
     photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
         # Avoid re-downloading if already present (unless it's a re-scrape with different photos?)
-        if not listing.photos_local:
-            local_paths = await download_listing_photos(listing.id, photo_urls)
             if local_paths:
                 listing.photos_local = photos_to_json(local_paths)
                 db.commit()
+
+    # ── Geocoding ──
+    if (listing.location or listing.city) and listing.latitude is None:
+        loc = listing.location or listing.city
+        coords = get_coordinates(loc)
+        if coords:
+            listing.latitude, listing.longitude = coords
+            db.commit()
 
     # ── Pre-calculate SNCF Distances ──
     if listing.city and listing.nearest_sncf_station is None:
@@ -301,6 +307,14 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                     is_duplicate=False,
                     duplicate_of_id=None,
                 )
+
+                # Geocoding for new listing
+                loc = new_listing.location or new_listing.city
+                if loc:
+                    coords = get_coordinates(loc)
+                    if coords:
+                        new_listing.latitude, new_listing.longitude = coords
+
                 db.add(new_listing)
                 new_count += 1
         else:

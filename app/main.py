@@ -162,6 +162,18 @@ class UserPasswordUpdateRequest(BaseModel):
     password: str
 
 
+class ProfilePOI(BaseModel):
+    name: str
+    address: str
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+
+
+class ProfileUpdateRequest(BaseModel):
+    work_address: Optional[str] = None
+    pois: list[ProfilePOI] = []
+
+
 class StationChoice(BaseModel):
     name: str
     lat: float
@@ -596,6 +608,51 @@ def ready_searches_page(
     })
 
 
+@app.get("/profile")
+def profile_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
+    # Parse POIs
+    pois = []
+    if user.poi_json:
+        try:
+            pois = json.loads(user.poi_json)
+        except:
+            pois = []
+
+    return templates.TemplateResponse(request=request, name="profile.html", context={
+        "user": user,
+        "pois": pois,
+        "queries": queries,
+        "listings": listings,
+        "title": "Mon Profil — Immo-Boussole",
+    })
+
+
+@app.get("/carte")
+def map_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
+    return templates.TemplateResponse(request=request, name="carte.html", context={
+        "queries": queries,
+        "listings": listings,
+        "title": "Carte des Biens — Immo-Boussole",
+    })
+
+
 # ─── API: Listings ────────────────────────────────────────────────────────────
 
 @app.get("/api/listings")
@@ -635,9 +692,101 @@ def get_listings(
             "photos": json_to_photos(l.photos_local),
             "date_added": l.date_added.isoformat() if l.date_added else None,
             "scraped_at": l.scraped_at.isoformat() if l.scraped_at else None,
+            "latitude": l.latitude,
+            "longitude": l.longitude,
         }
         for l in listings
     ]
+
+
+@app.get("/api/map-data")
+def get_map_data(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns listings and user POIs for the map."""
+    # 1. Listings (only Active/New)
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
+        Listing.latitude.isnot(None),
+        Listing.longitude.isnot(None)
+    ).all()
+
+    # 2. User Data
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    pois = []
+    if user.poi_json:
+        try:
+            pois = json.loads(user.poi_json)
+        except:
+            pois = []
+
+    return {
+        "listings": [
+            {
+                "id": l.id,
+                "title": l.title,
+                "price": l.price,
+                "location": l.location or l.city,
+                "lat": l.latitude,
+                "lon": l.longitude,
+                "url": f"/listings/{l.id}",
+                "status": l.status.value,
+                "photos": json_to_photos(l.photos_local)
+            }
+            for l in listings
+        ],
+        "user": {
+            "work": {
+                "address": user.work_address,
+                "lat": user.work_lat,
+                "lon": user.work_lon
+            } if user.work_address and user.work_lat else None,
+            "pois": pois
+        }
+    }
+
+
+@app.post("/api/profile")
+async def update_profile(
+    request: Request,
+    body: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update Work Address
+    if body.work_address != user.work_address:
+        user.work_address = body.work_address
+        if body.work_address:
+            coords = get_coordinates(body.work_address)
+            if coords:
+                user.work_lat, user.work_lon = coords
+            else:
+                user.work_lat, user.work_lon = None, None
+        else:
+            user.work_lat, user.work_lon = None, None
+
+    # Update POIs
+    new_pois = []
+    for poi in body.pois:
+        if not poi.lat or not poi.lon:
+            coords = get_coordinates(poi.address)
+            if coords:
+                poi.lat, poi.lon = coords
+        new_pois.append(poi.model_dump())
+    
+    user.poi_json = json.dumps(new_pois)
+    db.commit()
+    
+    return {"status": "updated"}
 
 
 @app.get("/api/listings/{listing_id}")

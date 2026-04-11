@@ -1016,6 +1016,7 @@
         <nav>
             <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
+            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
         </nav>
 
@@ -1066,6 +1067,7 @@
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             {% endif %}

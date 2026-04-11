@@ -102,6 +102,16 @@ _MIGRATIONS = [
 
     # users — new columns from v4
     ("users", "role",                    "TEXT DEFAULT 'user'"),
+
+    # listings — geolocation coordinates v5
+    ("listings", "latitude",             "REAL"),
+    ("listings", "longitude",            "REAL"),
+
+    # users — address and POI fields v5
+    ("users", "work_address",            "TEXT"),
+    ("users", "work_lat",                "REAL"),
+    ("users", "work_lon",                "REAL"),
+    ("users", "poi_json",                "TEXT"),
 ]
 
 
