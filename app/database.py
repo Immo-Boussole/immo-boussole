@@ -94,6 +94,12 @@ _MIGRATIONS = [
     ("listings", "bike_time_sncf",       "INTEGER"),
     ("listings", "car_time_sncf",        "INTEGER"),
 
+    # listings — SNCF Routing Part 2 (Manual selection & second station)
+    ("listings", "second_sncf_station", "TEXT"),
+    ("listings", "walk_time_sncf_2",     "INTEGER"),
+    ("listings", "bike_time_sncf_2",     "INTEGER"),
+    ("listings", "car_time_sncf_2",      "INTEGER"),
+
     # users — new columns from v4
     ("users", "role",                    "TEXT DEFAULT 'user'"),
 ]
