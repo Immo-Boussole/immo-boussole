@@ -88,7 +88,9 @@ The typography relies on **Inter**, a highly legible geometric sans-serif that s
   - Standard flex layouts shift to `flex-direction: column`.
   - Multi-column grids (like the `.stat-grid` and `.grid`) collapse uniformly into single `1fr` columns.
   - Sidebars transition into animated off-canvas drawers (`left: -280px` hiding) with a backdrop overlay.
-  - Generous internal container padding drops universally to `1rem` to preserve screen real-estate.
+  - Generous internal container padding drops universally to `1rem` to preserve screen real-estate. Note that the `body` itself remains unpadded to allow `.topbar` and full-width elements to touch the screen edges.
+  - Topbars (`.topbar`, `.topnav`) employ `flex-wrap: wrap` and their sub-sections (`.topbar-left`, `.topbar-right`) expand to `width: 100%` stack internal elements cleanly.
+  - Full-screen modals like the photo gallery stack vertically, shifting sidebars below the main image area.
 
 - *"Implement a new dashboard metric card featuring a dark background (`var(--surface-2)`), unified border (`var(--border)`), and a 12px radius. Feature a large stat value at 1.8rem bold."*
 - *"Create a standard interactive table row layout. Background rests at `var(--surface)`. On hover, the row should shift to `rgba(79, 142, 247, 0.12)`."*
