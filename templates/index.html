@@ -1134,7 +1134,7 @@
             <div class="grid" id="grid">
                 {% for listing in listings %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
-                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status }}"
+                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status.value }}"
                     onclick="window.location='/listings/{{ listing.id }}'">
 
                     <div class="card-img">
