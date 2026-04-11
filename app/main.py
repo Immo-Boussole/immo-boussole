@@ -344,8 +344,13 @@ def admin_users_page(
     _auth = Depends(admin_required)
 ):
     users = db.query(models.User).all()
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
     return templates.TemplateResponse(request=request, name="admin_users.html", context={
         "users": users,
+        "queries": queries,
+        "listings": listings,
         "title": "Gestion des Utilisateurs — Immo-Boussole",
     })
 
@@ -524,12 +529,18 @@ def listing_detail_page(
             Listing.id == listing.duplicate_of_id
         ).first()
 
+    # Sidebars context
+    queries = db.query(SearchQuery).all()
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
         "reviews": reviews,
         "reviews_by_reviewer": reviews_by_reviewer,
         "duplicate_original": duplicate_original,
+        "queries": queries,
+        "listings": all_listings,
         "title": f"{listing.title} — Immo-Boussole",
     })
 
@@ -541,8 +552,13 @@ def ideal_profile_page(
     _auth = Depends(login_required)
 ):
     profile = generate_ideal_profile(db)
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
     return templates.TemplateResponse(request=request, name="ideal_profile.html", context={
         "profile": profile,
+        "queries": queries,
+        "listings": listings,
         "title": "Fiche de Bien Idéal — Immo-Boussole",
     })
 

@@ -17,8 +17,8 @@ Like a true compass, the application doesn't tell you *where* to go, but provide
 
 ## Development Constraints (Non-Negotiable)
 - **Privacy First**: All data is stored locally in a Dockerized SQLite database. No external cloud tracking.
-- **Design Integrity**: Every new component MUST adhere to the [DESIGN.md](./DESIGN.md) specification (colors, typography, transitions).
-- **Internationalization**: The app must maintain 100% parity between French and English supporting the `locales/` JSON structure.
+- **Design Integrity**: Every new component MUST adhere to the [DESIGN.md](./DESIGN.md) specification. The application follows a **Universal Sidebar Navigation** pattern for consistency across all views.
+- **Internationalization**: The app must maintain 100% parity between French and English supporting the `locales/` JSON structure. Persistent language switching must be available in the sidebar footer.
 - **Resilience**: Scraping logic must handle dynamic content and anti-bot measures gracefully (using Browserless and Playwright).
 
 ## User Flow Philosophy

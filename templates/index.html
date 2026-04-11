@@ -30,6 +30,46 @@
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* Language Selector in Sidebar */
+        .sidebar-lang-selector {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sidebar-lang-selector .lang-item.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .sidebar-lang-selector .lang-item span {
+            font-size: 1rem;
+        }
+
         *,
         *::before,
         *::after {
@@ -50,7 +90,7 @@
         /* ── Sidebar ── */
         .sidebar {
             width: 270px;
-            min-height: 100vh;
+            height: 100vh;
             background: var(--surface);
             border-right: 1px solid var(--border);
             display: flex;
@@ -1028,17 +1068,26 @@
             {% endif %}
         </nav>
 
-        <div style="margin-top: auto; padding-top: 2rem;">
-            {% if request.session.get('username') %}
-            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
-                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
-                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
-            </div>
-            {% endif %}
+        <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
 
+            {% if request.session.get('username') %}
+            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0.5rem 0.75rem 0; border-top: 1px solid var(--border);">
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
+            </div>
+            {% endif %}
+
+            <div class="sidebar-lang-selector">
+                <a href="/lang/fr" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'fr' else '' }}">
+                    <span>🇫🇷</span> FR
+                </a>
+                <a href="/lang/en" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'en' else '' }}">
+                    <span>🇬🇧</span> EN
+                </a>
+            </div>
         </div>
     </aside>
 
