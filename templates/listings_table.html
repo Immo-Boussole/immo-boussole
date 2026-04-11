@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ request.session.get('lang', 'fr') }}">
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ t(request, 'nav.listings_table') }} — {{ t(request, 'app.title') }}</title>
 
     <link href="/static/css/inter.css" rel="stylesheet">
@@ -75,8 +75,11 @@
             background: var(--bg);
             color: var(--text);
             display: flex;
-            min-height: 100vh;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
+            margin: 0;
+            position: fixed; /* prevent scrolling of the body on mobile */
         }
 
         /* ── Sidebar ── */

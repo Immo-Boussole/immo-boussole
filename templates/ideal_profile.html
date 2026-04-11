@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="{{ request.session.get('lang', 'fr') }}">
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ title|default(t(request, 'ideal_profile.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
@@ -22,8 +22,11 @@
             background: var(--bg);
             color: var(--text);
             display: flex;
-            height: 100vh;
+            height: 100%;
+            width: 100%;
             overflow: hidden;
+            margin: 0;
+            position: fixed;
         }
 
         /* ── Sidebar ── */
