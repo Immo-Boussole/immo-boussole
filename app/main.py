@@ -571,7 +571,7 @@ def ready_searches_page(
 ):
     ready_searches = db.query(ReadySearch).all()
     queries = db.query(SearchQuery).all()
-    listings = db.query(Listing).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     
     return templates.TemplateResponse(request=request, name="ready_searches.html", context={
         "ready_searches": ready_searches,

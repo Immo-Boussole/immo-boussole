@@ -3,6 +3,11 @@
     /* For centered layout pages */
     body {
         flex-direction: column !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+        position: fixed;
+        width: 100%;
     }
 
     /* Topbar adjustments */
@@ -31,10 +36,14 @@
         left: -280px !important;
         top: 0;
         bottom: 0;
+        height: 100% !important;
+        height: 100dvh !important;
         z-index: 1000;
         transition: left 0.3s ease !important;
         width: 270px !important;
         box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        display: flex !important;
+        flex-direction: column !important;
     }
     body.sidebar-open .sidebar {
         left: 0 !important;
