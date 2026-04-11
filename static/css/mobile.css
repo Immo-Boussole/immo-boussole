@@ -3,22 +3,26 @@
     /* For centered layout pages */
     body {
         flex-direction: column !important;
-        padding: 1rem !important; 
     }
 
     /* Topbar adjustments */
-    .topbar {
+    .topbar, .topnav {
         padding: 1rem !important;
         flex-wrap: wrap;
         gap: 0.5rem !important;
     }
-    .topbar h1 {
+    .topbar h1, .topnav .nav-title {
         font-size: 1.15rem !important;
         flex: 1; /* allow it to take space next to the hamburger menu */
+    }
+    .topbar-left {
+        width: 100%;
+        gap: 0.5rem !important;
     }
     .topbar-right {
         gap: 0.5rem !important;
         flex-wrap: wrap;
+        width: 100%;
     }
 
     /* Fixed Sidebar Navigation with sliding effect */
@@ -125,6 +129,21 @@
         padding: 1.5rem !important;
         width: 95% !important;
     }
+    /* Gallery Modal */
+    .gallery-content {
+        flex-direction: column !important;
+    }
+    .gallery-sidebar {
+        width: 100% !important;
+        border-left: none !important;
+        border-top: 1px solid #e0e0e0;
+        max-height: 40vh;
+    }
+    .gallery-main {
+        padding: 1rem !important;
+    }
+    .gallery-next { right: 1rem !important; }
+    .gallery-prev { left: 1rem !important; }
 }
 
 /* Hide mobile menu button on desktop */
