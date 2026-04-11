@@ -272,11 +272,13 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
     for item in scraped_listings:
         ext_id = str(item["external_id"])
         if ext_id not in existing_ids:
+            # Case 1: Brand new or was previously disappeared
             existing = db.query(Listing).filter(Listing.external_id == ext_id).first()
             if existing:
                 existing.status = ListingStatus.NEW
                 existing.price = item.get("price")
                 existing.date_updated = datetime.now(timezone.utc)
+                existing.scraped_at = datetime.now(timezone.utc)
             else:
                 new_listing = Listing(
                     external_id=ext_id,
@@ -296,6 +298,18 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                 )
                 db.add(new_listing)
                 new_count += 1
+        else:
+            # Case 2: Already active/new and still online
+            # Find the object in our local list to update it
+            existing = next((l for l in existing_active if l.external_id == ext_id), None)
+            if existing:
+                # Transition NEW -> ACTIVE
+                if existing.status == ListingStatus.NEW:
+                    existing.status = ListingStatus.ACTIVE
+                # Always update the timestamp and price
+                existing.scraped_at = datetime.now(timezone.utc)
+                if item.get("price"):
+                    existing.price = item.get("price")
 
     db.commit()
 
