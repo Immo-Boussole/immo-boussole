@@ -22,6 +22,7 @@ services:
       - "8000:8000"
     networks:
       - immo-boussole-net
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
     environment:
       # SQLite database (path within the volume)
