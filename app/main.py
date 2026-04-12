@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -183,6 +183,15 @@ class StationChoice(BaseModel):
 class StationsUpdateRequest(BaseModel):
     station_1: StationChoice
     station_2: Optional[StationChoice] = None
+
+
+class MapPinEntry(BaseModel):
+    title: str
+    address: str
+
+
+class MapPinBulkRequest(BaseModel):
+    pins: list[MapPinEntry]
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -707,7 +716,7 @@ def get_map_data(
     db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
-    """Returns listings and user POIs for the map."""
+    """Returns listings, user POIs, and shared map pins for the map."""
     # 1. Listings (only Active/New)
     listings = db.query(Listing).filter(
         Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
@@ -725,6 +734,12 @@ def get_map_data(
             pois = json.loads(user.poi_json)
         except:
             pois = []
+
+    # 3. Shared Map Pins (from all users)
+    all_pins = db.query(MapPin).filter(
+        MapPin.lat.isnot(None),
+        MapPin.lon.isnot(None)
+    ).all()
 
     return {
         "listings": [
@@ -748,8 +763,74 @@ def get_map_data(
                 "lon": user.work_lon
             } if user.work_address and user.work_lat else None,
             "pois": pois
-        }
+        },
+        "pins": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "address": p.address,
+                "lat": p.lat,
+                "lon": p.lon,
+                "created_by": p.created_by
+            }
+            for p in all_pins
+        ],
+        "current_user": username
     }
+
+
+@app.post("/api/map-pins")
+def create_map_pins(
+    request: Request,
+    body: MapPinBulkRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Bulk-create map pins from title;address pairs. Geocodes each address."""
+    username = request.session.get("username")
+    created = []
+    errors = []
+
+    for entry in body.pins:
+        coords = get_coordinates(entry.address)
+        if coords:
+            lat, lon = coords
+            pin = MapPin(
+                title=entry.title.strip(),
+                address=entry.address.strip(),
+                lat=lat,
+                lon=lon,
+                created_by=username
+            )
+            db.add(pin)
+            created.append({"title": entry.title, "address": entry.address})
+        else:
+            errors.append({"title": entry.title, "address": entry.address, "error": "geocode_failed"})
+
+    db.commit()
+    return {"status": "ok", "created": len(created), "errors": errors}
+
+
+@app.delete("/api/map-pins/{pin_id}")
+def delete_map_pin(
+    pin_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Delete a map pin. Only the creator or admins can delete."""
+    pin = db.query(MapPin).filter(MapPin.id == pin_id).first()
+    if not pin:
+        raise HTTPException(status_code=404, detail="Pin not found")
+    
+    username = request.session.get("username")
+    role = request.session.get("role")
+    if pin.created_by != username and role != "admin":
+        raise HTTPException(status_code=403, detail="Cannot delete another user's pin")
+    
+    db.delete(pin)
+    db.commit()
+    return {"status": "deleted"}
 
 
 @app.post("/api/profile")

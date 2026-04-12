@@ -107,8 +107,24 @@
             background: var(--surface); gap: 1rem; flex-shrink: 0; z-index: 1001;
         }
         .topbar h1 { font-size: 1.25rem; font-weight: 700; }
+        .topbar-right { display: flex; align-items: center; gap: 1rem; }
         
         #map { flex: 1; width: 100%; background: var(--bg); }
+
+        /* ── Button ── */
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.55rem 1.1rem; border-radius: 9px; border: 1px solid var(--border);
+            background: var(--surface-2); color: var(--text); font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; transition: var(--trans);
+            font-family: 'Inter', sans-serif; text-decoration: none;
+        }
+        .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+        .btn.primary:disabled {
+            opacity: 0.5; cursor: not-allowed;
+        }
 
         /* Custom Popup Styling */
         .leaflet-popup-content-wrapper {
@@ -125,20 +141,114 @@
         .map-popup-specs { font-size: 0.75rem; color: var(--text-2); display: flex; gap: 8px; }
         .map-popup-loc { font-size: 0.8rem; color: var(--text-2); margin: 6px 0; display: flex; align-items: center; gap: 4px; }
         
+        .map-popup-gmaps {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.75rem; font-weight: 600; color: var(--accent);
+            text-decoration: none; margin-top: 8px; padding: 0.3rem 0.6rem;
+            border: 1px solid rgba(79, 142, 247, 0.3); border-radius: 6px;
+            transition: var(--trans);
+        }
+        .map-popup-gmaps:hover { background: rgba(79, 142, 247, 0.15); color: #fff; }
+        
+        .map-popup-meta {
+            font-size: 0.65rem; color: var(--text-2); margin-top: 6px;
+            display: flex; align-items: center; gap: 4px; opacity: 0.7;
+        }
+        .map-popup-delete {
+            font-size: 0.65rem; color: var(--red); cursor: pointer;
+            text-decoration: none; opacity: 0.7; transition: var(--trans);
+            border: none; background: none; font-family: 'Inter', sans-serif;
+            padding: 0.2rem 0.4rem; border-radius: 4px;
+        }
+        .map-popup-delete:hover { opacity: 1; background: rgba(242, 92, 105, 0.15); }
+
         .map-legend {
             position: absolute; bottom: 2rem; right: 2rem;
             background: var(--surface); border: 1px solid var(--border);
             padding: 1rem; border-radius: 12px; box-shadow: var(--shadow);
-            z-index: 1000; font-size: 0.8rem;
+            z-index: 1000; font-size: 0.8rem; max-height: 60vh; overflow-y: auto;
         }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
         .legend-item:last-child { margin-bottom: 0; }
         .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legend-separator {
+            height: 1px; background: var(--border); margin: 0.5rem 0;
+        }
+        .legend-section-title {
+            font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 0.3rem; margin-top: 0.2rem;
+        }
 
         /* Custom Icons */
         .custom-icon { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         .icon-work { background: var(--accent); }
         .icon-poi { background: var(--yellow); }
+
+        /* ── Modal ── */
+        .modal-backdrop {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+            z-index: 9999; align-items: center; justify-content: center;
+        }
+        .modal-backdrop.active { display: flex; }
+        .modal {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow);
+            width: 95%; max-width: 560px; padding: 2rem;
+            transform: translateY(20px); animation: modalSlideUp 0.3s ease forwards;
+        }
+        @keyframes modalSlideUp {
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            font-size: 1.1rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .modal-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.2rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+        .modal-instructions {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;
+            font-size: 0.8rem; color: var(--text-2); line-height: 1.6;
+        }
+        .modal-instructions code {
+            background: rgba(79, 142, 247, 0.15); color: var(--accent);
+            padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;
+            font-family: monospace;
+        }
+        .modal-instructions .format-example {
+            color: var(--text); font-weight: 500; margin-top: 0.4rem;
+            display: block;
+        }
+        .modal textarea {
+            width: 100%; min-height: 180px; resize: vertical;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 1rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.85rem;
+            line-height: 1.6; transition: var(--trans);
+        }
+        .modal textarea::placeholder { color: var(--text-2); opacity: 0.6; }
+        .modal textarea:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+        .modal-actions {
+            display: flex; gap: 0.75rem; margin-top: 1.25rem; justify-content: flex-end;
+        }
+        .modal-result {
+            margin-top: 1rem; font-size: 0.8rem; border-radius: 8px; padding: 0.75rem 1rem;
+            display: none;
+        }
+        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.12); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.25); }
+        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.12); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.25); }
     </style>
 </head>
 <body>
@@ -198,26 +308,89 @@
     <main class="main">
         <header class="topbar">
             <h1>{{ t(request, 'nav.map', 'Exploration Carte') }}</h1>
-            <div id="stats" style="font-size: 0.8rem; color: var(--text-2);">
-                Chargement des données...
+            <div class="topbar-right">
+                <div id="stats" style="font-size: 0.8rem; color: var(--text-2);">
+                    Chargement des données...
+                </div>
+                <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
+                    <i class="fa-solid fa-map-pin"></i>
+                    {{ t(request, 'map.add_addresses', 'Ajouter des adresses') }}
+                </button>
             </div>
         </header>
 
         <div id="map"></div>
         
-        <div class="map-legend">
+        <div class="map-legend" id="map-legend">
+            <div class="legend-section-title">{{ t(request, 'nav.listings_table', 'Annonces') }}</div>
             <div class="legend-item"><div class="dot" style="background: var(--accent);"></div> {{ t(request, 'map.new', 'Nouveauté') }}</div>
             <div class="legend-item"><div class="dot" style="background: var(--accent-2);"></div> {{ t(request, 'map.active', 'Active') }}</div>
             <div class="legend-item"><div class="dot" style="background: var(--red);"></div> {{ t(request, 'map.disappeared', 'Disparue') }}</div>
-            <div class="legend-item" style="margin-top: 0.5rem;"><i class="fa-solid fa-briefcase" style="color: var(--accent);"></i> {{ t(request, 'map.work', 'Travail') }}</div>
+            <div class="legend-separator"></div>
+            <div class="legend-item" style="margin-top: 0.2rem;"><i class="fa-solid fa-briefcase" style="color: var(--accent);"></i> {{ t(request, 'map.work', 'Travail') }}</div>
             <div class="legend-item"><i class="fa-solid fa-location-dot" style="color: var(--yellow);"></i> {{ t(request, 'map.poi', 'Point d\'intérêt') }}</div>
+            <div id="legend-pins-section"></div>
         </div>
     </main>
+
+    <!-- ── Bulk Address Modal ── -->
+    <div class="modal-backdrop" id="bulkModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request, 'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
+                <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-instructions">
+                <i class="fa-solid fa-circle-info" style="color: var(--accent); margin-right: 4px;"></i>
+                {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format :') }}
+                <span class="format-example"><code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Adresse physique') }}</code></span>
+            </div>
+
+            <textarea id="bulkTextarea"
+                placeholder="{{ t(request, 'map.bulk_placeholder', 'Mon Café Préféré ; 12 Rue de la Paix, Paris') }}"
+            ></textarea>
+
+            <div class="modal-result" id="modalResult"></div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeBulkModal()">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                </button>
+                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk">
+                    <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <script>
+        // ── User Color Palette ──
+        // Curated palette of 8 visually distinct, vibrant colors that work on dark backgrounds
+        const USER_COLORS = [
+            '#e06cff',  // Purple-pink
+            '#ff6b6b',  // Coral red
+            '#4ecdc4',  // Teal
+            '#45b7d1',  // Sky blue
+            '#f7dc6f',  // Gold
+            '#ff8a5c',  // Warm orange
+            '#a29bfe',  // Soft indigo
+            '#fd79a8',  // Rose
+        ];
+
+        function getUserColor(username) {
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+        }
+
+        // ── Map Init ──
         const map = L.map('map', {
             zoomControl: false
         }).setView([48.8566, 2.3522], 12); // Default to Paris
@@ -231,6 +404,10 @@
             maxZoom: 20
         }).addTo(map);
 
+        // Store pin markers layer for easy refresh
+        const pinMarkersLayer = L.layerGroup().addTo(map);
+        let currentUser = '';
+
         async function loadMapData() {
             try {
                 const res = await fetch('/api/map-data');
@@ -238,6 +415,7 @@
                 
                 const bounds = L.latLngBounds();
                 let markerCount = 0;
+                currentUser = data.current_user || '';
 
                 // 1. Listings
                 data.listings.forEach(l => {
@@ -254,13 +432,19 @@
 
                         const priceStr = l.price ? l.price.toLocaleString('fr-FR') + ' €' : 'N/C';
                         const specs = `${l.area || '?'}m² · ${l.rooms || '?'}p`;
+                        const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.location || l.city)}`;
                         
                         circle.bindPopup(`
                             <a href="/listings/${l.id}" class="map-popup-title">${l.title}</a>
                             <div class="map-popup-price">${priceStr}</div>
                             <div class="map-popup-specs">${specs}</div>
                             <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${l.location || l.city}</div>
+                            <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                            </a>
                         `);
+                        
+                        circle.on('dblclick', () => window.open(gmapsUrl, '_blank'));
                         
                         bounds.extend([l.lat, l.lon]);
                         markerCount++;
@@ -269,6 +453,7 @@
 
                 // 2. Work Location
                 if (data.user.work && data.user.work.lat && data.user.work.lon) {
+                    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.user.work.address)}`;
                     const workMarker = L.marker([data.user.work.lat, data.user.work.lon], {
                         icon: L.divIcon({
                             className: 'custom-div-icon',
@@ -279,13 +464,21 @@
                             iconAnchor: [16, 16]
                         })
                     }).addTo(map);
-                    workMarker.bindPopup(`<strong>Mon lieu de travail</strong><br>${data.user.work.address}`);
+                    workMarker.bindPopup(`
+                        <strong>Mon lieu de travail</strong><br>${data.user.work.address}
+                        <br>
+                        <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps" style="margin-top: 10px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                        </a>
+                    `);
+                    workMarker.on('dblclick', () => window.open(gmapsUrl, '_blank'));
                     bounds.extend([data.user.work.lat, data.user.work.lon]);
                 }
 
                 // 3. POIs
                 (data.user.pois || []).forEach(poi => {
                     if (poi.lat && poi.lon) {
+                        const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`;
                         const poiMarker = L.marker([poi.lat, poi.lon], {
                             icon: L.divIcon({
                                 className: 'custom-div-icon',
@@ -296,22 +489,223 @@
                                 iconAnchor: [14, 14]
                             })
                         }).addTo(map);
-                        poiMarker.bindPopup(`<strong>${poi.name}</strong><br>${poi.address}`);
+                        poiMarker.bindPopup(`
+                            <strong>${poi.name}</strong><br>${poi.address}
+                            <br>
+                            <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps" style="margin-top: 10px;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                            </a>
+                        `);
+                        poiMarker.on('dblclick', () => window.open(gmapsUrl, '_blank'));
                         bounds.extend([poi.lat, poi.lon]);
                     }
                 });
 
-                if (markerCount > 0) {
+                // 4. Shared Map Pins (from all users)
+                renderPins(data.pins || []);
+                (data.pins || []).forEach(p => {
+                    bounds.extend([p.lat, p.lon]);
+                });
+
+                if (markerCount > 0 || (data.pins && data.pins.length > 0)) {
                     map.fitBounds(bounds, { padding: [50, 50] });
                 }
                 
-                document.getElementById('stats').textContent = `${markerCount} annonces trouvées`;
+                const pinCount = (data.pins || []).length;
+                document.getElementById('stats').textContent = `${markerCount} annonces · ${pinCount} adresses`;
 
             } catch (err) {
                 console.error("Error loading map data:", err);
                 document.getElementById('stats').textContent = "Erreur lors du chargement des données";
             }
         }
+
+        function renderPins(pins) {
+            pinMarkersLayer.clearLayers();
+            const usersSeen = new Set();
+
+            pins.forEach(p => {
+                const color = getUserColor(p.created_by);
+                usersSeen.add(p.created_by);
+
+                const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
+                
+                const marker = L.marker([p.lat, p.lon], {
+                    icon: L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background: ${color}; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
+                                <i class="fa-solid fa-house-chimney"></i>
+                               </div>`,
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                });
+
+                const canDelete = (p.created_by === currentUser) || '{{ request.session.get("role") }}' === 'admin';
+                const deleteBtn = canDelete 
+                    ? `<button class="map-popup-delete" onclick="deletePin(${p.id})"><i class="fa-solid fa-trash-can"></i> {{ t(request, 'map.delete_pin', 'Supprimer') }}</button>`
+                    : '';
+
+                marker.bindPopup(`
+                    <strong class="map-popup-title">${p.title}</strong>
+                    <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${p.address}</div>
+                    <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                    </a>
+                    <div class="map-popup-meta">
+                        <i class="fa-solid fa-user"></i>
+                        <span style="color: ${color}; font-weight: 600;">${p.created_by}</span>
+                        ${deleteBtn}
+                    </div>
+                `);
+
+                // Clicking the marker icon opens Google Maps directly
+                marker.on('click', function(e) {
+                    // Open popup (default), but also set up the Google Maps redirect
+                    // The popup has the link, but we can also handle double-click for direct navigation
+                });
+                marker.on('dblclick', function(e) {
+                    window.open(gmapsUrl, '_blank');
+                });
+
+                pinMarkersLayer.addLayer(marker);
+            });
+
+            // Update legend with user colors
+            updatePinLegend(usersSeen);
+        }
+
+        function updatePinLegend(usersSeen) {
+            const section = document.getElementById('legend-pins-section');
+            if (usersSeen.size === 0) {
+                section.innerHTML = '';
+                return;
+            }
+            let html = `<div class="legend-separator"></div>`;
+            html += `<div class="legend-section-title">{{ t(request, 'map.custom_pins', 'Adresses personnalisées') }}</div>`;
+            usersSeen.forEach(username => {
+                const color = getUserColor(username);
+                html += `<div class="legend-item"><div class="dot" style="background: ${color};"></div> ${username}</div>`;
+            });
+            section.innerHTML = html;
+        }
+
+        async function deletePin(pinId) {
+            if (!confirm('{{ t(request, "ready_searches.delete_confirm", "Supprimer ?") }}')) return;
+            try {
+                const res = await fetch(`/api/map-pins/${pinId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    // Reload map data
+                    loadMapData();
+                }
+            } catch (err) {
+                console.error('Error deleting pin:', err);
+            }
+        }
+
+        // ── Modal Logic ──
+        function openBulkModal() {
+            document.getElementById('bulkModal').classList.add('active');
+            document.getElementById('bulkTextarea').value = '';
+            document.getElementById('modalResult').className = 'modal-result';
+            document.getElementById('modalResult').textContent = '';
+            document.getElementById('btnSubmitBulk').disabled = false;
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').classList.remove('active');
+        }
+
+        async function submitBulk() {
+            const textarea = document.getElementById('bulkTextarea');
+            const resultEl = document.getElementById('modalResult');
+            const btn = document.getElementById('btnSubmitBulk');
+            const raw = textarea.value.trim();
+
+            if (!raw) return;
+
+            // Parse lines: "Title ; Address"
+            const lines = raw.split('\n').filter(l => l.trim());
+            const pins = [];
+
+            for (const line of lines) {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    const title = parts[0].trim();
+                    const address = parts.slice(1).join(';').trim(); // In case address contains ;
+                    if (title && address) {
+                        pins.push({ title, address });
+                    }
+                }
+            }
+
+            if (pins.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.no_valid_entries", "No valid entries found.") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout en cours...") }}';
+            resultEl.className = 'modal-result';
+            resultEl.textContent = '';
+
+            try {
+                const res = await fetch('/api/map-pins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pins })
+                });
+
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) !") }}`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `\n⚠️ ${data.errors.length} {{ t(request, "map.geocode_failed", "erreur(s) de géolocalisation") }}:`;
+                        data.errors.forEach(e => {
+                            msg += `\n  • ${e.title} — ${e.address}`;
+                        });
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = msg;
+                    resultEl.style.whiteSpace = 'pre-line';
+
+                    // Reload map data
+                    loadMapData();
+
+                    // Close modal after a short delay
+                    setTimeout(() => closeBulkModal(), 2500);
+                } else {
+                    let errMsg = '{{ t(request, "map.geocode_failed", "Géolocalisation échouée") }}';
+                    if (data.errors && data.errors.length > 0) {
+                        errMsg += ':\n';
+                        data.errors.forEach(e => {
+                            errMsg += `  • ${e.title} — ${e.address}\n`;
+                        });
+                    }
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = errMsg;
+                    resultEl.style.whiteSpace = 'pre-line';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Network error: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> {{ t(request, "map.submit", "Ajouter les adresses") }}';
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('bulkModal').addEventListener('click', function(e) {
+            if (e.target === this) closeBulkModal();
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeBulkModal();
+        });
 
         loadMapData();
     </script>
