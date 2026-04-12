@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Optional Browserless authentication token
     BROWSERLESS_TOKEN: str = ""
 
+    # Versioning (overridden during build)
+    APP_VERSION: str = "1.1.1-dev"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -23,7 +23,7 @@ def load_translations():
 # Load them once at startup
 load_translations()
 
-def get_text(request: Request, key: str, **kwargs) -> str:
+def get_text(request: Request, key: str, default: str = None, **kwargs) -> str:
     """
     Get a translated string based on the current session language.
     `key` can be nested like 'nav.dashboard'.
@@ -56,12 +56,16 @@ def get_text(request: Request, key: str, **kwargs) -> str:
                 val = key
                 break
 
-    if isinstance(val, str):
+    if isinstance(val, str) and val != key:
         if kwargs:
             try:
                 return val.format(**kwargs)
             except KeyError:
                 return val
         return val
+
+    # If not found (val == key), return default if provided
+    if default is not None:
+        return default
 
     return str(key)
