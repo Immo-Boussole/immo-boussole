@@ -35,7 +35,21 @@
         "active": "Active",
         "disappeared": "Disappeared",
         "work": "Work",
-        "poi": "Points of interest"
+        "poi": "Points of interest",
+        "custom_pins": "Custom addresses",
+        "add_addresses": "Add addresses",
+        "bulk_title": "Bulk address import",
+        "bulk_instructions": "Enter one address per line in the format: Title ; Physical Address",
+        "bulk_placeholder": "My Favourite Café ; 12 Rue de la Paix, Paris\nMartin Bakery ; 5 Avenue Victor Hugo, Lyon",
+        "submit": "Add addresses",
+        "cancel": "Cancel",
+        "open_gmaps": "Open in Google Maps",
+        "added_by": "Added by",
+        "delete_pin": "Delete",
+        "geocode_failed": "Unable to geocode this address",
+        "no_valid_entries": "No valid entries found. Use format: Title ; Address",
+        "adding": "Adding...",
+        "success": "address(es) added successfully!"
     },
     "dashboard": {
         "all_listings": "All listings",

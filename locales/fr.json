@@ -35,7 +35,21 @@
         "active": "Actives",
         "disappeared": "Disparues",
         "work": "Travail",
-        "poi": "Points d'intérêt"
+        "poi": "Points d'intérêt",
+        "custom_pins": "Adresses personnalisées",
+        "add_addresses": "Ajouter des adresses",
+        "bulk_title": "Ajout d'adresses en masse",
+        "bulk_instructions": "Entrez une adresse par ligne au format : Titre ; Adresse physique",
+        "bulk_placeholder": "Mon Café Préféré ; 12 Rue de la Paix, Paris\nBoulangerie Martin ; 5 Avenue Victor Hugo, Lyon",
+        "submit": "Ajouter les adresses",
+        "cancel": "Annuler",
+        "open_gmaps": "Ouvrir dans Google Maps",
+        "added_by": "Ajouté par",
+        "delete_pin": "Supprimer",
+        "geocode_failed": "Impossible de géolocaliser cette adresse",
+        "no_valid_entries": "Aucune entrée valide trouvée. Utilisez le format : Titre ; Adresse",
+        "adding": "Ajout en cours...",
+        "success": "adresse(s) ajoutée(s) avec succès !"
     },
     "dashboard": {
         "all_listings": "Toutes les annonces",

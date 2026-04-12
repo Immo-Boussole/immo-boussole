@@ -196,3 +196,15 @@ class ReviewKeyword(Base):
     keyword_type = Column(String, nullable=False) # 'pros' or 'cons'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class MapPin(Base):
+    __tablename__ = "map_pins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    address = Column(String, nullable=False)
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    created_by = Column(String(50), nullable=False)  # username of creator
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

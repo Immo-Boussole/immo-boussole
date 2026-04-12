@@ -112,6 +112,14 @@ _MIGRATIONS = [
     ("users", "work_lat",                "REAL"),
     ("users", "work_lon",                "REAL"),
     ("users", "poi_json",                "TEXT"),
+
+    # map_pins — shared user address pins v6
+    ("map_pins", "title",                "TEXT NOT NULL DEFAULT ''"),
+    ("map_pins", "address",              "TEXT NOT NULL DEFAULT ''"),
+    ("map_pins", "lat",                  "REAL"),
+    ("map_pins", "lon",                  "REAL"),
+    ("map_pins", "created_by",           "TEXT NOT NULL DEFAULT ''"),
+    ("map_pins", "created_at",           "DATETIME"),
 ]
 
 
