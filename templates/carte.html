@@ -21,6 +21,46 @@
             --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        /* Language Selector in Sidebar */
+        .sidebar-lang-selector {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sidebar-lang-selector .lang-item.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .sidebar-lang-selector .lang-item span {
+            font-size: 1rem;
+        }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
@@ -123,12 +163,35 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            {% if request.session.get('role') == 'admin' %}
+            <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            {% endif %}
         </nav>
 
-        <div style="margin-top: auto; padding-top: 2rem;">
+        <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
+
+            {% if request.session.get('username') %}
+            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0.5rem 0.75rem 0; border-top: 1px solid var(--border);">
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
+            </div>
+            {% endif %}
+
+            <div class="sidebar-lang-selector">
+                <a href="/lang/fr" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'fr' else '' }}">
+                    <span>🇫🇷</span> FR
+                </a>
+                <a href="/lang/en" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'en' else '' }}">
+                    <span>🇬🇧</span> EN
+                </a>
+            </div>
+
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
+                ver: {{ app_version }}
+            </div>
         </div>
     </aside>
 
@@ -205,8 +268,8 @@
                 });
 
                 // 2. Work Location
-                if (data.user.work_lat && data.user.work_lon) {
-                    const workMarker = L.marker([data.user.work_lat, data.user.work_lon], {
+                if (data.user.work && data.user.work.lat && data.user.work.lon) {
+                    const workMarker = L.marker([data.user.work.lat, data.user.work.lon], {
                         icon: L.divIcon({
                             className: 'custom-div-icon',
                             html: `<div style="background: var(--accent); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; box-shadow: var(--shadow);">
@@ -216,12 +279,12 @@
                             iconAnchor: [16, 16]
                         })
                     }).addTo(map);
-                    workMarker.bindPopup(`<strong>Mon lieu de travail</strong><br>${data.user.work_address}`);
-                    bounds.extend([data.user.work_lat, data.user.work_lon]);
+                    workMarker.bindPopup(`<strong>Mon lieu de travail</strong><br>${data.user.work.address}`);
+                    bounds.extend([data.user.work.lat, data.user.work.lon]);
                 }
 
                 // 3. POIs
-                data.user.poi.forEach(poi => {
+                (data.user.pois || []).forEach(poi => {
                     if (poi.lat && poi.lon) {
                         const poiMarker = L.marker([poi.lat, poi.lon], {
                             icon: L.divIcon({
