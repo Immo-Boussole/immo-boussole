@@ -17,7 +17,25 @@
         "ready": "Ready to Search",
         "connected": "Connected:",
         "total_listings": "Total listings",
-        "users": "Users"
+        "users": "Users",
+        "map": "Map",
+        "profile": "My Profile"
+    },
+    "profile": {
+        "title": "My Profile",
+        "work_location": "Work Location",
+        "work_address_label": "Work address",
+        "poi_title": "Points of Interest",
+        "add_poi": "Add a point of interest",
+        "save_btn": "Save changes",
+        "saved_msg": "Profile updated successfully!"
+    },
+    "map": {
+        "new": "New",
+        "active": "Active",
+        "disappeared": "Disappeared",
+        "work": "Work",
+        "poi": "Points of interest"
     },
     "dashboard": {
         "all_listings": "All listings",

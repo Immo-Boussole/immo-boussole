@@ -17,7 +17,25 @@
         "ready": "Prêt à Rechercher",
         "connected": "Connecté:",
         "total_listings": "Total annonces",
-        "users": "Utilisateurs"
+        "users": "Utilisateurs",
+        "map": "Carte",
+        "profile": "Mon Profil"
+    },
+    "profile": {
+        "title": "Mon Profil",
+        "work_location": "Lieu de Travail",
+        "work_address_label": "Adresse du lieu de travail",
+        "poi_title": "Points d'Intérêt",
+        "add_poi": "Ajouter un point d'intérêt",
+        "save_btn": "Enregistrer les modifications",
+        "saved_msg": "Profil mis à jour avec succès !"
+    },
+    "map": {
+        "new": "Nouveautés",
+        "active": "Actives",
+        "disappeared": "Disparues",
+        "work": "Travail",
+        "poi": "Points d'intérêt"
     },
     "dashboard": {
         "all_listings": "Toutes les annonces",

@@ -67,6 +67,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["t"] = get_text
+templates.env.globals["app_version"] = settings.APP_VERSION
 
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
@@ -350,7 +351,7 @@ def health_check(db: Session = Depends(get_db)):
         return {
             "status": "ok", 
             "timestamp": datetime.now().isoformat(),
-            "version": os.getenv("APP_VERSION", "1.1.1")
+            "version": settings.APP_VERSION
         }
     except Exception as e:
         # If DB is down, return 500 so container becomes "unhealthy"
@@ -489,6 +490,7 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
         "listings": listings,
         "queries": queries,
         "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
         "title": "Tableau de Bord — Immo-Boussole",
     })
 
