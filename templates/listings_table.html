@@ -293,10 +293,6 @@
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div style="display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1rem;">
-            <a href="/lang/fr" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'fr' else '0.4' }}; transition: opacity 0.2s;">🇫🇷</a>
-            <a href="/lang/en" style="text-decoration: none; font-size: 1.25rem; opacity: {{ '1' if request.session.get('lang', 'fr') == 'en' else '0.4' }}; transition: opacity 0.2s;">🇬🇧</a>
-        </div>
         <div class="logo">
             <i class="fa-solid fa-compass-drafting"></i>
             {{ t(request, 'app.title') }}

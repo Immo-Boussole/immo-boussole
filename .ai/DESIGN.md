@@ -67,6 +67,23 @@ The typography relies on **Inter**, a highly legible geometric sans-serif that s
 - **Colors**: Typically pure black or white text sitting confidently on a semantic background color (`var(--green)`, `var(--red)`).
 
 - **Global Layout System**: Full height CSS grid/flex hybrid (`100vh` layouts, locked scroll body). The application utilizes a **Universal Sidebar Navigation** pattern where every page consists of a fixed Sidebar (`aside.sidebar`) and a scrollable Main Content area (`main.main`). The body is set to `overflow: hidden` to enable independent scrolling for both the sidebar and the content area.
+
+### Sidebar Structure (`aside.sidebar`)
+The sidebar is **identical across all templates**. Every page MUST include the exact same sidebar sections in this order. No section may be omitted.
+
+1. **Logo** — `.logo` with gradient text and compass icon.
+2. **Navigation** — `sidebar-section-title` "Navigation" followed by nav links: Dashboard, Listings Table, Carte, Profil Idéal.
+3. **Auto Searches** — `sidebar-section-title` listing automated queries from `queries`.
+4. **Manual Searches** — `sidebar-section-title` listing manual listings filtered by `source == "manuel"`.
+5. **Ready / Settings** — `sidebar-section-title` with links: Ready to Search, Mon Profil, and conditionally Gestion Utilisateurs (admin only).
+6. **Footer** (pushed to bottom via `margin-top: auto`) — **ALL of the following are mandatory on every page:**
+   - **Logout link**: `<a href="/logout">` styled with `color: var(--red)`.
+   - **Connected user info**: Displays `{{ t(request, 'nav.connected') }}` followed by username (`font-weight: 600`) and role badge (`font-size: 0.6rem`, uppercase, `opacity: 0.6`). Wrapped in `{% if request.session.get('username') %}` guard. Separated from logout by a `border-top: 1px solid var(--border)`.
+   - **Language selector**: `.sidebar-lang-selector` pill toggle with FR 🇫🇷 and EN 🇬🇧 options. Uses `var(--surface-2)` background, `12px` border-radius, and `var(--accent)` for the active state.
+   - **Version display**: Monospace text showing `ver: {{ app_version }}`. Styled with `font-size: 0.6rem`, `opacity: 0.4`, `text-align: center`, `font-family: monospace`.
+
+> **CRITICAL**: When creating or modifying any template, always copy the complete sidebar from `index.html` as the reference. Never create a partial sidebar missing any of the 6 sections above.
+
 - **Spacing Scale**: Usually proportional by `rem` (`0.25rem`, `0.5rem`, `0.75rem`, `1rem`, `1.25rem`, `1.5rem`).
 - **Gaps**: Grid layouts employ `1.25rem` gaps between display cards. Flex clusters use tighter `0.5rem` to `1rem` spacing.
 - **CSS Custom Properties**: Hardcoded colors shouldn't exist in markup. Everything references standard custom props from `:root` (e.g. `var(--surface)`).
