@@ -120,6 +120,9 @@ _MIGRATIONS = [
     ("map_pins", "lon",                  "REAL"),
     ("map_pins", "created_by",           "TEXT NOT NULL DEFAULT ''"),
     ("map_pins", "created_at",           "DATETIME"),
+
+    # listings — Géorisques report v7
+    ("listings", "georisques_json",      "TEXT"),
 ]
 
 

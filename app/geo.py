@@ -1,6 +1,7 @@
 import httpx
 from typing import Dict, Optional, Tuple
 from functools import lru_cache
+from app.config import settings
 
 # Dictionary cache for geo computations by city to avoid doing the same query for 100 listings in the same city
 # Format: { "Lyon": {"nearest_sncf_station": "Gare Part-Dieu", "walk_time_sncf": 15, "bike_time_sncf": 5, "car_time_sncf": 3} }
@@ -136,3 +137,78 @@ def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
     GEO_CACHE[city_key] = result
     print(f"[Geo] Fetched SNCF data for {city_key}: {result}")
     return result
+
+
+def get_insee_code(city_name: str, zipcode: str = None) -> Optional[str]:
+    """
+    Retrieves the INSEE code for a city via OpenDataSoft API.
+    Used for Géorisques reports when the full address is missing.
+    """
+    if not city_name and not zipcode:
+        return None
+    
+    # Normalize city name for API (uppercase, replace spaces with hyphens)
+    city_upper = city_name.strip().upper().replace(" ", "-") if city_name else ""
+    
+    # Build a more flexible WHERE clause
+    clauses = []
+    if zipcode:
+        clauses.append(f'postal_code="{zipcode}"')
+    
+    if city_upper:
+        # Use LIKE to match city names that might have suffixes (arrondissements, etc.)
+        clauses.append(f'nom_comm like "{city_upper}%"')
+    
+    where_clause = " and ".join(clauses)
+    
+    url = "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/correspondance-code-insee-code-postal/records"
+    try:
+        res = httpx.get(url, params={"where": where_clause, "limit": 1}, timeout=10.0)
+        res.raise_for_status()
+        data = res.json()
+        
+        results = data.get("results", [])
+        if results:
+            return results[0].get("insee_com")
+        
+        # If no result with city + zip, try zip alone as fallback
+        if zipcode and city_upper:
+             res = httpx.get(url, params={"where": f'postal_code="{zipcode}"', "limit": 1}, timeout=10.0)
+             res.raise_for_status()
+             data = res.json()
+             results = data.get("results", [])
+             if results:
+                 return results[0].get("insee_com")
+
+        return None
+    except Exception as e:
+        print(f"[Geo] INSEE lookup failed for {city_name} ({zipcode}): {e}")
+        return None
+
+
+def fetch_georisques_data(address: str = None, insee_code: str = None) -> Optional[Dict]:
+    """
+    Calls the Géorisques API to generate a JSON risk report.
+    Priority to 'address' if provided and seems complete.
+    """
+    if not address and not insee_code:
+        return None
+    
+    url = f"{settings.GEORISQUES_API_BASEURL.rstrip('/')}/v1/resultats_rapport_risque"
+    params = {}
+    if address:
+        params["adresse"] = address
+    elif insee_code:
+        params["code_insee"] = insee_code
+        
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+    if settings.GEORISQUES_API_KEY:
+        headers["Authorization"] = f"Bearer {settings.GEORISQUES_API_KEY}"
+        
+    try:
+        res = httpx.get(url, params=params, headers=headers, timeout=15.0)
+        res.raise_for_status()
+        return res.json()
+    except Exception as e:
+        print(f"[Geo] Géorisques API failed (addr={address}, insee={insee_code}): {e}")
+        return None

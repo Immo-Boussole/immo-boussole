@@ -14,7 +14,7 @@ from app.scrapers import (
     NotairesScraper, VinciScraper, ImmobilierFranceScraper
 )
 from app.media import download_listing_photos, photos_to_json
-from app.geo import fetch_sncf_times_for_city, get_coordinates
+from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
 import httpx
 from bs4 import BeautifulSoup
 
@@ -230,7 +230,52 @@ async def create_listing_from_details(
             listing.nearest_sncf_station = "NOT_FOUND"
         db.commit()
 
+    # ── Géorisques Risk Report ──
+    if listing.georisques_json is None:
+        await update_listing_georisques(listing, db)
+
     return listing, (not existing)
+
+
+async def update_listing_georisques(listing: Listing, db: Session):
+    """
+    Fetches and updates Géorisques data for a listing.
+    """
+    import re
+    
+    location = listing.location or ""
+    city = listing.city or ""
+    
+    # Extract zipcode if present
+    zip_match = re.search(r'\d{5}', location)
+    zipcode = zip_match.group(0) if zip_match else None
+    
+    # Heuristic for full address: contains a number at start or is notably longer than city+zip
+    location_norm = location.strip().lower()
+    city_norm = city.strip().lower()
+    
+    is_address = False
+    if location_norm:
+        # Check for street number at start
+        if re.match(r'^\d+', location_norm):
+            is_address = True
+        elif city_norm and len(location_norm) > (len(city_norm) + 7):
+            is_address = True
+            
+    report_json = None
+    if is_address:
+        print(f"[Services] Fetching Géorisques for address: {location}")
+        report_json = fetch_georisques_data(address=location)
+    elif city:
+        insee = get_insee_code(city, zipcode)
+        if insee:
+            print(f"[Services] Fetching Géorisques for INSEE: {insee} ({city})")
+            report_json = fetch_georisques_data(insee_code=insee)
+            
+    if report_json:
+        listing.georisques_json = json.dumps(report_json)
+        db.commit()
+        print(f"[Services] Géorisques report saved for listing {listing.id}")
 
 
 # ─── Scrape and Diff (Search Queries) ─────────────────────────────────────────
@@ -316,6 +361,10 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                         new_listing.latitude, new_listing.longitude = coords
 
                 db.add(new_listing)
+                db.commit() # Commit to get ID
+                db.refresh(new_listing)
+                
+                await update_listing_georisques(new_listing, db)
                 new_count += 1
         else:
             # Case 2: Already active/new and still online
@@ -329,6 +378,9 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                 existing.scraped_at = datetime.now(timezone.utc)
                 if item.get("price"):
                     existing.price = item.get("price")
+            
+            # Refresh Géorisques even for existing listings (as requested)
+            await update_listing_georisques(existing, db)
 
     db.commit()
 
