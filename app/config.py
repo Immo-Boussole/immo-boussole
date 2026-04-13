@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Versioning (overridden during build)
     APP_VERSION: str = "1.1.1-dev"
 
+    # Géorisques API
+    GEORISQUES_API_BASEURL: str = "https://www.georisques.gouv.fr/api/"
+    GEORISQUES_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

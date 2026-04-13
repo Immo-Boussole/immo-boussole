@@ -144,6 +144,9 @@ class Listing(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
+    # Risk data
+    georisques_json = Column(Text, nullable=True)
+
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
 
