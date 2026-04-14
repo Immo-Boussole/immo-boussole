@@ -331,20 +331,6 @@
         </div>
         {% endif %}
 
-        </div>
-                <div class="src" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--text-2); font-size: 0.7rem;">
-                    <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> MANUEL</span>
-                    <span style="font-weight: 700; color: var(--accent); font-size: 0.75rem;">
-                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}
-                    </span>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_manual') }}</div>
-        {% endif %}
-
         <br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
