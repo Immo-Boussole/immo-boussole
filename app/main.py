@@ -486,17 +486,24 @@ def set_language(request: Request, lang: str):
 
 @app.get("/")
 def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
-    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    # Original mixed list for sidebar
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
+    # Split for Dashboard view
+    imported_listings = db.query(Listing).filter(Listing.status == ListingStatus.ACTIVE).order_by(Listing.date_added.desc()).limit(100).all()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.REJECTED).order_by(Listing.date_added.desc()).limit(100).all()
+    
     queries = db.query(SearchQuery).all()
 
-    # Attach local photos to each listing
-    for listing in listings:
+    for listing in imported_listings + rejected_listings:
         listing._photos = json_to_photos(listing.photos_local)
 
     local_hash = get_local_commit_hash()
 
     return templates.TemplateResponse(request=request, name="index.html", context={
-        "listings": listings,
+        "imported_listings": imported_listings,
+        "rejected_listings": rejected_listings,
+        "listings": all_listings,
         "queries": queries,
         "local_hash": local_hash,
         "app_version": settings.APP_VERSION,
@@ -510,14 +517,20 @@ def listings_table_page(
     db: Session = Depends(get_db), 
     _auth = Depends(login_required)
 ):
-    listings = db.query(Listing).order_by(Listing.date_added.desc()).all()
+    imported_listings = db.query(Listing).filter(Listing.status == ListingStatus.ACTIVE).order_by(Listing.date_added.desc()).all()
+    rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.REJECTED).order_by(Listing.date_added.desc()).all()
+    
+    # For sidebar stats
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     queries = db.query(SearchQuery).all()
 
-    for listing in listings:
+    for listing in imported_listings + rejected_listings:
         listing._photos = json_to_photos(listing.photos_local)
 
     return templates.TemplateResponse(request=request, name="listings_table.html", context={
-        "listings": listings,
+        "imported_listings": imported_listings,
+        "rejected_listings": rejected_listings,
+        "listings": all_listings,
         "queries": queries,
         "title": "Tableau des Annonces — Immo-Boussole",
     })
@@ -579,6 +592,7 @@ def listing_detail_page(
         "duplicate_original": duplicate_original,
         "queries": queries,
         "listings": all_listings,
+        "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
         "title": f"{listing.title} — Immo-Boussole",
     })
 
@@ -616,6 +630,34 @@ def ready_searches_page(
         "queries": queries,
         "listings": listings,
         "title": "Prêt à Rechercher — Immo-Boussole",
+    })
+
+
+@app.get("/searches/auto")
+def auto_searches_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    # Fetch NEW listings
+    new_listings = db.query(Listing).filter(Listing.status == ListingStatus.NEW).order_by(Listing.date_added.desc()).all()
+    queries = db.query(SearchQuery).all()
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+
+    for listing in new_listings:
+        listing._photos = json_to_photos(listing.photos_local)
+
+    # Group listings by date_added.date()
+    from itertools import groupby
+    grouped = []
+    for k, g in groupby(new_listings, key=lambda x: x.date_added.date() if x.date_added else None):
+        grouped.append((k, list(g)))
+
+    return templates.TemplateResponse(request=request, name="auto_searches.html", context={
+        "grouped_listings": grouped,
+        "queries": queries,
+        "listings": all_listings,
+        "title": "Recherches Automatiques — Immo-Boussole",
     })
 
 
@@ -1160,6 +1202,26 @@ def update_listing(
     db.commit()
     db.refresh(listing)
     return {"status": "updated", "listing_id": listing.id}
+
+
+@app.post("/api/listings/{listing_id}/import")
+def import_listing(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    listing.status = ListingStatus.ACTIVE
+    db.commit()
+    return {"status": "imported", "listing_id": listing.id}
+
+
+@app.post("/api/listings/{listing_id}/reject")
+def reject_listing(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    listing.status = ListingStatus.REJECTED
+    db.commit()
+    return {"status": "rejected", "listing_id": listing.id}
 
 
 @app.post("/api/listings/{listing_id}/photos")

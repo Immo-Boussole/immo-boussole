@@ -329,19 +329,9 @@
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_searches') }}</div>
         {% endif %}
 
-        <br>
-        <div class="sidebar-section-title">{{ t(request, 'nav.manual_searches') }}</div>
-
-        {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list %}
-        {% if manual_listings %}
-        <div class="query-list">
-            {% for listing in manual_listings[:10] %}
-            <a href="/listings/{{ listing.id }}" class="query-item" style="text-decoration: none; display: block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.8rem; transition: var(--trans);">
-                <div class="name" style="font-weight: 600; color: var(--text);">{{ listing.title[:30] }}{% if listing.title|length > 30 %}...{% endif %}</div>
+        </div>
                 <div class="src" style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; color: var(--text-2); font-size: 0.7rem;">
                     <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> MANUEL</span>
                     <span style="font-weight: 700; color: var(--accent); font-size: 0.75rem;">
@@ -359,6 +349,7 @@
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>

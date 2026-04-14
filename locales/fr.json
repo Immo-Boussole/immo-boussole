@@ -11,6 +11,7 @@
         "logout": "Déconnexion",
         "navigation": "Navigation",
         "auto_searches": "Recherches Automatiques",
+        "auto_searches_view": "Recherches Automatiques",
         "manual_searches": "Recherches Manuelles",
         "no_searches": "Aucune recherche configurée",
         "no_manual": "Aucun bien ajouté manuellement",
@@ -59,10 +60,16 @@
             "active": "Actives",
             "disappeared": "Disparues"
         },
+        "imported": "Importée(s)",
+        "rejected": "Rejetée(s)",
         "add_listing": "Ajouter une annonce",
         "empty_state": {
             "title": "Aucune annonce trouvée",
             "subtitle": "Il n'y a pas encore d'annonces avec ce statut, ou la base est vide."
+        },
+        "empty_rejected": {
+            "title": "Aucune annonce rejetée",
+            "subtitle": "Les annonces rejetées s'afficheront ici."
         },
         "stats": {
             "new": "Nouvelles",
@@ -284,5 +291,16 @@
         "added_without_scraping": "Annonce ajoutée avec informations de base (sans plein scraping).",
         "duplicate_warning": "⚠️ Un bien similaire (même prix, surface et ville) existe déjà !",
         "unknown_source": "Source inconnue:"
+    },
+    "auto_searches": {
+        "title": "Recherches Automatiques",
+        "empty_title": "Aucune nouvelle annonce",
+        "empty_subtitle": "Il n'y a pas de nouvelle annonce à traiter pour le moment.",
+        "import_btn": "Importer",
+        "reject_btn": "Rejeter",
+        "view_listing": "Voir l'annonce",
+        "import_error": "Erreur lors de l'importation",
+        "reject_error": "Erreur lors du rejet",
+        "network_error": "Erreur de réseau"
     }
 }

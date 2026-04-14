@@ -349,33 +349,13 @@
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_searches') }}</div>
-        {% endif %}
-
-        <br>
-        <div class="sidebar-section-title">{{ t(request, 'nav.manual_searches') }}</div>
-
-        {% set manual_listings = listings|selectattr("source", "equalto", "manuel")|list if listings else [] %}
-        {% if manual_listings %}
-        <div class="query-list">
-            {% for listing_item in manual_listings[:10] %}
-            <a href="/listings/{{ listing_item.id }}" class="query-item">
-                <div class="name">{{ listing_item.title[:30] }}...</div>
-                <div class="src">
-                    <span><i class="fa-solid fa-link" style="color: var(--accent); font-size: 0.6rem;"></i> {{ t(request, 'misc.manual') }}</span>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div style="font-size: 0.8rem; color: var(--text-2);">{{ t(request, 'nav.no_manual') }}</div>
         {% endif %}
 
         <br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link active" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             {% endif %}
