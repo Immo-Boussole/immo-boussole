@@ -11,6 +11,7 @@
         "logout": "Logout",
         "navigation": "Navigation",
         "auto_searches": "Automatic Searches",
+        "auto_searches_view": "Automatic Searches",
         "manual_searches": "Manual Searches",
         "no_searches": "No searches configured",
         "no_manual": "No manual listings",
@@ -59,10 +60,16 @@
             "active": "Active",
             "disappeared": "Disappeared"
         },
+        "imported": "Imported",
+        "rejected": "Rejected",
         "add_listing": "Add Listing",
         "empty_state": {
             "title": "No listings found",
             "subtitle": "There are no listings with this status yet, or the database is empty."
+        },
+        "empty_rejected": {
+            "title": "No rejected listings",
+            "subtitle": "Rejected listings will appear here."
         },
         "stats": {
             "new": "New",
@@ -284,5 +291,16 @@
         "added_without_scraping": "Listing added with basic information (without full scraping).",
         "duplicate_warning": "⚠️ A similar property (same price, area, and city) already exists!",
         "unknown_source": "Unknown source:"
+    },
+    "auto_searches": {
+        "title": "Automatic Searches",
+        "empty_title": "No new listings",
+        "empty_subtitle": "There are no new listings to process at the moment.",
+        "import_btn": "Import",
+        "reject_btn": "Reject",
+        "view_listing": "View listing",
+        "import_error": "Error during import",
+        "reject_error": "Error during rejection",
+        "network_error": "Network error"
     }
 }

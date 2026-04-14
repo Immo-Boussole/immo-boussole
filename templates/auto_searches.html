@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{{ title|default(t(request, 'ready_searches.title')) }} — {{ t(request, 'app.title') }}</title>
+    <title>{{ title|default(t(request, 'auto_searches.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
@@ -344,8 +344,8 @@
         <br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
-            <a href="/searches/ready" class="nav-link active"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
-            <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/searches/auto" class="nav-link active"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
@@ -386,223 +386,100 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{{ t(request, 'ready_searches.title') }}</h1>
-            </div>
-            <div class="topbar-right">
-                {% if request.session.get('role') == 'user' %}
-                <button class="btn primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> {{ t(request, 'ready_searches.add_btn') }}</button>
-                {% endif %}
+                <h1>{{ title|default(t(request, 'auto_searches.title')) }}</h1>
             </div>
         </header>
 
         <div class="content">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>{{ t(request, 'ready_searches.platform') }}</th>
-                            <th>{{ t(request, 'ready_searches.criteria') }}</th>
-                            <th>{{ t(request, 'ready_searches.url') }}</th>
-                            <th style="width: 250px;">{{ t(request, 'ready_searches.actions') }}</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% if ready_searches %}
-                            {% for search in ready_searches %}
-                            <tr>
-                                <td class="col-platform">{{ search.platform|upper }}</td>
-                                <td class="col-criteria">{{ search.criteria or '-' }}</td>
-                                <td class="col-url" title="{{ search.url }}">{{ search.url }}</td>
-                                <td class="row-actions">
-                                    <a href="{{ search.url }}" target="_blank" class="btn sm" title="Ouvrir"><i class="fa-solid fa-external-link"></i> {{ t(request, 'ready_searches.open') }}</a>
-                                    {% if request.session.get('role') == 'user' %}
-                                    <button class="btn sm edit-btn" 
-                                            data-id="{{ search.id }}"
-                                            data-platform="{{ search.platform }}"
-                                            data-criteria="{{ search.criteria or '' }}"
-                                            data-url="{{ search.url }}"
-                                            onclick="openEditModal(this)" 
-                                            title="Éditer">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button class="btn sm btn-delete" 
-                                            onclick="deleteSearch({{ search.id }})" 
-                                            title="Supprimer">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                    {% endif %}
-                                </td>
-
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-2);">
-                                    <i class="fa-solid fa-info-circle"></i> {{ t(request, 'ready_searches.empty') }}
-                                </td>
-                            </tr>
-                        {% endif %}
-
-                    </tbody>
-                </table>
-            </div>
+            {% if grouped_listings %}
+                {% for date, listings in grouped_listings %}
+                <div class="date-group" style="margin-bottom: 2rem;">
+                    <h2 style="font-size: 1.1rem; color: var(--text-2); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                        <i class="fa-regular fa-calendar" style="color: var(--accent);"></i> {{ date.strftime('%d/%m/%Y') }}
+                    </h2>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {% for listing in listings %}
+                        <div class="card horizontal-listing" data-id="{{ listing.id }}" style="display: flex; flex-direction: row; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; height: 120px;">
+                            {% set photos = listing._photos if listing._photos is defined else [] %}
+                            <div class="list-img" style="width: 160px; height: 100%; position: relative; flex-shrink: 0;">
+                                {% if photos %}
+                                <img src="/{{ photos[0] }}" alt="{{ listing.title }}" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                {% else %}
+                                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--surface); color:var(--text-2);"><i class="fa-regular fa-image"></i></div>
+                                {% endif %}
+                                <span class="badge" style="position:absolute; top:0.5rem; left:0.5rem; background: rgba(16, 217, 164, 0.15); color: var(--green);">{{ t(request, 'misc.new') | default('NOUVELLE') }}</span>
+                            </div>
+                            
+                            <div class="list-body" style="padding: 1rem; flex: 1; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                    <div style="overflow: hidden;">
+                                        <div style="font-weight: 700; font-size: 1rem; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.2rem;">{{ listing.title }}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-2);">
+                                            <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or t(request, 'misc.nc') }}</span> • 
+                                            {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int }} m²</span> • {% endif %}
+                                            <span style="color: var(--accent); font-weight: 700; text-transform: uppercase; font-size: 0.7rem;">{{ listing.source.value|upper }}</span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; font-weight: 800; font-size: 1.1rem; color: var(--text);">
+                                        {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}
+                                        {% if listing.price_per_sqm %}<div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="list-actions" style="width: 250px; background: var(--surface); border-left: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;">
+                                <a href="{{ listing.url }}" target="_blank" class="btn sm" style="width: 100%; justify-content: center;"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'auto_searches.view_listing') }}</a>
+                                <div style="display: flex; gap: 0.5rem; width: 100%;">
+                                    <button class="btn sm primary" onclick="importListing({{ listing.id }})" style="flex: 1; justify-content: center; background: var(--accent); border-color: var(--accent);"><i class="fa-solid fa-check"></i> {{ t(request, 'auto_searches.import_btn') }}</button>
+                                    <button class="btn sm btn-delete" onclick="rejectListing({{ listing.id }})" style="flex: 1; justify-content: center;"><i class="fa-solid fa-xmark"></i> {{ t(request, 'auto_searches.reject_btn') }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty" style="text-align: center; padding: 4rem 2rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius);">
+                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: var(--text-2); margin-bottom: 1rem; display: block;"></i>
+                    <h2 style="font-size: 1.2rem; margin-bottom: 0.5rem;">{{ t(request, 'auto_searches.empty_title') }}</h2>
+                    <p style="color: var(--text-2); font-size: 0.9rem;">{{ t(request, 'auto_searches.empty_subtitle') }}</p>
+                </div>
+            {% endif %}
         </div>
     </div>
-
-    <!-- Modal Modal: Ajouter/Éditer -->
-    <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-        <div class="modal">
-            <h2 id="modalTitle" style="margin-bottom: 1.5rem;">{{ t(request, 'ready_searches.modal_add_title') }}</h2>
-            <form id="searchForm" onsubmit="saveSearch(event)">
-                <input type="hidden" id="searchId">
-                <div class="form-group">
-                    <label>{{ t(request, 'ready_searches.platform') }}</label>
-                    <select id="searchPlatform" required>
-
-                        <option value="leboncoin">LeBonCoin</option>
-                        <option value="seloger">SeLoger</option>
-                        <option value="lefigaro">Le Figaro</option>
-                        <option value="logicimmo">LogicImmo</option>
-                        <option value="bienici">BienIci</option>
-                        <option value="iadfrance">IAD France</option>
-                        <option value="notaires">Notaires</option>
-                        <option value="vinci">Vinci</option>
-                        <option value="immobilier_france">Immobilier France</option>
-                        <option value="manuel">Manuel</option>
-                    </select>
-                </div>
-                <div class="form-group" id="customPlatformGroup" style="display: none;">
-                    <label>{{ t(request, 'ready_searches.platform_name') }}</label>
-                    <input type="text" id="customPlatformName" placeholder="...">
-                </div>
-
-                <div class="form-group">
-                    <label>{{ t(request, 'ready_searches.criteria_label') }}</label>
-                    <input type="text" id="searchCriteria" placeholder="...">
-                </div>
-                <div class="form-group">
-                    <label>{{ t(request, 'ready_searches.url_label') }}</label>
-                    <input type="url" id="searchUrl" placeholder="https://..." required>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn" onclick="closeModal()">{{ t(request, 'ready_searches.cancel') }}</button>
-                    <button type="submit" class="btn primary">{{ t(request, 'ready_searches.save') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 
     <script>
-        const i18n = {
-            addTitle: "{{ t(request, 'ready_searches.modal_add_title') }}",
-            editTitle: "{{ t(request, 'ready_searches.modal_edit_title') }}",
-            deleteConfirm: "{{ t(request, 'ready_searches.delete_confirm') }}",
-            deleteError: "{{ t(request, 'ready_searches.delete_error') }}",
-            networkError: "{{ t(request, 'ready_searches.network_error') }}",
-            unknownError: "{{ t(request, 'ready_searches.unknown_error') }}"
+        const i18n_auto = {
+            importError: "{{ t(request, 'auto_searches.import_error') }}",
+            rejectError: "{{ t(request, 'auto_searches.reject_error') }}",
+            networkError: "{{ t(request, 'auto_searches.network_error') }}"
         };
 
-        function openCreateModal() {
-            const modal = document.getElementById('modal');
-            const title = document.getElementById('modalTitle');
-            const idInput = document.getElementById('searchId');
-            const platformInput = document.getElementById('searchPlatform');
-            const criteriaInput = document.getElementById('searchCriteria');
-            const urlInput = document.getElementById('searchUrl');
-
-            title.textContent = i18n.addTitle;
-            idInput.value = "";
-
-            platformInput.value = "leboncoin";
-            criteriaInput.value = "";
-            urlInput.value = "";
-
-            modal.classList.add('open');
-        }
-
-        function openEditModal(btn) {
-            const modal = document.getElementById('modal');
-            const title = document.getElementById('modalTitle');
-            const idInput = document.getElementById('searchId');
-            const platformInput = document.getElementById('searchPlatform');
-            const criteriaInput = document.getElementById('searchCriteria');
-            const urlInput = document.getElementById('searchUrl');
-
-            title.textContent = i18n.editTitle;
-            idInput.value = btn.dataset.id;
-
-            criteriaInput.value = btn.dataset.criteria;
-            urlInput.value = btn.dataset.url;
-
-            const platform = btn.dataset.platform;
-            if (platform.endsWith(" (ajout manuel)")) {
-                platformInput.value = "manuel";
-                document.getElementById('customPlatformName').value = platform.replace(" (ajout manuel)", "");
-                document.getElementById('customPlatformGroup').style.display = 'block';
-            } else {
-                platformInput.value = platform;
-                document.getElementById('customPlatformName').value = "";
-                document.getElementById('customPlatformGroup').style.display = 'none';
-            }
-
-            modal.classList.add('open');
-        }
-
-        function closeModal() {
-            document.getElementById('modal').classList.remove('open');
-        }
-
-        // Toggle custom platform field
-        document.getElementById('searchPlatform').addEventListener('change', function() {
-            const isManual = this.value === 'manuel';
-            document.getElementById('customPlatformGroup').style.display = isManual ? 'block' : 'none';
-            if (!isManual) document.getElementById('customPlatformName').value = "";
-        });
-
-        async function saveSearch(e) {
-            e.preventDefault();
-            const id = document.getElementById('searchId').value;
-            const body = {
-                platform: document.getElementById('searchPlatform').value,
-                custom_platform_name: document.getElementById('customPlatformName').value,
-                criteria: document.getElementById('searchCriteria').value,
-                url: document.getElementById('searchUrl').value
-            };
-
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/api/searches/ready/${id}` : '/api/searches/ready';
-
+        async function importListing(id) {
             try {
-                const res = await fetch(url, {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
+                const res = await fetch(`/api/listings/${id}/import`, { method: 'POST' });
                 if (res.ok) {
                     window.location.reload();
                 } else {
-                    const err = await res.json();
-                    alert("Erreur: " + (err.detail || i18n.unknownError));
+                    alert(i18n_auto.importError);
                 }
             } catch (err) {
-                alert(i18n.networkError);
+                alert(i18n_auto.networkError);
             }
         }
 
-        async function deleteSearch(id) {
-            if (!confirm(i18n.deleteConfirm)) return;
+        async function rejectListing(id) {
             try {
-                const res = await fetch(`/api/searches/ready/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/listings/${id}/reject`, { method: 'POST' });
                 if (res.ok) {
                     window.location.reload();
                 } else {
-                    alert(i18n.deleteError);
+                    alert(i18n_auto.rejectError);
                 }
             } catch (err) {
-                alert(i18n.networkError);
+                alert(i18n_auto.networkError);
             }
         }
     </script>

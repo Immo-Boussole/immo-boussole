@@ -26,6 +26,7 @@ class ListingStatus(str, enum.Enum):
     NEW = "nouvelle"
     ACTIVE = "active"
     DISAPPEARED = "disparue"
+    REJECTED = "rejetee"
 
 
 class Source(str, enum.Enum):
