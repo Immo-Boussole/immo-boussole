@@ -313,25 +313,7 @@
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-        </nav>
-
-        <br>
-        <div class="sidebar-section-title">{{ t(request, 'nav.auto_searches') }}</div>
-
-        {% if queries %}
-        <div class="query-list">
-            {% for query in queries %}
-            <div class="query-item">
-                <div class="name">{{ query.name or query.url[:30] }}</div>
-                <div class="src">
-                    <span><i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i> {{ query.source.value|upper }}</span>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <br>
+        </nav><br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
@@ -419,7 +401,10 @@
                             </div>
                             
                             <div class="list-actions" style="width: 250px; background: var(--surface); border-left: 1px solid var(--border); padding: 1rem; display: flex; flex-direction: column; justify-content: center; gap: 0.5rem;">
-                                <a href="{{ listing.url }}" target="_blank" class="btn sm" style="width: 100%; justify-content: center;"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'auto_searches.view_listing') }}</a>
+                                <div style="display: flex; gap: 0.5rem; width: 100%; margin-bottom: 0.5rem;">
+                                    <button class="btn sm" onclick="refreshListing({{ listing.id }})" style="flex: 1; justify-content: center;"><i class="fa-solid fa-rotate-right"></i> {{ t(request, 'auto_searches.refresh_btn', 'Actualiser') }}</button>
+                                    <a href="{{ listing.url }}" target="_blank" class="btn sm" style="flex: 1; justify-content: center;"><i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'auto_searches.view_listing') }}</a>
+                                </div>
                                 <div style="display: flex; gap: 0.5rem; width: 100%;">
                                     <button class="btn sm primary" onclick="importListing({{ listing.id }})" style="flex: 1; justify-content: center; background: var(--accent); border-color: var(--accent);"><i class="fa-solid fa-check"></i> {{ t(request, 'auto_searches.import_btn') }}</button>
                                     <button class="btn sm btn-delete" onclick="rejectListing({{ listing.id }})" style="flex: 1; justify-content: center;"><i class="fa-solid fa-xmark"></i> {{ t(request, 'auto_searches.reject_btn') }}</button>
@@ -457,6 +442,23 @@
                 }
             } catch (err) {
                 alert(i18n_auto.networkError);
+            }
+        }
+
+        async function refreshListing(id) {
+            try {
+                // Change cursor to wait and disable button ideally, but since we reload:
+                document.body.style.cursor = 'wait';
+                const res = await fetch(`/api/listings/${id}/rescrape`, { method: 'POST' });
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert(i18n_auto.networkError);
+                    document.body.style.cursor = 'default';
+                }
+            } catch (err) {
+                alert(i18n_auto.networkError);
+                document.body.style.cursor = 'default';
             }
         }
 

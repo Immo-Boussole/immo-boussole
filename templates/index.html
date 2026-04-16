@@ -1018,25 +1018,7 @@
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-        </nav>
-
-        <br>
-        <div class="sidebar-section-title">{{ t(request, 'nav.auto_searches') }}</div>
-        {% if queries %}
-        <div class="query-list">
-            {% for query in queries %}
-            <div class="query-item">
-                <div class="name">{{ query.name or query.url[:30] }}</div>
-                <div class="src"><i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i>
-                    {{ query.source.value|upper }}</div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-
-
-        <br>
+        </nav><br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
