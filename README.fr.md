@@ -1,5 +1,7 @@
 # 🧭 Immo-Boussole
 
+[![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
+
 *Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
 
 [English version available here](README.md)
