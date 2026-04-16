@@ -312,26 +312,7 @@
             <a href="/listings/table" class="nav-link active"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-        </nav>
-
-        <br>
-        <div class="sidebar-section-title">{{ t(request, 'nav.auto_searches') }}</div>
-
-        {% if queries %}
-        <div class="query-list">
-            {% for query in queries %}
-            <div class="query-item" style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; font-size: 0.8rem;">
-                <div class="name" style="font-weight: 600;">{{ query.name or query.url[:30] }}</div>
-                <div class="src" style="color: var(--text-2); font-size: 0.7rem; margin-top: 0.15rem;">
-                    <i class="fa-solid fa-circle-dot" style="color: var(--green); font-size: 0.6rem;"></i>
-                    {{ query.source.value|upper }}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <br>
+        </nav><br>
         <div class="sidebar-section-title">{{ t(request, 'nav.ready') }}</div>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
