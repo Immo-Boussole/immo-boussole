@@ -11,13 +11,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies into a separate layer for caching
 COPY requirements.txt .
 RUN pip install --upgrade pip \
-    && pip install --prefix=/install --no-cache-dir -r requirements.txt
+    && pip install --prefix=/install --no-cache-dir -r requirements.txt \
+    && python -c "import urllib.request, tarfile; urllib.request.urlretrieve('https://nodejs.org/dist/v24.14.1/node-v24.14.1-linux-x64.tar.xz', 'node.tar.xz'); tar = tarfile.open('node.tar.xz'); tar.extractall(); tar.close();" \
+    && find /install -path "*/playwright/driver/node" -exec cp node-v24.14.1-linux-x64/bin/node {} \; \
+    && rm -rf node.tar.xz node-v24.14.1-linux-x64
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim
 
 WORKDIR /app
+
+# Upgrade system packages to patch vulnerabilities (e.g., openssl)
+RUN apt-get update && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
