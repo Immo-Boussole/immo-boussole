@@ -201,9 +201,10 @@ async def create_listing_from_details(
     photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
         # Avoid re-downloading if already present (unless it's a re-scrape with different photos?)
-            if local_paths:
-                listing.photos_local = photos_to_json(local_paths)
-                db.commit()
+        local_paths = await download_listing_photos(listing.id, photo_urls)
+        if local_paths:
+            listing.photos_local = photos_to_json(local_paths)
+            db.commit()
 
     # ── Geocoding ──
     if (listing.location or listing.city) and listing.latitude is None:
