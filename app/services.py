@@ -162,6 +162,7 @@ async def create_listing_from_details(
         (listing, is_new): the created/found listing and whether it's newly created
     """
     external_id = details.get("external_id", f"manual_{hash(original_url)}")
+    local_paths = [] # Initialize here to ensure it's always defined
 
     # Check if already exists by external_id or URL
     existing = db.query(Listing).filter(
@@ -198,14 +199,17 @@ async def create_listing_from_details(
     db.refresh(listing)
 
     # ── Download photos asynchronously in background ──
-    local_paths = []
     photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
         # Avoid re-downloading if already present
-        local_paths = await download_listing_photos(listing.id, photo_urls)
-        if local_paths:
-            listing.photos_local = photos_to_json(local_paths)
-            db.commit()
+        try:
+            downloaded = await download_listing_photos(listing.id, photo_urls)
+            if downloaded:
+                local_paths = downloaded
+                listing.photos_local = photos_to_json(local_paths)
+                db.commit()
+        except Exception as e:
+            print(f"[Services] Error downloading photos for listing {listing.id}: {e}")
 
     # ── Geocoding ──
     if (listing.location or listing.city) and listing.latitude is None:
