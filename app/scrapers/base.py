@@ -33,7 +33,7 @@ class BaseScraper(abc.ABC):
         Returns {"html": "<rendered HTML>"} or {} on failure.
         """
         from playwright.async_api import async_playwright
-        from playwright_stealth import stealth_async
+        from playwright_stealth import Stealth
 
         browserless_url = settings.BROWSERLESS_URL
         print(f"[Scraper] Extraction via Playwright/Browserless pour : {url}")
@@ -55,7 +55,10 @@ class BaseScraper(abc.ABC):
                     locale="fr-FR",
                 )
                 page = await context.new_page()
-                await stealth_async(page)
+                
+                # Apply stealth
+                stealth = Stealth()
+                await stealth.apply_stealth_async(page)
 
                 print(f"[Scraper] Navigation vers : {url}...")
                 await page.goto(url, wait_until="networkidle", timeout=60000)
