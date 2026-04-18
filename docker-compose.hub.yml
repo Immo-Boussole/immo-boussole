@@ -1,0 +1,69 @@
+# 🐳 Docker Compose for Production/Testing using Hub images
+# This file pulls images from Docker Hub instead of building locally.
+# Note: This is ideal for quick deployment without needing the source code on the host.
+
+name: immo-boussole-hub
+
+services:
+
+  # ── Main Application ─────────────────────────────────────────────────────────
+  immo-boussole:
+    image: wikijm/immo-boussole:${APP_VERSION:-latest}
+    container_name: immo-boussole-app
+    restart: unless-stopped
+    depends_on:
+      - browserless
+    ports:
+      - "8000:8000"
+    networks:
+      - immo-boussole-net
+    environment:
+      # SQLite database (path within the volume)
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+      # Headless browser (Playwright via CDP → Browserless)
+      BROWSERLESS_URL: "ws://browserless:3000"
+      SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
+      DEBUG: "${DEBUG:-false}"
+
+    volumes:
+      # SQLite database persistence
+      - db-data:/app/data
+      # Persistent storage for downloaded photos
+      - media-data:/app/static/media
+
+  # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - immo-boussole-net
+    environment:
+      - MAX_CONCURRENT_SESSIONS=5
+      - CONNECTION_TIMEOUT=120000
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
+      - PREBOOT_CHROME=true
+      - TOKEN=${BROWSERLESS_TOKEN:-}
+      - TZ=Europe/Paris
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ── Internal Network ─────────────────────────────────────────────────────────
+networks:
+  immo-boussole-net:
+    name: immo-boussole-net
+    driver: bridge
+
+# ── Persistent Volumes ───────────────────────────────────────────────────────
+volumes:
+  db-data:
+    name: immo-boussole-db
+  media-data:
+    name: immo-boussole-media

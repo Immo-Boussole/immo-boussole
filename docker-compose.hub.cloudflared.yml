@@ -1,0 +1,77 @@
+# 🐳 Dedicated Docker Compose for Hub Images + Cloudflared + Portainer
+# This file pulls images from Docker Hub and is designed for secure deployment.
+# All external communication passes through the Cloudflare Tunnel.
+
+name: immo-boussole-hub-cloudflared
+
+services:
+
+  # ── Main Application ─────────────────────────────────────────────────────────
+  immo-boussole:
+    image: wikijm/immo-boussole:${APP_VERSION:-latest}
+    container_name: immo-boussole-app
+    restart: unless-stopped
+    depends_on:
+      - browserless
+    networks:
+      - immo-boussole-net
+    environment:
+      # SQLite database (path within the volume)
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+      # Headless browser (Playwright via CDP → Browserless)
+      BROWSERLESS_URL: "ws://browserless:3000"
+      SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
+      DEBUG: "${DEBUG:-false}"
+    volumes:
+      # SQLite database persistence
+      - db-data:/app/data
+      # Persistent storage for downloaded photos
+      - media-data:/app/static/media
+    # NOTE: No "ports:" block is present.
+    # The application is only accessible via the Docker network or the Tunnel.
+
+  # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
+    restart: unless-stopped
+    networks:
+      - immo-boussole-net
+    environment:
+      - MAX_CONCURRENT_SESSIONS=5
+      - CONNECTION_TIMEOUT=120000
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
+      - PREBOOT_CHROME=true
+      - TOKEN=${BROWSERLESS_TOKEN:-}
+      - TZ=Europe/Paris
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Cloudflare Tunnel Connector ──────────────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    networks:
+      - immo-boussole-net
+    environment:
+      # Replace with your Zero Trust token or use a .env file
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
+
+# ── Internal Network ─────────────────────────────────────────────────────────
+networks:
+  immo-boussole-net:
+    name: immo-boussole-net
+    driver: bridge
+
+# ── Persistent Volumes ───────────────────────────────────────────────────────
+volumes:
+  db-data:
+    name: immo-boussole-db
+  media-data:
+    name: immo-boussole-media
