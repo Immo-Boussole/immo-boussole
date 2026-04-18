@@ -198,10 +198,10 @@ async def create_listing_from_details(
     db.refresh(listing)
 
     # ── Download photos asynchronously in background ──
-    photo_urls = details.get("photo_urls", [])
     local_paths = []
+    photo_urls = details.get("photo_urls", [])
     if photo_urls and download_photos:
-        # Avoid re-downloading if already present (unless it's a re-scrape with different photos?)
+        # Avoid re-downloading if already present
         local_paths = await download_listing_photos(listing.id, photo_urls)
         if local_paths:
             listing.photos_local = photos_to_json(local_paths)
