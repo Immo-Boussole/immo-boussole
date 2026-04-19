@@ -7,7 +7,7 @@
 
 [Version française disponible ici](README.fr.md)
 
-**Immo-Boussole** is a collaborative web application designed to centralize, catalog, and evaluate real estate listings (LeBonCoin, SeLoger) in a structured manner.
+**Immo-Boussole** is a collaborative web application designed to centralize, catalog, and evaluate real estate listings (LeBonCoin, SeLoger, and 8+ more platforms) in a structured manner.
 
 ![Dashboard](static/media/demo/exemple_tableaudebord.png)
 ![Listings Table](static/media/demo/exemple_tableaudesannonces.png)
@@ -17,9 +17,12 @@
 
 - **Smart Scraping**: Automatic extraction of details (price, area, DPE, taxes, charges, photos) from over 10 platforms:
   - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
+- **Scheduled Auto-Search**: Automatic scraping of all "Ready to Search" entries, running **every hour from 6:00 to 22:30**. New listings appear in the "Automatic Searches" view, pre-tagged with their source platform and search criteria.
+- **Force Search**: A button in the "Automatic Searches" view lets you trigger a full scraping cycle instantly, without waiting for the next scheduled run.
 - **Local Media Management**: Photos are downloaded and served locally to avoid dead links.
 - **Collaborative Reviews**: Separate rating and comment system.
 - **Ideal Property Profile**: Generation of a dynamic profile based on top-rated listings (average price, area, recurring pros/cons).
+- **Interactive Map**: Visualize all active and new listings on a geographic map.
 - **Premium Interface**: Modern dark design, descriptive cards, photo carousels, and a secure delete button with confirmation (slide).
 
 ---
@@ -34,36 +37,39 @@ Import active listings from **LeBonCoin** and **SeLoger**. The scraper automatic
 ![Dashboard with Listings](static/media/demo/demo_dashboard.png)
 *Initial state of the dashboard after importing 4 listings.*
 
-### 📸 2. Interactive Photo Gallery
+### 🤖 2. Automatic Searches & Scheduled Scraping
+Configure your search URLs in the **"Ready to Search"** view (platform + criteria + URL). The scheduler will automatically scrape all configured searches every hour between 6:00 and 22:30. New listings appear in **"Automatic Searches"**, showing the source platform and criteria as the first two columns. A **"Force Search"** button lets you trigger a full cycle instantly.
+
+### 📸 3. Interactive Photo Gallery
 The detail page includes a responsive carousel and a premium "lightbox" gallery for an immersive view of the properties.
 
 ![Photo Gallery Demo](static/media/demo/demo_gallery.png)
 
 *Interactive demonstration of the carousel and gallery.*
 
-### 👥 3. Collaborative Review System
+### 👥 4. Collaborative Review System
 The application allows multiple reviewers (e.g., **Jean DUPONT** and **Marie MARTIN**) to provide independent reviews, ratings, and notes on each property.
 
 ![Collaborative Reviews Demo](static/media/demo/demo_reviews.png)
 
 *Adding collaborative reviews and assigning ratings.*
 
-### 🌟 4. "Ideal Property" Dynamic Profile
+### 🌟 5. "Ideal Property" Dynamic Profile
 The application automatically synthesizes all highly-rated reviews to create your "Ideal Property" profile, highlighting recurring positive and negative points.
 
 ![Ideal Property Profile](static/media/demo/demo_ideal_profile.png)
 
 *Dynamic synthesis of reviews into a 'Perfect Match' profile.*
 
-### 🛡️ 5. Secure "Slide to Delete"
+### 🛡️ 6. Secure "Slide to Delete"
 To prevent accidental deletions, the interface uses a premium slide-to-confirm interaction.
 
 ![Deletion Demo](static/media/demo/demo_deletion.webp)
 
 *Demonstration of the secure slide-to-delete feature.*
 
-### 🔔 6. New Version Alert
-A banner automatically appears at the bottom of the home screen when a new version of the source code is available on GitHub. This mechanism discreetly compares the local commit hash with that of the main branch to keep you informed of the latest features and updates.
+### 🔔 7. New Version Alert
+A banner automatically appears at the bottom of the home screen when a new version of the source code is available on GitHub.
 
 ![Version Alert Demo](static/media/demo/demo_alert_banner.png)
 
@@ -73,7 +79,7 @@ A banner automatically appears at the bottom of the home screen when a new versi
 
 ### Prerequisites
 - Python 3.10+
-- [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) running locally (port 8191 by default) for scraping.
+- A [Browserless](https://www.browserless.io/) instance (or Docker, which bundles it automatically) for full scraping.
 
 ### Local Installation
 1. **Clone the project**
@@ -100,7 +106,7 @@ A banner automatically appears at the bottom of the home screen when a new versi
 
 ## 🐳 Running with Docker
 
-The project is fully containerized, automatically including the **FlareSolverr** scraping engine. A pre-built image is available on [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) and is automatically updated after each code modification via [GitHub Actions](.github/workflows/docker-publish.yml).
+The project is fully containerized, automatically including the **Browserless** scraping engine. A pre-built image is available on [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) and is automatically updated after each code modification via [GitHub Actions](.github/workflows/docker-publish.yml).
 
 1. **Launch all services**:
    You can either build the image locally or use the pre-built image from Docker Hub:
@@ -114,8 +120,6 @@ The project is fully containerized, automatically including the **FlareSolverr**
      docker compose -f docker-compose.hub.yml up -d
      ```
 
-   The local build command builds (or rebuilds) the image from the local source code and launches two containers: `immo-boussole` (the app) and `flaresolverr` (Cloudflare bypass).
-
    > [!TIP]
    > To update the application after a code change (when building locally), simply re-run:
    > `docker compose up -d --build immo-boussole`
@@ -123,19 +127,29 @@ The project is fully containerized, automatically including the **FlareSolverr**
 
 2. **Access**: The interface is available at [http://localhost:8000](http://localhost:8000).
 
-3. **Captcha Management (Optional)**:
-   If you encounter captcha blocks during scraping, you can enable the [2Captcha](https://2captcha.com/) solver:
-   - In your `.env` file, set `CAPTCHA_SOLVER=2captcha`.
-   - Enter your API key in `TWO_CAPTCHA_API_KEY=your_key_here`.
-   - Restart the containers: `docker compose up -d`.
-
-4. **Persistence**: The database and media are stored in named volumes (`immo-boussole-db` and `immo-boussole-media`).
+3. **Persistence**: The database and media are stored in named volumes (`immo-boussole-db` and `immo-boussole-media`).
 
 ### 🌐 Advanced Deployment (Portainer & Cloudflared)
 
 For secure production deployment on a remote server, you can use **Portainer** to manage your containers and **Cloudflared** (Cloudflare Zero Trust Tunnels) to securely expose the application to the Internet without opening ports.
 
 👉 **See the detailed guide: [Installation via Docker, Portainer, and Cloudflared](INSTALL_Docker+Portainer+Cloudflared.en.md)**
+
+---
+
+## ⚙️ Environment Configuration
+
+Key variables in `.env`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SECRET_KEY` | *(required)* | Session encryption key. Change in production. |
+| `DATABASE_URL` | `sqlite:///./immo_boussole.db` | Path to the SQLite database. |
+| `BROWSERLESS_URL` | `ws://localhost:3000` | WebSocket URL for the headless browser. |
+| `BROWSERLESS_TOKEN` | *(empty)* | Optional authentication token for Browserless. |
+| `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Human-readable** cron description displayed in the UI next to the "Force Search" button. |
+| `GEORISQUES_API_KEY` | *(optional)* | API key for the French Géorisques risk data service. |
+| `APP_VERSION` | `1.1.1-dev` | Version string shown in the sidebar footer. |
 
 ---
 
@@ -160,6 +174,7 @@ The system distinguishes between two primary roles:
 - **USER**:
   - Full access to property searching and evaluation.
   - Ability to import listings via URLs or manual entry.
+  - Access to the automatic search scheduling and force-search feature.
   - **Restriction**: No access to the administration panel.
 
 ---
@@ -167,51 +182,65 @@ The system distinguishes between two primary roles:
 ## 📖 User Guide
 
 1. **Add a property**: Click on "+ Add Listing" and paste the LeBonCoin or SeLoger URL.
-2. **Review**: Click on a card to view details, then fill out your section.
-3. **Delete**: On the dashboard, click the trash can icon on a card and slide to confirm.
-4. **Ideal Profile**: Check the global synthesis via the sidebar to see what type of property fits you best.
+2. **Set up auto-searches**: Go to **"Ready to Search"** and add a platform + criteria + URL. The scheduler will scrape it automatically every hour (6h–22h30).
+3. **Review new auto-found listings**: Open **"Automatic Searches"** to see, import, or reject newly discovered properties. Use **"Force Search"** to trigger an immediate cycle.
+4. **Review**: Click on a card to view details, then fill out your section.
+5. **Delete**: On the dashboard, click the trash can icon on a card and slide to confirm.
+6. **Ideal Profile**: Check the global synthesis via the sidebar to see what type of property fits you best.
 
 ## 🔌 API Documentation (REST)
 
 The application exposes a comprehensive REST API built with **FastAPI**. All endpoints require authentication (active session) and return an HTTP 401 code in case of unauthorized access.
 
 ### Listings
-- `GET /api/listings`: Retrieves the list of listings (optional search filters: `status`, `source`, `limit`).
+- `GET /api/listings`: Retrieves the list of listings (optional filters: `status`, `source`, `limit`).
 - `GET /api/listings/{listing_id}`: Retrieves full details of a specific listing.
-- `POST /api/listings/submit-url`: Adds a new listing via a URL (automatically starts scraping). Accepts `url` and `skip_scraping` (boolean) in JSON.
+- `POST /api/listings/submit-url`: Adds a new listing via a URL (automatically starts scraping).
 - `POST /api/listings/{listing_id}/rescrape`: Manually triggers a scrape to update an existing listing.
-- `PUT /api/listings/{listing_id}`: Manually updates the attributes of a listing (title, price, area, DPE, etc.).
+- `PUT /api/listings/{listing_id}`: Manually updates the attributes of a listing.
 - `DELETE /api/listings/{listing_id}`: Deletes a listing and its associated reviews.
+- `POST /api/listings/{listing_id}/import`: Imports a listing (sets status to ACTIVE).
+- `POST /api/listings/{listing_id}/reject`: Rejects a listing (sets status to REJECTED).
 - `POST /api/listings/{listing_id}/photos`: Imports new photos from a list of URLs.
 - `POST /api/listings/{listing_id}/photos/upload`: Directly uploads photos (Multipart Form).
 
+### Automatic Searches
+- `POST /api/searches/force`: **Triggers a full scraping cycle immediately** in the background (visible in the "Automatic Searches" view).
+
+### Ready Searches
+- `GET /searches/ready` *(page)*: Lists all configured search URLs.
+- `POST /api/searches/ready`: Adds a new ready search (platform, criteria, URL).
+- `PUT /api/searches/ready/{id}`: Updates an existing ready search.
+- `DELETE /api/searches/ready/{id}`: Removes a ready search.
+
 ### Administration (Admin only)
 - `GET /admin/users`: Interface for managing users.
-- `POST /api/admin/users`: Creates a new user account (JSON body: `username`, `password`, `role`).
-- `DELETE /api/admin/users/{user_id}`: Deletes a user account (prevents self-deletion).
+- `POST /api/admin/users`: Creates a new user account.
+- `DELETE /api/admin/users/{user_id}`: Deletes a user account.
 
 ### Reviews
 - `GET /api/listings/{listing_id}/reviews`: Lists all reviews left on a listing.
-- `POST /api/listings/{listing_id}/reviews`: Adds or updates a collaborative review (ratings, pros, cons).
+- `POST /api/listings/{listing_id}/reviews`: Adds or updates a collaborative review.
 - `PUT /api/reviews/{review_id}`: Modifies an existing specific review.
 - `DELETE /api/reviews/{review_id}`: Deletes an existing review.
 
 ### Ideal Profile
-- `GET /api/profile/ideal`: Returns the dynamic synthesis of the ideal property, calculated from the highest-rated listings.
+- `GET /api/profile/ideal`: Returns the dynamic synthesis of the ideal property.
 
-### Saved Searches (Queries)
-- `GET /api/queries`: Returns the list of scheduled automatic searches.
-- `POST /api/queries`: Adds a new search to be scheduled (URL, name, source).
-
-The API is also fully documented and testable via the integrated Swagger interface, accessible at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (or `/redoc`) when the application is running.
+The API is also fully documented and testable via the integrated Swagger interface at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
 ## 🏗️ Project Structure
 
-- `app/`: Backend logic (scrapers, models, API services).
-- `templates/`: HTML pages (Jinja2).
+- `app/`: Backend logic (scrapers, models, API services, scheduler).
+  - `main.py`: FastAPI routes and application entry point.
+  - `models.py`: SQLAlchemy ORM models (Listing, ReadySearch, SearchQuery, …).
+  - `services.py`: Scraping and listing creation business logic.
+  - `scheduler.py`: APScheduler cron jobs (hourly 6h–22h30).
+  - `database.py`: DB engine, session factory, and automatic migrations.
+- `templates/`: Jinja2 HTML pages.
 - `static/`: CSS assets and downloaded media (listing photos).
+- `locales/`: Internationalization JSON files (`fr.json`, `en.json`).
 - `tests/`: Unit and integration test scripts.
-- `debug/`: Debugging tools and temporary scraping logs.
 - `Dockerfile` & `docker-compose.yml`: Docker configuration.
 - `immo_boussole.db`: SQLite database (managed automatically).
 - `.ai/`: Specialized documentation and AI-related context.
@@ -227,12 +256,13 @@ The project includes a comprehensive testing framework to ensure stability:
 Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
 
 ## 🏗️ Technical Stack
-- **Backend**: FastAPI (Python)
-- **Database**: SQLite + SQLAlchemy (Automatic migrations included)
-- **Scraping**: FlareSolverr / BeautifulSoup4 / HTTPX
+- **Backend**: FastAPI (Python 3.12)
+- **Database**: SQLite + SQLAlchemy (Automatic migrations included, no Alembic required)
+- **Scraping**: Playwright + Browserless / BeautifulSoup4 / HTTPX
 - **Additional Scrapers**: Figaro and LogicImmo adapted from the [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper) project
 - **Frontend**: HTML5 / Vanilla CSS / Jinja2
-- **Scheduler**: APScheduler (for automatic searches)
+- **Scheduler**: APScheduler with `CronTrigger` (hourly runs, 6h–22h30)
+- **Geo & Risk**: Nominatim (geocoding), OSRM (routing), Géorisques API (risk data)
 
 
 ## 🚀 Upcoming Features
@@ -240,10 +270,13 @@ Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
 - ✅ Protect access to the entire site with an authentication mechanism.
 - ✅ Create an admin account setup system on first run.
 - ✅ Create an administration interface.
-- ✅ Create a user account system (at least one default user account, the admin should not be able to import listings).
-- ⬜ Create a real estate agent account system (ability to view imported listings in the app, user feedback, and the ideal property profile).
-- ⬜ Add a favorite system for listings.
-- ⬜ Add a favorite system for searches.
+- ✅ Create a user account system (admin cannot import listings).
 - ✅ Make the application multilingual (French and English).
+- ✅ Interactive map of listings.
+- ✅ Automatic scheduled searches (hourly, 6h–22h30) from "Ready to Search" entries.
+- ✅ "Force Search" button to trigger an immediate scraping cycle.
+- ✅ Platform & criteria columns in the "Automatic Searches" view.
+- ⬜ Create a real estate agent account system.
+- ⬜ Add a favorite system for listings and searches.
 - ⬜ Add a notification system (email, push, etc.).
-- ⬜ Re-implement the duplicate detection mechanism (alert if a similar property is already present).
+- ⬜ Re-implement the duplicate detection mechanism.

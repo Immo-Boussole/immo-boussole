@@ -644,8 +644,21 @@ def auto_searches_page(
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
 
+    # Build a lookup map of ReadySearch by ID for fast access
+    ready_search_map = {rs.id: rs for rs in db.query(ReadySearch).all()}
+
     for listing in new_listings:
         listing._photos = json_to_photos(listing.photos_local)
+
+        # Resolve platform and criteria — first 2 columns in auto_searches view
+        if listing.source_ready_search_id and listing.source_ready_search_id in ready_search_map:
+            rs = ready_search_map[listing.source_ready_search_id]
+            listing._platform = rs.platform.upper()
+            listing._criteria = rs.criteria or "-"
+        else:
+            # Fallback for listings created before this feature, or via other paths
+            listing._platform = listing.source.value.upper() if listing.source else "-"
+            listing._criteria = listing.source_criteria or "-"
 
     # Group listings by date_added.date()
     from itertools import groupby
@@ -657,6 +670,7 @@ def auto_searches_page(
         "grouped_listings": grouped,
         "queries": queries,
         "listings": all_listings,
+        "scraping_schedule": settings.SCRAPING_SCHEDULE,
         "title": "Recherches Automatiques — Immo-Boussole",
     })
 
@@ -1488,3 +1502,20 @@ def delete_ready_search(request: Request, search_id: int, db: Session = Depends(
     db.delete(search)
     db.commit()
     return {"status": "deleted", "id": search_id}
+
+
+# ─── API: Force Scraping ───────────────────────────────────────────────────────
+
+@app.post("/api/searches/force")
+def force_scraping(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Manually triggers a full scraping cycle immediately,
+    running it in a background thread so the response returns instantly.
+    """
+    from app.scheduler import scraping_job
+    background_tasks.add_task(scraping_job)
+    return {"status": "started", "message": "Scraping forcé lancé en arrière-plan."}

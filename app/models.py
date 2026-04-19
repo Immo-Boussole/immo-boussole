@@ -148,6 +148,10 @@ class Listing(Base):
     # Risk data
     georisques_json = Column(Text, nullable=True)
 
+    # Source tracking (which ReadySearch generated this listing)
+    source_ready_search_id = Column(Integer, ForeignKey("ready_searches.id"), nullable=True)
+    source_criteria        = Column(String, nullable=True)  # Copy of ReadySearch.criteria for persistence
+
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
 

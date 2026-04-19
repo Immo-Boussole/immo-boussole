@@ -286,12 +286,18 @@ async def update_listing_georisques(listing: Listing, db: Session):
 
 # ─── Scrape and Diff (Search Queries) ─────────────────────────────────────────
 
-async def scrape_and_diff(query: SearchQuery, db: Session):
+async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
     """
     Runs the full scrape cycle for a search query:
     1. Scrapes listing results
     2. Marks disappeared listings
     3. Creates new listings with duplicate detection
+    
+    Args:
+        query: The SearchQuery to run (URL + source/platform)
+        db: DB session
+        ready_search: Optional ReadySearch that triggered this job (used to store
+                      platform/criteria origin on new listings for the auto_searches view)
     """
     scrapers = {
         Source.LEBONCOIN: LeboncoinScraper(),
@@ -358,6 +364,9 @@ async def scrape_and_diff(query: SearchQuery, db: Session):
                     scraped_at=datetime.now(timezone.utc),
                     is_duplicate=False,
                     duplicate_of_id=None,
+                    # Store the origin ReadySearch for the auto_searches view
+                    source_ready_search_id=ready_search.id if ready_search else None,
+                    source_criteria=ready_search.criteria if ready_search else None,
                 )
 
                 # Geocoding for new listing
