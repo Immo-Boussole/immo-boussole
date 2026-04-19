@@ -8,4 +8,7 @@ class ListingStatus(str, enum.Enum):
     DISAPPEARED = "disparue"
 
 template = Template('data-status="{{ status }}"')
-print(template.render(status=ListingStatus.NEW))
+output = template.render(status=ListingStatus.NEW)
+print(output)
+assert output == 'data-status="nouvelle"'
+print("Jinja test passed.")

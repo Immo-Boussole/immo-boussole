@@ -214,6 +214,17 @@ The API is also fully documented and testable via the integrated Swagger interfa
 - `debug/`: Debugging tools and temporary scraping logs.
 - `Dockerfile` & `docker-compose.yml`: Docker configuration.
 - `immo_boussole.db`: SQLite database (managed automatically).
+- `.ai/`: Specialized documentation and AI-related context.
+
+## 🧪 Testing
+
+The project includes a comprehensive testing framework to ensure stability:
+
+- **Run all tests**: `python tests/run_tests.py`
+- **CI Mode (Fast)**: `python tests/run_tests.py --ci`
+- **Automated CI**: Managed via GitHub Actions on every push or manual trigger.
+
+Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
 
 ## 🏗️ Technical Stack
 - **Backend**: FastAPI (Python)
