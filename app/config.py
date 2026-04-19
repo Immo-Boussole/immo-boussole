@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12
+    SCRAPING_SCHEDULE: str = "Toutes les heures, de 6h à 22h30"  # Human-readable label shown in the UI
 
     # Browserless URL (headless Chrome via CDP)
     BROWSERLESS_URL: str = "ws://localhost:3000"

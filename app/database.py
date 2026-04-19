@@ -123,6 +123,10 @@ _MIGRATIONS = [
 
     # listings — Géorisques report v7
     ("listings", "georisques_json",      "TEXT"),
+
+    # listings — ReadySearch source tracking v8
+    ("listings", "source_ready_search_id", "INTEGER"),
+    ("listings", "source_criteria",        "TEXT"),
 ]
 
 
