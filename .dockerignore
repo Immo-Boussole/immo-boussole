@@ -13,11 +13,11 @@ env/
 ENV/
 
 # Tests & debug files
+tests/
 test_*.py
 *_debug.*
 *_snapshot.*
 debug_*.py
-add_and_run.py
 nodes_debug.json
 
 # Database (stored in Docker volume)
