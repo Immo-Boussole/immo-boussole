@@ -7,6 +7,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,5 +34,212 @@ jobs:
         # Add any other dependencies if they are missing from requirements.txt
         
     - name: Run tests (CI mode)
+      id: run_tests
+      continue-on-error: true
       run: |
-        python tests/run_tests.py --ci
+        python tests/run_tests.py --ci --report=test-results.json
+
+    - name: Process test results & manage issues
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          // ── Load test report ────────────────────────────────────
+          const reportPath = path.join(process.env.GITHUB_WORKSPACE, 'test-results.json');
+          if (!fs.existsSync(reportPath)) {
+            core.warning('test-results.json not found — skipping issue management.');
+            return;
+          }
+          const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+
+          const LABEL_PREFIX = 'ci:test-failure:';
+          const CI_LABEL      = 'ci-automated';
+          const commitSha     = context.sha;
+          const shortSha      = commitSha.substring(0, 7);
+          const branch        = context.ref.replace('refs/heads/', '');
+          const runUrl        = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+          // ── Ensure the ci-automated label exists ────────────────
+          try {
+            await github.rest.issues.getLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: CI_LABEL
+            });
+          } catch {
+            await github.rest.issues.createLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: CI_LABEL,
+              color: 'b60205',
+              description: 'Issue created automatically by CI test failures'
+            });
+          }
+
+          // ── Fetch all open CI issues ────────────────────────────
+          const openIssues = await github.paginate(
+            github.rest.issues.listForRepo,
+            {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: CI_LABEL,
+              per_page: 100
+            }
+          );
+
+          // Index open issues by their test-specific label
+          const issuesByTestLabel = {};
+          for (const issue of openIssues) {
+            for (const label of issue.labels) {
+              const labelName = typeof label === 'string' ? label : label.name;
+              if (labelName.startsWith(LABEL_PREFIX)) {
+                issuesByTestLabel[labelName] = issue;
+              }
+            }
+          }
+
+          // ── Process each test result ────────────────────────────
+          const failedTests  = report.tests.filter(t => t.status !== 'passed');
+          const passedTests  = report.tests.filter(t => t.status === 'passed');
+
+          // Create / update issues for failed tests
+          for (const test of failedTests) {
+            const testLabel = `${LABEL_PREFIX}${test.script}`;
+            const title = `🔴 CI Failure: ${test.script} (${test.group})`;
+
+            // Truncate output to avoid massive issue bodies
+            const stdout = (test.stdout || '').substring(0, 3000);
+            const stderr = (test.stderr || '').substring(0, 3000);
+
+            const body = [
+              `## CI Test Failure`,
+              ``,
+              `| Field | Value |`,
+              `|-------|-------|`,
+              `| **Test** | \`${test.script}\` |`,
+              `| **Group** | ${test.group} |`,
+              `| **Status** | \`${test.status}\` |`,
+              `| **Duration** | ${test.duration}s |`,
+              `| **Commit** | [\`${shortSha}\`](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}) |`,
+              `| **Branch** | \`${branch}\` |`,
+              `| **Run** | [View workflow run](${runUrl}) |`,
+              ``,
+              `### stdout`,
+              '```',
+              stdout || '(empty)',
+              '```',
+              `### stderr`,
+              '```',
+              stderr || '(empty)',
+              '```',
+              ``,
+              `---`,
+              `*This issue was created automatically by CI. It will be auto-closed when the test passes.*`
+            ].join('\n');
+
+            // Ensure the per-test label exists
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: testLabel
+              });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: testLabel,
+                color: 'e11d48',
+                description: `CI tracking label for ${test.script}`
+              });
+            }
+
+            const existing = issuesByTestLabel[testLabel];
+            if (existing) {
+              // Avoid duplicates — just add a comment noting continued failure
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: [
+                  `⚠️ **Still failing** on commit [\`${shortSha}\`](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}) (branch: \`${branch}\`)`,
+                  ``,
+                  `Status: \`${test.status}\` | Duration: ${test.duration}s`,
+                  `[View workflow run](${runUrl})`
+                ].join('\n')
+              });
+              core.info(`Issue #${existing.number} already exists for ${test.script} — added comment.`);
+            } else {
+              // Create new issue
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: [CI_LABEL, testLabel]
+              });
+              core.info(`Created issue #${newIssue.data.number} for ${test.script}`);
+            }
+          }
+
+          // ── Auto-close issues for tests that now pass ──────────
+          for (const test of passedTests) {
+            const testLabel = `${LABEL_PREFIX}${test.script}`;
+            const existing = issuesByTestLabel[testLabel];
+
+            if (existing) {
+              const closingBody = [
+                `✅ **Test \`${test.script}\` is now passing.**`,
+                ``,
+                `| Field | Value |`,
+                `|-------|-------|`,
+                `| **Fixed in commit** | [\`${shortSha}\`](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}) |`,
+                `| **Branch** | \`${branch}\` |`,
+                `| **Run** | [View workflow run](${runUrl}) |`,
+                ``,
+                branch !== 'main'
+                  ? `> **Note:** This fix is on branch \`${branch}\`. Merge to \`main\` to apply the fix to production.`
+                  : `> This fix has been applied to \`main\`.`,
+                ``,
+                `---`,
+                `*Automatically closed by CI.*`
+              ].join('\n');
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: closingBody
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+
+              core.info(`Closed issue #${existing.number} — ${test.script} now passes.`);
+            }
+          }
+
+          // ── Summary ────────────────────────────────────────────
+          const summary = [
+            `### CI Issue Management Summary`,
+            `- **Passed:** ${report.total_passed}`,
+            `- **Failed:** ${report.total_failed}`,
+            `- **Issues created:** ${failedTests.filter(t => !issuesByTestLabel[`${LABEL_PREFIX}${t.script}`]).length}`,
+            `- **Issues updated:** ${failedTests.filter(t => issuesByTestLabel[`${LABEL_PREFIX}${t.script}`]).length}`,
+            `- **Issues closed:** ${passedTests.filter(t => issuesByTestLabel[`${LABEL_PREFIX}${t.script}`]).length}`
+          ].join('\n');
+          core.summary.addRaw(summary);
+          await core.summary.write();
+
+    - name: Fail workflow if tests failed
+      if: steps.run_tests.outcome == 'failure'
+      run: exit 1
