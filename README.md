@@ -1,6 +1,7 @@
 # 🧭 Immo-Boussole
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
+[![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
 
 *Note: At its core, this project targets French platforms for property search. / Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens.*
 
@@ -99,16 +100,24 @@ A banner automatically appears at the bottom of the home screen when a new versi
 
 ## 🐳 Running with Docker
 
-The project is fully containerized, automatically including the **FlareSolverr** scraping engine.
+The project is fully containerized, automatically including the **FlareSolverr** scraping engine. A pre-built image is available on [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) and is automatically updated after each code modification via [GitHub Actions](.github/workflows/docker-publish.yml).
 
 1. **Launch all services**:
-   ```bash
-   docker compose up -d --build immo-boussole
-   ```
-   This command builds (or rebuilds) the image from the local source code and launches two containers: `immo-boussole` (the app) and `flaresolverr` (Cloudflare bypass).
+   You can either build the image locally or use the pre-built image from Docker Hub:
+
+   - **From source (local build)**:
+     ```bash
+     docker compose up -d --build immo-boussole
+     ```
+   - **From Docker Hub (pre-built)**:
+     ```bash
+     docker compose -f docker-compose.hub.yml up -d
+     ```
+
+   The local build command builds (or rebuilds) the image from the local source code and launches two containers: `immo-boussole` (the app) and `flaresolverr` (Cloudflare bypass).
 
    > [!TIP]
-   > To update the application after a code change, simply re-run this same command:
+   > To update the application after a code change (when building locally), simply re-run:
    > `docker compose up -d --build immo-boussole`
    > The image will be updated with your changes, but **your data (database and photos) will remain intact** thanks to persistent volumes.
 
