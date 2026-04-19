@@ -41,7 +41,7 @@ jobs:
 
     - name: Process test results & manage issues
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ff407f1d24f00f # v7.1.0
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
       with:
         script: |
           const fs = require('fs');
