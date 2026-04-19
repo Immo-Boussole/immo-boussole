@@ -1,6 +1,7 @@
 # 🧭 Immo-Boussole
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
+[![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
 
 *Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
 
@@ -100,16 +101,24 @@ Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une 
 
 ## 🐳 Utilisation avec Docker
 
-Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **FlareSolverr**.
+Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **FlareSolverr**. Une image pré-construite est disponible sur [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) et est mise à jour automatiquement après chaque modification du code via [GitHub Actions](.github/workflows/docker-publish.yml).
 
 1. **Lancer l'ensemble des services** :
-   ```bash
-   docker compose up -d --build immo-boussole
-   ```
-   Cette commande construit (ou reconstruit) l'image à partir du code source local et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
+   Vous pouvez soit construire l'image localement, soit utiliser l'image pré-construite de Docker Hub :
+
+   - **Depuis les sources (construction locale)** :
+     ```bash
+     docker compose up -d --build immo-boussole
+     ```
+   - **Depuis Docker Hub (image pré-construite)** :
+     ```bash
+     docker compose -f docker-compose.hub.yml up -d
+     ```
+
+   La commande de construction locale compile (ou recompile) l'image à partir du code source local et lance deux conteneurs : `immo-boussole` (l'application) et `flaresolverr` (le bypass Cloudflare).
 
    > [!TIP]
-   > Pour mettre à jour l'application après une modification de code, relancez simplement cette même commande :
+   > Pour mettre à jour l'application après une modification de code (en construction locale), relancez simplement :
    > `docker compose up -d --build immo-boussole`
    > L'image sera mise à jour avec vos changements, mais **vos données (base de données et photos) resteront intactes** grâce aux volumes persistants.
 

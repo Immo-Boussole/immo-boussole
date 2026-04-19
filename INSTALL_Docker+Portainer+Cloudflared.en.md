@@ -35,14 +35,19 @@ We will deploy Immo-Boussole, FlareSolverr (for scraping), and the Cloudflared c
 
 1. Log in to your **Portainer** interface.
 2. Select your environment (usually `local`) and go to **Stacks**.
-5. Select the **Repository** method.
+3. Select the **Repository** method.
    > [!TIP]
    > This method is recommended because Portainer handles Git cloning internally, avoiding `git not found` errors on NAS systems (like Synology).
 
-6. **Repository configuration**:
+4. **Repository configuration**:
    - **Repository URL**: `https://github.com/Immo-Boussole/immo-boussole.git` (or your **own fork** URL)
    - **Repository Reference**: `refs/heads/main`
-   - **Compose file path**: `docker-compose.cloudflared.yml`
+   - **Compose file path**: 
+     - `docker-compose.hub.cloudflared.yml` (Recommended: Pulls pre-built image from [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general))
+     - `docker-compose.cloudflared.yml` (Manual build: Compiles the application from source code)
+
+   > [!IMPORTANT]
+   > The Docker image is automatically updated on Docker Hub after each code change via GitHub Actions. Using the Hub version ensures a faster deployment and avoids compilation on your server.
 
 7. **Environment variables** (at the bottom of the page):
    - **Required changes**: Add a variable named `TUNNEL_TOKEN` and paste your Zero Trust token.
