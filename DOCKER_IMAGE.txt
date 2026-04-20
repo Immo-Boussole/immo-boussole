@@ -1,1 +1,9 @@
-wikijm/immo-boussole:latest
+wikijm/immo-boussole:eaa749c4acfd2da92b87564e5fe85cd4cd2357de
+
+# Tag court (docker pull)
+wikijm/immo-boussole:eaa749c4acfd2da92b87564e5fe85cd4cd2357de
+
+# Généré automatiquement par GitHub Actions
+# Date   : 2026-04-20T16:58:39Z
+# Commit : eaa749c4acfd2da92b87564e5fe85cd4cd2357de
+# Ref    : main
