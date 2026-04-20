@@ -76,3 +76,73 @@ jobs:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           only-severities: critical,high
           exit-code: true
+
+  update-image-ref:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          # Le GITHUB_TOKEN par défaut suffit pour pousser sur le même repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine image identifier
+        id: image_id
+        run: |
+          # Tag principal : semver si c'est un tag, sinon SHA long
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+            IMAGE_SHORT="${{ env.IMAGE_NAME }}:${VERSION}"
+          else
+            IMAGE_SHORT="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          fi
+          IMAGE_FULL="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "image_short=${IMAGE_SHORT}" >> "$GITHUB_OUTPUT"
+          echo "image_full=${IMAGE_FULL}"   >> "$GITHUB_OUTPUT"
+
+      - name: Update DOCKER_IMAGE.txt
+        run: |
+          {
+            echo "${{ steps.image_id.outputs.image_full }}"
+            echo ""
+            echo "# Tag court (docker pull)"
+            echo "${{ steps.image_id.outputs.image_short }}"
+            echo ""
+            echo "# Généré automatiquement par GitHub Actions"
+            echo "# Date   : $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "# Commit : ${{ github.sha }}"
+            echo "# Ref    : ${{ github.ref_name }}"
+          } > DOCKER_IMAGE.txt
+
+      - name: Update Docker image badge in README.md
+        run: |
+          SHORT="${{ steps.image_id.outputs.image_short }}"
+          # Encode pour shields.io : / → %2F, : → %3A
+          ENCODED=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "${SHORT}")
+          BADGE="[![Docker Image](https://img.shields.io/badge/image-${ENCODED}-0db7ed?logo=docker\&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)"
+          sed -i "s|^\[!\[Docker Image\].*hub\.docker\.com/r/wikijm/immo-boussole.*|${BADGE}|" README.md
+
+      - name: Update Docker image badge in README.fr.md
+        run: |
+          SHORT="${{ steps.image_id.outputs.image_short }}"
+          ENCODED=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "${SHORT}")
+          BADGE="[![Image Docker](https://img.shields.io/badge/image-${ENCODED}-0db7ed?logo=docker\&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)"
+          sed -i "s|^\[!\[Image Docker\].*hub\.docker\.com/r/wikijm/immo-boussole.*|${BADGE}|" README.fr.md
+
+      - name: Commit and push updated files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DOCKER_IMAGE.txt README.md README.fr.md
+          if git diff --cached --quiet; then
+            echo "Aucun changement à committer."
+          else
+            git commit -m "chore: update Docker image ref → ${{ steps.image_id.outputs.image_short }} [skip ci]"
+            git push
+          fi
