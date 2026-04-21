@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Optional Browserless authentication token
     BROWSERLESS_TOKEN: str = ""
 
+    # Browserless connection timeout (seconds)
+    BROWSERLESS_CONNECT_TIMEOUT: int = 30
+
     # Versioning (overridden during build)
     APP_VERSION: str = "1.1.1-dev"
 
