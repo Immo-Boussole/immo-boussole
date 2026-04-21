@@ -12,7 +12,8 @@ services:
     container_name: immo-boussole-app
     restart: unless-stopped
     depends_on:
-      - browserless
+      browserless:
+        condition: service_healthy
     ports:
       - "8000:8000"
     networks:
@@ -33,13 +34,20 @@ services:
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
-    image: browserless/chrome:latest
+    image: browserless/chrome:1-chrome-stable
     container_name: browserless
     restart: unless-stopped
+    shm_size: 2gb
     ports:
       - "3000:3000"
     networks:
       - immo-boussole-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     environment:
       - MAX_CONCURRENT_SESSIONS=5
       - CONNECTION_TIMEOUT=120000

@@ -49,16 +49,47 @@ class BaseScraper(abc.ABC):
                     print("[Scraper] Warning: playwright_stealth not found, modern Stealth class or stealth_async missing. Proceeding without stealth.")
                     pass
 
-        browserless_url = settings.BROWSERLESS_URL
+        # --- Browserless URL Preparation ---
+        base_url = settings.BROWSERLESS_URL.rstrip("/")
+        # Append /playwright path if not present (recommended for Browserless Playwright connections)
+        if not base_url.endswith("/playwright"):
+            base_url = f"{base_url}/playwright"
+        
+        # Append token if provided
+        token = settings.BROWSERLESS_TOKEN
+        browserless_url = f"{base_url}?token={token}" if token else base_url
+        
         print(f"[Scraper] Extraction via Playwright/Browserless pour : {url}")
 
         pw = None
         browser = None
         context = None
+        
+        # Retry logic for the connection
+        max_retries = 3
+        retry_delay = 5 # seconds
+        
         try:
             pw = await async_playwright().start()
+            
+            # --- Connection with Retries ---
+            for attempt in range(1, max_retries + 1):
+                try:
+                    print(f"[Scraper] Connexion à Browserless (tentative {attempt}/{max_retries})...")
+                    browser = await pw.chromium.connect_over_cdp(
+                        browserless_url, 
+                        timeout=settings.BROWSERLESS_CONNECT_TIMEOUT * 1000
+                    )
+                    break # Success!
+                except Exception as e:
+                    if attempt < max_retries:
+                        print(f"[Scraper] Échec connexion Browserless (tentative {attempt}): {e}. Nouvel essai dans {retry_delay}s...")
+                        await asyncio.sleep(retry_delay)
+                    else:
+                        raise e # Final attempt failed
+            
             try:
-                browser = await pw.chromium.connect_over_cdp(browserless_url)
+                # Once connected, proceed with page extraction
                 context = await browser.new_context(
                     user_agent=(
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
