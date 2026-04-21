@@ -28,7 +28,7 @@ RUN apt-get update && apt-get upgrade -y \
 
 LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
-ARG APP_VERSION="1.1.1-dev"
+ARG APP_VERSION="${APP_VERSION}"
 LABEL version="${APP_VERSION}"
 LABEL org.opencontainers.image.version="${APP_VERSION}"
 
