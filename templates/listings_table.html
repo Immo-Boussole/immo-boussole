@@ -286,6 +286,113 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+
+        /* ── Filter Bar ── */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .filter-bar .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-bar .filter-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+
+        .filter-input, .filter-select {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            padding: 0.45rem 0.75rem;
+            outline: none;
+            transition: var(--trans);
+            width: 100%;
+        }
+        .filter-input:focus, .filter-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.15);
+        }
+        .filter-select option { background: var(--surface-2); }
+
+        .btn-reset-filter {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text-2);
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.45rem 0.9rem;
+            cursor: pointer;
+            transition: var(--trans);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-reset-filter:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .results-count {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-2);
+            white-space: nowrap;
+            padding-left: 0.25rem;
+        }
+        .results-count span { color: var(--accent); }
+
+        /* ── Sortable columns ── */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.75rem;
+            white-space: nowrap;
+        }
+        th.sortable .sort-icon {
+            position: absolute;
+            right: 0.55rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.3;
+            font-size: 0.65rem;
+            transition: var(--trans);
+        }
+        th.sortable:hover .sort-icon { opacity: 0.7; color: var(--accent); }
+        th.sortable.asc .sort-icon,
+        th.sortable.desc .sort-icon { opacity: 1; color: var(--accent); }
+        th.sortable.asc { color: var(--accent); }
+        th.sortable.desc { color: var(--accent); }
+
+        .no-results-row td {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--text-2);
+            font-size: 0.875rem;
+        }
     </style>
 </head>
 
@@ -361,26 +468,113 @@
         </header>
 
         <div class="content">
+
+            <!-- Filter Bar -->
+            <div class="filter-bar" id="filter-bar">
+                <div class="filter-group" style="flex: 2; min-width: 220px;">
+                    <label for="filter-search"><i class="fa-solid fa-magnifying-glass"></i></label>
+                    <input id="filter-search" class="filter-input" type="text" placeholder="{{ t(request, 'filter.search_placeholder', 'Rechercher…') }}" oninput="applyFilters()">
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-source">{{ t(request, 'table.source') }}</label>
+                    <select id="filter-source" class="filter-select" onchange="applyFilters()">
+                        <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
+                        {% set sources = listings | map(attribute='source') | map(attribute='value') | unique | list | sort %}
+                        {% for src in sources %}
+                        <option value="{{ src|upper }}">{{ src|upper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-status">{{ t(request, 'table.status') }}</label>
+                    <select id="filter-status" class="filter-select" onchange="applyFilters()">
+                        <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
+                        {% set statuses = listings | map(attribute='status') | map(attribute='value') | unique | list | sort %}
+                        {% for st in statuses %}
+                        <option value="{{ st }}">{{ t(request, 'misc.' + st, st|upper) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filter-dpe">{{ t(request, 'table.dpe') }}</label>
+                    <select id="filter-dpe" class="filter-select" onchange="applyFilters()">
+                        <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="G">G</option>
+                        <option value="NC">N/C</option>
+                    </select>
+                </div>
+
+                <button class="btn-reset-filter" onclick="resetFilters()">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'filter.reset', 'Réinitialiser') }}
+                </button>
+
+                <div class="results-count" id="results-count">
+                    <span id="count-visible">{{ listings|length }}</span> / {{ listings|length }}
+                </div>
+            </div>
+
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
                             <th style="width: 40px;"></th>
-                            <th>{{ t(request, 'table.title') }}</th>
-                            <th>{{ t(request, 'table.source') }}</th>
-                            <th>{{ t(request, 'table.location') }}</th>
-                            <th>{{ t(request, 'table.price') }}</th>
-                            <th>{{ t(request, 'table.area') }}</th>
-                            <th>{{ t(request, 'table.rooms') }}</th>
-                            <th>{{ t(request, 'table.dpe') }}</th>
-                            <th>{{ t(request, 'table.status') }}</th>
+                            <th class="sortable" data-col="1" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.title') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="2" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.source') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="3" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.location') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="4" data-type="number" onclick="sortTable(this)">
+                                {{ t(request, 'table.price') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="5" data-type="number" onclick="sortTable(this)">
+                                {{ t(request, 'table.area') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="6" data-type="number" onclick="sortTable(this)">
+                                {{ t(request, 'table.rooms') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="7" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.dpe') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="8" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.status') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
                             <th>{{ t(request, 'table.action') }}</th>
                         </tr>
                     </thead>
 
-                    <tbody>
+                    <tbody id="table-body">
                         {% for listing in listings %}
-                        <tr>
+                        <tr
+                            data-title="{{ listing.title | lower }}"
+                            data-source="{{ listing.source.value | upper }}"
+                            data-location="{{ (listing.location or listing.city or '') | lower }}"
+                            data-price="{{ listing.price or 0 }}"
+                            data-area="{{ listing.area or 0 }}"
+                            data-rooms="{{ listing.rooms or 0 }}"
+                            data-dpe="{{ listing.dpe_rating or 'NC' }}"
+                            data-status="{{ listing.status.value }}"
+                        >
                             <td>
                                 {% if request.session.get('role') == 'user' %}
                                 <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'table.reload') }}">
@@ -391,9 +585,9 @@
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
                             <td>{{ listing.location or listing.city or '-' }}</td>
-                            <td class="col-price">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
-                            <td>{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
-                            <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
+                            <td class="col-price" data-raw="{{ listing.price or 0 }}">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
+                            <td data-raw="{{ listing.area or 0 }}">{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
+                            <td data-raw="{{ listing.rooms or 0 }}">{{ listing.rooms|int if listing.rooms else '-' }}</td>
                             <td>
                                 {% if listing.dpe_rating %}
                                 <span class="dpe-tag dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</span>
@@ -410,8 +604,10 @@
                                 <a href="/listings/{{ listing.id }}" class="row-link">{{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
                             </td>
                         </tr>
-
                         {% endfor %}
+                        <tr id="no-results-row" class="no-results-row" style="display:none;">
+                            <td colspan="10"><i class="fa-solid fa-filter-circle-xmark" style="margin-right:0.5rem; color:var(--text-2);"></i>{{ t(request, 'filter.no_results', 'Aucun résultat pour ces filtres.') }}</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -419,30 +615,110 @@
     </div>
 
     <script>
+        /* ── Rescrape ── */
         async function rescrapeListing(listingId, btn) {
             if (btn.classList.contains('loading')) return;
-            
             btn.classList.add('loading');
-            const icon = btn.querySelector('i');
-            
             try {
-                const response = await fetch(`/api/listings/${listingId}/rescrape`, {
-                    method: 'POST'
-                });
+                const response = await fetch(`/api/listings/${listingId}/rescrape`, { method: 'POST' });
                 const result = await response.json();
-                
-                if (response.ok) {
-                    // Refresh page to show new data
-                    window.location.reload();
-                } else {
-                    alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));
-                }
+                if (response.ok) { window.location.reload(); }
+                else { alert("Erreur lors du scraping: " + (result.detail || "Inconnue")); }
             } catch (error) {
                 console.error("Error:", error);
                 alert("Erreur de connexion au serveur.");
-            } finally {
-                btn.classList.remove('loading');
+            } finally { btn.classList.remove('loading'); }
+        }
+
+        /* ── Filter ── */
+        const TOTAL = document.querySelectorAll('#table-body tr:not(#no-results-row)').length;
+
+        function applyFilters() {
+            const search  = document.getElementById('filter-search').value.toLowerCase().trim();
+            const source  = document.getElementById('filter-source').value;
+            const status  = document.getElementById('filter-status').value;
+            const dpe     = document.getElementById('filter-dpe').value;
+
+            const rows = document.querySelectorAll('#table-body tr:not(#no-results-row)');
+            let visible = 0;
+
+            rows.forEach(row => {
+                const matchSearch = !search ||
+                    row.dataset.title.includes(search) ||
+                    row.dataset.location.includes(search);
+                const matchSource = !source || row.dataset.source === source;
+                const matchStatus = !status || row.dataset.status === status;
+                const matchDpe    = !dpe    || row.dataset.dpe === dpe;
+
+                const show = matchSearch && matchSource && matchStatus && matchDpe;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            document.getElementById('count-visible').textContent = visible;
+            document.getElementById('no-results-row').style.display = visible === 0 ? '' : 'none';
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-source').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-dpe').value = '';
+            applyFilters();
+        }
+
+        /* ── Sort ── */
+        let currentSortCol = null;
+        let currentSortDir = 'asc';
+
+        function sortTable(th) {
+            const col  = parseInt(th.dataset.col);
+            const type = th.dataset.type;
+            const icon = th.querySelector('.sort-icon');
+
+            // Toggle direction
+            if (currentSortCol === col) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortDir = 'asc';
             }
+            currentSortCol = col;
+
+            // Update all header icons
+            document.querySelectorAll('th.sortable').forEach(h => {
+                h.classList.remove('asc', 'desc');
+                h.querySelector('.sort-icon').className = 'fa-solid fa-sort sort-icon';
+            });
+            th.classList.add(currentSortDir);
+            icon.className = currentSortDir === 'asc'
+                ? 'fa-solid fa-sort-up sort-icon'
+                : 'fa-solid fa-sort-down sort-icon';
+
+            // Collect & sort rows (excluding no-results placeholder)
+            const tbody = document.getElementById('table-body');
+            const rows  = Array.from(tbody.querySelectorAll('tr:not(#no-results-row)'));
+
+            rows.sort((a, b) => {
+                const aCell = a.cells[col];
+                const bCell = b.cells[col];
+
+                let aVal, bVal;
+                if (type === 'number') {
+                    aVal = parseFloat(aCell.dataset.raw ?? aCell.textContent) || 0;
+                    bVal = parseFloat(bCell.dataset.raw ?? bCell.textContent) || 0;
+                } else {
+                    aVal = aCell.textContent.trim().toLowerCase();
+                    bVal = bCell.textContent.trim().toLowerCase();
+                }
+
+                if (aVal < bVal) return currentSortDir === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDir === 'asc' ?  1 : -1;
+                return 0;
+            });
+
+            // Re-insert sorted rows before the no-results placeholder
+            const noResults = document.getElementById('no-results-row');
+            rows.forEach(r => tbody.insertBefore(r, noResults));
         }
     </script>
 </body>
