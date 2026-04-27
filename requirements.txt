@@ -12,4 +12,3 @@ beautifulsoup4
 httpx
 aiofiles
 itsdangerous
-tls-client
