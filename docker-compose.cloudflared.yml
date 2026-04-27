@@ -51,11 +51,11 @@ services:
       retries: 5
       start_period: 30s
     environment:
-      - MAX_CONCURRENT_SESSIONS=5
+      - MAX_CONCURRENT_SESSIONS=2          # Reduced: prevents simultaneous Chrome OOM at startup
       - CONNECTION_TIMEOUT=120000
       - DEFAULT_BLOCK_ADS=true
       - DEFAULT_STEALTH=true
-      - PREBOOT_CHROME=true
+      - PREBOOT_CHROME=false               # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
     logging:
