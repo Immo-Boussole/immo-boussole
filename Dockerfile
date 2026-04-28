@@ -1,5 +1,5 @@
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM python:3.14-slim AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN pip install --upgrade pip \
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM python:3.14-slim
+FROM python:3.14-slim-bookworm
 
 WORKDIR /app
 
@@ -36,6 +36,10 @@ ENV APP_VERSION="${APP_VERSION}"
 
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
+
+# Upgrade pip in the runtime stage (builder's pip upgrade only affects /usr/local
+# in the builder, NOT /install — so it was never carried over, leaving CVE-2026-3219)
+RUN pip install --upgrade pip --no-cache-dir
 
 # Create non-root user for security
 RUN useradd -m -u 1000 boussole \
