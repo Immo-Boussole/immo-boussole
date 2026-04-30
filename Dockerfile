@@ -1,5 +1,5 @@
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM python:3.14-slim-bookworm AS builder
+FROM python:alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN pip install --upgrade pip \
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM python:3.14-slim-bookworm
+FROM python:alpine
 
 WORKDIR /app
 
