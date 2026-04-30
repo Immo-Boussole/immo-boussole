@@ -1,16 +1,16 @@
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM python:alpine AS builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies for Alpine
-RUN apk add --no-cache \
+# Install build dependencies for Debian
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    musl-dev \
     python3-dev \
-    libffi-dev
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies into a separate layer for caching
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --prefix=/install --no-cache-dir -r requirements.txt \
@@ -20,12 +20,13 @@ RUN pip install --upgrade pip \
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM python:alpine
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Upgrade system packages to patch vulnerabilities using Alpine's package manager
-RUN apk update && apk upgrade --no-cache
+# Upgrade system packages for security
+RUN apt-get update && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
@@ -41,8 +42,8 @@ COPY --from=builder /install /usr/local
 # Upgrade pip in the runtime stage
 RUN pip install --upgrade pip --no-cache-dir
 
-# Create non-root user for security (Alpine syntax)
-RUN adduser -D -u 1000 boussole \
+# Create non-root user (Debian syntax)
+RUN useradd -m -u 1000 boussole \
     && mkdir -p /app/static/media /app/data \
     && chown -R boussole:boussole /app
 
