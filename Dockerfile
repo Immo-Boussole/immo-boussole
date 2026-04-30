@@ -3,10 +3,12 @@ FROM python:alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install build dependencies for Alpine
+RUN apk add --no-cache \
     gcc \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    python3-dev \
+    libffi-dev
 
 # Install Python dependencies into a separate layer for caching
 COPY requirements.txt .
@@ -22,9 +24,8 @@ FROM python:alpine
 
 WORKDIR /app
 
-# Upgrade system packages to patch vulnerabilities (e.g., openssl)
-RUN apt-get update && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+# Upgrade system packages to patch vulnerabilities using Alpine's package manager
+RUN apk update && apk upgrade --no-cache
 
 LABEL maintainer="WikiJM"
 LABEL description="Immo-Boussole – Collaborative real estate catalogue"
@@ -37,12 +38,11 @@ ENV APP_VERSION="${APP_VERSION}"
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# Upgrade pip in the runtime stage (builder's pip upgrade only affects /usr/local
-# in the builder, NOT /install — so it was never carried over, leaving CVE-2026-3219)
+# Upgrade pip in the runtime stage
 RUN pip install --upgrade pip --no-cache-dir
 
-# Create non-root user for security
-RUN useradd -m -u 1000 boussole \
+# Create non-root user for security (Alpine syntax)
+RUN adduser -D -u 1000 boussole \
     && mkdir -p /app/static/media /app/data \
     && chown -R boussole:boussole /app
 
@@ -55,8 +55,6 @@ COPY --chown=boussole:boussole static/ ./static/
 USER boussole
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
-# /app/data      → SQLite database (persistent)
-# /app/static/media → Downloaded media files (persistent)
 VOLUME ["/app/data", "/app/static/media"]
 
 # ── Environment defaults ──────────────────────────────────────────────────────
