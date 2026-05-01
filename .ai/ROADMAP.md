@@ -18,17 +18,50 @@ The future of Immo-Boussole is to evolve from a simple aggregator to an **Intell
 - **DNA Alignment**: Premium feel + Collaborative intelligence.
 - **Use Case**: Sending a "Boussole-verified" opportunity to a bank or partner.
 
-### 3. 🔔 Intelligent "Compass Alerts" (Medium Term)
-- **Goal**: Use a webhook or email system to notify the user when a new listing matches "Gold Star" criteria (price/area ratio > X).
-- **DNA Alignment**: Efficiency via automation.
-- **Personalization**: Unique user-defined weighting of criteria.
-
-### 4. 👔 Real Estate Agent Role (Medium Term)
+### 3. 👔 Real Estate Agent Role (Medium Term)
 - **Goal**: Add a third role (`agent`) that can view imported listings, user reviews, and the Ideal Property Profile.
 - **Restriction**: Cannot import or delete listings; read-only access.
 
-### 5. ⭐ Favorites System (Short Term)
+### 4. ⭐ Favorites System (Short Term)
 - **Goal**: Allow users to star/bookmark both listings and ready searches.
+
+### 5. 🌐 New Scrapers: Century21, Orpi, PAP (Medium Term)
+- **Goal**: Expand source coverage with major French real estate networks currently missing from the aggregator.
+- **Priority targets**: `Century21.fr`, `Orpi.com`, `PAP.fr` (particulier à particulier — no agent fee).
+- **Approach**: Use DevTools Network tab to identify REST/JSON APIs for each site; fall back to Playwright for JS-heavy pages.
+- **Impact**: ~30–40% more listings coverage versus current 9-source baseline.
+- **Effort**: High — each scraper requires independent reverse engineering, anti-bot bypass evaluation, and field mapping.
+
+### 6. 🤖 AI Listing Summary (Medium Term)
+- **Goal**: Auto-generate a concise bullet-point summary of each listing's description to save reading time.
+- **Approach**: Call a local LLM via Ollama (e.g. `llama3`) or the OpenAI API. Add `ai_summary = Column(Text, nullable=True)` to `Listing`.
+- **Secondary benefit**: Use the LLM to extract missing structured fields (DPE, surface terrain, etc.) directly from the raw description when the scraper did not capture them.
+- **Config**: `OLLAMA_URL` / `OPENAI_API_KEY` env vars; disabled if neither is set.
+- **UI**: Display the AI summary as a collapsible section on the listing detail page, styled with `var(--surface-2)` background and a `🤖` icon.
+
+### 7. 🩺 Scraper Error Monitoring (Short Term)
+- **Goal**: Surface scraping failures to admins instead of only printing to console logs.
+- **Approach**:
+  - Add a `ScrapingLog` DB model (`source`, `query_name`, `status`, `error_msg`, `listings_found`, `duration_s`, `ran_at`).
+  - Wrap `scrape_and_diff()` in a try/except that writes a log entry on success **and** failure.
+  - Add an admin-only page `/admin/scraping-logs` listing the last N runs per source, with color-coded status badges.
+  - Optional: Send an Apprise alert if a source fails 3 consecutive times.
+- **Impact**: Immediate visibility into broken scrapers without SSH log access.
+
+### 8. 📄 Multi-page Pagination in Scrapers (Medium Term)
+- **Goal**: Retrieve all pages of results from a source, not just the first page.
+- **Approach**: Add a `max_pages: int = 1` parameter to `BaseScraper.get_listings()`. Each scraper subclass implements a `_next_page_url()` helper that extracts the "next page" link or increments an offset parameter.
+- **Priority**: Apply first to `LeBonCoin`, `BienIci`, and `SeLoger` which regularly have 5–20 result pages.
+- **Guard**: Respect a configurable `SCRAPER_MAX_PAGES` env variable (default: `3`) to avoid runaway loops.
+
+### 9. 🎯 Matching Score Visible Everywhere (Short Term)
+- **Goal**: Show how well each listing matches the user's Ideal Profile directly on the map markers and in the listings table — not only on the detail page.
+- **Approach**:
+  - Compute a `match_score` (0–100%) server-side in a shared `compute_match_score(listing, ideal_profile)` function in `services.py`.
+  - Store the score in a non-persisted property or compute it at render time and inject it into the template context.
+  - **Map**: Color-code Leaflet markers (green = high match, orange = medium, red = low).
+  - **Table**: Add a sortable "Match" column with a colored percentage badge.
+  - **Dashboard**: Add a "Best matches today" mini-widget on `index.html`.
 
 ---
 
@@ -49,6 +82,13 @@ The future of Immo-Boussole is to evolve from a simple aggregator to an **Intell
 ---
 
 ## ✅ Completed Milestones
+
+### 🔔 Apprise Push Notifications (May 2026)
+- **Per-user Apprise URL**: Each user can configure their own `apprise_url` in Mon Profil (Telegram, Discord, ntfy, Pushover, email, etc.).
+- **Global fallback**: `APPRISE_URL` env variable acts as a system-wide notification channel if no per-user URL is set.
+- **Trigger**: After each `scrape_and_diff()` run, all genuinely new (non-duplicate) listings are bundled and sent as a single grouped notification per user.
+- **Test endpoint**: `POST /api/notifications/test` allows users to validate their URL from the profile page without waiting for a scrape cycle.
+- **DB Migration v9**: `ALTER TABLE users ADD COLUMN apprise_url TEXT`.
 
 ### 🗺️ Navigation Harmonization (April 2026)
 - **Universal Sidebar**: Replaced hybrid navigation with a persistent sidebar across all views.

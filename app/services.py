@@ -15,6 +15,7 @@ from app.scrapers import (
 )
 from app.media import download_listing_photos, photos_to_json
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
+from app.notifications import send_new_listing_notifications
 import httpx
 from bs4 import BeautifulSoup
 
@@ -337,6 +338,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 
     # 2. Process new listings
     new_count = 0
+    new_listing_objects: list[Listing] = []  # collected for notifications
     for item in scraped_listings:
         ext_id = str(item["external_id"])
         if ext_id not in existing_ids:
@@ -381,6 +383,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 db.refresh(new_listing)
                 
                 await update_listing_georisques(new_listing, db)
+                new_listing_objects.append(new_listing)
                 new_count += 1
         else:
             # Case 2: Already active/new and still online
@@ -405,6 +408,10 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         f"[Services] Diff terminé: {len(scraped_ids)} annonces scrapées, "
         f"{new_count} nouvelles, {disappeared_count} disparues."
     )
+
+    # ── Send push notifications for new listings ──
+    if new_listing_objects:
+        await send_new_listing_notifications(new_listing_objects, db)
 
 
 # ─── Review Management ────────────────────────────────────────────────────────

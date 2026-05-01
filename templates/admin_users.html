@@ -315,6 +315,39 @@
 
         .alert.success { background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
         .alert.error { background: rgba(242, 92, 105, 0.1); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow);
+            transform: translateY(20px);
+            transition: var(--trans);
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-overlay.show .modal {
+            transform: translateY(0);
+        }
+        .modal h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 
@@ -375,7 +408,7 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>Gestion des Utilisateurs</h1>
+                <h1>{{ t(request, 'admin_users.title') }}</h1>
             </div>
         </header>
 
@@ -384,51 +417,74 @@
                 <div id="alert" class="alert"></div>
 
                 <div class="card">
-                    <h2>Créer un utilisateur</h2>
+                    <h2>{{ t(request, 'admin_users.create_user') }}</h2>
                     <form id="createUserForm">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Nom d'utilisateur</label>
+                                <label>{{ t(request, 'admin_users.username') }}</label>
                                 <input type="text" id="username" required>
                             </div>
                             <div class="form-group">
-                                <label>Mot de passe</label>
+                                <label>{{ t(request, 'admin_users.password') }}</label>
                                 <input type="password" id="password" required>
                             </div>
                             <div class="form-group">
-                                <label>Rôle</label>
+                                <label>{{ t(request, 'admin_users.role') }}</label>
                                 <select id="role">
-                                    <option value="user">Utilisateur</option>
-                                    <option value="admin">Administrateur</option>
+                                    <option value="user">{{ t(request, 'admin_users.role_user') }}</option>
+                                    <option value="admin">{{ t(request, 'admin_users.role_admin') }}</option>
                                 </select>
                             </div>
                         </div>
-                        <button type="submit" class="btn"><i class="fas fa-user-plus"></i> Créer</button>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t(request, 'admin_users.email_opt') }}</label>
+                                <input type="email" id="email" placeholder="email@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t(request, 'admin_users.phone_opt') }}</label>
+                                <input type="tel" id="phone" placeholder="06 12 34 56 78">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t(request, 'admin_users.sfr_id_opt') }}</label>
+                                <input type="text" id="sfr_identifier" placeholder="id@sfr.fr">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t(request, 'admin_users.sfr_pass_opt') }}</label>
+                                <input type="password" id="sfr_password" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn"><i class="fas fa-user-plus"></i> {{ t(request, 'admin_users.create_btn') }}</button>
                     </form>
                 </div>
 
                 <div class="card">
-                    <h2>Liste des Utilisateurs</h2>
+                    <h2>{{ t(request, 'admin_users.list_title') }}</h2>
                     <table>
                         <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Rôle</th>
-                                <th>Actions</th>
+                                <th>{{ t(request, 'admin_users.username') }}</th>
+                                <th>{{ t(request, 'admin_users.role') }}</th>
+                                <th>{{ t(request, 'admin_users.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for user in users %}
                             <tr>
-                                <td>{{ user.username }}</td>
+                                <td>{{ user.username }}<br><small style="color: var(--text-2);">{{ user.email or '' }}</small></td>
                                 <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
                                 <td>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <button class="btn secondary" onclick="changePassword({{ user.id }}, '{{ user.username }}')">
+                                        <button class="btn secondary" onclick="openEditModal({{ user.id }}, '{{ user.username }}', '{{ user.role }}', '{{ user.email or '' }}', '{{ user.phone or '' }}', '{{ user.sfr_identifier or '' }}', '{{ user.sfr_password or '' }}')" title="{{ t(request, 'admin_users.btn_edit_profile') }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn secondary" onclick="changePassword({{ user.id }}, '{{ user.username }}')" title="{{ t(request, 'admin_users.btn_change_pwd') }}">
                                             <i class="fas fa-key"></i>
                                         </button>
                                         {% if user.username != request.session.get('username') %}
-                                        <button class="btn danger" onclick="deleteUser({{ user.id }})">
+                                        <button class="btn danger" onclick="deleteUser({{ user.id }})" title="{{ t(request, 'admin_users.btn_delete') }}">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                         {% endif %}
@@ -443,6 +499,43 @@
         </div>
     </main>
 
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2>{{ t(request, 'admin_users.edit_modal_title') }} <span id="editModalUsername" style="color: var(--accent);"></span></h2>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>{{ t(request, 'admin_users.role') }}</label>
+                    <select id="editRole" style="width: 100%;">
+                        <option value="user">{{ t(request, 'admin_users.role_user') }}</option>
+                        <option value="admin">{{ t(request, 'admin_users.role_admin') }}</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>{{ t(request, 'profile.email') }}</label>
+                    <input type="email" id="editEmail" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>{{ t(request, 'profile.phone') }}</label>
+                    <input type="tel" id="editPhone" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>{{ t(request, 'profile.sfr_id') }}</label>
+                    <input type="text" id="editSfrId" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>{{ t(request, 'profile.sfr_pass') }}</label>
+                    <input type="password" id="editSfrPass" style="width: 100%;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn secondary" onclick="closeEditModal()">{{ t(request, 'admin_users.cancel') }}</button>
+                    <button type="submit" class="btn">{{ t(request, 'admin_users.save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const alertBox = document.getElementById('alert');
 
@@ -455,15 +548,21 @@
 
         document.getElementById('createUserForm').onsubmit = async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const role = document.getElementById('role').value;
+            const payload = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                sfr_identifier: document.getElementById('sfr_identifier').value,
+                sfr_password: document.getElementById('sfr_password').value
+            };
 
             try {
                 const res = await fetch('/api/admin/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, role })
+                    body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
@@ -516,6 +615,54 @@
                 showAlert('Erreur de connexion', 'error');
             }
         }
+
+        // Edit Modal logic
+        function openEditModal(id, username, role, email, phone, sfrId, sfrPass) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editModalUsername').textContent = username;
+            document.getElementById('editRole').value = role;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editPhone').value = phone;
+            document.getElementById('editSfrId').value = sfrId;
+            document.getElementById('editSfrPass').value = sfrPass;
+            
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        document.getElementById('editUserForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const payload = {
+                role: document.getElementById('editRole').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                sfr_identifier: document.getElementById('editSfrId').value,
+                sfr_password: document.getElementById('editSfrPass').value
+            };
+
+            try {
+                const res = await fetch(`/api/admin/users/${id}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showAlert('Utilisateur mis à jour avec succès', 'success');
+                    closeEditModal();
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            }
+        };
     </script>
 </body>
 
