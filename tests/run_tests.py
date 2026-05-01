@@ -16,7 +16,8 @@ BOLD = "\033[1m"
 TEST_GROUPS = {
     "Smoke": [
         "check_template.py",
-        "test_jinja.py"
+        "test_jinja.py",
+        "check_i18n.py"
     ],
     "Core": [
         "test_api_map_data.py",
