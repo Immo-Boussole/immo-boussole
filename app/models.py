@@ -216,3 +216,8 @@ class MapPin(Base):
     created_by = Column(String(50), nullable=False)  # username of creator
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Nearby city metadata (set when pin was imported via "villes voisines")
+    nearby_distance_km = Column(Float, nullable=True)   # Distance from the search origin in km
+    nearby_ref_commune = Column(String, nullable=True)  # Name of the reference city searched
+    nearby_ref_cp      = Column(String, nullable=True)  # Postal code of the reference city
+

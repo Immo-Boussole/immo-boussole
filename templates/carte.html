@@ -249,6 +249,118 @@
         }
         .modal-result.success { display: block; background: rgba(16, 217, 164, 0.12); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.25); }
         .modal-result.error { display: block; background: rgba(242, 92, 105, 0.12); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.25); }
+
+        /* ── Nearby Cities Modal ── */
+        .modal-nearby { max-width: 720px; }
+
+        .nearby-form-row {
+            display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.25rem;
+        }
+        .nearby-form-group {
+            display: flex; flex-direction: column; gap: 0.4rem;
+        }
+        .nearby-form-group label {
+            font-size: 0.75rem; font-weight: 600; color: var(--text-2);
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .nearby-form-group input[type="text"] {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 9px; padding: 0.55rem 0.9rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            transition: var(--trans); width: 140px;
+        }
+        .nearby-form-group input[type="text"]:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+        .nearby-range-group { flex: 1; }
+        .nearby-range-label {
+            display: flex; justify-content: space-between;
+            font-size: 0.75rem; font-weight: 600; color: var(--text-2);
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .nearby-range-val {
+            color: var(--accent); font-weight: 700;
+        }
+        input[type="range"].nearby-range {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 4px; border-radius: 4px;
+            background: var(--surface-2); outline: none; margin-top: 0.5rem;
+            cursor: pointer;
+        }
+        input[type="range"].nearby-range::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: var(--accent); border: 2px solid #fff;
+            box-shadow: 0 0 6px rgba(79, 142, 247, 0.5); cursor: pointer;
+            transition: var(--trans);
+        }
+        input[type="range"].nearby-range::-webkit-slider-thumb:hover {
+            background: var(--accent-2); transform: scale(1.2);
+        }
+
+        .nearby-results-wrapper {
+            display: none; flex-direction: column; gap: 0.75rem; margin-top: 1rem;
+        }
+        .nearby-results-wrapper.visible { display: flex; }
+
+        .nearby-results-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 0.8rem; color: var(--text-2);
+        }
+        .nearby-check-controls { display: flex; gap: 0.75rem; }
+        .nearby-check-controls button {
+            background: none; border: none; color: var(--accent);
+            font-size: 0.75rem; font-weight: 600; cursor: pointer;
+            padding: 0; transition: var(--trans);
+        }
+        .nearby-check-controls button:hover { color: var(--text); }
+
+        .nearby-table-wrapper {
+            max-height: 280px; overflow-y: auto;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .nearby-table {
+            width: 100%; border-collapse: collapse; font-size: 0.82rem;
+        }
+        .nearby-table thead th {
+            padding: 0.6rem 0.85rem;
+            text-align: left; font-size: 0.65rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.07em;
+            color: var(--text-2); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; background: var(--surface-2);
+        }
+        .nearby-table tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: var(--trans); cursor: pointer;
+        }
+        .nearby-table tbody tr:last-child { border-bottom: none; }
+        .nearby-table tbody tr:hover { background: rgba(79, 142, 247, 0.08); }
+        .nearby-table tbody tr.selected { background: rgba(79, 142, 247, 0.06); }
+        .nearby-table td {
+            padding: 0.55rem 0.85rem; color: var(--text); vertical-align: middle;
+        }
+        .nearby-table td.td-check { width: 36px; text-align: center; }
+        .nearby-table td.td-dist {
+            color: var(--orange); font-weight: 700; white-space: nowrap;
+        }
+        .nearby-table td.td-cp {
+            color: var(--text-2); font-family: monospace; font-size: 0.8rem;
+        }
+        .nearby-cb {
+            width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer;
+        }
+
+        /* Nearby tag in map popup */
+        .map-nearby-tag {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            margin-top: 7px; padding: 0.25rem 0.6rem;
+            background: rgba(248, 168, 75, 0.15);
+            border: 1px solid rgba(248, 168, 75, 0.3);
+            border-radius: 6px; font-size: 0.7rem; font-weight: 600;
+            color: var(--orange);
+        }
     </style>
 </head>
 <body>
@@ -312,12 +424,17 @@
                 <div id="stats" style="font-size: 0.8rem; color: var(--text-2);">
                     Chargement des données...
                 </div>
+                <button class="btn" onclick="openNearbyCitiesModal()" id="btn-nearby-cities">
+                    <i class="fa-solid fa-city"></i>
+                    {{ t(request, 'map.nearby_btn', 'Rechercher des villes aux alentours') }}
+                </button>
                 <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
                     <i class="fa-solid fa-map-pin"></i>
                     {{ t(request, 'map.add_addresses', 'Ajouter des adresses') }}
                 </button>
             </div>
         </header>
+
 
         <div id="map"></div>
         
@@ -364,8 +481,71 @@
         </div>
     </div>
 
+    <!-- ── Nearby Cities Modal ── -->
+    <div class="modal-backdrop" id="nearbyCitiesModal">
+        <div class="modal modal-nearby">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-city" style="color: var(--orange);"></i> {{ t(request, 'map.nearby_title', 'Rechercher des villes aux alentours') }}</h2>
+                <button class="modal-close" onclick="closeNearbyCitiesModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="nearby-form-row">
+                <div class="nearby-form-group">
+                    <label for="nearbyCP"><i class="fa-solid fa-envelope" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Code Postal') }}</label>
+                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: 91190') }}" maxlength="5" inputmode="numeric">
+                </div>
+                <div class="nearby-form-group nearby-range-group">
+                    <div class="nearby-range-label">
+                        <span><i class="fa-solid fa-circle-notch" style="margin-right:3px"></i> {{ t(request, 'map.nearby_radius_label', 'Rayon') }}</span>
+                        <span class="nearby-range-val"><span id="nearbyRayonVal">5</span> km</span>
+                    </div>
+                    <input type="range" id="nearbyRayon" class="nearby-range" min="1" max="100" value="5"
+                           oninput="document.getElementById('nearbyRayonVal').textContent = this.value">
+                </div>
+                <button class="btn primary" onclick="searchNearbyCities()" id="btnSearchNearby">
+                    <i class="fa-solid fa-magnifying-glass"></i> {{ t(request, 'map.nearby_search_btn', 'Rechercher') }}
+                </button>
+            </div>
+
+            <div class="modal-result" id="nearbySearchResult"></div>
+
+            <div class="nearby-results-wrapper" id="nearbyResultsWrapper">
+                <div class="nearby-results-toolbar">
+                    <span id="nearbyCount" style="font-weight: 600; color: var(--text);"></span>
+                    <div class="nearby-check-controls">
+                        <button onclick="nearbyCheckAll(true)">{{ t(request, 'map.nearby_check_all', 'Tout cocher') }}</button>
+                        <button onclick="nearbyCheckAll(false)">{{ t(request, 'map.nearby_uncheck_all', 'Tout d\'cocher') }}</button>
+                    </div>
+                </div>
+                <div class="nearby-table-wrapper">
+                    <table class="nearby-table">
+                        <thead>
+                            <tr>
+                                <th class="td-check"></th>
+                                <th>{{ t(request, 'map.nearby_col_commune', 'Commune') }}</th>
+                                <th>{{ t(request, 'map.nearby_col_cp', 'Code Postal') }}</th>
+                                <th>{{ t(request, 'map.nearby_col_distance', 'Distance') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nearbyCitiesTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 0;">
+                    <button class="btn" onclick="closeNearbyCitiesModal()">
+                        <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                    </button>
+                    <button class="btn primary" onclick="addNearbyCitiesToMap()" id="btnAddNearby">
+                        <i class="fa-solid fa-plus"></i> {{ t(request, 'map.nearby_add_btn', 'Ajouter à la carte') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     
     <script>
         // ── User Color Palette ──
@@ -546,8 +726,15 @@
                     ? `<button class="map-popup-delete" onclick="deletePin(${p.id})"><i class="fa-solid fa-trash-can"></i> {{ t(request, 'map.delete_pin', 'Supprimer') }}</button>`
                     : '';
 
+                // Nearby city tag
+                const nearbyTagTpl = '{{ t(request, "map.nearby_distance_tag", "\u00c0 {distance} km de {city} ({cp})") }}';
+                const nearbyTag = (p.nearby_distance_km != null)
+                    ? `<div class="map-nearby-tag"><i class="fa-solid fa-location-crosshairs"></i> ${nearbyTagTpl.replace('{distance}', p.nearby_distance_km.toLocaleString('fr-FR')).replace('{city}', p.nearby_ref_commune).replace('{cp}', p.nearby_ref_cp)}</div>`
+                    : '';
+
                 marker.bindPopup(`
                     <strong class="map-popup-title">${p.title}</strong>
+                    ${nearbyTag}
                     <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${p.address}</div>
                     <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
@@ -701,10 +888,185 @@
         document.getElementById('bulkModal').addEventListener('click', function(e) {
             if (e.target === this) closeBulkModal();
         });
+        document.getElementById('nearbyCitiesModal').addEventListener('click', function(e) {
+            if (e.target === this) closeNearbyCitiesModal();
+        });
 
         // Close modal on Escape
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') closeBulkModal();
+            if (e.key === 'Escape') { closeBulkModal(); closeNearbyCitiesModal(); }
+        });
+
+        // ── Nearby Cities Modal Logic ──
+        let nearbyRefCommune = '';
+        let nearbyRefCp = '';
+
+        function openNearbyCitiesModal() {
+            document.getElementById('nearbyCitiesModal').classList.add('active');
+            document.getElementById('nearbyCP').value = '';
+            document.getElementById('nearbyRayon').value = 5;
+            document.getElementById('nearbyRayonVal').textContent = '5';
+            document.getElementById('nearbySearchResult').className = 'modal-result';
+            document.getElementById('nearbySearchResult').textContent = '';
+            document.getElementById('nearbyResultsWrapper').classList.remove('visible');
+            document.getElementById('nearbyCitiesTableBody').innerHTML = '';
+            nearbyRefCommune = '';
+            nearbyRefCp = '';
+            setTimeout(() => document.getElementById('nearbyCP').focus(), 100);
+        }
+
+        function closeNearbyCitiesModal() {
+            document.getElementById('nearbyCitiesModal').classList.remove('active');
+        }
+
+        async function searchNearbyCities() {
+            const cp = document.getElementById('nearbyCP').value.trim();
+            const rayon = document.getElementById('nearbyRayon').value;
+            const resultEl = document.getElementById('nearbySearchResult');
+            const btn = document.getElementById('btnSearchNearby');
+
+            if (!/^\d{5}$/.test(cp)) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_invalid_cp", "Veuillez saisir un code postal valide (5 chiffres).") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.nearby_searching", "Recherche...") }}';
+            resultEl.className = 'modal-result';
+            resultEl.textContent = '';
+            document.getElementById('nearbyResultsWrapper').classList.remove('visible');
+
+            try {
+                const res = await fetch(`/api/nearby-cities?cp=${encodeURIComponent(cp)}&rayon=${rayon}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                const cities = await res.json();
+
+                if (!cities || cities.length === 0) {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouv\u00e9e pour ce code postal et ce rayon.") }}';
+                    return;
+                }
+
+                // Deduce reference city: first entry with smallest distance
+                nearbyRefCommune = cities[0].nom_commune || '';
+                nearbyRefCp = cities[0].code_postal || cp;
+
+                // Populate table
+                const tbody = document.getElementById('nearbyCitiesTableBody');
+                tbody.innerHTML = '';
+                cities.forEach((city, idx) => {
+                    const distKm = typeof city.distance === 'number' ? city.distance.toFixed(1) : city.distance;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="td-check"><input type="checkbox" class="nearby-cb" id="nearby-cb-${idx}" checked></td>
+                        <td>${city.nom_commune || ''}</td>
+                        <td class="td-cp">${city.code_postal || ''}</td>
+                        <td class="td-dist">${distKm} km</td>
+                    `;
+                    // Store city data on the row
+                    tr.dataset.commune = city.nom_commune || '';
+                    tr.dataset.cp = city.code_postal || '';
+                    tr.dataset.distance = city.distance || 0;
+                    // Click row to toggle checkbox
+                    tr.addEventListener('click', function(e) {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = this.querySelector('.nearby-cb');
+                            cb.checked = !cb.checked;
+                        }
+                        tr.classList.toggle('selected', tr.querySelector('.nearby-cb').checked);
+                    });
+                    tr.querySelector('.nearby-cb').addEventListener('change', function() {
+                        tr.classList.toggle('selected', this.checked);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('nearbyCount').textContent = `${cities.length} {{ t(request, "map.nearby_found", "ville(s) trouv\u00e9e(s)") }}`;
+                document.getElementById('nearbyResultsWrapper').classList.add('visible');
+
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_error_prefix", "Erreur : ") }}' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> {{ t(request, "map.nearby_search_btn", "Rechercher") }}';
+            }
+        }
+
+        function nearbyCheckAll(checked) {
+            document.querySelectorAll('.nearby-cb').forEach(cb => {
+                cb.checked = checked;
+                cb.closest('tr').classList.toggle('selected', checked);
+            });
+        }
+
+        async function addNearbyCitiesToMap() {
+            const btn = document.getElementById('btnAddNearby');
+            const resultEl = document.getElementById('nearbySearchResult');
+
+            // Collect selected rows
+            const rows = document.querySelectorAll('#nearbyCitiesTableBody tr');
+            const selected = [];
+            rows.forEach(row => {
+                const cb = row.querySelector('.nearby-cb');
+                if (cb && cb.checked) {
+                    selected.push({
+                        nom_commune: row.dataset.commune,
+                        code_postal: row.dataset.cp,
+                        distance: parseFloat(row.dataset.distance),
+                        ref_commune: nearbyRefCommune,
+                        ref_cp: nearbyRefCp
+                    });
+                }
+            });
+
+            if (selected.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_none_selected", "Veuillez cocher au moins une ville.") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.nearby_adding", "Ajout en cours...") }}';
+
+            try {
+                const res = await fetch('/api/map-pins/nearby', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cities: selected })
+                });
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `${data.created} {{ t(request, "map.nearby_success", "ville(s) ajout\u00e9e(s) \u00e0 la carte !") }}`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `\n\u26a0\ufe0f ${data.errors.length} {{ t(request, "map.nearby_geocode_errors", "erreur(s) de g\u00e9olocalisation.") }}`;
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = msg;
+                    resultEl.style.whiteSpace = 'pre-line';
+                    loadMapData();
+                    setTimeout(() => closeNearbyCitiesModal(), 2500);
+                } else {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_geocode", "Aucune ville n\'a pu \u00eatre g\u00e9olocalis\u00e9e.") }}';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_network_error", "Erreur r\u00e9seau : ") }}' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> {{ t(request, "map.nearby_add_btn", "Ajouter \u00e0 la carte") }}';
+            }
+        }
+
+        // Allow Enter key in postal code field to trigger search
+        document.getElementById('nearbyCP').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') searchNearbyCities();
         });
 
         loadMapData();
