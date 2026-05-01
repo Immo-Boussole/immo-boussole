@@ -44,8 +44,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 120s
     environment:
       # 1 session: prevents two Chrome instances competing for RAM on constrained hosts
       - MAX_CONCURRENT_SESSIONS=1
