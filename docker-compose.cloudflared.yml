@@ -16,7 +16,7 @@ services:
         - APP_VERSION=${APP_VERSION:-latest}
     image: immo-boussole-app:${APP_VERSION:-latest}
     container_name: immo-boussole-app
-    restart: unless-stopped
+    restart: always
     depends_on:
       browserless:
         condition: service_healthy
@@ -41,7 +41,7 @@ services:
   browserless:
     image: browserless/chrome:1-chrome-stable
     container_name: browserless
-    restart: unless-stopped
+    restart: always
     shm_size: 2gb
     networks:
       - immo-boussole-net
@@ -73,7 +73,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
-    restart: unless-stopped
+    restart: always
     command: tunnel run
     networks:
       - immo-boussole-net
