@@ -194,6 +194,18 @@ class MapPinBulkRequest(BaseModel):
     pins: list[MapPinEntry]
 
 
+class NearbyCityPin(BaseModel):
+    nom_commune: str
+    code_postal: str
+    distance: float        # in km
+    ref_commune: str       # Deduced reference city name (first result at distance ≈ 0)
+    ref_cp: str            # Postal code of the reference city
+
+
+class NearbyCityBulkRequest(BaseModel):
+    cities: list[NearbyCityPin]
+
+
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
 
 def _resolve_scraper(url: str):
@@ -827,7 +839,10 @@ def get_map_data(
                 "address": p.address,
                 "lat": p.lat,
                 "lon": p.lon,
-                "created_by": p.created_by
+                "created_by": p.created_by,
+                "nearby_distance_km": p.nearby_distance_km,
+                "nearby_ref_commune": p.nearby_ref_commune,
+                "nearby_ref_cp": p.nearby_ref_cp,
             }
             for p in all_pins
         ],
@@ -862,6 +877,88 @@ def create_map_pins(
             created.append({"title": entry.title, "address": entry.address})
         else:
             errors.append({"title": entry.title, "address": entry.address, "error": "geocode_failed"})
+
+    db.commit()
+    return {"status": "ok", "created": len(created), "errors": errors}
+
+
+@app.get("/api/nearby-cities")
+async def get_nearby_cities(
+    cp: str,
+    rayon: int = 5,
+    _auth = Depends(login_required)
+):
+    """
+    Proxy endpoint to villes-voisines.fr API.
+    Avoids CORS issues by making the request server-side.
+    Returns a list of nearby cities sorted by distance.
+    """
+    import httpx as _httpx
+    import re
+
+    # Validate postal code: must be 5 digits
+    if not re.fullmatch(r"\d{5}", cp.strip()):
+        raise HTTPException(status_code=400, detail="Code postal invalide (5 chiffres requis)")
+
+    # Clamp rayon to sensible bounds
+    rayon = max(1, min(rayon, 200))
+
+    url = f"https://www.villes-voisines.fr/getcp.php?cp={cp}&rayon={rayon}"
+    try:
+        async with _httpx.AsyncClient() as client:
+            res = await client.get(url, timeout=10.0, headers={"User-Agent": "ImmoBoussole/1.0"})
+        res.raise_for_status()
+        raw = res.json()
+        # API returns a dict keyed by string indices {"0": {...}, "1": {...}}
+        # Convert to a plain list sorted by distance
+        cities = list(raw.values())
+        cities.sort(key=lambda c: c.get("distance", 0))
+        return cities
+    except _httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Erreur API villes-voisines: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Impossible de contacter l'API villes-voisines: {str(e)}")
+
+
+@app.post("/api/map-pins/nearby")
+def create_nearby_city_pins(
+    request: Request,
+    body: NearbyCityBulkRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Geocodes and persists selected nearby cities as MapPins.
+    Stores reference city metadata so the map tooltip can display
+    \"À X km de [Ville] (CP)\".
+    """
+    username = request.session.get("username")
+    created = []
+    errors = []
+
+    for city in body.cities:
+        query_str = f"{city.nom_commune} {city.code_postal}, France"
+        coords = get_coordinates(query_str)
+        if coords:
+            lat, lon = coords
+            pin = MapPin(
+                title=f"{city.nom_commune.title()} ({city.code_postal})",
+                address=query_str,
+                lat=lat,
+                lon=lon,
+                created_by=username,
+                nearby_distance_km=round(city.distance, 2),
+                nearby_ref_commune=city.ref_commune,
+                nearby_ref_cp=city.ref_cp,
+            )
+            db.add(pin)
+            created.append({"title": pin.title, "address": pin.address})
+        else:
+            errors.append({
+                "title": f"{city.nom_commune} ({city.code_postal})",
+                "address": query_str,
+                "error": "geocode_failed"
+            })
 
     db.commit()
     return {"status": "ok", "created": len(created), "errors": errors}
