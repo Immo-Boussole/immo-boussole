@@ -132,6 +132,15 @@ _MIGRATIONS = [
     ("map_pins", "nearby_distance_km",     "REAL"),
     ("map_pins", "nearby_ref_commune",     "TEXT"),
     ("map_pins", "nearby_ref_cp",          "TEXT"),
+
+    # users — Apprise notification URL v10
+    ("users", "apprise_url",               "TEXT"),
+
+    # users — Contact & SFR Identifiers v11
+    ("users", "email",                     "TEXT"),
+    ("users", "phone",                     "TEXT"),
+    ("users", "sfr_identifier",            "TEXT"),
+    ("users", "sfr_password",              "TEXT"),
 ]
 
 

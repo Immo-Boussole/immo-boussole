@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     GEORISQUES_API_BASEURL: str = "https://www.georisques.gouv.fr/api/"
     GEORISQUES_API_KEY: str = ""
 
+    # Notifications (Apprise)
+    # Global fallback URL used when a user has no personal apprise_url configured.
+    # Supports any Apprise-compatible URL: tgram://, discord://, ntfy://, mailto://, etc.
+    # Leave empty to disable global notifications.
+    APPRISE_URL: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

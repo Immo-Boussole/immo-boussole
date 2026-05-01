@@ -264,6 +264,56 @@
                         </button>
                     </div>
 
+                    <!-- Section: Contact & Services Tiers -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-address-card"></i>
+                            <h2>{{ t(request, 'profile.contact_title') }}</h2>
+                        </div>
+                        <div class="form-row" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>{{ t(request, 'profile.email') }}</label>
+                                <input type="email" id="email" name="email" value="{{ user.email or '' }}" placeholder="Ex: mon.email@example.com">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>{{ t(request, 'profile.phone') }}</label>
+                                <input type="tel" id="phone" name="phone" value="{{ user.phone or '' }}" placeholder="Ex: 06 12 34 56 78">
+                            </div>
+                        </div>
+                        <div class="form-row" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>{{ t(request, 'profile.sfr_id') }}</label>
+                                <input type="text" id="sfr_identifier" name="sfr_identifier" value="{{ user.sfr_identifier or '' }}" placeholder="identifiant@sfr.fr">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 200px;">
+                                <label>{{ t(request, 'profile.sfr_pass') }}</label>
+                                <input type="password" id="sfr_password" name="sfr_password" value="{{ user.sfr_password or '' }}" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <p style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.5rem;">
+                            <i class="fa-solid fa-info-circle"></i> {{ t(request, 'profile.contact_info_desc') }}
+                        </p>
+                    </div>
+
+                    <!-- Section: Notifications -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-bell"></i>
+                            <h2>{{ t(request, 'profile.notifications_title', 'Notifications (Push, Email, etc.)') }}</h2>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ t(request, 'profile.apprise_url_label', 'URL Apprise') }}</label>
+                            <input type="text" id="apprise_url" name="apprise_url" value="{{ user.apprise_url or '' }}" placeholder="Ex: tgram://bottoken/chatid ou mailto://user:pass@domain.com">
+                            <p style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.5rem;">
+                                <i class="fa-solid fa-info-circle"></i> Recevez des alertes pour chaque nouvelle annonce via Telegram, Discord, Push, Email, etc. <br>
+                                <a href="https://github.com/caronc/apprise/wiki" target="_blank" style="color: var(--accent); text-decoration: none;">Voir la liste des services supportés et formats d'URL</a>.
+                            </p>
+                        </div>
+                        <button type="button" class="btn" onclick="testAppriseNotification()" id="testNotifBtn">
+                            <i class="fa-solid fa-paper-plane"></i> {{ t(request, 'profile.test_notif_btn', 'Tester la notification') }}
+                        </button>
+                    </div>
+
                     <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                         <button type="submit" class="btn primary" id="saveBtn">
                             <i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'profile.save_btn', 'Enregistrer les modifications') }}
@@ -319,7 +369,12 @@
 
             const payload = {
                 work_address: document.getElementById('work_address').value,
-                poi: pois
+                poi: pois,
+                apprise_url: document.getElementById('apprise_url').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                sfr_identifier: document.getElementById('sfr_identifier').value,
+                sfr_password: document.getElementById('sfr_password').value
             };
 
             try {
@@ -342,6 +397,40 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications';
+            }
+        }
+
+        async function testAppriseNotification() {
+            const urlInput = document.getElementById('apprise_url').value.trim();
+            if (!urlInput) {
+                alert("Veuillez d'abord saisir une URL Apprise.");
+                return;
+            }
+
+            const btn = document.getElementById('testNotifBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Envoi...';
+
+            try {
+                const res = await fetch('/api/notifications/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apprise_url: urlInput })
+                });
+
+                if (res.ok) {
+                    alert("Notification de test envoyée avec succès ! Vérifiez votre appareil.");
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Impossible d'envoyer la notification."));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur réseau lors du test de notification.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
             }
         }
 
