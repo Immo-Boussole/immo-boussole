@@ -1,3 +1,4 @@
+---
 # 🐳 Dedicated Docker Compose for Cloudflared + Portainer
 # This file is designed for secure deployment without exposed ports.
 # All external communication passes through the Cloudflare Tunnel.
@@ -33,8 +34,8 @@ services:
       - db-data:/app/data
       # Persistent storage for downloaded photos
       - media-data:/app/static/media
-    # NOTE: No "ports:" block is present.
-    # The application is only accessible via the Docker network or the Tunnel.
+  # NOTE: No "ports:" block is present.
+  # The application is only accessible via the Docker network or the Tunnel.
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
@@ -51,12 +52,15 @@ services:
       retries: 5
       start_period: 30s
     environment:
-      - MAX_CONCURRENT_SESSIONS=1          # 1 session: prevents two Chrome instances competing for RAM on constrained hosts
-      - MAX_MEMORY_PERCENT=97              # Allow launch up to 97% memory (default 90% blocks jobs on hosts idling at 88-89%)
+      # 1 session: prevents two Chrome instances competing for RAM on constrained hosts
+      - MAX_CONCURRENT_SESSIONS=1
+      # Allow launch up to 97% memory (default 90% blocks jobs on hosts idling at 88-89%)
+      - MAX_MEMORY_PERCENT=97
       - CONNECTION_TIMEOUT=120000          # WebSocket session timeout (ms); Python client retries 3× with 30s each
       - DEFAULT_BLOCK_ADS=false
       - DEFAULT_STEALTH=false
-      - PREBOOT_CHROME=false               # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
+      # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
+      - PREBOOT_CHROME=false
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
     logging:
