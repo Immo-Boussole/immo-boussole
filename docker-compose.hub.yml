@@ -44,17 +44,17 @@ services:
     networks:
       - immo-boussole-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/pressure" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 120s
     environment:
       # 1 session: prevents two Chrome instances competing for RAM on constrained hosts
-      - MAX_CONCURRENT_SESSIONS=1
+      - MAX_CONCURRENT_SESSIONS=5
       # Allow launch up to 97% memory (default 90% blocks jobs on hosts idling at 88-89%)
       - MAX_MEMORY_PERCENT=97
-      - CONNECTION_TIMEOUT=120000          # WebSocket session timeout (ms); Python client retries 3× with 30s each
+      - CONNECTION_TIMEOUT=120000 # WebSocket session timeout (ms); Python client retries 3× with 30s each
       - DEFAULT_BLOCK_ADS=false
       - DEFAULT_STEALTH=false
       # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)

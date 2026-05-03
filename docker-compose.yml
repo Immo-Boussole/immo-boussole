@@ -56,7 +56,7 @@ services:
     networks:
       - immo-boussole-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/pressure"]
       interval: 10s
       timeout: 5s
       retries: 10
