@@ -3,12 +3,14 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies for Debian
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    python3-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies into a separate layer for caching
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --prefix=/install --no-cache-dir -r requirements.txt \
@@ -22,7 +24,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Upgrade system packages to patch vulnerabilities (e.g., openssl)
+# Upgrade system packages for security
 RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -37,7 +39,10 @@ ENV APP_VERSION="${APP_VERSION}"
 # Copy installed packages from builder
 COPY --from=builder /install /usr/local
 
-# Create non-root user for security
+# Upgrade pip in the runtime stage
+RUN pip install --upgrade pip --no-cache-dir
+
+# Create non-root user (Debian syntax)
 RUN useradd -m -u 1000 boussole \
     && mkdir -p /app/static/media /app/data \
     && chown -R boussole:boussole /app
@@ -51,8 +56,6 @@ COPY --chown=boussole:boussole static/ ./static/
 USER boussole
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
-# /app/data      → SQLite database (persistent)
-# /app/static/media → Downloaded media files (persistent)
 VOLUME ["/app/data", "/app/static/media"]
 
 # ── Environment defaults ──────────────────────────────────────────────────────

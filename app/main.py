@@ -150,6 +150,10 @@ class UserCreateRequest(BaseModel):
     username: str
     password: str
     role: str = "user"
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    sfr_identifier: Optional[str] = None
+    sfr_password: Optional[str] = None
 
     @field_validator("role")
     @classmethod
@@ -163,6 +167,21 @@ class UserPasswordUpdateRequest(BaseModel):
     password: str
 
 
+class UserAdminUpdateRequest(BaseModel):
+    role: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    sfr_identifier: Optional[str] = None
+    sfr_password: Optional[str] = None
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        if v not in ["admin", "user"]:
+            raise ValueError("Role must be 'admin' or 'user'")
+        return v
+
+
 class ProfilePOI(BaseModel):
     name: str
     address: str
@@ -173,6 +192,11 @@ class ProfilePOI(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     work_address: Optional[str] = None
     pois: list[ProfilePOI] = []
+    apprise_url: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    sfr_identifier: Optional[str] = None
+    sfr_password: Optional[str] = None
 
 
 class StationChoice(BaseModel):
@@ -192,6 +216,18 @@ class MapPinEntry(BaseModel):
 
 class MapPinBulkRequest(BaseModel):
     pins: list[MapPinEntry]
+
+
+class NearbyCityPin(BaseModel):
+    nom_commune: str
+    code_postal: str
+    distance: float        # in km
+    ref_commune: str       # Deduced reference city name (first result at distance ≈ 0)
+    ref_cp: str            # Postal code of the reference city
+
+
+class NearbyCityBulkRequest(BaseModel):
+    cities: list[NearbyCityPin]
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -291,6 +327,10 @@ def setup_admin(
     request: Request, 
     username: str = Form(...), 
     password: str = Form(...),
+    email: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    sfr_identifier: Optional[str] = Form(None),
+    sfr_password: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     if db.query(models.User).count() > 0:
@@ -299,7 +339,16 @@ def setup_admin(
     salt = os.urandom(16)
     pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
     
-    user = models.User(username=username, password_hash=pwd_hash, salt=salt, role="admin")
+    user = models.User(
+        username=username, 
+        password_hash=pwd_hash, 
+        salt=salt, 
+        role="admin",
+        email=email,
+        phone=phone,
+        sfr_identifier=sfr_identifier,
+        sfr_password=sfr_password
+    )
     db.add(user)
     db.commit()
     
@@ -405,7 +454,11 @@ def create_user(
         username=body.username, 
         password_hash=pwd_hash, 
         salt=salt, 
-        role=body.role
+        role=body.role,
+        email=body.email,
+        phone=body.phone,
+        sfr_identifier=body.sfr_identifier,
+        sfr_password=body.sfr_password
     )
     db.add(user)
     db.commit()
@@ -451,6 +504,27 @@ def update_user_password(
     user.password_hash = pwd_hash
     db.commit()
     
+    return {"status": "updated", "username": user.username}
+
+
+@app.put("/api/admin/users/{user_id}/profile")
+def update_user_admin(
+    user_id: int,
+    body: UserAdminUpdateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.role = body.role
+    if body.email is not None: user.email = body.email.strip() or None
+    if body.phone is not None: user.phone = body.phone.strip() or None
+    if body.sfr_identifier is not None: user.sfr_identifier = body.sfr_identifier.strip() or None
+    if body.sfr_password is not None: user.sfr_password = body.sfr_password.strip() or None
+    
+    db.commit()
     return {"status": "updated", "username": user.username}
 
 
@@ -827,7 +901,10 @@ def get_map_data(
                 "address": p.address,
                 "lat": p.lat,
                 "lon": p.lon,
-                "created_by": p.created_by
+                "created_by": p.created_by,
+                "nearby_distance_km": p.nearby_distance_km,
+                "nearby_ref_commune": p.nearby_ref_commune,
+                "nearby_ref_cp": p.nearby_ref_cp,
             }
             for p in all_pins
         ],
@@ -862,6 +939,88 @@ def create_map_pins(
             created.append({"title": entry.title, "address": entry.address})
         else:
             errors.append({"title": entry.title, "address": entry.address, "error": "geocode_failed"})
+
+    db.commit()
+    return {"status": "ok", "created": len(created), "errors": errors}
+
+
+@app.get("/api/nearby-cities")
+async def get_nearby_cities(
+    cp: str,
+    rayon: int = 5,
+    _auth = Depends(login_required)
+):
+    """
+    Proxy endpoint to villes-voisines.fr API.
+    Avoids CORS issues by making the request server-side.
+    Returns a list of nearby cities sorted by distance.
+    """
+    import httpx as _httpx
+    import re
+
+    # Validate postal code: must be 5 digits
+    if not re.fullmatch(r"\d{5}", cp.strip()):
+        raise HTTPException(status_code=400, detail="Code postal invalide (5 chiffres requis)")
+
+    # Clamp rayon to sensible bounds
+    rayon = max(1, min(rayon, 200))
+
+    url = f"https://www.villes-voisines.fr/getcp.php?cp={cp}&rayon={rayon}"
+    try:
+        async with _httpx.AsyncClient() as client:
+            res = await client.get(url, timeout=10.0, headers={"User-Agent": "ImmoBoussole/1.0"})
+        res.raise_for_status()
+        raw = res.json()
+        # API returns a dict keyed by string indices {"0": {...}, "1": {...}}
+        # Convert to a plain list sorted by distance
+        cities = list(raw.values())
+        cities.sort(key=lambda c: c.get("distance", 0))
+        return cities
+    except _httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Erreur API villes-voisines: {e.response.status_code}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Impossible de contacter l'API villes-voisines: {str(e)}")
+
+
+@app.post("/api/map-pins/nearby")
+def create_nearby_city_pins(
+    request: Request,
+    body: NearbyCityBulkRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Geocodes and persists selected nearby cities as MapPins.
+    Stores reference city metadata so the map tooltip can display
+    \"À X km de [Ville] (CP)\".
+    """
+    username = request.session.get("username")
+    created = []
+    errors = []
+
+    for city in body.cities:
+        query_str = f"{city.nom_commune} {city.code_postal}, France"
+        coords = get_coordinates(query_str)
+        if coords:
+            lat, lon = coords
+            pin = MapPin(
+                title=f"{city.nom_commune.title()} ({city.code_postal})",
+                address=query_str,
+                lat=lat,
+                lon=lon,
+                created_by=username,
+                nearby_distance_km=round(city.distance, 2),
+                nearby_ref_commune=city.ref_commune,
+                nearby_ref_cp=city.ref_cp,
+            )
+            db.add(pin)
+            created.append({"title": pin.title, "address": pin.address})
+        else:
+            errors.append({
+                "title": f"{city.nom_commune} ({city.code_postal})",
+                "address": query_str,
+                "error": "geocode_failed"
+            })
 
     db.commit()
     return {"status": "ok", "created": len(created), "errors": errors}
@@ -923,9 +1082,49 @@ async def update_profile(
         new_pois.append(poi.model_dump())
     
     user.poi_json = json.dumps(new_pois)
+
+    # Update Apprise notification URL
+    if body.apprise_url is not None:
+        user.apprise_url = body.apprise_url.strip() or None
+
+    # Update Contact & SFR fields
+    if body.email is not None: user.email = body.email.strip() or None
+    if body.phone is not None: user.phone = body.phone.strip() or None
+    if body.sfr_identifier is not None: user.sfr_identifier = body.sfr_identifier.strip() or None
+    if body.sfr_password is not None: user.sfr_password = body.sfr_password.strip() or None
+
     db.commit()
     
     return {"status": "updated"}
+
+
+class NotificationTestRequest(BaseModel):
+    apprise_url: str
+
+
+@app.post("/api/notifications/test")
+async def test_notification(
+    body: NotificationTestRequest,
+    request: Request,
+    _auth = Depends(login_required)
+):
+    """
+    Sends a test push notification to the provided Apprise URL.
+    Used from the Mon Profil page to validate the configuration.
+    """
+    from app.notifications import send_test_notification
+
+    url = body.apprise_url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL Apprise vide")
+
+    success = await send_test_notification(url)
+    if not success:
+        raise HTTPException(
+            status_code=502,
+            detail="La notification n'a pas pu être envoyée. Vérifiez votre URL Apprise."
+        )
+    return {"status": "sent"}
 
 
 @app.get("/api/listings/{listing_id}")

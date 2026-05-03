@@ -15,11 +15,20 @@ class User(Base):
     role = Column(String(20), nullable=False, default="user") # "admin" or "user"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Contact & Identifiers
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    sfr_identifier = Column(String, nullable=True)
+    sfr_password = Column(String, nullable=True)
+
     # User Addresses & POIs
     work_address = Column(String, nullable=True)
     work_lat = Column(Float, nullable=True)
     work_lon = Column(Float, nullable=True)
     poi_json = Column(Text, nullable=True)  # JSON-encoded list of dicts: [{"name": "...", "address": "...", "lat": ..., "lon": ...}]
+
+    # Notifications
+    apprise_url = Column(String, nullable=True)  # Apprise-compatible URL (tgram://, discord://, ntfy://, mailto://, etc.)
 
 
 class ListingStatus(str, enum.Enum):
@@ -215,4 +224,9 @@ class MapPin(Base):
     lon = Column(Float, nullable=True)
     created_by = Column(String(50), nullable=False)  # username of creator
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Nearby city metadata (set when pin was imported via "villes voisines")
+    nearby_distance_km = Column(Float, nullable=True)   # Distance from the search origin in km
+    nearby_ref_commune = Column(String, nullable=True)  # Name of the reference city searched
+    nearby_ref_cp      = Column(String, nullable=True)  # Postal code of the reference city
 
