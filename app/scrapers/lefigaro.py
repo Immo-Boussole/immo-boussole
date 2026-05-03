@@ -4,96 +4,211 @@ from app.scrapers.base import BaseScraper
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 
+
 class LeFigaroScraper(BaseScraper):
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helper: extract the __NUXT__ JSON blob from raw HTML
+    # ─────────────────────────────────────────────────────────────────────────
+    def _extract_nuxt_data(self, html_content: str) -> Optional[dict]:
+        """
+        Tries several patterns to extract the __NUXT__ state object from the
+        rendered HTML.  Returns the parsed dict or None on failure.
+        """
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Pattern 1: modern Nuxt 3 – inline JSON object assignment
+        # e.g.  window.__NUXT__={"data":[...],"state":...}
+        for script in soup.find_all('script'):
+            text = script.string or ""
+            match = re.search(r'window\.__NUXT__\s*=\s*(\{.*)', text, re.DOTALL)
+            if match:
+                raw = match.group(1).strip().rstrip(';')
+                try:
+                    # Balanced-brace extraction to avoid trailing JS
+                    depth, end = 0, 0
+                    for i, ch in enumerate(raw):
+                        if ch == '{':
+                            depth += 1
+                        elif ch == '}':
+                            depth -= 1
+                            if depth == 0:
+                                end = i + 1
+                                break
+                    return json.loads(raw[:end])
+                except Exception as e:
+                    print(f"[LeFigaro] Erreur parse __NUXT__ (pattern 1): {e}", flush=True)
+
+        # Pattern 2: Nuxt 2 – function call form
+        # e.g.  __NUXT__=(function(a,b,...){return {...}}(...))
+        for script in soup.find_all('script'):
+            text = script.string or ""
+            if '__NUXT__' in text and 'function' in text:
+                print("[LeFigaro] __NUXT__ via function() – parsing non supporté pour l'instant", flush=True)
+                break
+
+        return None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helper: dig into the data structure for classified listings
+    # ─────────────────────────────────────────────────────────────────────────
+    def _find_classifieds_list(self, data: dict) -> Optional[list]:
+        """
+        Navigates through the various Nuxt data shapes to find the list of
+        classified ads.
+
+        Known paths:
+          • Nuxt 3:  data (list of state objects) → classifiedsListResponse.classifieds
+          • Nuxt 2:  data.classifiedsListResponse.classifieds
+        """
+        raw_data = data.get("data")
+        if raw_data is None:
+            return None
+
+        # Nuxt 3: data is a list of state objects
+        if isinstance(raw_data, list):
+            for item in raw_data:
+                if not isinstance(item, dict):
+                    continue
+                resp = item.get("classifiedsListResponse", {}) or {}
+                classifieds = resp.get("classifieds")
+                if isinstance(classifieds, list):
+                    print(f"[LeFigaro] classifieds trouvés dans data (liste Nuxt3): {len(classifieds)} annonces", flush=True)
+                    return classifieds
+
+        # Nuxt 2: data is a plain dict
+        if isinstance(raw_data, dict):
+            resp = raw_data.get("classifiedsListResponse", {}) or {}
+            classifieds = resp.get("classifieds")
+            if isinstance(classifieds, list):
+                print(f"[LeFigaro] classifieds trouvés dans data (dict Nuxt2): {len(classifieds)} annonces", flush=True)
+                return classifieds
+
+        return None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Helper: find a single classified detail object
+    # ─────────────────────────────────────────────────────────────────────────
+    def _find_classified_detail(self, data: dict) -> Optional[dict]:
+        """
+        Returns the single `classified` object from a detail page __NUXT__ state.
+        """
+        raw_data = data.get("data")
+        if raw_data is None:
+            return None
+
+        # Nuxt 3
+        if isinstance(raw_data, list):
+            for item in raw_data:
+                if not isinstance(item, dict):
+                    continue
+                resp = item.get("classifiedDetailResponse", {}) or {}
+                classified = resp.get("classified")
+                if isinstance(classified, dict):
+                    print("[LeFigaro] classified detail trouvé (Nuxt3)", flush=True)
+                    return classified
+
+        # Nuxt 2
+        if isinstance(raw_data, dict):
+            resp = raw_data.get("classifiedDetailResponse", {}) or {}
+            classified = resp.get("classified")
+            if isinstance(classified, dict):
+                print("[LeFigaro] classified detail trouvé (Nuxt2)", flush=True)
+                return classified
+
+        return None
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # get_listings
+    # ─────────────────────────────────────────────────────────────────────────
     async def get_listings(self, search_url: str) -> List[Dict]:
         """
         Extract listings from a LeFigaro search result page.
+        Primary strategy: parse window.__NUXT__.data.classifiedsListResponse.classifieds
+        Fallback: BeautifulSoup parsing of <article> elements.
         """
-        # Le Figaro search API is often used, but we'll try to extract from the HTML first
-        # as the search_url provided by the user is likely a web URL.
         snapshot = await self.extract_page_content(search_url)
         if not snapshot:
             return []
 
         html_content = snapshot.get("html", "")
+        if not html_content:
+            return []
+
         listings = []
 
-        if html_content:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            # Look for JSON payload in script tags if available, similar to LBC
-            match = re.search(r'window\.__INITIAL_STATE__\s*=\s*({.*?});', html_content, re.DOTALL)
-            if match:
-                try:
-                    data = json.loads(match.group(1))
-                    # The exact path in INITIAL_STATE depends on the page version
-                    # This is a placeholder for the logic found in the external repo
-                    # which often targets api.figaro.fr directly.
-                    pass
-                except Exception as e:
-                    print(f"[LeFigaro] Error parsing INITIAL_STATE: {e}")
+        # ── Strategy 1: __NUXT__ JSON ──────────────────────────────────────
+        nuxt_data = self._extract_nuxt_data(html_content)
+        if nuxt_data:
+            classifieds = self._find_classifieds_list(nuxt_data)
+            if classifieds:
+                for c in classifieds:
+                    try:
+                        listings.append(self._classified_to_dict(c))
+                    except Exception as e:
+                        print(f"[LeFigaro] Erreur conversion classified: {e}", flush=True)
 
-            # Fallback: BeautifulSoup parsing
-            # Le Figaro uses specific classes for listing items
-            items = soup.find_all('div', class_=re.compile(r'class-item|ad-item'))
-            for item in items:
-                try:
-                    link = item.find('a', href=True)
-                    if not link: continue
-                    url = link['href']
-                    if not url.startswith('http'):
-                        url = "https://immobilier.lefigaro.fr" + url
-                    
-                    title_elem = item.find(['h2', 'span'], class_=re.compile(r'title|subject'))
-                    title = title_elem.text.strip() if title_elem else "Annonce Le Figaro"
-                    
-                    price_elem = item.find(text=re.compile(r'(\d+[\d\s]*)\s*€'))
-                    price = 0.0
-                    if price_elem:
-                        match = re.search(r'(\d+[\d\s]*)\s*€', price_elem)
-                        if match:
-                            price_str = re.sub(r'[^\d]', '', match.group(1))
-                            if price_str: price = float(price_str)
-                    
-                    ext_id = url.split('-')[-1].split('.')[0]
-                    
-                    # Extract city from title if possible
-                    # Example title: "Vente maison 4 pièces 142.87 m² à Tournon-sur-Rhône (07300), 290 000 €"
-                    city = None
-                    location = "France"
-                    match_loc = re.search(r'à (.*?) \((\d{5})\)', title)
-                    if match_loc:
-                        city_name = match_loc.group(1).strip()
-                        zip_code = match_loc.group(2).strip()
-                        city = self._normalize_city(city_name)
-                        location = f"{city_name} ({zip_code[:2]})"
-                    elif ' à ' in title:
-                        parts = title.split(' à ')
-                        if len(parts) > 1:
-                            potential_city = parts[1].split(',')[0].strip()
-                            city = self._normalize_city(potential_city)
-                            location = potential_city
+        if listings:
+            print(f"[LeFigaro] {len(listings)} annonces extraites via __NUXT__", flush=True)
+            return listings
 
-                    listings.append({
-                        "external_id": f"figaro_{ext_id}",
-                        "title": title,
-                        "url": url,
-                        "price": price,
-                        "location": location,
-                        "city": city,
-                        "area": None,
-                        "rooms": None,
-                        "photo_urls": [],
-                    })
-                except Exception as e:
-                    print(f"[LeFigaro] Error parsing item: {e}")
+        # ── Strategy 2: BeautifulSoup DOM fallback ─────────────────────────
+        print("[LeFigaro] Fallback DOM BeautifulSoup", flush=True)
+        soup = BeautifulSoup(html_content, 'html.parser')
+        # Current LeFigaro uses <article> tags for each listing
+        items = soup.find_all('article')
+        for item in items:
+            try:
+                link = item.find('a', href=True)
+                if not link:
                     continue
+                url = link['href']
+                if not url.startswith('http'):
+                    url = "https://immobilier.lefigaro.fr" + url
+
+                # Title / type
+                title_elem = item.find(['h2', 'h3', 'p'])
+                title = title_elem.text.strip() if title_elem else "Annonce Le Figaro"
+
+                # Price
+                price = 0.0
+                price_text = item.get_text(" ", strip=True)
+                price_match = re.search(r'([\d\s]+)\s*€', price_text)
+                if price_match:
+                    price_str = re.sub(r'[^\d]', '', price_match.group(1))
+                    if price_str:
+                        price = float(price_str)
+
+                # Location (e.g., "Paris 3ème (75)")
+                location, city = self._parse_location_from_text(price_text)
+
+                ext_id = url.split('-')[-1].split('.')[0]
+
+                listings.append({
+                    "external_id": f"figaro_{ext_id}",
+                    "title": title,
+                    "url": url,
+                    "price": price,
+                    "location": location,
+                    "city": city,
+                    "area": None,
+                    "rooms": None,
+                    "photo_urls": [],
+                })
+            except Exception as e:
+                print(f"[LeFigaro] Erreur parsing article: {e}", flush=True)
+                continue
 
         return listings
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # get_listing_details
+    # ─────────────────────────────────────────────────────────────────────────
     async def get_listing_details(self, url: str) -> Dict:
         """
         Scrape a single LeFigaro listing page for details.
+        Primary strategy: parse window.__NUXT__ classifiedDetailResponse.
+        Fallback: meta tags + regex.
         """
         snapshot = await self.extract_page_content(url)
         if not snapshot:
@@ -103,132 +218,152 @@ class LeFigaroScraper(BaseScraper):
         if not html_content:
             return {}
 
-        details = {}
+        details: Dict = {"url": url}
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Extract basic info from meta tags
-        details["url"] = url
+        # ── Fallback meta / title defaults ────────────────────────────────
         og_title = soup.find('meta', attrs={"property": "og:title"})
-        title = og_title.get("content", "") if og_title else (soup.find('title').text.strip() if soup.find('title') else "Annonce Le Figaro")
-        details["title"] = title
-        
-        # Extract city and location from title
-        match_loc = re.search(r'à (.*?) \((\d{5})\)', title)
-        if match_loc:
-            city_name = match_loc.group(1).strip()
-            zip_code = match_loc.group(2).strip()
-            details["city"] = self._normalize_city(city_name)
-            details["location"] = f"{city_name} ({zip_code[:2]})"
-        elif ' à ' in title:
-            parts = title.split(' à ')
-            if len(parts) > 1:
-                potential_city = parts[1].split(',')[0].strip()
-                details["city"] = self._normalize_city(potential_city)
-                details["location"] = potential_city
+        title_tag = soup.find('title')
+        details["title"] = (
+            og_title.get("content", "") if og_title
+            else (title_tag.text.strip() if title_tag else "Annonce Le Figaro")
+        )
 
         og_desc = soup.find('meta', attrs={"property": "og:description"})
         details["description_text"] = og_desc.get("content", "") if og_desc else ""
 
-        # Extract price
-        price_elem = soup.find(text=re.compile(r'(\d+[\d\s]*)\s*€'))
-        if price_elem:
-            match = re.search(r'(\d+[\d\s]*)\s*€', price_elem)
-            if match:
-                price_str = re.sub(r'[^\d]', '', match.group(1))
-                if price_str: details["price"] = float(price_str)
+        # Location from title (best-effort)
+        loc, city = self._parse_location_from_text(details["title"])
+        if loc:
+            details["location"] = loc
+            details["city"] = city
 
-        # External ID
+        # Price regex fallback
+        price_text = soup.get_text(" ", strip=True)
+        price_match = re.search(r'([\d\s]+)\s*€', price_text)
+        if price_match:
+            price_str = re.sub(r'[^\d]', '', price_match.group(1))
+            if price_str:
+                details["price"] = float(price_str)
+
         ext_id = url.split('-')[-1].split('.')[0]
         details["external_id"] = f"figaro_{ext_id}"
 
-        # ── EXTRACT DATA FROM window.__NUXT__ (Modern Figaro) ──
-        # ── EXTRACT DATA FROM window.__NUXT__ (Modern Figaro) ──
-        # Search for the script tag containing __NUXT__
-        nuxt_script = None
-        for s in soup.find_all('script'):
-            if s.string and 'window.__NUXT__' in s.string:
-                nuxt_script = s
-                break
-        
-        if nuxt_script and nuxt_script.string:
-            print(f"[LeFigaro] Script __NUXT__ trouvé (taille: {len(nuxt_script.string)})", flush=True)
-            try:
-                # Find the JSON part between the first { and the last }
-                start_idx = nuxt_script.string.find('{')
-                end_idx = nuxt_script.string.rfind('}')
-                if start_idx != -1 and end_idx != -1:
-                    json_text = nuxt_script.string[start_idx:end_idx+1]
-                    data = json.loads(json_text)
-                    
-                    classified = None
-                    if "data" in data:
-                        # Case: data is a list (common in Nuxt 3)
-                        if isinstance(data["data"], list):
-                            for item in data["data"]:
-                                if isinstance(item, dict) and "classifiedDetailResponse" in item:
-                                    classified = item["classifiedDetailResponse"].get("classified")
-                                    print("[LeFigaro] Classified trouvé dans data (liste)", flush=True)
-                                    break
-                        # Case: data is a dict (Nuxt 2)
-                        elif isinstance(data["data"], dict):
-                            classified = data["data"].get("classifiedDetailResponse", {}).get("classified")
-                            if classified: print("[LeFigaro] Classified trouvé dans data (dict)", flush=True)
-                    
-                    if classified:
-                        details["title"] = classified.get("title", details.get("title"))
-                        details["description_text"] = classified.get("description", details.get("description_text"))
-                        details["price"] = classified.get("price", details.get("price"))
-                        
-                        # Location
-                        loc_data = classified.get("location", {})
-                        city_name = loc_data.get("city")
-                        zip_code = loc_data.get("zipCode")
-                        if city_name:
-                            details["city"] = self._normalize_city(city_name)
-                            details["location"] = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
-
-                        # Caracteristics
-                        details["area"] = classified.get("surface", details.get("area"))
-                        details["rooms"] = classified.get("roomCount", details.get("rooms"))
-                        details["bedrooms"] = classified.get("bedroomCount")
-                        
-                        # Photos
-                        photos_list = []
-                        images_data = classified.get("images", {}) or {}
-                        raw_photos = images_data.get("photos") or classified.get("medias") or []
-                        print(f"[LeFigaro] Raw photos found: {len(raw_photos) if isinstance(raw_photos, list) else 'NOT A LIST'}", flush=True)
-                        
-                        if isinstance(raw_photos, list):
-                            for p in raw_photos:
-                                if not isinstance(p, dict): continue
-                                urls = p.get("url", {})
-                                best_url = (urls.get("extra-large") or urls.get("large") or 
-                                           urls.get("medium") or urls.get("small"))
-                                if best_url:
-                                    photos_list.append(best_url)
-                        
-                        if photos_list:
-                            details["photo_urls"] = photos_list
-                            print(f"[LeFigaro] Extrait {len(photos_list)} photos du Nuxt", flush=True)
-            except Exception as e:
-                print(f"[LeFigaro] Erreur parsing Nuxt : {e}", flush=True)
+        # ── Strategy 1: __NUXT__ ──────────────────────────────────────────
+        nuxt_data = self._extract_nuxt_data(html_content)
+        if nuxt_data:
+            classified = self._find_classified_detail(nuxt_data)
+            if classified:
+                details = {**details, **self._classified_to_dict(classified, url=url)}
+                return details
+            else:
+                print("[LeFigaro] __NUXT__ trouvé mais aucun classifiedDetailResponse dedans", flush=True)
         else:
-            print("[LeFigaro] Script __NUXT__ non trouvé dans le HTML", flush=True)
+            print("[LeFigaro] __NUXT__ absent du HTML", flush=True)
 
-        # Photo URLs Fallback if nothing found or incomplete
-        if not details.get("photo_urls") or len(details.get("photo_urls", [])) <= 1:
-            # Try to find all picture tags or img tags with certain classes
+        # ── Photo fallback ─────────────────────────────────────────────────
+        if not details.get("photo_urls"):
             fb_photos = []
             for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro')):
                 src = img.get('src')
                 if src and 'thumb' not in src.lower():
                     fb_photos.append(src)
-            
             if fb_photos:
-                details["photo_urls"] = list(set(fb_photos + details.get("photo_urls", [])))
-            elif not details.get("photo_urls"):
+                details["photo_urls"] = list(set(fb_photos))
+            else:
                 og_img = soup.find('meta', attrs={"property": "og:image"})
-                if og_img:
+                if og_img and og_img.get("content"):
                     details["photo_urls"] = [og_img.get("content")]
 
         return details
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Private helpers
+    # ─────────────────────────────────────────────────────────────────────────
+    def _classified_to_dict(self, classified: dict, url: str = None) -> dict:
+        """Convert a raw 'classified' dict from __NUXT__ into our standard format."""
+        record_link = classified.get("recordLink") or classified.get("url") or url or ""
+        if record_link and not record_link.startswith("http"):
+            record_link = "https://immobilier.lefigaro.fr" + record_link
+
+        ext_id = classified.get("id") or (record_link.split('-')[-1].split('.')[0] if record_link else "")
+
+        loc_data = classified.get("location", {}) or {}
+        city_name = loc_data.get("city") or loc_data.get("cityLabel")
+        zip_code = loc_data.get("zipCode") or loc_data.get("postalCode")
+        if city_name:
+            city = self._normalize_city(city_name)
+            location = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
+        else:
+            city = None
+            location = "France"
+
+        # Photos
+        photos_list = []
+        images_data = classified.get("images", {}) or {}
+        raw_photos = (
+            images_data.get("photos")
+            or classified.get("medias")
+            or classified.get("photos")
+            or []
+        )
+        if isinstance(raw_photos, list):
+            for p in raw_photos:
+                if not isinstance(p, dict):
+                    continue
+                urls = p.get("url", {}) or {}
+                if isinstance(urls, str):
+                    photos_list.append(urls)
+                elif isinstance(urls, dict):
+                    best = (
+                        urls.get("extra-large")
+                        or urls.get("large")
+                        or urls.get("medium")
+                        or urls.get("small")
+                    )
+                    if best:
+                        photos_list.append(best)
+
+        return {
+            "external_id": f"figaro_{ext_id}",
+            "title": classified.get("title") or classified.get("subject") or "Annonce Le Figaro",
+            "url": record_link,
+            "price": classified.get("price") or classified.get("priceValue") or 0.0,
+            "location": location,
+            "city": city,
+            "area": classified.get("surface") or classified.get("area"),
+            "rooms": classified.get("roomCount") or classified.get("rooms"),
+            "bedrooms": classified.get("bedroomCount") or classified.get("bedrooms"),
+            "description_text": classified.get("description") or classified.get("descriptionText") or "",
+            "photo_urls": photos_list,
+        }
+
+    def _parse_location_from_text(self, text: str) -> tuple:
+        """
+        Try to extract (location_str, normalized_city) from a free-form text.
+        Returns ("", None) if nothing found.
+        """
+        if not text:
+            return "", None
+
+        # Pattern: "… à Tournon-sur-Rhône (07300) …"
+        match = re.search(r'à (.*?) \((\d{5})\)', text)
+        if match:
+            city_name = match.group(1).strip()
+            zip_code = match.group(2).strip()
+            return f"{city_name} ({zip_code[:2]})", self._normalize_city(city_name)
+
+        # Pattern: "Paris 3ème (75)" (already formatted)
+        match = re.search(r'([A-Za-zÀ-ÿ\s\-]+)\s+\((\d{2,5})\)', text)
+        if match:
+            city_name = match.group(1).strip()
+            dep = match.group(2).strip()
+            return f"{city_name} ({dep[:2]})", self._normalize_city(city_name)
+
+        # Pattern: "… à Paris …"
+        match = re.search(r' à ([A-Za-zÀ-ÿ\s\-]+?)(?:[,\.]|$)', text)
+        if match:
+            city_name = match.group(1).strip()
+            return city_name, self._normalize_city(city_name)
+
+        return "", None
