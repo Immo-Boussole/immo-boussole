@@ -971,10 +971,14 @@ async def get_nearby_cities(
             res = await client.get(url, timeout=10.0, headers={"User-Agent": "ImmoBoussole/1.0"})
         res.raise_for_status()
         raw = res.json()
-        # API returns a dict keyed by string indices {"0": {...}, "1": {...}}
-        # Convert to a plain list sorted by distance
-        cities = list(raw.values())
-        cities.sort(key=lambda c: c.get("distance", 0))
+        # API sometimes returns a dict keyed by string indices {"0": {...}, "1": {...}}
+        # or sometimes directly a list. We handle both.
+        if isinstance(raw, dict):
+            cities = list(raw.values())
+        else:
+            cities = raw
+
+        cities.sort(key=lambda c: float(c.get("distance", 0)) if c.get("distance") is not None else 0)
         return cities
     except _httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Erreur API villes-voisines: {e.response.status_code}")
