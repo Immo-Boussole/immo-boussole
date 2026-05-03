@@ -32,6 +32,10 @@ services:
       - db-data:/app/data
       # Persistent storage for downloaded photos
       - media-data:/app/static/media
+      # Local app code mapping for scraper fixes
+      - ./app:/app/app
+
+    command: bash -c "pip install playwright==1.41.0 playwright-stealth && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
@@ -55,8 +59,8 @@ services:
       # Allow launch up to 97% memory (default 90% blocks jobs on hosts idling at 88-89%)
       - MAX_MEMORY_PERCENT=97
       - CONNECTION_TIMEOUT=120000 # WebSocket session timeout (ms); Python client retries 3× with 30s each
-      - DEFAULT_BLOCK_ADS=false
-      - DEFAULT_STEALTH=false
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
       # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
       - PREBOOT_CHROME=false
       - TOKEN=${BROWSERLESS_TOKEN:-}
