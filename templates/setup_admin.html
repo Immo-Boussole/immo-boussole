@@ -264,6 +264,44 @@
                     <input type="password" id="password" name="password" placeholder="••••••••" required>
                 </div>
             </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+            <div style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1rem; text-align: left;">
+                <i class="fas fa-info-circle"></i> {{ t(request, 'setup.optional_info') }}
+            </div>
+
+            <div class="form-group">
+                <label for="email">{{ t(request, 'profile.email') }}</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" name="email" placeholder="admin@example.com">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">{{ t(request, 'profile.phone') }}</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="phone" name="phone" placeholder="06 12 34 56 78">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="sfr_identifier">{{ t(request, 'profile.sfr_id') }}</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-wifi"></i>
+                    <input type="text" id="sfr_identifier" name="sfr_identifier" placeholder="identifiant@sfr.fr">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="sfr_password">{{ t(request, 'profile.sfr_pass') }}</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="sfr_password" name="sfr_password" placeholder="••••••••">
+                </div>
+            </div>
             
             <button type="submit" class="btn">{{ t(request, 'setup.create_account') }}</button>
         </form>

@@ -1,3 +1,4 @@
+---
 # 🐳 Dedicated Docker Compose for Hub Images + Cloudflared + Portainer
 # This file pulls images from Docker Hub and is designed for secure deployment.
 # All external communication passes through the Cloudflare Tunnel.
@@ -10,7 +11,7 @@ services:
   immo-boussole:
     image: wikijm/immo-boussole:${APP_VERSION:-latest}
     container_name: immo-boussole-app
-    restart: unless-stopped
+    restart: always
     depends_on:
       browserless:
         condition: service_healthy
@@ -28,14 +29,14 @@ services:
       - db-data:/app/data
       # Persistent storage for downloaded photos
       - media-data:/app/static/media
-    # NOTE: No "ports:" block is present.
-    # The application is only accessible via the Docker network or the Tunnel.
+  # NOTE: No "ports:" block is present.
+  # The application is only accessible via the Docker network or the Tunnel.
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
     image: browserless/chrome:1-chrome-stable
     container_name: browserless
-    restart: unless-stopped
+    restart: always
     shm_size: 2gb
     networks:
       - immo-boussole-net
@@ -43,14 +44,18 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 120s
     environment:
-      - MAX_CONCURRENT_SESSIONS=5
-      - CONNECTION_TIMEOUT=120000
-      - DEFAULT_BLOCK_ADS=true
-      - DEFAULT_STEALTH=true
-      - PREBOOT_CHROME=true
+      # 1 session: prevents two Chrome instances competing for RAM on constrained hosts
+      - MAX_CONCURRENT_SESSIONS=1
+      # Allow launch up to 97% memory (default 90% blocks jobs on hosts idling at 88-89%)
+      - MAX_MEMORY_PERCENT=97
+      - CONNECTION_TIMEOUT=120000          # WebSocket session timeout (ms); Python client retries 3× with 30s each
+      - DEFAULT_BLOCK_ADS=false
+      - DEFAULT_STEALTH=false
+      # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
+      - PREBOOT_CHROME=false
       - TOKEN=${BROWSERLESS_TOKEN:-}
       - TZ=Europe/Paris
     logging:
@@ -63,7 +68,7 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
-    restart: unless-stopped
+    restart: always
     command: tunnel run
     networks:
       - immo-boussole-net
