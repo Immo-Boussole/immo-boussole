@@ -51,15 +51,12 @@ class BaseScraper(abc.ABC):
 
         # --- Browserless URL Preparation ---
         base_url = settings.BROWSERLESS_URL.rstrip("/")
-        # Append /playwright path if not present (recommended for Browserless Playwright connections)
-        if not base_url.endswith("/playwright"):
-            base_url = f"{base_url}/playwright"
         
         # Append token if provided
         token = settings.BROWSERLESS_TOKEN
         browserless_url = f"{base_url}?token={token}" if token else base_url
         
-        print(f"[Scraper] Extraction via Playwright/Browserless pour : {url}")
+        print(f"[Scraper] Extraction via Playwright/Browserless CDP pour : {url}")
 
         pw = None
         browser = None
@@ -91,11 +88,6 @@ class BaseScraper(abc.ABC):
             try:
                 # Once connected, proceed with page extraction
                 context = await browser.new_context(
-                    user_agent=(
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/125.0.0.0 Safari/537.36"
-                    ),
                     viewport={"width": 1920, "height": 1080},
                     locale="fr-FR",
                 )
