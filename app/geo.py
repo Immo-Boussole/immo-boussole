@@ -186,6 +186,40 @@ def get_insee_code(city_name: str, zipcode: str = None) -> Optional[str]:
         return None
 
 
+def get_postal_code(city_name: str) -> Optional[str]:
+    """
+    Retrieves the postal code for a city via OpenDataSoft API.
+    Used for the nearby cities search feature.
+    """
+    if not city_name:
+        return None
+    
+    # Normalize city name for API (uppercase, replace spaces with hyphens)
+    city_upper = city_name.strip().upper().replace(" ", "-")
+    
+    # Use LIKE to match city names that might have suffixes
+    where_clause = f'nom_comm like "{city_upper}%"'
+    
+    url = "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/correspondance-code-insee-code-postal/records"
+    try:
+        res = httpx.get(url, params={"where": where_clause, "limit": 1}, timeout=10.0)
+        res.raise_for_status()
+        data = res.json()
+        
+        results = data.get("results", [])
+        if results:
+            # Note: postal_code can be a string like "75001" or sometimes a list of strings
+            pc = results[0].get("postal_code")
+            if isinstance(pc, list):
+                return pc[0]
+            return pc
+        
+        return None
+    except Exception as e:
+        print(f"[Geo] Postal code lookup failed for {city_name}: {e}")
+        return None
+
+
 def fetch_georisques_data(address: str = None, insee_code: str = None) -> Optional[Dict]:
     """
     Calls the Géorisques API to generate a JSON risk report.
