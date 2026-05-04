@@ -34,6 +34,8 @@ services:
       - media-data:/app/static/media
       # Local app code mapping for scraper fixes
       - ./app:/app/app
+      - ./templates:/app/templates
+      - ./locales:/app/locales
 
     command: bash -c "pip install playwright==1.41.0 playwright-stealth && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
