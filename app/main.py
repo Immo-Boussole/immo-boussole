@@ -31,7 +31,7 @@ from app.services import (
     fetch_basic_metadata,
     generate_ideal_profile,
 )
-from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates
+from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates, get_postal_code
 from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
@@ -946,21 +946,31 @@ def create_map_pins(
 
 @app.get("/api/nearby-cities")
 async def get_nearby_cities(
-    cp: str,
+    query: str,
     rayon: int = 5,
     _auth = Depends(login_required)
 ):
     """
     Proxy endpoint to villes-voisines.fr API.
-    Avoids CORS issues by making the request server-side.
-    Returns a list of nearby cities sorted by distance.
+    Supports both postal code (5 digits) and city names.
+    Returns a dict with 'cities' (list) and 'reference' (dict).
     """
     import httpx as _httpx
     import re
 
-    # Validate postal code: must be 5 digits
-    if not re.fullmatch(r"\d{5}", cp.strip()):
-        raise HTTPException(status_code=400, detail="Code postal invalide (5 chiffres requis)")
+    query = query.strip()
+    cp = ""
+    ref_name = query
+
+    # Check if query is a postal code
+    if re.fullmatch(r"\d{5}", query):
+        cp = query
+    else:
+        # Try to resolve city name to postal code
+        resolved_cp = get_postal_code(query)
+        if not resolved_cp:
+            raise HTTPException(status_code=404, detail=f"Impossible de trouver le code postal pour '{query}'")
+        cp = resolved_cp
 
     # Clamp rayon to sensible bounds
     rayon = max(1, min(rayon, 200))
@@ -971,15 +981,30 @@ async def get_nearby_cities(
             res = await client.get(url, timeout=10.0, headers={"User-Agent": "ImmoBoussole/1.0"})
         res.raise_for_status()
         raw = res.json()
-        # API sometimes returns a dict keyed by string indices {"0": {...}, "1": {...}}
-        # or sometimes directly a list. We handle both.
+        
         if isinstance(raw, dict):
             cities = list(raw.values())
         else:
             cities = raw
 
         cities.sort(key=lambda c: float(c.get("distance", 0)) if c.get("distance") is not None else 0)
-        return cities
+        
+        # Determine reference info
+        # If the first city has distance 0, use its name as ref_name if query was a CP
+        if cities and float(cities[0].get("distance", 0)) == 0:
+            if re.fullmatch(r"\d{5}", query):
+                ref_name = cities[0].get("nom_commune", query)
+            ref_cp = cities[0].get("code_postal", cp)
+        else:
+            ref_cp = cp
+
+        return {
+            "cities": cities,
+            "reference": {
+                "name": ref_name,
+                "cp": ref_cp
+            }
+        }
     except _httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"Erreur API villes-voisines: {e.response.status_code}")
     except Exception as e:

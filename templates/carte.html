@@ -491,8 +491,8 @@
 
             <div class="nearby-form-row">
                 <div class="nearby-form-group">
-                    <label for="nearbyCP"><i class="fa-solid fa-envelope" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Code Postal') }}</label>
-                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: 91190') }}" maxlength="5" inputmode="numeric">
+                    <label for="nearbyCP"><i class="fa-solid fa-city" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Ville ou Code Postal') }}</label>
+                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: Lyon ou 69000') }}">
                 </div>
                 <div class="nearby-form-group nearby-range-group">
                     <div class="nearby-range-label">
@@ -920,14 +920,14 @@
         }
 
         async function searchNearbyCities() {
-            const cp = document.getElementById('nearbyCP').value.trim();
+            const query = document.getElementById('nearbyCP').value.trim();
             const rayon = document.getElementById('nearbyRayon').value;
             const resultEl = document.getElementById('nearbySearchResult');
             const btn = document.getElementById('btnSearchNearby');
 
-            if (!/^\d{5}$/.test(cp)) {
+            if (!query) {
                 resultEl.className = 'modal-result error';
-                resultEl.textContent = '{{ t(request, "map.nearby_invalid_cp", "Veuillez saisir un code postal valide (5 chiffres).") }}';
+                resultEl.textContent = '{{ t(request, "map.nearby_invalid_query", "Veuillez saisir une ville ou un code postal.") }}';
                 return;
             }
 
@@ -938,22 +938,24 @@
             document.getElementById('nearbyResultsWrapper').classList.remove('visible');
 
             try {
-                const res = await fetch(`/api/nearby-cities?cp=${encodeURIComponent(cp)}&rayon=${rayon}`);
+                const res = await fetch(`/api/nearby-cities?query=${encodeURIComponent(query)}&rayon=${rayon}`);
                 if (!res.ok) {
                     const err = await res.json();
                     throw new Error(err.detail || `HTTP ${res.status}`);
                 }
-                const cities = await res.json();
+                const data = await res.json();
+                const cities = data.cities;
+                const reference = data.reference;
 
                 if (!cities || cities.length === 0) {
                     resultEl.className = 'modal-result error';
-                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouv\u00e9e pour ce code postal et ce rayon.") }}';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouvée pour cette recherche.") }}';
                     return;
                 }
 
-                // Deduce reference city: first entry with smallest distance
-                nearbyRefCommune = cities[0].nom_commune || '';
-                nearbyRefCp = cities[0].code_postal || cp;
+                // Use reference info from API
+                nearbyRefCommune = reference.name;
+                nearbyRefCp = reference.cp;
 
                 // Populate table
                 const tbody = document.getElementById('nearbyCitiesTableBody');
