@@ -68,7 +68,7 @@ services:
       - MAX_MEMORY_PERCENT=97
       - CONNECTION_TIMEOUT=120000          # WebSocket session timeout (ms); Python client retries 3× with 30s each
       - DEFAULT_BLOCK_ADS=false
-      - DEFAULT_STEALTH=false
+      - DEFAULT_STEALTH=true
       # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
       - PREBOOT_CHROME=false
       - TOKEN=${BROWSERLESS_TOKEN:-}

@@ -18,6 +18,11 @@ class LeboncoinScraper(BaseScraper):
 
         html_content = snapshot.get("html", "")
         text_content = snapshot.get("text", "")
+        
+        if "geo.captcha-delivery.com" in html_content or "<title>leboncoin.fr</title>" in html_content:
+            print("[LBC] Bloqué par DataDome captcha lors de la recherche !")
+            raise Exception("Leboncoin a bloqué la recherche via DataDome.")
+
         listings = []
 
         if html_content:
@@ -126,6 +131,10 @@ class LeboncoinScraper(BaseScraper):
         if not html_content:
             return {}
 
+        if "geo.captcha-delivery.com" in html_content or "<title>leboncoin.fr</title>" in html_content:
+            print("[LBC] Bloqué par DataDome captcha !")
+            raise Exception("Leboncoin a bloqué l'accès via DataDome.")
+
         details = {}
 
         # Primary: parse __NEXT_DATA__ JSON for detail page
@@ -171,6 +180,7 @@ class LeboncoinScraper(BaseScraper):
 
                     # Fallback to HTML if JSON images are missing or only one
                     if len(details["photo_urls"]) <= 1:
+                        soup = BeautifulSoup(html_content, 'html.parser')
                         fb_photos = []
                         # Look for images in the gallery container if possible
                         for img in soup.find_all('img', src=re.compile(r'img\.leboncoin\.fr')):

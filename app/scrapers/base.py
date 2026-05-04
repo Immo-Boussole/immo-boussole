@@ -52,9 +52,11 @@ class BaseScraper(abc.ABC):
         # --- Browserless URL Preparation ---
         base_url = settings.BROWSERLESS_URL.rstrip("/")
         
-        # Append token if provided
+        # Append token and stealth if provided
         token = settings.BROWSERLESS_TOKEN
-        browserless_url = f"{base_url}?token={token}" if token else base_url
+        browserless_url = f"{base_url}?stealth=true"
+        if token:
+            browserless_url += f"&token={token}"
         
         print(f"[Scraper] Extraction via Playwright/Browserless CDP pour : {url}")
 
