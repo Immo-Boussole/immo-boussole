@@ -63,7 +63,7 @@ async def download_single_image(
 async def download_listing_photos(
     listing_id: int,
     photo_urls: list[str],
-    max_photos: int = 25,
+    max_photos: int = 30,
 ) -> list[str]:
     """
     Downloads photos for a listing in parallel.
