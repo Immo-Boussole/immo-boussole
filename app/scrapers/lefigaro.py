@@ -411,11 +411,21 @@ class LeFigaroScraper(BaseScraper):
         if isinstance(rooms, list) and len(rooms) > 0:
             rooms = rooms[0]
             
-        bedrooms = classified.get("bedroomCount") or classified.get("bedrooms")
+        bedrooms = (
+            classified.get("bedRoomCount") 
+            or classified.get("bedroomCount") 
+            or classified.get("bedrooms")
+        )
         if isinstance(bedrooms, list) and len(bedrooms) > 0:
             bedrooms = bedrooms[0]
 
-        description = classified.get("descriptionFull") or classified.get("description") or classified.get("descriptionText") or ""
+        description = (
+            classified.get("descriptionFull") 
+            or classified.get("fullDescription") 
+            or classified.get("description") 
+            or classified.get("descriptionText") 
+            or ""
+        )
 
         # Mobilité / Transports
         poi_categories = loc_data.get("poiCategories", [])
