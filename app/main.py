@@ -32,7 +32,7 @@ from app.services import (
     generate_ideal_profile,
 )
 from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates
-from app.media import json_to_photos
+from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
 
@@ -569,7 +569,7 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
     
     queries = db.query(SearchQuery).all()
 
-    for listing in imported_listings + rejected_listings:
+    for listing in all_listings + imported_listings + rejected_listings:
         listing._photos = json_to_photos(listing.photos_local)
 
     local_hash = get_local_commit_hash()
@@ -1397,6 +1397,39 @@ def delete_listing(
     db.delete(listing)
     db.commit()
     return {"status": "deleted", "listing_id": listing_id}
+
+
+@app.delete("/api/listings/{listing_id}/photos/{photo_index}")
+def delete_listing_photo(
+    request: Request,
+    listing_id: int,
+    photo_index: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Delete a specific photo by its index."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+        
+    photos = json_to_photos(listing.photos_local)
+    if photo_index < 0 or photo_index >= len(photos):
+        raise HTTPException(status_code=404, detail="Photo index out of range")
+        
+    photo_path = photos.pop(photo_index)
+    
+    # Try to delete the physical file
+    try:
+        full_path = os.path.join(os.getcwd(), photo_path.strip('/'))
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    except Exception as e:
+        print(f"Failed to delete photo file {photo_path}: {e}")
+        
+    listing.photos_local = photos_to_json(photos)
+    db.commit()
+    
+    return {"status": "deleted", "photo_index": photo_index}
 
 
 @app.put("/api/listings/{listing_id}")
