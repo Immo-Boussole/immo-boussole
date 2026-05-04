@@ -242,10 +242,9 @@
         .dpe-G { background: #c73232; color: #fff; } .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
 
         /* Description */
-        .description { font-size: 0.875rem; line-height: 1.7; color: var(--text-2); max-height: 140px; overflow: hidden; position: relative; }
+        .description { font-size: 0.875rem; line-height: 1.7; color: var(--text-2); max-height: 140px; overflow: hidden; position: relative; white-space: pre-wrap; }
         .description.expanded { max-height: none; }
-        .description::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface)); }
-        .description.expanded::after { display: none; }
+        .description:not(.expanded).has-overflow::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; }
         .read-more { font-size: 0.78rem; color: var(--accent); cursor: pointer; margin-top: 0.5rem; display: none; font-weight: 600; }
 
 
@@ -1224,8 +1223,9 @@
     // ── Description toggle ────────────────────────────────────────────────────
     const desc = document.getElementById('desc');
     const readMore = document.getElementById('readMore');
-    if (desc && desc.scrollHeight > desc.offsetHeight + 20) {
+    if (desc && desc.scrollHeight > desc.offsetHeight + 1) {
         readMore.style.display = 'block';
+        desc.classList.add('has-overflow');
     }
     function toggleDesc() {
         desc.classList.toggle('expanded');
