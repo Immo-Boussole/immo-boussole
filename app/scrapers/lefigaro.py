@@ -8,46 +8,77 @@ from typing import List, Dict, Optional
 class LeFigaroScraper(BaseScraper):
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Helper: extract the __NUXT__ JSON blob from raw HTML
+    # Helper: Extract the __NUXT__ / __NUXT_DATA__ state from raw HTML
     # ─────────────────────────────────────────────────────────────────────────
+    def _inflate_nuxt_data(self, flat_data: list) -> dict:
+        """Inflates a flat Nuxt 3 (unjs/devalue) array into a nested python dict."""
+        resolved = {}
+        def walk(idx):
+            if not isinstance(idx, int) or idx < 0 or idx >= len(flat_data):
+                return idx
+            if idx in resolved:
+                return resolved[idx]
+            
+            val = flat_data[idx]
+            if isinstance(val, dict):
+                res = {}
+                resolved[idx] = res
+                for k, v in val.items():
+                    res[k] = walk(v)
+                return res
+            elif isinstance(val, list):
+                # Handle Nuxt reactivity wrappers
+                if len(val) == 2 and isinstance(val[0], str) and val[0] in ('ShallowReactive', 'Reactive', 'Ref', 'ShallowRef'):
+                    res = walk(val[1])
+                    resolved[idx] = res
+                    return res
+                res = []
+                resolved[idx] = res
+                for i in val:
+                    res.append(walk(i))
+                return res
+            else:
+                resolved[idx] = val
+                return val
+        
+        return walk(0)
+
     def _extract_nuxt_data(self, html_content: str) -> Optional[dict]:
         """
-        Tries several patterns to extract the __NUXT__ state object from the
-        rendered HTML.  Returns the parsed dict or None on failure.
+        Tries several patterns to extract the Nuxt state object from the
+        rendered HTML. Returns the parsed dict or None on failure.
         """
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Pattern 1: modern Nuxt 3 – inline JSON object assignment
-        # e.g.  window.__NUXT__={"data":[...],"state":...}
+        # Pattern 1: modern Nuxt 3 - flat JSON in script#__NUXT_DATA__
+        nuxt_data_tag = soup.find('script', id='__NUXT_DATA__')
+        if nuxt_data_tag and nuxt_data_tag.string:
+            try:
+                flat_data = json.loads(nuxt_data_tag.string)
+                if isinstance(flat_data, list):
+                    return self._inflate_nuxt_data(flat_data)
+            except Exception as e:
+                print(f"[LeFigaro] Erreur parse __NUXT_DATA__: {e}", flush=True)
+
+        # Pattern 2: older Nuxt 3 - inline JSON object assignment window.__NUXT__
         for script in soup.find_all('script'):
             text = script.string or ""
             match = re.search(r'window\.__NUXT__\s*=\s*(\{.*)', text, re.DOTALL)
             if match:
                 raw = match.group(1).strip().rstrip(';')
                 try:
-                    # Balanced-brace extraction to avoid trailing JS
                     depth, end = 0, 0
                     for i, ch in enumerate(raw):
-                        if ch == '{':
-                            depth += 1
+                        if ch == '{': depth += 1
                         elif ch == '}':
                             depth -= 1
                             if depth == 0:
                                 end = i + 1
                                 break
-                    return json.loads(raw[:end])
+                    if end > 0:
+                        return json.loads(raw[:end])
                 except Exception as e:
-                    print(f"[LeFigaro] Erreur parse __NUXT__ (pattern 1): {e}", flush=True)
-
-        # Pattern 2: Nuxt 2 – function call form
-        # e.g.  __NUXT__=(function(a,b,...){return {...}}(...))
-        for script in soup.find_all('script'):
-            text = script.string or ""
-            if '__NUXT__' in text and 'function' in text:
-                print("[LeFigaro] __NUXT__ via function() – parsing non supporté pour l'instant", flush=True)
-                break
-
-        return None
+                    print(f"[LeFigaro] Erreur parse __NUXT__ (pattern window.__NUXT__): {e}", flush=True)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Helper: dig into the data structure for classified listings
@@ -254,7 +285,10 @@ class LeFigaroScraper(BaseScraper):
         if nuxt_data:
             classified = self._find_classified_detail(nuxt_data)
             if classified:
-                details = {**details, **self._classified_to_dict(classified, url=url)}
+                nuxt_details = self._classified_to_dict(classified, url=url)
+                if nuxt_details.get("title") == "Annonce Le Figaro" and details.get("title"):
+                    nuxt_details["title"] = details["title"]
+                details = {**details, **nuxt_details}
                 return details
             else:
                 print("[LeFigaro] __NUXT__ trouvé mais aucun classifiedDetailResponse dedans", flush=True)
@@ -264,12 +298,19 @@ class LeFigaroScraper(BaseScraper):
         # ── Photo fallback ─────────────────────────────────────────────────
         if not details.get("photo_urls"):
             fb_photos = []
-            for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro')):
+            for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro|lh3\.googleusercontent\.com')):
                 src = img.get('src')
                 if src and 'thumb' not in src.lower():
+                    # If it's a googleusercontent URL, we strip the size parameters at the end to get full res
+                    # or keep it as is. Usually keeping the w940 is fine.
                     fb_photos.append(src)
             if fb_photos:
-                details["photo_urls"] = list(set(fb_photos))
+                # Remove duplicates while preserving order
+                unique_photos = []
+                for p in fb_photos:
+                    if p not in unique_photos:
+                        unique_photos.append(p)
+                details["photo_urls"] = unique_photos
             else:
                 og_img = soup.find('meta', attrs={"property": "og:image"})
                 if og_img and og_img.get("content"):
@@ -324,6 +365,73 @@ class LeFigaroScraper(BaseScraper):
                     if best:
                         photos_list.append(best)
 
+        # DPE & GES
+        dpe_data = classified.get("dpe", {}) or {}
+        dpe_rating = dpe_data.get("energyCategory") or dpe_data.get("dpeCategory")
+        ges_rating = dpe_data.get("gesCategory")
+        dpe_value = dpe_data.get("energy") or dpe_data.get("dpeValue")
+        ges_value = dpe_data.get("ges") or dpe_data.get("gesValue")
+
+        # Équipements & Extérieurs
+        options = classified.get("options", []) or []
+        if isinstance(options, str):
+            options = [options]
+        options_lower = [str(o).lower() for o in options]
+        
+        has_balcony = any("balcon" in o for o in options_lower)
+        has_terrace = any("terrass" in o for o in options_lower)
+        has_garden = any("jardin" in o for o in options_lower)
+        has_elevator = any("ascenseur" in o for o in options_lower)
+        has_cellar = any("cave" in o for o in options_lower)
+        has_pool = any("piscin" in o for o in options_lower)
+        has_parking = any(k in o for o in options_lower for k in ["parking", "garage", "box"])
+
+        # Financier & Copropriété
+        price_data = classified.get("priceData", {}) or {}
+        condominium = classified.get("condominium", {}) or {}
+        
+        land_tax = None
+        prop_tax = price_data.get("propertyTax")
+        if isinstance(prop_tax, dict):
+            land_tax = prop_tax.get("value")
+            
+        charges = None
+        annual_fees = condominium.get("annualFees")
+        if annual_fees:
+            try:
+                charges = float(annual_fees) / 12.0
+            except:
+                pass
+                
+        procedure_syndic = condominium.get("ongoingRecourse")
+        copropriete_lots = condominium.get("lotsCount")
+
+        # Handle lists in rooms
+        rooms = classified.get("roomCount") or classified.get("rooms")
+        if isinstance(rooms, list) and len(rooms) > 0:
+            rooms = rooms[0]
+            
+        bedrooms = classified.get("bedroomCount") or classified.get("bedrooms")
+        if isinstance(bedrooms, list) and len(bedrooms) > 0:
+            bedrooms = bedrooms[0]
+
+        description = classified.get("descriptionFull") or classified.get("description") or classified.get("descriptionText") or ""
+
+        # Mobilité / Transports
+        poi_categories = loc_data.get("poiCategories", [])
+        transports = []
+        if isinstance(poi_categories, list):
+            for cat in poi_categories:
+                if isinstance(cat, dict) and cat.get("label", "").lower() in ["transports", "mobilité"]:
+                    for poi in cat.get("poi", []):
+                        if isinstance(poi, dict):
+                            count = poi.get("count", 0)
+                            label = poi.get("label", "")
+                            if count and label:
+                                transports.append(f"{count} {label}")
+        if transports:
+            description += "\n\nTransports : " + ", ".join(transports)
+
         return {
             "external_id": f"figaro_{ext_id}",
             "title": classified.get("title") or classified.get("subject") or "Annonce Le Figaro",
@@ -332,10 +440,33 @@ class LeFigaroScraper(BaseScraper):
             "location": location,
             "city": city,
             "area": classified.get("surface") or classified.get("area"),
-            "rooms": classified.get("roomCount") or classified.get("rooms"),
-            "bedrooms": classified.get("bedroomCount") or classified.get("bedrooms"),
-            "description_text": classified.get("description") or classified.get("descriptionText") or "",
+            "rooms": rooms,
+            "bedrooms": bedrooms,
+            "description_text": description,
             "photo_urls": photos_list,
+            
+            # Nouvelles données extraites
+            "dpe_rating": dpe_rating,
+            "ges_rating": ges_rating,
+            "dpe_value": dpe_value,
+            "ges_value": ges_value,
+            
+            "balcony": has_balcony,
+            "terrace": has_terrace,
+            "garden": has_garden,
+            "elevator": has_elevator,
+            "cellar": has_cellar,
+            "pool": has_pool,
+            "parking_count": 1 if has_parking else 0,
+            
+            "land_tax": land_tax,
+            "charges": charges,
+            "procedure_syndic": procedure_syndic,
+            "copropriete_lots": copropriete_lots,
+            "property_type": classified.get("type"),
+            "heating_type": classified.get("heatingType"),
+            "land_area": classified.get("areaGround"),
+            "bathroom_count": classified.get("showerRoomCount") or classified.get("bathroomCount"),
         }
 
     def _parse_location_from_text(self, text: str) -> tuple:

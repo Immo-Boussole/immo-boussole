@@ -1539,7 +1539,14 @@
             <div class="gallery-sidebar">
                 <div class="gallery-header">
                     <div class="gallery-idx" id="galleryIdx">1/1</div>
-                    <div class="gallery-title">{{ listing.title }}</div>
+                    <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.5rem; margin-bottom: 1.5rem;">
+                        <div class="gallery-title" style="margin-bottom:0;">{{ listing.title }}</div>
+                        {% if request.session.get('role') == 'user' %}
+                        <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="gallery-thumbs" id="galleryThumbs">
                     {% for photo in photos %}
@@ -1777,6 +1784,27 @@
 
         function gallerySlide(dir) {
             galleryGoTo(currentGalleryIdx + dir);
+        }
+
+        async function deleteCurrentPhoto() {
+            if (!confirm("{{ t(request, 'listing.confirm_delete_photo', 'Voulez-vous vraiment supprimer cette photo ?') }}")) return;
+            
+            try {
+                const res = await fetch(`/api/listings/{{ listing.id }}/photos/${currentGalleryIdx}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    showToast("{{ t(request, 'listing.photo_deleted', 'Photo supprimée avec succès !') }}");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur lors de la suppression: " + (err.detail || "Inconnue"));
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau");
+            }
         }
     </script>
 </body>
