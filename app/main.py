@@ -1077,6 +1077,91 @@ def delete_map_pin(
     return {"status": "deleted"}
 
 
+@app.get("/api/city-info")
+async def get_city_info(
+    city: str,
+    _auth = Depends(login_required)
+):
+    """
+    Returns geographic info for a given city name:
+    - total_area_km2: administrative area in km² (from Nominatim extratags)
+    - stations: list of SNCF stations with walk/bike/car times (minutes)
+    Results are cached in GEO_CACHE.
+    """
+    import httpx as _httpx
+    from app.geo import GEO_CACHE, get_coordinates, find_nearby_stations, calculate_station_times
+
+    city_key = city.strip()
+    cache_key = f"city_info:{city_key.lower()}"
+
+    if cache_key in GEO_CACHE:
+        return GEO_CACHE[cache_key]
+
+    # 1. Geocode – use Nominatim with extratags for area
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+    area_km2 = None
+    try:
+        async with _httpx.AsyncClient() as client:
+            res = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "q": city_key,
+                    "format": "json",
+                    "limit": 1,
+                    "extratags": 1,
+                    "addressdetails": 0,
+                },
+                headers=headers,
+                timeout=10.0,
+            )
+        res.raise_for_status()
+        data = res.json()
+        if data:
+            place = data[0]
+            lat = float(place["lat"])
+            lon = float(place["lon"])
+            # Try to get area from extratags (area in m²)
+            extratags = place.get("extratags") or {}
+            area_m2 = extratags.get("area")
+            if area_m2:
+                try:
+                    area_km2 = round(float(area_m2) / 1_000_000, 1)
+                except Exception:
+                    area_km2 = None
+        else:
+            raise HTTPException(status_code=404, detail=f"Ville '{city_key}' introuvable")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Erreur géocodage : {e}")
+
+    # 2. Find nearby SNCF stations (up to 5) and calculate travel times
+    stations_raw = find_nearby_stations(lat, lon, radius=20000)
+    # Sort by straight-line distance and take top 5
+    def dist_sq(s):
+        return (lat - s["lat"]) ** 2 + (lon - s["lon"]) ** 2
+    stations_raw.sort(key=dist_sq)
+    stations_raw = stations_raw[:5]
+
+    stations_out = []
+    for s in stations_raw:
+        times = calculate_station_times(lat, lon, s["lat"], s["lon"])
+        stations_out.append({
+            "name": s["name"],
+            "walk": times.get("walk"),
+            "bike": times.get("bike"),
+            "car": times.get("car"),
+        })
+
+    result = {
+        "city": city_key,
+        "area_km2": area_km2,
+        "stations": stations_out,
+    }
+    GEO_CACHE[cache_key] = result
+    return result
+
+
 @app.post("/api/profile")
 async def update_profile(
     request: Request,

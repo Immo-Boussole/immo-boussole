@@ -361,6 +361,122 @@
             border-radius: 6px; font-size: 0.7rem; font-weight: 600;
             color: var(--orange);
         }
+
+        /* ── City Info Panel ── */
+        .city-info-btn {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            background: none; border: none; padding: 0;
+            color: var(--text); font-weight: 800; font-size: 0.95rem;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            transition: var(--trans); text-align: left;
+        }
+        .city-info-btn:hover { color: var(--accent); }
+        .city-info-btn .city-btn-icon {
+            font-size: 0.65rem; color: var(--accent); opacity: 0.7;
+            transition: var(--trans);
+        }
+        .city-info-btn:hover .city-btn-icon { opacity: 1; }
+
+        .city-panel {
+            position: fixed; top: 0; right: -420px; width: 400px;
+            height: 100vh; background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+            z-index: 9998; display: flex; flex-direction: column;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+        .city-panel.open { right: 0; }
+
+        .city-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .city-panel-header h2 {
+            font-size: 1.1rem; font-weight: 800;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-panel-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.1rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .city-panel-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .city-panel-body {
+            flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;
+            display: flex; flex-direction: column; gap: 1.25rem;
+        }
+
+        .city-stat-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem 1.25rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .city-stat-icon {
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .city-stat-icon.area { background: rgba(79,142,247,0.15); color: var(--accent); }
+        .city-stat-label { font-size: 0.7rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; }
+        .city-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); line-height: 1; margin-top: 2px; }
+        .city-stat-unit { font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-left: 2px; }
+
+        .city-section-title {
+            font-size: 0.7rem; font-weight: 700; color: var(--text-2);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-section-title::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        .station-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 0.85rem 1rem;
+            transition: var(--trans);
+        }
+        .station-card:hover { border-color: rgba(79,142,247,0.25); }
+        .station-name {
+            font-size: 0.9rem; font-weight: 700; color: var(--text);
+            margin-bottom: 0.6rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .station-name i { color: var(--accent); }
+        .station-times {
+            display: flex; gap: 0.5rem;
+        }
+        .station-time-chip {
+            flex: 1; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.4rem 0.5rem;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+        }
+        .station-time-chip .chip-icon { font-size: 0.85rem; }
+        .station-time-chip .chip-icon.walk { color: var(--green); }
+        .station-time-chip .chip-icon.bike { color: var(--orange); }
+        .station-time-chip .chip-icon.car  { color: var(--accent); }
+        .station-time-chip .chip-val { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+        .station-time-chip .chip-label { font-size: 0.6rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .city-panel-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 1rem; padding: 3rem;
+            color: var(--text-2); font-size: 0.85rem;
+        }
+        .city-panel-loading i { font-size: 2rem; color: var(--accent); }
+        .city-panel-error {
+            background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.25);
+            border-radius: 10px; padding: 1rem; color: var(--red);
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 768px) {
+            .city-panel { width: 100%; right: -100%; }
+            .city-panel.open { right: 0; }
+        }
     </style>
 </head>
 <body>
@@ -437,7 +553,23 @@
 
 
         <div id="map"></div>
-        
+
+        <!-- ── City Info Side Panel ── -->
+        <div class="city-panel" id="cityInfoPanel">
+            <div class="city-panel-header">
+                <h2>
+                    <i class="fa-solid fa-city" style="color: var(--orange);"></i>
+                    <span id="cityPanelName">—</span>
+                </h2>
+                <button class="city-panel-close" onclick="closeCityPanel()" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="city-panel-body" id="cityPanelBody">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
         <div class="map-legend" id="map-legend">
             <div class="legend-section-title">{{ t(request, 'nav.listings_table', 'Annonces') }}</div>
             <div class="legend-item"><div class="dot" style="background: var(--accent);"></div> {{ t(request, 'map.new', 'Nouveauté') }}</div>
@@ -732,8 +864,19 @@
                     ? `<div class="map-nearby-tag"><i class="fa-solid fa-location-crosshairs"></i> ${nearbyTagTpl.replace('{distance}', p.nearby_distance_km.toLocaleString('fr-FR')).replace('{city}', p.nearby_ref_commune).replace('{cp}', p.nearby_ref_cp)}</div>`
                     : '';
 
+                // City name – clickable to open info panel for nearby city pins
+                const isNearbyPin = (p.nearby_distance_km != null);
+                // Extract plain city name (strip CP suffix like "Lyon (69000)")
+                const rawTitle = p.title || '';
+                const cityNameForPanel = rawTitle.replace(/\s*\(\d{5}\)$/, '').trim();
+                const titleHtml = isNearbyPin
+                    ? `<button class="city-info-btn" onclick="openCityPanel(event, '${cityNameForPanel.replace(/'/g, "\\'")}')">` +
+                      `<i class="fa-solid fa-up-right-from-square city-btn-icon"></i>${rawTitle}` +
+                      `</button>`
+                    : `<strong class="map-popup-title">${rawTitle}</strong>`;
+
                 marker.bindPopup(`
-                    <strong class="map-popup-title">${p.title}</strong>
+                    ${titleHtml}
                     ${nearbyTag}
                     <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${p.address}</div>
                     <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
@@ -1070,6 +1213,132 @@
         document.getElementById('nearbyCP').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') searchNearbyCities();
         });
+
+        // ── City Info Panel ──
+        function openCityPanel(e, cityName) {
+            if (e) e.stopPropagation();
+            const panel = document.getElementById('cityInfoPanel');
+            const nameEl = document.getElementById('cityPanelName');
+            const body = document.getElementById('cityPanelBody');
+
+            nameEl.textContent = cityName;
+            body.innerHTML = `
+                <div class="city-panel-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Chargement des données…
+                </div>`;
+            panel.classList.add('open');
+
+            fetchCityInfo(cityName);
+        }
+
+        function closeCityPanel() {
+            document.getElementById('cityInfoPanel').classList.remove('open');
+        }
+
+        // Close panel when pressing Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeCityPanel();
+        });
+
+        const _cityInfoCache = {};
+
+        async function fetchCityInfo(cityName) {
+            const body = document.getElementById('cityPanelBody');
+
+            if (_cityInfoCache[cityName]) {
+                renderCityInfo(_cityInfoCache[cityName]);
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/city-info?city=${encodeURIComponent(cityName)}`);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                _cityInfoCache[cityName] = data;
+                renderCityInfo(data);
+            } catch (err) {
+                body.innerHTML = `<div class="city-panel-error"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</div>`;
+            }
+        }
+
+        function fmtMin(min) {
+            if (min == null) return '—';
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+        }
+
+        function renderCityInfo(data) {
+            const body = document.getElementById('cityPanelBody');
+
+            // Area card
+            let areaHtml = '';
+            if (data.area_km2 != null) {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div>
+                            <span class="city-stat-value">${data.area_km2.toLocaleString('fr-FR')}</span>
+                            <span class="city-stat-unit">km²</span>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div style="color: var(--text-2); font-size: 0.82rem; margin-top: 4px;">Donnée non disponible</div>
+                    </div>
+                </div>`;
+            }
+
+            // Stations section
+            let stationsHtml = '';
+            if (data.stations && data.stations.length > 0) {
+                stationsHtml = `<div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF à proximité</div>`;
+                data.stations.forEach(s => {
+                    stationsHtml += `
+                    <div class="station-card">
+                        <div class="station-name">
+                            <i class="fa-solid fa-train-subway"></i>
+                            ${s.name}
+                        </div>
+                        <div class="station-times">
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-person-walking chip-icon walk"></i>
+                                <span class="chip-val">${fmtMin(s.walk)}</span>
+                                <span class="chip-label">À pied</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-bicycle chip-icon bike"></i>
+                                <span class="chip-val">${fmtMin(s.bike)}</span>
+                                <span class="chip-label">Vélo</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-car chip-icon car"></i>
+                                <span class="chip-val">${fmtMin(s.car)}</span>
+                                <span class="chip-label">Voiture</span>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                stationsHtml = `
+                <div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF</div>
+                <div style="color: var(--text-2); font-size: 0.82rem;">Aucune gare trouvée dans un rayon de 20 km.</div>`;
+            }
+
+            body.innerHTML = areaHtml + stationsHtml;
+        }
 
         loadMapData();
     </script>
