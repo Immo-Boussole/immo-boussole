@@ -68,7 +68,53 @@
             text-decoration: none;
         }
 
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo i {
+            -webkit-text-fill-color: var(--accent);
+            font-size: 1.4rem;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -77,7 +123,6 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             margin-bottom: 0.75rem;
-            margin-top: 1.5rem;
         }
 
         .nav-link {
@@ -94,9 +139,50 @@
             margin-bottom: 0.25rem;
         }
 
-        .nav-link:hover, .nav-link.active {
+        .nav-link:hover,
+        .nav-link.active {
             background: rgba(79, 142, 247, 0.12);
             color: var(--accent);
+        }
+
+        /* Language Selector in Sidebar */
+        .sidebar-lang-selector {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sidebar-lang-selector .lang-item.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .sidebar-lang-selector .lang-item span {
+            font-size: 1rem;
         }
 
         /* ── Main Content ── */
@@ -346,43 +432,76 @@
 </head>
 
 <body>
-    <!-- Sidebar (Simplified for Chat, but keeping structure) -->
     <aside class="sidebar">
         <a href="/" class="logo">
-            <i class="fas fa-compass"></i>
-            Immo-Boussole
+            <i class="fa-solid fa-compass-drafting"></i>
+            {{ t(request, 'app.title') }}
         </a>
 
-        <div class="sidebar-section-title">Navigation</div>
-        <a href="/" class="nav-link">
-            <i class="fas fa-chart-line"></i> Dashboard
-        </a>
-        <a href="/listings/table" class="nav-link">
-            <i class="fas fa-table"></i> Listings Table
-        </a>
-        <a href="/carte" class="nav-link">
-            <i class="fas fa-map-marked-alt"></i> Carte
-        </a>
-        <a href="/profile/ideal" class="nav-link">
-            <i class="fas fa-bullseye"></i> Profil Idéal
-        </a>
-        <a href="/chat" class="nav-link active">
-            <i class="fas fa-robot"></i> Assistant IA
-        </a>
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
+        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
+        {% set dup_cnt = listings|selectattr("is_duplicate", "equalto", True)|list|length %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card dup">
+                <div class="val">{{ dup_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.duplicates') }}</div>
+            </div>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
+        </div>
 
-        <div class="sidebar-section-title">Prêt / Paramètres</div>
-        <a href="/searches/ready" class="nav-link">
-            <i class="fas fa-search-location"></i> Ready to Search
-        </a>
-        <a href="/profile" class="nav-link">
-            <i class="fas fa-user-circle"></i> Mon Profil
-        </a>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
+        <nav>
+            <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
+            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
+            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link active"><i class="fa-solid fa-robot"></i> Assistant IA</a>
+        </nav><br>
+        <nav>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
+            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            {% if request.session.get('role') == 'admin' %}
+            <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            {% endif %}
+        </nav>
 
-        <div class="sidebar-footer">
+        <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <a href="/logout" class="nav-link" style="color: var(--red);">
-                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
-            <span class="version">ver: {{ app_version }}</span>
+
+            {% if request.session.get('username') %}
+            <div style="font-size: 0.75rem; color: var(--text-2); padding: 0.5rem 0.75rem 0; border-top: 1px solid var(--border);">
+                {{ t(request, 'nav.connected') }} <span style="color: var(--text); font-weight: 600;">{{ request.session.get('username') }}</span>
+                <span style="font-size: 0.6rem; text-transform: uppercase; opacity: 0.6;">({{ request.session.get('role') }})</span>
+            </div>
+            {% endif %}
+
+            <div class="sidebar-lang-selector">
+                <a href="/lang/fr" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'fr' else '' }}">
+                    <span>🇫🇷</span> FR
+                </a>
+                <a href="/lang/en" class="lang-item {{ 'active' if request.session.get('lang', 'fr') == 'en' else '' }}">
+                    <span>🇬🇧</span> EN
+                </a>
+            </div>
+
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
+            </div>
         </div>
     </aside>
 
