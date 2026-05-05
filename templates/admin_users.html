@@ -89,6 +89,49 @@
             color: var(--accent);
         }
 
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
+
         /* ── Main Content ── */
         .main {
             flex: 1;
@@ -356,24 +399,51 @@
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div class="logo">
+        <a href="/" class="logo">
             <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+            {{ t(request, 'app.title') }}
+        </a>
+
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
+        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
+        {% set dup_cnt = listings|selectattr("is_duplicate", "equalto", True)|list|length %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card dup">
+                <div class="val">{{ dup_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.duplicates') }}</div>
+            </div>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
+            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
+            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link active" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             {% endif %}
         </nav>
+
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <a href="/logout" class="nav-link" style="color: var(--red);">

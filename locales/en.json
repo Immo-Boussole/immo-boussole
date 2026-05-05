@@ -103,10 +103,11 @@
         },
         "stats": {
             "new": "New",
-            "disappeared": "Disappeared"
+            "disappeared": "Disappeared",
+            "duplicates": "Duplicates"
         },
         "filter_label": "Filter:",
-        "refresh_tags": "Force Refresh",
+        "refresh_tags": "Force Tags Refresh",
         "see": "View",
         "add_listings_title": "Add listings",
         "add_listings_desc_single": "Paste the URL of a real estate listing.",

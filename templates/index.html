@@ -997,10 +997,15 @@
         {% set total = listings|length %}
         {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
         {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
+        {% set dup_cnt = listings|selectattr("is_duplicate", "equalto", True)|list|length %}
         <div class="stat-grid">
-            <div class="stat-card" style="grid-column: 1 / -1;">
+            <div class="stat-card">
                 <div class="val">{{ total }}</div>
                 <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card dup">
+                <div class="val">{{ dup_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.duplicates') }}</div>
             </div>
             <div class="stat-card new">
                 <div class="val">{{ new_cnt }}</div>

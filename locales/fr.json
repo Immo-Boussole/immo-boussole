@@ -103,10 +103,11 @@
         },
         "stats": {
             "new": "Nouvelles",
-            "disappeared": "Disparues"
+            "disappeared": "Disparues",
+            "duplicates": "Doublons"
         },
         "filter_label": "Filtrer :",
-        "refresh_tags": "Force Refresh",
+        "refresh_tags": "Forcer le rafraîchissement des tags",
         "see": "Voir",
         "add_listings_title": "Ajouter des annonces",
         "add_listings_desc_single": "Collez l'URL d'une annonce immobilière.",
