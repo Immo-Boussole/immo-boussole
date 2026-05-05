@@ -495,7 +495,7 @@ class LeFigaroScraper(BaseScraper):
             "property_type": classified.get("type"),
             "heating_type": classified.get("heatingType"),
             "land_area": classified.get("areaGround"),
-            "bathroom_count": classified.get("showerRoomCount") or classified.get("bathroomCount"),
+            "bathroom_count": (classified.get("showerRoomCount") or 0) + (classified.get("bathroomCount") or 0),
         }
 
     def _parse_location_from_text(self, text: str) -> tuple:

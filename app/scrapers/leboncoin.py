@@ -320,9 +320,11 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
 
-            elif key == "nb_bathrooms":
+            elif key in ("nb_bathrooms", "nb_shower_rooms") or "salle_de_bain" in key or "salle_d_eau" in key or "bathroom" in key or "shower" in key:
                 try:
-                    result["bathroom_count"] = int(val)
+                    # Accumulate if multiple are present
+                    current = result.get("bathroom_count", 0)
+                    result["bathroom_count"] = current + int(val)
                 except (ValueError, TypeError):
                     pass
 
@@ -467,7 +469,13 @@ class LeboncoinScraper(BaseScraper):
             "étage": "floor",
             "nombre d'étages": "total_floors",
             "salles de bain": "bathroom_count",
+            "salle de bain": "bathroom_count",
+            "salles d'eau": "bathroom_count",
+            "salle d'eau": "bathroom_count",
+            "salles de douche": "bathroom_count",
+            "salle de douche": "bathroom_count",
             "wc": "toilet_count",
+            "toilettes": "toilet_count",
             "chauffage": "heating_type",
             "mode de chauffage": "heating_mode",
             "cuisine": "kitchen_type",
