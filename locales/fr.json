@@ -106,6 +106,7 @@
             "disappeared": "Disparues"
         },
         "filter_label": "Filtrer :",
+        "refresh_tags": "Forcer le rafraichissement des tags",
         "see": "Voir",
         "add_listings_title": "Ajouter des annonces",
         "add_listings_desc_single": "Collez l'URL d'une annonce immobilière.",
@@ -354,6 +355,8 @@
         "view_listing": "Voir l'annonce",
         "import_error": "Erreur lors de l'importation",
         "reject_error": "Erreur lors du rejet",
-        "network_error": "Erreur de réseau"
+        "network_error": "Erreur de réseau",
+        "auto_refresh_label": "Rafraîchissement auto",
+        "auto_refresh_value": "Toutes les 30 min (06h-22h30)"
     }
 }

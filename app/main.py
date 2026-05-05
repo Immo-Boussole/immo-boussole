@@ -67,7 +67,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["t"] = get_text
-templates.env.globals["app_version"] = settings.APP_VERSION
+
+# Build a concise display version from APP_VERSION (which may be a full Docker tag)
+_raw_version = settings.APP_VERSION
+if ":" in _raw_version:
+    # Docker image tag like "wikijm/immo-boussole:267266ff1192..."  →  "267266ff"
+    _raw_version = _raw_version.split(":")[-1][:8]
+templates.env.globals["app_version"] = _raw_version
 
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
@@ -744,7 +750,7 @@ def auto_searches_page(
         "grouped_listings": grouped,
         "queries": queries,
         "listings": all_listings,
-        "scraping_schedule": settings.SCRAPING_SCHEDULE,
+        "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),
         "title": "Recherches Automatiques — Immo-Boussole",
     })
 
@@ -795,6 +801,14 @@ def map_page(
 
 
 # ─── API: Listings ────────────────────────────────────────────────────────────
+
+@app.post("/api/listings/refresh-tags")
+def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_required)):
+    """Triggers the global scraping job in the background to update NEW/DISAPPEARED tags."""
+    from app.scheduler import scraping_job
+    background_tasks.add_task(scraping_job)
+    return {"status": "success", "message": "Le rafraîchissement des tags a été lancé en arrière-plan."}
+
 
 @app.get("/api/listings")
 def get_listings(
@@ -1089,7 +1103,7 @@ async def get_city_info(
     Results are cached in GEO_CACHE.
     """
     import httpx as _httpx
-    from app.geo import GEO_CACHE, get_coordinates, find_nearby_stations, calculate_station_times
+    from app.geo import GEO_CACHE, find_nearby_stations, calculate_station_times, haversine_km
 
     city_key = city.strip()
     cache_key = f"city_info:{city_key.lower()}"
@@ -1097,15 +1111,20 @@ async def get_city_info(
     if cache_key in GEO_CACHE:
         return GEO_CACHE[cache_key]
 
-    # 1. Geocode – use Nominatim with extratags for area
     headers = {"User-Agent": "ImmoBoussole/1.0"}
     area_km2 = None
+    lat = None
+    lon = None
+
     try:
         async with _httpx.AsyncClient() as client:
-            res = await client.get(
+            # 1a. First try: structured search for administrative boundary (has area data)
+            res_boundary = await client.get(
                 "https://nominatim.openstreetmap.org/search",
                 params={
-                    "q": city_key,
+                    "city": city_key,
+                    "country": "France",
+                    "featuretype": "city",
                     "format": "json",
                     "limit": 1,
                     "extratags": 1,
@@ -1114,22 +1133,54 @@ async def get_city_info(
                 headers=headers,
                 timeout=10.0,
             )
-        res.raise_for_status()
-        data = res.json()
-        if data:
-            place = data[0]
-            lat = float(place["lat"])
-            lon = float(place["lon"])
-            # Try to get area from extratags (area in m²)
-            extratags = place.get("extratags") or {}
-            area_m2 = extratags.get("area")
-            if area_m2:
-                try:
-                    area_km2 = round(float(area_m2) / 1_000_000, 1)
-                except Exception:
-                    area_km2 = None
-        else:
+            res_boundary.raise_for_status()
+            boundary_data = res_boundary.json()
+
+            if boundary_data:
+                place = boundary_data[0]
+                lat = float(place["lat"])
+                lon = float(place["lon"])
+                extratags = place.get("extratags") or {}
+                area_m2 = extratags.get("area")
+                if area_m2:
+                    try:
+                        area_km2 = round(float(area_m2) / 1_000_000, 1)
+                    except Exception:
+                        area_km2 = None
+
+            # 1b. Fallback: generic search (if boundary search found nothing)
+            if lat is None:
+                res_generic = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={
+                        "q": city_key,
+                        "format": "json",
+                        "limit": 1,
+                        "extratags": 1,
+                        "addressdetails": 0,
+                    },
+                    headers=headers,
+                    timeout=10.0,
+                )
+                res_generic.raise_for_status()
+                generic_data = res_generic.json()
+                if generic_data:
+                    place = generic_data[0]
+                    lat = float(place["lat"])
+                    lon = float(place["lon"])
+                    # Try area from fallback too
+                    if area_km2 is None:
+                        extratags = place.get("extratags") or {}
+                        area_m2 = extratags.get("area")
+                        if area_m2:
+                            try:
+                                area_km2 = round(float(area_m2) / 1_000_000, 1)
+                            except Exception:
+                                area_km2 = None
+
+        if lat is None or lon is None:
             raise HTTPException(status_code=404, detail=f"Ville '{city_key}' introuvable")
+
     except HTTPException:
         raise
     except Exception as e:
@@ -1137,10 +1188,11 @@ async def get_city_info(
 
     # 2. Find nearby SNCF stations (up to 5) and calculate travel times
     stations_raw = find_nearby_stations(lat, lon, radius=20000)
-    # Sort by straight-line distance and take top 5
-    def dist_sq(s):
-        return (lat - s["lat"]) ** 2 + (lon - s["lon"]) ** 2
-    stations_raw.sort(key=dist_sq)
+
+    # Sort by haversine distance (proper great-circle) and take top 5
+    for s in stations_raw:
+        s["_dist_km"] = haversine_km(lat, lon, s["lat"], s["lon"])
+    stations_raw.sort(key=lambda s: s["_dist_km"])
     stations_raw = stations_raw[:5]
 
     stations_out = []
@@ -1148,6 +1200,7 @@ async def get_city_info(
         times = calculate_station_times(lat, lon, s["lat"], s["lon"])
         stations_out.append({
             "name": s["name"],
+            "distance_km": round(s["_dist_km"], 1),
             "walk": times.get("walk"),
             "bike": times.get("bike"),
             "car": times.get("car"),
@@ -1500,12 +1553,33 @@ def delete_listing(
     db: Session = Depends(get_db), 
     _auth = Depends(login_required)
 ):
-    """Delete a listing and its reviews."""
+    """Delete a listing, its reviews, and its media files."""
     listing = db.query(Listing).filter(Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
-    db.delete(listing)
-    db.commit()
+
+    try:
+        # Clear duplicate_of_id references pointing to this listing
+        db.query(Listing).filter(Listing.duplicate_of_id == listing_id).update(
+            {"duplicate_of_id": None, "is_duplicate": False}
+        )
+
+        db.delete(listing)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Delete] Error deleting listing {listing_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression : {e}")
+
+    # Clean up media files on disk (best effort, don't fail if files are missing)
+    import shutil, os
+    media_dir = os.path.join("static", "media", str(listing_id))
+    if os.path.isdir(media_dir):
+        try:
+            shutil.rmtree(media_dir)
+        except Exception as e:
+            print(f"[Delete] Warning: could not remove media dir {media_dir}: {e}")
+
     return {"status": "deleted", "listing_id": listing_id}
 
 

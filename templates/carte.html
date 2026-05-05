@@ -446,6 +446,12 @@
             display: flex; align-items: center; gap: 0.5rem;
         }
         .station-name i { color: var(--accent); }
+        .station-dist {
+            font-size: 0.65rem; font-weight: 700; color: var(--orange);
+            margin-left: auto; white-space: nowrap;
+            background: rgba(248,168,75,0.12); padding: 0.15rem 0.5rem;
+            border-radius: 6px; font-family: monospace;
+        }
         .station-times {
             display: flex; gap: 0.5rem;
         }
@@ -527,8 +533,8 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
@@ -1306,11 +1312,12 @@
             if (data.stations && data.stations.length > 0) {
                 stationsHtml = `<div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF à proximité</div>`;
                 data.stations.forEach(s => {
+                    const distLabel = s.distance_km != null ? ` <span class="station-dist">${s.distance_km} km</span>` : '';
                     stationsHtml += `
                     <div class="station-card">
                         <div class="station-name">
                             <i class="fa-solid fa-train-subway"></i>
-                            ${s.name}
+                            ${s.name}${distLabel}
                         </div>
                         <div class="station-times">
                             <div class="station-time-chip">

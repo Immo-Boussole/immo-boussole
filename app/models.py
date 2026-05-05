@@ -136,7 +136,7 @@ class Listing(Base):
 
     # Duplicate detection
     is_duplicate = Column(Boolean, default=False)
-    duplicate_of_id = Column(Integer, ForeignKey("listings.id"), nullable=True)
+    duplicate_of_id = Column(Integer, ForeignKey("listings.id", ondelete="SET NULL"), nullable=True)
 
     # SNCF Station routing
     nearest_sncf_station = Column(String, nullable=True)

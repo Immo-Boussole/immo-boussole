@@ -1049,8 +1049,8 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
@@ -1087,6 +1087,11 @@
             </button>
             <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
                 <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
+            </button>
+
+            <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="margin-left: auto; border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
+                <i class="fa-solid fa-rotate"></i> 
+                <span>{{ t(request, 'dashboard.refresh_tags') }}</span>
             </button>
         </div>
 
@@ -1467,6 +1472,34 @@
                 btnNoScrape.disabled = false;
                 spinner.style.display = 'none';
                 label.style.display = 'inline';
+            }
+        }
+
+        async function refreshTags() {
+            const btn = document.getElementById('btnRefreshTags');
+            const icon = btn.querySelector('i');
+            const span = btn.querySelector('span');
+            
+            btn.disabled = true;
+            icon.classList.add('fa-spin');
+            const originalText = span.textContent;
+            span.textContent = 'Traitement...';
+
+            try {
+                const res = await fetch('/api/listings/refresh-tags', { method: 'POST' });
+                if (res.ok) {
+                    alert('Rafraîchissement lancé en arrière-plan. Les tags seront mis à jour progressivement.');
+                } else {
+                    alert('Erreur lors du lancement du rafraîchissement.');
+                }
+            } catch (e) {
+                alert('Erreur réseau.');
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    icon.classList.remove('fa-spin');
+                    span.textContent = originalText;
+                }, 3000);
             }
         }
 

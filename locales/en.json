@@ -106,6 +106,7 @@
             "disappeared": "Disappeared"
         },
         "filter_label": "Filter:",
+        "refresh_tags": "Force tag refresh",
         "see": "View",
         "add_listings_title": "Add listings",
         "add_listings_desc_single": "Paste the URL of a real estate listing.",
@@ -354,6 +355,8 @@
         "view_listing": "View listing",
         "import_error": "Error during import",
         "reject_error": "Error during rejection",
-        "network_error": "Network error"
+        "network_error": "Network error",
+        "auto_refresh_label": "Auto Refresh",
+        "auto_refresh_value": "Every 30 min (6am-10:30pm)"
     }
 }

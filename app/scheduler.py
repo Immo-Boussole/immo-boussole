@@ -73,21 +73,13 @@ def start_scheduler():
     """
     scheduler = BackgroundScheduler()
 
-    # Hourly on the hour, 06:00 – 22:00
+    # Every 30 minutes, 06:00 – 22:30
+    from app.translations import get_text
     scheduler.add_job(
         scraping_job,
-        trigger=CronTrigger(hour="6-22", minute="0"),
-        id="scraping_job_hourly",
-        name="Scraping auto — toutes les heures (06h-22h)",
-        replace_existing=True,
-    )
-
-    # Extra run at 22:30
-    scheduler.add_job(
-        scraping_job,
-        trigger=CronTrigger(hour="22", minute="30"),
-        id="scraping_job_2230",
-        name="Scraping auto — 22h30",
+        trigger=CronTrigger(hour="6-22", minute="0,30"),
+        id="scraping_job_30min",
+        name=f"Scraping auto — {get_text(None, 'auto_searches.auto_refresh_value')}",
         replace_existing=True,
     )
 
