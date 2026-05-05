@@ -63,6 +63,29 @@ def scraping_job():
         print("Tâche de scraping terminée.")
 
 
+def full_refresh_job():
+    """
+    Combined job:
+    1. Runs the normal scraping job (find new listings in search results)
+    2. Runs the individual status refresh (verify if existing listings are still online)
+    """
+    print("Démarrage du rafraîchissement complet (Scraping + Statuts)...")
+    
+    # Run the automated searches
+    scraping_job()
+    
+    # Run the individual status checks
+    from app.services import refresh_all_listings_status
+    db = SessionLocal()
+    try:
+        asyncio.run(refresh_all_listings_status(db))
+    except Exception as e:
+        print(f"Erreur durant le rafraîchissement des statuts : {e}")
+    finally:
+        db.close()
+        print("Rafraîchissement complet terminé.")
+
+
 def start_scheduler():
     """
     Registers two APScheduler cron jobs so scraping runs every hour

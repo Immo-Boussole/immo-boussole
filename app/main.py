@@ -35,6 +35,7 @@ from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_s
 from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
+from app.assistant import run_assistant_step
 
 # Run migrations FIRST (adds missing columns to existing tables)
 run_migrations()
@@ -234,6 +235,12 @@ class NearbyCityPin(BaseModel):
 
 class NearbyCityBulkRequest(BaseModel):
     cities: list[NearbyCityPin]
+    include_stations: bool = False
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[dict] = []
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -800,14 +807,44 @@ def map_page(
     })
 
 
+@app.get("/chat")
+def chat_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(login_required)
+):
+    queries = db.query(SearchQuery).all()
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
+    return templates.TemplateResponse(request=request, name="chat.html", context={
+        "queries": queries,
+        "listings": all_listings,
+        "title": "Assistant IA — Immo-Boussole",
+    })
+
+
+@app.post("/api/chat")
+async def chat_api(
+    body: ChatRequest,
+    _auth = Depends(login_required)
+):
+    """
+    Endpoint de discussion avec l'assistant IA (Ollama).
+    """
+    content, new_history = await run_assistant_step(body.message, body.history)
+    # Filter out system prompt and internal messages for the frontend if necessary
+    # or just return everything
+    return {"content": content, "history": new_history}
+
+
 # ─── API: Listings ────────────────────────────────────────────────────────────
 
 @app.post("/api/listings/refresh-tags")
 def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_required)):
-    """Triggers the global scraping job in the background to update NEW/DISAPPEARED tags."""
-    from app.scheduler import scraping_job
-    background_tasks.add_task(scraping_job)
-    return {"status": "success", "message": "Le rafraîchissement des tags a été lancé en arrière-plan."}
+    """Triggers the full refresh job (Scraping + Individual status checks) in the background."""
+    from app.scheduler import full_refresh_job
+    background_tasks.add_task(full_refresh_job)
+    return {"status": "success", "message": "Le rafraîchissement complet des tags et statuts a été lancé en arrière-plan."}
 
 
 @app.get("/api/listings")
@@ -919,6 +956,7 @@ def get_map_data(
                 "nearby_distance_km": p.nearby_distance_km,
                 "nearby_ref_commune": p.nearby_ref_commune,
                 "nearby_ref_cp": p.nearby_ref_cp,
+                "pin_type": p.pin_type,
             }
             for p in all_pins
         ],
@@ -1055,9 +1093,31 @@ def create_nearby_city_pins(
                 nearby_distance_km=round(city.distance, 2),
                 nearby_ref_commune=city.ref_commune,
                 nearby_ref_cp=city.ref_cp,
+                pin_type="city"
             )
             db.add(pin)
             created.append({"title": pin.title, "address": pin.address})
+
+            # Import nearby stations if requested
+            if body.include_stations:
+                stations = find_nearby_stations(lat, lon, radius=20000)
+                for s in stations:
+                    # Check if station already exists for this city/user to avoid massive duplicates?
+                    # For simplicity, we just add them.
+                    # Or maybe only add if it's not already a pin at the exact same lat/lon?
+                    s_pin = MapPin(
+                        title=f"Gare de {s['name']}",
+                        address=f"Gare SNCF, {city.nom_commune}",
+                        lat=s["lat"],
+                        lon=s["lon"],
+                        created_by=username,
+                        pin_type="station",
+                        # Link it to the city
+                        nearby_ref_commune=city.nom_commune,
+                        nearby_ref_cp=city.code_postal
+                    )
+                    db.add(s_pin)
+                    created.append({"title": s_pin.title, "address": s_pin.address})
         else:
             errors.append({
                 "title": f"{city.nom_commune} ({city.code_postal})",
@@ -1158,6 +1218,7 @@ async def get_city_info(
                         "limit": 1,
                         "extratags": 1,
                         "addressdetails": 0,
+                        "countrycodes": "fr",
                     },
                     headers=headers,
                     timeout=10.0,
@@ -1630,8 +1691,35 @@ def update_listing(
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     update_data = body.model_dump(exclude_unset=True)
+    
+    # If location or city is changed, we need to re-geocode
+    re_geocode = False
+    if "location" in update_data and update_data["location"] != listing.location:
+        re_geocode = True
+    if "city" in update_data and update_data["city"] != listing.city:
+        re_geocode = True
+
     for key, value in update_data.items():
         setattr(listing, key, value)
+    
+    if re_geocode:
+        loc = listing.location or listing.city
+        if loc:
+            from app.geo import get_coordinates, fetch_sncf_times_for_city
+            coords = get_coordinates(loc)
+            if coords:
+                listing.latitude, listing.longitude = coords
+                # Clear SNCF data so it gets re-fetched on next detail page load
+                listing.nearest_sncf_station = None
+                listing.walk_time_sncf = None
+                listing.bike_time_sncf = None
+                listing.car_time_sncf = None
+                listing.second_sncf_station = None
+                listing.walk_time_sncf_2 = None
+                listing.bike_time_sncf_2 = None
+                listing.car_time_sncf_2 = None
+            else:
+                listing.latitude, listing.longitude = None, None
         
     db.commit()
     db.refresh(listing)

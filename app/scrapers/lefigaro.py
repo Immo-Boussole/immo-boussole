@@ -252,7 +252,31 @@ class LeFigaroScraper(BaseScraper):
         details: Dict = {"url": url}
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # ── Fallback meta / title defaults ────────────────────────────────
+        # ── Strategy 1: __NUXT__ ──────────────────────────────────────────
+        nuxt_data = self._extract_nuxt_data(html_content)
+        if nuxt_data:
+            classified = self._find_classified_detail(nuxt_data)
+            if classified:
+                nuxt_details = self._classified_to_dict(classified, url=url)
+                if nuxt_details.get("title") == "Annonce Le Figaro" and details.get("title"):
+                    nuxt_details["title"] = details["title"]
+                
+                # Check for "vendu" or "indisponible" in description or options
+                unavail_keywords = ["vendu", "compromis", "plus disponible", "retiré"]
+                desc_lower = nuxt_details.get("description_text", "").lower()
+                if any(k in desc_lower for k in unavail_keywords):
+                    print(f"[LeFigaro] Listing found but marked as unavailable in description: {url}", flush=True)
+                    return {} # Mark as disappeared
+
+                details = {**details, **nuxt_details}
+                return details
+            else:
+                print("[LeFigaro] __NUXT__ trouvé mais aucun classifiedDetailResponse dedans", flush=True)
+        else:
+            print("[LeFigaro] __NUXT__ absent du HTML", flush=True)
+
+        # ── Strategy 2: DOM fallback (Strict) ──────────────────────────────
+        # Try to extract title/desc even for fallback
         og_title = soup.find('meta', attrs={"property": "og:title"})
         title_tag = soup.find('title')
         details["title"] = (
@@ -269,52 +293,47 @@ class LeFigaroScraper(BaseScraper):
             details["location"] = loc
             details["city"] = city
 
-        # Price regex fallback
+        # Keywords that indicate the listing is GONE despite the page being up
+        gone_keywords = ["n'est plus disponible", "annonce supprimée", "déjà vendu", "déjà loué", "ne sont plus disponibles"]
+        page_text_lower = html_content.lower()
+        if any(k in page_text_lower for k in gone_keywords):
+            print(f"[LeFigaro] Listing marked as GONE in DOM: {url}", flush=True)
+            return {}
+
+        # Only proceed if we find a price or specific listing markers
         price_text = soup.get_text(" ", strip=True)
         price_match = re.search(r'([\d\s]+)\s*€', price_text)
+
         if price_match:
             price_str = re.sub(r'[^\d]', '', price_match.group(1))
             if price_str:
                 details["price"] = float(price_str)
-
-        ext_id = url.split('-')[-1].split('.')[0]
-        details["external_id"] = f"figaro_{ext_id}"
-
-        # ── Strategy 1: __NUXT__ ──────────────────────────────────────────
-        nuxt_data = self._extract_nuxt_data(html_content)
-        if nuxt_data:
-            classified = self._find_classified_detail(nuxt_data)
-            if classified:
-                nuxt_details = self._classified_to_dict(classified, url=url)
-                if nuxt_details.get("title") == "Annonce Le Figaro" and details.get("title"):
-                    nuxt_details["title"] = details["title"]
-                details = {**details, **nuxt_details}
+                # If we have a price, we assume it's a valid listing page
+                ext_id = url.split('-')[-1].split('.')[0]
+                details["external_id"] = f"figaro_{ext_id}"
+                
+                # ── Photo fallback ──
+                fb_photos = []
+                for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro|lh3\.googleusercontent\.com')):
+                    src = img.get('src')
+                    if src and 'thumb' not in src.lower():
+                        fb_photos.append(src)
+                if fb_photos:
+                    # Remove duplicates while preserving order
+                    unique_photos = []
+                    for p in fb_photos:
+                        if p not in unique_photos:
+                            unique_photos.append(p)
+                    details["photo_urls"] = unique_photos
+                else:
+                    og_img = soup.find('meta', attrs={"property": "og:image"})
+                    if og_img and og_img.get("content"):
+                        details["photo_urls"] = [og_img.get("content")]
+                
                 return details
-            else:
-                print("[LeFigaro] __NUXT__ trouvé mais aucun classifiedDetailResponse dedans", flush=True)
-        else:
-            print("[LeFigaro] __NUXT__ absent du HTML", flush=True)
 
-        # ── Photo fallback ─────────────────────────────────────────────────
-        if not details.get("photo_urls"):
-            fb_photos = []
-            for img in soup.find_all('img', src=re.compile(r'images\.figaro|media\.figaro|lh3\.googleusercontent\.com')):
-                src = img.get('src')
-                if src and 'thumb' not in src.lower():
-                    # If it's a googleusercontent URL, we strip the size parameters at the end to get full res
-                    # or keep it as is. Usually keeping the w940 is fine.
-                    fb_photos.append(src)
-            if fb_photos:
-                # Remove duplicates while preserving order
-                unique_photos = []
-                for p in fb_photos:
-                    if p not in unique_photos:
-                        unique_photos.append(p)
-                details["photo_urls"] = unique_photos
-            else:
-                og_img = soup.find('meta', attrs={"property": "og:image"})
-                if og_img and og_img.get("content"):
-                    details["photo_urls"] = [og_img.get("content")]
+        print(f"[LeFigaro] No valid listing data found for {url}, marking as disappeared", flush=True)
+        return {}
 
         return details
 

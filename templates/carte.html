@@ -500,6 +500,7 @@
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav>
 
         <br>
@@ -583,6 +584,7 @@
             <div class="legend-item"><div class="dot" style="background: var(--red);"></div> {{ t(request, 'map.disappeared', 'Disparue') }}</div>
             <div class="legend-separator"></div>
             <div class="legend-item" style="margin-top: 0.2rem;"><i class="fa-solid fa-briefcase" style="color: var(--accent);"></i> {{ t(request, 'map.work', 'Travail') }}</div>
+            <div class="legend-item"><i class="fa-solid fa-train" style="color: var(--yellow);"></i> Gares</div>
             <div class="legend-item"><i class="fa-solid fa-location-dot" style="color: var(--yellow);"></i> {{ t(request, 'map.poi', 'Point d\'intérêt') }}</div>
             <div id="legend-pins-section"></div>
         </div>
@@ -669,13 +671,21 @@
                     </table>
                 </div>
 
-                <div class="modal-actions" style="margin-top: 0;">
-                    <button class="btn" onclick="closeNearbyCitiesModal()">
-                        <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
-                    </button>
-                    <button class="btn primary" onclick="addNearbyCitiesToMap()" id="btnAddNearby">
-                        <i class="fa-solid fa-plus"></i> {{ t(request, 'map.nearby_add_btn', 'Ajouter à la carte') }}
-                    </button>
+                <div class="modal-actions" style="margin-top: 0; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="addStationsNearCities" class="nearby-cb" style="margin: 0;">
+                        <label for="addStationsNearCities" style="font-size: 0.8rem; color: var(--text-2); cursor: pointer;">
+                            ajouter les gares à proximité des villes à importer (20 Km)
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn primary" onclick="addNearbyCitiesToMap()" id="btnAddNearby">
+                            <i class="fa-solid fa-plus"></i> {{ t(request, 'map.nearby_add_btn', 'Ajouter à la carte') }}
+                        </button>
+                        <button class="btn" onclick="closeNearbyCitiesModal()">
+                            <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -848,11 +858,18 @@
 
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
                 
+                const isStation = p.pin_type === 'station';
+                const pinBg = isStation ? 'var(--yellow)' : color;
+                const pinColor = isStation ? '#000' : '#fff';
+                const iconHtml = isStation
+                    ? `<i class="fa-solid fa-train"></i>`
+                    : `<i class="fa-solid fa-house-chimney"></i>`;
+                
                 const marker = L.marker([p.lat, p.lon], {
                     icon: L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div style="background: ${color}; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
-                                <i class="fa-solid fa-house-chimney"></i>
+                        html: `<div style="background: ${pinBg}; color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
+                                ${iconHtml}
                                </div>`,
                         iconSize: [26, 26],
                         iconAnchor: [13, 13]
@@ -1188,7 +1205,10 @@
                 const res = await fetch('/api/map-pins/nearby', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cities: selected })
+                    body: JSON.stringify({ 
+                        cities: selected,
+                        include_stations: document.getElementById('addStationsNearCities').checked
+                    })
                 });
                 const data = await res.json();
 

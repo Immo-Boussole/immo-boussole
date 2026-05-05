@@ -141,6 +141,9 @@ _MIGRATIONS = [
     ("users", "phone",                     "TEXT"),
     ("users", "sfr_identifier",            "TEXT"),
     ("users", "sfr_password",              "TEXT"),
+
+    # map_pins — pin type v12
+    ("map_pins", "pin_type",               "TEXT NOT NULL DEFAULT 'city'"),
 ]
 
 

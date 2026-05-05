@@ -329,12 +329,13 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 
     existing_ids = [l.external_id for l in existing_active]
 
-    # 1. Mark disappeared listings
+    # 1. DISAPPEARED logic (DISABLED here because it's too aggressive with overlapping searches)
+    # Disappearance is now handled by refresh_all_listings_status which checks URLs individually.
     disappeared_count = 0
-    for listing in existing_active:
-        if listing.external_id not in scraped_ids:
-            listing.status = ListingStatus.DISAPPEARED
-            disappeared_count += 1
+    # for listing in existing_active:
+    #     if listing.external_id not in scraped_ids:
+    #         listing.status = ListingStatus.DISAPPEARED
+    #         disappeared_count += 1
 
     # 2. Process new listings
     new_count = 0
@@ -406,12 +407,70 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 
     print(
         f"[Services] Diff terminé: {len(scraped_ids)} annonces scrapées, "
-        f"{new_count} nouvelles, {disappeared_count} disparues."
+        f"{new_count} nouvelles."
     )
 
     # ── Send push notifications for new listings ──
     if new_listing_objects:
         await send_new_listing_notifications(new_listing_objects, db)
+
+
+async def refresh_listing_status(listing: Listing, db: Session):
+    """
+    Checks if a listing is still online by visiting its URL.
+    Updates status to DISAPPEARED if not found.
+    """
+    from app.main import _resolve_scraper
+    source, scraper = _resolve_scraper(listing.url)
+    
+    print(f"[Services] Refreshing status for listing {listing.id} ({listing.url})")
+    
+    is_online = True
+    try:
+        if scraper:
+            details = await scraper.get_listing_details(listing.url)
+            # If scraper returns empty or a title indicating an error/removed page
+            if not details or not details.get("external_id") or "Erreur" in details.get("title", ""):
+                is_online = False
+        else:
+            # Fallback for manual or unknown sources
+            details = await fetch_basic_metadata(listing.url)
+            if not details or "Erreur" in details.get("title", ""):
+                is_online = False
+    except Exception as e:
+        print(f"[Services] Error checking status for {listing.id}: {e}")
+        # In case of network error, we don't assume it's disappeared
+        return
+
+    if not is_online:
+        if listing.status != ListingStatus.DISAPPEARED:
+            print(f"[Services] Listing {listing.id} has DISAPPEARED")
+            listing.status = ListingStatus.DISAPPEARED
+            db.commit()
+    else:
+        # If it was disappeared but now it's back
+        if listing.status == ListingStatus.DISAPPEARED:
+            print(f"[Services] Listing {listing.id} is BACK ONLINE")
+            listing.status = ListingStatus.ACTIVE
+            db.commit()
+    
+    listing.scraped_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+async def refresh_all_listings_status(db: Session):
+    """
+    Iterates through all ACTIVE, NEW and DISAPPEARED listings 
+    to refresh their online status.
+    """
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, ListingStatus.DISAPPEARED])
+    ).all()
+    
+    print(f"[Services] Starting global status refresh for {len(listings)} listings...")
+    for l in listings:
+        await refresh_listing_status(l, db)
+    print("[Services] Global status refresh completed.")
 
 
 # ─── Review Management ────────────────────────────────────────────────────────
