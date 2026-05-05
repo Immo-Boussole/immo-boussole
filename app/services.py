@@ -2,6 +2,7 @@
 Business logic services: scraping, duplicate detection, listing creation.
 """
 import json
+import os
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -13,7 +14,7 @@ from app.scrapers import (
     LogicimmoScraper, BieniciScraper, IadfranceScraper,
     NotairesScraper, VinciScraper, ImmobilierFranceScraper
 )
-from app.media import download_listing_photos, photos_to_json
+from app.media import download_listing_photos, photos_to_json, json_to_photos
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
 from app.notifications import send_new_listing_notifications
 import httpx
@@ -419,6 +420,7 @@ async def refresh_listing_status(listing: Listing, db: Session):
     """
     Checks if a listing is still online by visiting its URL.
     Updates status to DISAPPEARED if not found.
+    Also ensures the presentation image is valid; if not, refreshes the listing.
     """
     from app.main import _resolve_scraper
     source, scraper = _resolve_scraper(listing.url)
@@ -426,6 +428,7 @@ async def refresh_listing_status(listing: Listing, db: Session):
     print(f"[Services] Refreshing status for listing {listing.id} ({listing.url})")
     
     is_online = True
+    details = {}
     try:
         if scraper:
             details = await scraper.get_listing_details(listing.url)
@@ -442,16 +445,49 @@ async def refresh_listing_status(listing: Listing, db: Session):
         # In case of network error, we don't assume it's disappeared
         return
 
+    # Check if presentation photo (the first one) is valid on disk
+    photo_ok = False
+    photos = json_to_photos(listing.photos_local)
+    if photos:
+        first_photo_path = photos[0]
+        if os.path.exists(first_photo_path) and os.path.getsize(first_photo_path) > 0:
+            photo_ok = True
+
     if not is_online:
         if listing.status != ListingStatus.DISAPPEARED:
             print(f"[Services] Listing {listing.id} has DISAPPEARED")
             listing.status = ListingStatus.DISAPPEARED
             db.commit()
     else:
-        # If it was disappeared but now it's back
-        if listing.status == ListingStatus.DISAPPEARED:
-            print(f"[Services] Listing {listing.id} is BACK ONLINE")
-            listing.status = ListingStatus.ACTIVE
+        # If it was disappeared but now it's back, OR if the photo is broken
+        was_disappeared = (listing.status == ListingStatus.DISAPPEARED)
+        
+        if was_disappeared or not photo_ok:
+            reason = "BACK ONLINE" if was_disappeared else "PHOTO BROKEN/MISSING"
+            print(f"[Services] Listing {listing.id} is {reason}, performing full refresh...")
+            
+            # Update fields from details
+            for key, value in details.items():
+                if hasattr(listing, key) and value is not None:
+                    # Skip fields handled specially or problematic
+                    if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
+                        continue
+                    setattr(listing, key, value)
+            
+            # Re-download photos
+            photo_urls = details.get("photo_urls", [])
+            if photo_urls:
+                try:
+                    downloaded = await download_listing_photos(listing.id, photo_urls)
+                    if downloaded:
+                        listing.photos_local = photos_to_json(downloaded)
+                except Exception as e:
+                    print(f"[Services] Error re-downloading photos for listing {listing.id}: {e}")
+            
+            if was_disappeared:
+                print(f"[Services] Listing {listing.id} is BACK ONLINE")
+                listing.status = ListingStatus.ACTIVE
+            
             db.commit()
     
     listing.scraped_at = datetime.now(timezone.utc)
