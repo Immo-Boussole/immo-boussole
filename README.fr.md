@@ -25,6 +25,7 @@
 - **Avis Collaboratifs** : Système de notation et de commentaires séparés.
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Carte Interactive** : Visualisation géographique de toutes les annonces actives et nouvelles.
+- **Assistant IA & Service MCP** : Discutez avec vos annonces via un assistant intelligent intégré (Ollama) ou connectez vos propres outils IA (Claude Desktop) grâce au protocole MCP.
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
 
 ---
@@ -76,6 +77,11 @@ Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une 
 ![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
 
 *Aperçu de la bannière indiquant une mise à jour disponible.*
+
+### 🤖 8. Assistant IA & Service MCP
+L'application intègre désormais un assistant conversationnel capable d'analyser vos annonces, de répondre à vos questions et de fournir des statistiques. Vous pouvez également exposer vos données à des outils externes comme Claude Desktop via le protocole **MCP (Model Context Protocol)**.
+
+👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP](MCP_SETUP.fr.md)**
 
 ## 🛠️ Installation & Lancement
 
@@ -152,6 +158,8 @@ Variables clés dans `.env` :
 | `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Libellé lisible** du planning cron, affiché dans l'interface à côté du bouton "Forcer la recherche". |
 | `GEORISQUES_API_KEY` | *(optionnel)* | Clé API pour le service de données de risques Géorisques. |
 | `APP_VERSION` | `1.1.1-dev` | Version affichée dans le pied de page de la barre latérale. |
+| `OLLAMA_URL` | `http://host.docker.internal:11434` | URL de votre instance Ollama locale. |
+| `OLLAMA_MODEL` | `llama3` | Modèle utilisé par l'assistant IA. |
 
 ---
 
@@ -214,6 +222,10 @@ L'application expose une API REST complète construite avec **FastAPI**. Tous le
 - `PUT /api/searches/ready/{id}` : Met à jour une recherche existante.
 - `DELETE /api/searches/ready/{id}` : Supprime une recherche.
 
+### Assistant IA & MCP
+- `POST /api/chat` : Endpoint de discussion avec l'assistant (Ollama).
+- **Service MCP** : Serveur stdio/SSE disponible pour connecter des clients externes (Claude Desktop).
+
 ### Administration (Admin uniquement)
 - `GET /admin/users` : Interface de gestion des utilisateurs.
 - `POST /api/admin/users` : Crée un nouveau compte utilisateur.
@@ -244,6 +256,7 @@ L'API est entièrement documentée et testable via l'interface Swagger intégré
 - `tests/` : Scripts de tests unitaires et d'intégration.
 - `Dockerfile` & `docker-compose.yml` : Configuration Docker.
 - `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
+- `MCP_SETUP.fr.md` : Guide complet de configuration de l'IA et du MCP.
 - `.ai/` : Documentation spécialisée et contexte lié à l'IA.
 
 ## 🧪 Tests
@@ -277,6 +290,8 @@ Une documentation détaillée est disponible dans [.ai/TESTING.md](.ai/TESTING.m
 - ✅ Recherches automatiques planifiées (toutes les heures, 6h–22h30) depuis les entrées "Prêt à Rechercher".
 - ✅ Bouton "Forcer la recherche" pour déclencher un cycle immédiat.
 - ✅ Colonnes Plateforme & Critères dans la vue "Recherches Automatiques".
+- ✅ Service MCP (Model Context Protocol) pour connecter des outils IA externes.
+- ✅ Assistant IA intégré (Ollama) pour discuter avec les annonces.
 - ⬜ Créer un système de création de compte conseiller immobilier.
 - ⬜ Ajouter un système de favoris pour les annonces et les recherches.
 - ⬜ Ajouter un système de notifications (email, push, etc.).
