@@ -84,7 +84,12 @@
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1rem;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
             text-align: center;
             transition: var(--trans);
         }
@@ -110,6 +115,10 @@
 
         .stat-card.new .val {
             color: var(--green);
+        }
+
+        .stat-card.act .val {
+            color: var(--accent);
         }
 
         .stat-card.dis .val {
@@ -439,21 +448,21 @@
         </a>
 
         {% set total = listings|length %}
-        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
-        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
-        {% set dup_cnt = listings|selectattr("is_duplicate", "equalto", True)|list|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
         <div class="stat-grid">
             <div class="stat-card">
                 <div class="val">{{ total }}</div>
                 <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
-            <div class="stat-card dup">
-                <div class="val">{{ dup_cnt }}</div>
-                <div class="lbl">{{ t(request, 'dashboard.stats.duplicates') }}</div>
-            </div>
             <div class="stat-card new">
                 <div class="val">{{ new_cnt }}</div>
                 <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
             </div>
             <div class="stat-card dis">
                 <div class="val">{{ dis_cnt }}</div>

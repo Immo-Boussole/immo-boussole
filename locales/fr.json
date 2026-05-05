@@ -103,6 +103,7 @@
         },
         "stats": {
             "new": "Nouvelles",
+            "active": "Actives",
             "disappeared": "Disparues",
             "duplicates": "Doublons"
         },

@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -440,6 +440,8 @@ def admin_users_page(
     users = db.query(models.User).all()
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
     
     return templates.TemplateResponse(request=request, name="admin_users.html", context={
         "users": users,
@@ -571,6 +573,32 @@ def set_language(request: Request, lang: str):
     return RedirectResponse(url=referer, status_code=303)
 
 
+def _get_viewed_listing_ids(request: Request, db: Session) -> set[int]:
+    username = request.session.get("username")
+    if not username:
+        return set()
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        return set()
+    views = db.query(UserListingView.listing_id).filter(UserListingView.user_id == user.id).all()
+    return {v[0] for v in views}
+
+
+def _enrich_listings(listings: list[Listing], viewed_ids: set[int]):
+    for listing in listings:
+        if not hasattr(listing, "_photos"):
+            listing._photos = json_to_photos(listing.photos_local)
+        
+        # Dynamic status for the UI: Only override if it's currently NEW or ACTIVE
+        if listing.status in [ListingStatus.NEW, ListingStatus.ACTIVE]:
+            if listing.id in viewed_ids:
+                listing.user_status = "active"
+            else:
+                listing.user_status = "nouvelle"
+        else:
+            listing.user_status = listing.status.value
+
+
 @app.get("/")
 def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
     # Original mixed list for sidebar
@@ -581,9 +609,9 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
     rejected_listings = db.query(Listing).filter(Listing.status == ListingStatus.REJECTED).order_by(Listing.date_added.desc()).limit(100).all()
     
     queries = db.query(SearchQuery).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
 
-    for listing in all_listings + imported_listings + rejected_listings:
-        listing._photos = json_to_photos(listing.photos_local)
+    _enrich_listings(all_listings + imported_listings + rejected_listings, viewed_ids)
 
     local_hash = get_local_commit_hash()
 
@@ -610,9 +638,9 @@ def listings_table_page(
     # For sidebar stats
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     queries = db.query(SearchQuery).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
 
-    for listing in imported_listings + rejected_listings:
-        listing._photos = json_to_photos(listing.photos_local)
+    _enrich_listings(imported_listings + rejected_listings + all_listings, viewed_ids)
 
     return templates.TemplateResponse(request=request, name="listings_table.html", context={
         "imported_listings": imported_listings,
@@ -670,6 +698,24 @@ def listing_detail_page(
     # Sidebars context
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+
+    _enrich_listings([listing] + all_listings, viewed_ids)
+
+    # Record user view
+    username = request.session.get("username")
+    if username:
+        user = db.query(models.User).filter(models.User.username == username).first()
+        if user:
+            # Check if already viewed
+            existing_view = db.query(UserListingView).filter(
+                UserListingView.user_id == user.id,
+                UserListingView.listing_id == listing_id
+            ).first()
+            if not existing_view:
+                new_view = UserListingView(user_id=user.id, listing_id=listing_id)
+                db.add(new_view)
+                db.commit()
 
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
@@ -693,6 +739,8 @@ def ideal_profile_page(
     profile = generate_ideal_profile(db)
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
     
     return templates.TemplateResponse(request=request, name="ideal_profile.html", context={
         "profile": profile,
@@ -711,6 +759,8 @@ def ready_searches_page(
     ready_searches = db.query(ReadySearch).all()
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
     
     return templates.TemplateResponse(request=request, name="ready_searches.html", context={
         "ready_searches": ready_searches,
@@ -730,6 +780,8 @@ def auto_searches_page(
     new_listings = db.query(Listing).filter(Listing.status == ListingStatus.NEW).order_by(Listing.date_added.desc()).all()
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(new_listings + all_listings, viewed_ids)
 
     # Build a lookup map of ReadySearch by ID for fast access
     ready_search_map = {rs.id: rs for rs in db.query(ReadySearch).all()}
@@ -773,6 +825,8 @@ def profile_page(
     
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
     
     # Parse POIs
     pois = []
@@ -799,6 +853,8 @@ def map_page(
 ):
     queries = db.query(SearchQuery).all()
     listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
     
     return templates.TemplateResponse(request=request, name="carte.html", context={
         "queries": queries,
@@ -815,6 +871,8 @@ def chat_page(
 ):
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(all_listings, viewed_ids)
     
     return templates.TemplateResponse(request=request, name="chat.html", context={
         "queries": queries,
@@ -898,12 +956,15 @@ def get_map_data(
     _auth = Depends(login_required)
 ):
     """Returns listings, user POIs, and shared map pins for the map."""
-    # 1. Listings (only Active/New)
     listings = db.query(Listing).filter(
         Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
         Listing.latitude.isnot(None),
         Listing.longitude.isnot(None)
     ).all()
+
+    # Enrichment
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
 
     # 2. User Data
     username = request.session.get("username")
@@ -932,7 +993,7 @@ def get_map_data(
                 "lat": l.latitude,
                 "lon": l.longitude,
                 "url": f"/listings/{l.id}",
-                "status": l.status.value,
+                "status": l.user_status,
                 "photos": json_to_photos(l.photos_local)
             }
             for l in listings
