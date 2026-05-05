@@ -1,7 +1,20 @@
 import httpx
+import math
 from typing import Dict, Optional, Tuple
 from functools import lru_cache
 from app.config import settings
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Returns the great-circle distance in km between two points."""
+    R = 6371.0  # Earth radius in km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    )
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 # Dictionary cache for geo computations by city to avoid doing the same query for 100 listings in the same city
 # Format: { "Lyon": {"nearest_sncf_station": "Gare Part-Dieu", "walk_time_sncf": 15, "bike_time_sncf": 5, "car_time_sncf": 3} }
@@ -61,27 +74,39 @@ def find_nearby_stations(lat: float, lon: float, radius: int = 20000) -> list:
         return []
 
 def calculate_station_times(start_lat: float, start_lon: float, end_lat: float, end_lon: float) -> Dict[str, Optional[int]]:
-    """Calculates walk, bike, and car times between two points via OSRM."""
-    times = {}
-    for mode, key in [('foot', 'walk'), ('bike', 'bike'), ('car', 'car')]:
-        profile = mode
-        if mode == 'car': profile = 'driving'
-        elif mode == 'bike': profile = 'cycling'
-        elif mode == 'foot': profile = 'walking'
+    """
+    Calculates walk, bike, and car times between two points.
+    Uses OSRM driving profile (the only one reliably available on the public demo server)
+    to get road distance, then derives walk/bike estimates from that distance
+    using realistic average speeds:
+      - Walking: ~5 km/h
+      - Cycling: ~15 km/h
+      - Car time: directly from OSRM driving duration
+    """
+    times: Dict[str, Optional[int]] = {"walk": None, "bike": None, "car": None}
 
-        url_osrm = f"http://router.project-osrm.org/route/v1/{profile}/{start_lon},{start_lat};{end_lon},{end_lat}?overview=false"
-        try:
-            res_osrm = httpx.get(url_osrm, timeout=5.0)
-            res_osrm.raise_for_status()
-            data_osrm = res_osrm.json()
-            if data_osrm.get('code') == 'Ok' and data_osrm.get('routes'):
-                duration_seconds = data_osrm['routes'][0]['duration']
-                times[key] = int(duration_seconds / 60)
-            else:
-                times[key] = None
-        except Exception as e:
-            print(f"[Geo] OSRM {mode} routing failed: {e}")
-            times[key] = None
+    url_osrm = (
+        f"http://router.project-osrm.org/route/v1/driving/"
+        f"{start_lon},{start_lat};{end_lon},{end_lat}?overview=false"
+    )
+    try:
+        res_osrm = httpx.get(url_osrm, timeout=5.0)
+        res_osrm.raise_for_status()
+        data_osrm = res_osrm.json()
+        if data_osrm.get("code") == "Ok" and data_osrm.get("routes"):
+            route = data_osrm["routes"][0]
+            car_duration_s = route["duration"]       # seconds
+            road_distance_m = route["distance"]      # metres
+
+            times["car"] = max(1, int(car_duration_s / 60))
+
+            # Derive walk & bike from road distance (more realistic than straight-line)
+            road_km = road_distance_m / 1000.0
+            times["walk"] = max(1, round(road_km / 5.0 * 60))   # 5 km/h
+            times["bike"] = max(1, round(road_km / 15.0 * 60))  # 15 km/h
+    except Exception as e:
+        print(f"[Geo] OSRM driving routing failed: {e}")
+
     return times
 
 def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
