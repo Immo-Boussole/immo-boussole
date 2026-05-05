@@ -44,6 +44,35 @@ services:
       - ./templates:/app/templates
       - ./app:/app/app
       - ./locales:/app/locales
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ── MCP Server (Model Context Protocol) ──────────────────────────────────────
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: immo-boussole-mcp:${APP_VERSION:-latest}
+    container_name: immo-boussole-mcp
+    restart: always
+    depends_on:
+      immo-boussole:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+    volumes:
+      - db-data:/app/data
+      - ./app:/app/app
+    ports:
+      - "8001:8001"
+    # Run as SSE server to allow remote/containerized access
+    command: ["python", "-m", "app.mcp_server"]
+    networks:
+      - immo-boussole-net
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:

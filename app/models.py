@@ -230,3 +230,5 @@ class MapPin(Base):
     nearby_ref_commune = Column(String, nullable=True)  # Name of the reference city searched
     nearby_ref_cp      = Column(String, nullable=True)  # Postal code of the reference city
 
+    pin_type = Column(String(20), nullable=False, default="city") # "city" or "station"
+

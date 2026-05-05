@@ -29,7 +29,7 @@ def get_coordinates(location_str: str) -> Optional[Tuple[float, float]]:
     headers = {"User-Agent": "ImmoBoussole/1.0"}
     geocode_url = f"https://nominatim.openstreetmap.org/search"
     try:
-        res = httpx.get(geocode_url, params={"q": location_str, "format": "json", "limit": 1}, headers=headers, timeout=10.0)
+        res = httpx.get(geocode_url, params={"q": location_str, "format": "json", "limit": 1, "countrycodes": "fr"}, headers=headers, timeout=10.0)
         res.raise_for_status()
         data = res.json()
         if not data:

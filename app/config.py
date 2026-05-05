@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Leave empty to disable global notifications.
     APPRISE_URL: str = ""
 
+    # LLM / Ollama
+    OLLAMA_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_MODEL: str = "llama3"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -13,3 +13,4 @@ httpx
 aiofiles
 itsdangerous
 apprise
+fastmcp
