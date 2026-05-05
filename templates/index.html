@@ -132,7 +132,12 @@
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1rem;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
             text-align: center;
             transition: var(--trans);
         }
@@ -160,12 +165,12 @@
             color: var(--green);
         }
 
-        .stat-card.dis .val {
-            color: var(--red);
+        .stat-card.act .val {
+            color: var(--accent);
         }
 
-        .stat-card.dup .val {
-            color: var(--orange);
+        .stat-card.dis .val {
+            color: var(--red);
         }
 
         .sidebar-section-title {
@@ -995,21 +1000,21 @@
         </div>
 
         {% set total = listings|length %}
-        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
-        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
-        {% set dup_cnt = listings|selectattr("is_duplicate", "equalto", True)|list|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
         <div class="stat-grid">
             <div class="stat-card">
                 <div class="val">{{ total }}</div>
                 <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
-            <div class="stat-card dup">
-                <div class="val">{{ dup_cnt }}</div>
-                <div class="lbl">{{ t(request, 'dashboard.stats.duplicates') }}</div>
-            </div>
             <div class="stat-card new">
                 <div class="val">{{ new_cnt }}</div>
                 <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
             </div>
             <div class="stat-card dis">
                 <div class="val">{{ dis_cnt }}</div>
@@ -1106,7 +1111,7 @@
             <div class="grid" id="grid">
                 {% for listing in listings %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
-                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status.value }}"
+                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.user_status }}"
                     onclick="window.location='/listings/{{ listing.id }}'">
 
                     <div class="card-img">
@@ -1116,7 +1121,7 @@
                         <div class="card-img-placeholder"><i class="fa-regular fa-image"></i></div>
                         {% endif %}
                         <div class="card-overlay"></div>
-                        <span class="badge {{ listing.status.value }}">{{ listing.status.value }}</span>
+                        <span class="badge {{ listing.user_status }}">{{ listing.user_status }}</span>
                         {% if listing.dpe_rating %}
                         <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
                         {% endif %}

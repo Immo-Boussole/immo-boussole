@@ -183,6 +183,19 @@ class Review(Base):
     listing = relationship("Listing", back_populates="reviews")
 
 
+class UserListingView(Base):
+    __tablename__ = "user_listing_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    viewed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", backref="views")
+    listing = relationship("Listing", backref="user_views")
+
+
 class SearchQuery(Base):
     __tablename__ = "search_queries"
 
