@@ -223,6 +223,7 @@ class SelogerScraper(BaseScraper):
                 rooms = classified.get("rooms", {})
                 details["rooms"] = rooms.get("total") or classified.get("roomCount")
                 details["area"] = classified.get("livingArea") or classified.get("surface")
+                details["bathroom_count"] = (rooms.get("bathRooms") or 0) + (rooms.get("showerRooms") or 0) or classified.get("bathroomCount")
 
                 # Photos 
                 # Path: classified.domains.medias.images

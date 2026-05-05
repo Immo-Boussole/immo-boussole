@@ -113,6 +113,7 @@ class BieniciScraper(BaseScraper):
                         details["price"] = ad.get("price")
                         details["area"] = ad.get("surfaceArea")
                         details["rooms"] = ad.get("roomsCount")
+                        details["bathroom_count"] = (ad.get("bathroomsCount") or 0) + (ad.get("showerRoomsCount") or 0)
                         
                         # Photos
                         photos = []
