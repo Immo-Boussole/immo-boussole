@@ -26,18 +26,53 @@ def get_coordinates(location_str: str) -> Optional[Tuple[float, float]]:
     if not location_str:
         return None
     
+    # Cleaning: if the string contains a ' — ' or ' - ' after a name, try to take only the address part
+    # Example: "SANOFI — 14 Espace Henri Vallée, 69007 Lyon" -> "14 Espace Henri Vallée, 69007 Lyon"
+    cleaned_location = location_str
+    for separator in [" — ", " - ", " : "]:
+        if separator in location_str:
+            parts = location_str.split(separator)
+            # If the second part looks like an address (has a number or a comma), use it
+            if len(parts) >= 2 and (any(c.isdigit() for c in parts[1]) or "," in parts[1]):
+                cleaned_location = separator.join(parts[1:]).strip()
+                break
+
     headers = {"User-Agent": "ImmoBoussole/1.0"}
     geocode_url = f"https://nominatim.openstreetmap.org/search"
-    try:
-        res = httpx.get(geocode_url, params={"q": location_str, "format": "json", "limit": 1, "countrycodes": "fr"}, headers=headers, timeout=10.0)
-        res.raise_for_status()
-        data = res.json()
-        if not data:
+    
+    async def query(q: str):
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(geocode_url, params={"q": q, "format": "json", "limit": 1, "countrycodes": "fr"}, headers=headers, timeout=10.0)
+                res.raise_for_status()
+                return res.json()
+        except Exception as e:
+            print(f"[Geo] Query failed for {q}: {e}")
             return None
-        return float(data[0]['lat']), float(data[0]['lon'])
-    except Exception as e:
-        print(f"[Geo] Geocoding failed for {location_str}: {e}")
+
+    # Note: get_coordinates is used synchronously in many places, 
+    # so we use httpx.get instead of async here to avoid breaking callers,
+    # OR we keep it sync but with a fallback logic.
+    
+    def sync_query(q: str):
+        try:
+            res = httpx.get(geocode_url, params={"q": q, "format": "json", "limit": 1, "countrycodes": "fr"}, headers=headers, timeout=10.0)
+            res.raise_for_status()
+            return res.json()
+        except Exception:
+            return None
+
+    # Try 1: Full or cleaned string
+    data = sync_query(cleaned_location)
+    
+    # Try 2: If failed and we cleaned it, try the original just in case
+    if not data and cleaned_location != location_str:
+        data = sync_query(location_str)
+        
+    if not data:
         return None
+        
+    return float(data[0]['lat']), float(data[0]['lon'])
 
 def find_nearby_stations(lat: float, lon: float, radius: int = 20000) -> list:
     """Finds SNCF stations within radius via Overpass API."""

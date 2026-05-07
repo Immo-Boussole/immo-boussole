@@ -267,40 +267,55 @@
         }
         .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
         .modal-instructions {
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;
-            font-size: 0.8rem; color: var(--text-2); line-height: 1.6;
+            background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);
+            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
+            font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
+            display: flex; gap: 1rem; align-items: flex-start;
         }
+        .modal-instructions i {
+            color: var(--accent); font-size: 1.1rem; margin-top: 0.15rem;
+        }
+        .modal-instructions .instructions-content { flex: 1; }
         .modal-instructions code {
-            background: rgba(79, 142, 247, 0.15); color: var(--accent);
-            padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;
-            font-family: monospace;
+            background: rgba(79, 142, 247, 0.15); color: #8eb7f9;
+            padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            display: inline-block; margin-top: 0.5rem;
         }
-        .modal-instructions .format-example {
-            color: var(--text); font-weight: 500; margin-top: 0.4rem;
-            display: block;
-        }
+
         .modal textarea {
-            width: 100%; min-height: 180px; resize: vertical;
+            width: 100%; min-height: 220px; resize: none;
             background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 10px; padding: 1rem; color: var(--text);
-            font-family: 'Inter', sans-serif; font-size: 0.85rem;
+            border-radius: 12px; padding: 1.25rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
             line-height: 1.6; transition: var(--trans);
+            margin-bottom: 1rem;
         }
-        .modal textarea::placeholder { color: var(--text-2); opacity: 0.6; }
+        .modal textarea::placeholder { color: var(--text-2); opacity: 0.4; }
         .modal textarea:focus {
             outline: none; border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
         }
+
         .modal-actions {
-            display: flex; gap: 0.75rem; margin-top: 1.25rem; justify-content: flex-end;
+            display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;
         }
         .modal-result {
-            margin-top: 1rem; font-size: 0.8rem; border-radius: 8px; padding: 0.75rem 1rem;
-            display: none;
+            margin-top: 1rem; font-size: 0.85rem; border-radius: 12px; padding: 1rem 1.25rem;
+            display: none; line-height: 1.5;
         }
-        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.12); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.25); }
-        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.12); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.25); }
+        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
+        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.08); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+        .modal-error-list {
+            list-style: none; padding: 0; margin: 0.5rem 0 0 0;
+        }
+        .modal-error-list li {
+            position: relative; padding-left: 1.2rem; margin-bottom: 0.25rem;
+            opacity: 0.9; font-size: 0.8rem;
+        }
+        .modal-error-list li::before {
+            content: '•'; position: absolute; left: 0; color: var(--red);
+        }
 
         /* ── Nearby Cities Modal ── */
         .modal-nearby { max-width: 720px; }
@@ -672,9 +687,11 @@
             </div>
 
             <div class="modal-instructions">
-                <i class="fa-solid fa-circle-info" style="color: var(--accent); margin-right: 4px;"></i>
-                {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format :') }}
-                <span class="format-example"><code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Adresse physique') }}</code></span>
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="instructions-content">
+                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
+                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                </div>
             </div>
 
             <textarea id="bulkTextarea"
@@ -687,7 +704,7 @@
                 <button class="btn" onclick="closeBulkModal()">
                     <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
                 </button>
-                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk">
+                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk" style="padding-left: 1.25rem; padding-right: 1.25rem;">
                     <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
                 </button>
             </div>
@@ -1086,33 +1103,36 @@
                 const data = await res.json();
 
                 if (data.created > 0) {
-                    let msg = `${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) !") }}`;
+                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
                     if (data.errors && data.errors.length > 0) {
-                        msg += `\n⚠️ ${data.errors.length} {{ t(request, "map.geocode_failed", "erreur(s) de géolocalisation") }}:`;
+                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                        msg += `<ul class="modal-error-list">`;
                         data.errors.forEach(e => {
-                            msg += `\n  • ${e.title} — ${e.address}`;
+                            msg += `<li>${e.title} — ${e.address}</li>`;
                         });
+                        msg += `</ul>`;
                     }
                     resultEl.className = 'modal-result success';
-                    resultEl.textContent = msg;
-                    resultEl.style.whiteSpace = 'pre-line';
+                    resultEl.innerHTML = msg;
 
                     // Reload map data
                     loadMapData();
 
-                    // Close modal after a short delay
-                    setTimeout(() => closeBulkModal(), 2500);
+                    // Close modal after a short delay if no errors
+                    if (!data.errors || data.errors.length === 0) {
+                        setTimeout(() => closeBulkModal(), 2000);
+                    }
                 } else {
-                    let errMsg = '{{ t(request, "map.geocode_failed", "Géolocalisation échouée") }}';
+                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
                     if (data.errors && data.errors.length > 0) {
-                        errMsg += ':\n';
+                        errMsg += `<ul class="modal-error-list">`;
                         data.errors.forEach(e => {
-                            errMsg += `  • ${e.title} — ${e.address}\n`;
+                            errMsg += `<li>${e.title} — ${e.address}</li>`;
                         });
+                        errMsg += `</ul>`;
                     }
                     resultEl.className = 'modal-result error';
-                    resultEl.textContent = errMsg;
-                    resultEl.style.whiteSpace = 'pre-line';
+                    resultEl.innerHTML = errMsg;
                 }
             } catch (err) {
                 resultEl.className = 'modal-result error';
