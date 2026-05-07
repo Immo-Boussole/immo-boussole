@@ -310,6 +310,12 @@
             flex-wrap: wrap;
         }
 
+        .filter-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
         .filter-label {
             font-size: 0.75rem;
             color: var(--text-2);
@@ -792,7 +798,80 @@
         }
 
         .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        /* ── Bulk Address Modal ── */
+        .modal-instructions {
+            background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);
+            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
+            font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
+            display: flex; gap: 1rem; align-items: flex-start;
+            text-align: left;
+        }
+        .modal-instructions i {
+            color: var(--accent); font-size: 1.1rem; margin-top: 0.15rem;
+        }
+        .modal-instructions .instructions-content { flex: 1; }
+        .modal-instructions code {
+            background: rgba(79, 142, 247, 0.15); color: #8eb7f9;
+            padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            display: inline-block; margin-top: 0.5rem;
+        }
+
+        #bulkModal .modal {
+            max-width: 560px;
+        }
+        #bulkModal textarea {
+            width: 100%; min-height: 220px; resize: none;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.25rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            line-height: 1.6; transition: var(--trans);
             margin-bottom: 1rem;
+        }
+        #bulkModal textarea::placeholder { color: var(--text-2); opacity: 0.4; }
+        #bulkModal textarea:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+
+        .modal-result {
+            margin-top: 1rem; font-size: 0.85rem; border-radius: 12px; padding: 1rem 1.25rem;
+            display: none; line-height: 1.5; text-align: left;
+        }
+        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
+        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.08); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+        
+        .modal-error-list {
+            list-style: none; padding: 0; margin: 0.5rem 0 0 0;
+        }
+        .modal-error-list li {
+            position: relative; padding-left: 1.2rem; margin-bottom: 0.25rem;
+            opacity: 0.9; font-size: 0.8rem;
+        }
+        .modal-error-list li::before {
+            content: '•'; position: absolute; left: 0; color: var(--red);
+        }
+
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            font-size: 1.1rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .modal-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.2rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .modal-actions {
+            display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;
         }
 
         .form-group label {
@@ -1077,8 +1156,12 @@
             </div>
             
             <div class="topbar-right">
+                <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
+                    <i class="fa-solid fa-map-pin"></i>
+                    {{ t(request, 'map.add_addresses', 'Adresses') }}
+                </button>
                 <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-                {% if request.session.get('role') == 'user' %}
+                {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
                 <button class="btn primary" id="btnAddUrl" onclick="openModal()">
                     <i class="fa-solid fa-plus"></i> {{ t(request, 'dashboard.add_listing') }}
                 </button>
@@ -1089,16 +1172,18 @@
 
         <div class="filter-bar">
             <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
-            <button class="btn active" id="f-all" onclick="filter('all', this)">{{ t(request, 'dashboard.filters.all') }}</button>
-            <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-                <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
-            </button>
-            <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-                <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
-            </button>
-            <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-                <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
-            </button>
+            <div class="filter-chips">
+                <button class="btn active" id="f-all" onclick="filter('all', this)">{{ t(request, 'dashboard.filters.all') }}</button>
+                <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
+                    <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
+                </button>
+                <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
+                    <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
+                </button>
+                <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
+                    <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
+                </button>
+            </div>
 
             <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="margin-left: auto; border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
                 <i class="fa-solid fa-rotate"></i> 
@@ -1196,7 +1281,7 @@
                                 {{ t(request, 'dashboard.see') }} <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                             <button class="btn-delete"
-                                onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})'
+                                onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|forceescape }})'
                                 title="{{ t(request, 'dashboard.delete_title') }}" aria-label="{{ t(request, 'listing.delete_btn') }}">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
@@ -1528,9 +1613,109 @@
 
         // Keyboard shortcut: Escape to close modal
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
+            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); closeBulkModal(); }
             if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
         });
+
+        // ── Bulk Address Modal Logic ──────────────────────────────────────────
+        function openBulkModal() {
+            document.getElementById('bulkModal').classList.add('open');
+            document.getElementById('bulkTextarea').value = '';
+            document.getElementById('bulkResult').style.display = 'none';
+            document.getElementById('bulkResult').innerHTML = '';
+            document.getElementById('btnSubmitBulk').disabled = false;
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').classList.remove('open');
+        }
+
+        async function submitBulk() {
+            const textarea = document.getElementById('bulkTextarea');
+            const resultEl = document.getElementById('bulkResult');
+            const btn = document.getElementById('btnSubmitBulk');
+            const raw = textarea.value.trim();
+
+            if (!raw) return;
+
+            const lines = raw.split('\n').filter(l => l.trim());
+            const pins = [];
+
+            for (const line of lines) {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    const title = parts[0].trim();
+                    const address = parts.slice(1).join(';').trim();
+                    if (title && address) {
+                        pins.push({ title, address });
+                    }
+                }
+            }
+
+            if (pins.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.no_valid_entries", "Format invalide. Utilisez: Titre ; Adresse") }}';
+                resultEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout...") }}';
+            resultEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/map-pins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pins })
+                });
+
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                        msg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            msg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        msg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.innerHTML = msg;
+                    resultEl.style.display = 'block';
+
+                    if (!data.errors || data.errors.length === 0) {
+                        setTimeout(() => {
+                            closeBulkModal();
+                            // If we're not on the map, maybe we want to go there? 
+                            // Or just stay here. Let's stay here but notify.
+                        }, 2000);
+                    }
+                } else {
+                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        errMsg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            errMsg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        errMsg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result error';
+                    resultEl.innerHTML = errMsg;
+                    resultEl.style.display = 'block';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Erreur réseau: ' + err.message;
+                resultEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
 
         // ── Delete flow ──────────────────────────────────────────────────────
         let pendingDeleteId = null;
@@ -1691,6 +1876,39 @@
             <button onclick="document.getElementById('updateBanner').style.transform = 'translateY(100%)'; setTimeout(()=>document.getElementById('updateBanner').style.display='none', 400);" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.25rem; opacity: 0.7; padding: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="Fermer">
                 <i class="fa-solid fa-xmark"></i>
             </button>
+        </div>
+    </div>
+
+    <!-- ── Bulk Address Modal ── -->
+    <div class="modal-backdrop" id="bulkModal" onclick="if(event.target===this) closeBulkModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request, 'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
+                <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-instructions">
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="instructions-content">
+                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
+                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                </div>
+            </div>
+
+            <textarea id="bulkTextarea"
+                placeholder="{{ t(request, 'map.bulk_placeholder', 'Mon Café Préféré ; 12 Rue de la Paix, Paris') }}"
+            ></textarea>
+
+            <div class="modal-result" id="bulkResult"></div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeBulkModal()">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                </button>
+                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk" style="padding-left: 1.25rem; padding-right: 1.25rem;">
+                    <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
+                </button>
+            </div>
         </div>
     </div>
 

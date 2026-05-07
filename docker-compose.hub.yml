@@ -3,7 +3,7 @@
 # This file pulls images from Docker Hub instead of building locally.
 # Note: This is ideal for quick deployment without needing the source code on the host.
 
-name: immo-boussole-hub
+name: immo-boussole
 
 services:
 
