@@ -25,6 +25,7 @@
 - **Avis Collaboratifs** : Système de notation et de commentaires séparés.
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Carte Interactive** : Visualisation géographique de toutes les annonces actives et nouvelles.
+- **Sauvegarde & Restauration** : Solution d'administration intégrée pour exporter/importer tout le système (DB, photos, config) en un seul fichier ZIP.
 - **Assistant IA & Service MCP** : Discutez avec vos annonces via un assistant intelligent intégré (Ollama) ou connectez vos propres outils IA (Claude Desktop) grâce au protocole MCP.
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
 
@@ -230,6 +231,10 @@ L'application expose une API REST complète construite avec **FastAPI**. Tous le
 - `GET /admin/users` : Interface de gestion des utilisateurs.
 - `POST /api/admin/users` : Crée un nouveau compte utilisateur.
 - `DELETE /api/admin/users/{user_id}` : Supprime un compte utilisateur.
+- `GET /api/admin/backup` : Télécharge une sauvegarde complète du système en ZIP.
+- `POST /api/admin/restore` : Restaure le système à partir d'une sauvegarde ZIP.
+
+👉 **Consultez le guide : [Documentation Sauvegarde & Restauration](BACKUP_RESTORE.fr.md)**
 
 ### Avis (Reviews)
 - `GET /api/listings/{listing_id}/reviews` : Liste tous les avis d'une annonce.
@@ -292,6 +297,7 @@ Une documentation détaillée est disponible dans [.ai/TESTING.md](.ai/TESTING.m
 - ✅ Colonnes Plateforme & Critères dans la vue "Recherches Automatiques".
 - ✅ Service MCP (Model Context Protocol) pour connecter des outils IA externes.
 - ✅ Assistant IA intégré (Ollama) pour discuter avec les annonces.
+- ✅ Système de sauvegarde et restauration (ZIP) pour les administrateurs.
 - ⬜ Créer un système de création de compte conseiller immobilier.
 - ⬜ Ajouter un système de favoris pour les annonces et les recherches.
 - ⬜ Ajouter un système de notifications (email, push, etc.).

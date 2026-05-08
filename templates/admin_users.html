@@ -574,6 +574,26 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="card">
+                    <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
+                        {{ t(request, 'admin_users.backup_desc') }}
+                    </p>
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <a href="/api/admin/backup" class="btn">
+                            <i class="fas fa-download"></i> {{ t(request, 'admin_users.backup_btn') }}
+                        </a>
+                        
+                        <div style="border-left: 1px solid var(--border); height: 2rem; margin: 0 0.5rem;"></div>
+
+                        <label for="restoreFile" class="btn secondary" style="margin: 0; cursor: pointer;">
+                            <i class="fas fa-upload"></i> {{ t(request, 'admin_users.restore_btn') }}
+                        </label>
+                        <input type="file" id="restoreFile" style="display: none;" accept=".zip" onchange="handleRestore(this)">
+                        <span id="restoreStatus" style="font-size: 0.8rem; color: var(--text-2);"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -742,6 +762,44 @@
                 showAlert('Erreur de connexion', 'error');
             }
         };
+
+        async function handleRestore(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            const status = document.getElementById('restoreStatus');
+            
+            if (!confirm("Attention : Cela va écraser toutes vos données actuelles. Continuer ?")) {
+                input.value = '';
+                return;
+            }
+
+            status.textContent = "Restauration en cours...";
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/admin/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showAlert(data.message || 'Système restauré avec succès', 'success');
+                    status.textContent = "Restauré ! Redémarrage conseillé.";
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                    status.textContent = "Échec de la restauration.";
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+                status.textContent = "Erreur réseau.";
+            } finally {
+                input.value = '';
+            }
+        }
     </script>
 </body>
 

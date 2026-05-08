@@ -274,7 +274,14 @@
         "save": "Save",
         "btn_edit_profile": "Edit profile",
         "btn_change_pwd": "Change password",
-        "btn_delete": "Delete"
+        "btn_delete": "Delete",
+        "backup_restore_title": "Backup & Restore",
+        "backup_btn": "Download backup",
+        "restore_btn": "Restore backup",
+        "restore_success": "System restored successfully !",
+        "restore_error": "Error during restoration: ",
+        "backup_filename": "immo_boussole_backup",
+        "backup_desc": "The backup includes the database, photos, and configuration."
     },
     "auth": {
         "login_title": "Login — Immo-Boussole",
@@ -359,6 +366,7 @@
         "reject_error": "Error during rejection",
         "network_error": "Network error",
         "auto_refresh_label": "Auto Refresh",
-        "auto_refresh_value": "Every 30 min (6am-10:30pm)"
+        "auto_refresh_value": "Every 30 min (6am-10:30pm)",
+        "last_sync_label": "Last sync"
     }
 }
