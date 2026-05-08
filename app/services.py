@@ -155,6 +155,7 @@ async def create_listing_from_details(
     source: Source,
     original_url: str,
     download_photos: bool = True,
+    status: Optional[ListingStatus] = None,
 ) -> Tuple[Listing, bool]:
     """
     Creates or updates a listing from scraped details.
@@ -192,7 +193,12 @@ async def create_listing_from_details(
     # Store source and update timestamp
     listing.source = source
     listing.scraped_at = datetime.now(timezone.utc)
-    listing.status = ListingStatus.NEW
+    
+    # Set status only for new listings or if explicitly provided
+    if status:
+        listing.status = status
+    elif not existing:
+        listing.status = ListingStatus.NEW
 
     if not existing:
         db.add(listing)

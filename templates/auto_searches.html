@@ -437,12 +437,24 @@
             </div>
             <div class="topbar-right" style="display: flex; align-items: center; gap: 1rem;">
                 <!-- Rafraichissement auto : config cron -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-2); font-size: 0.8rem;">
-                    <i class="fa-solid fa-clock" style="color: var(--accent); opacity: 0.7;"></i>
-                    <span>{{ t(request, 'auto_searches.auto_refresh_label', 'Rafraîchissement auto') }} :</span>
-                    <span style="font-weight: 600; color: var(--text); font-family: monospace; font-size: 0.78rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.15rem 0.5rem;">
-                        {{ scraping_schedule }}
-                    </span>
+                <div style="display: flex; align-items: center; gap: 1rem; color: var(--text-2); font-size: 0.8rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-clock" style="color: var(--accent); opacity: 0.7;"></i>
+                        <span>{{ t(request, 'auto_searches.auto_refresh_label', 'Rafraîchissement auto') }} :</span>
+                        <span style="font-weight: 600; color: var(--text); font-family: monospace; font-size: 0.78rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.15rem 0.5rem;">
+                            {{ scraping_schedule }}
+                        </span>
+                    </div>
+
+                    {% if last_sync %}
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-arrows-rotate" style="color: var(--green); opacity: 0.7;"></i>
+                        <span>{{ t(request, 'auto_searches.last_sync_label', 'Dernière synchro') }} :</span>
+                        <span style="font-weight: 600; color: var(--text); font-family: monospace; font-size: 0.78rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0.15rem 0.5rem;" title="{{ last_sync.strftime('%H:%M:%S') }}">
+                            {{ last_sync.strftime('%d/%m %H:%M') }}
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
                 <!-- Bouton Forcer la recherche -->
                 <button id="forceSearchBtn" class="btn primary" onclick="forceSearch()" style="gap: 0.5rem;">

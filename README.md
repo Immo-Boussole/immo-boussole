@@ -24,6 +24,7 @@
 - **Collaborative Reviews**: Separate rating and comment system.
 - **Ideal Property Profile**: Generation of a dynamic profile based on top-rated listings (average price, area, recurring pros/cons).
 - **Interactive Map**: Visualize all active and new listings on a geographic map.
+- **Backup & Restore**: Built-in admin solution to export/import the entire system (DB, photos, config) in a single ZIP file.
 - **AI Assistant & MCP Service**: Chat with your listings via an integrated intelligent assistant (Ollama) or connect your own AI tools (Claude Desktop) using the MCP protocol.
 - **Premium Interface**: Modern dark design, descriptive cards, photo carousels, and a secure delete button with confirmation (slide).
 
@@ -230,6 +231,10 @@ The application exposes a comprehensive REST API built with **FastAPI**. All end
 - `GET /admin/users`: Interface for managing users.
 - `POST /api/admin/users`: Creates a new user account.
 - `DELETE /api/admin/users/{user_id}`: Deletes a user account.
+- `GET /api/admin/backup`: Downloads a full ZIP backup of the system.
+- `POST /api/admin/restore`: Restores the system from a ZIP backup.
+
+👉 **Check the guide: [Backup & Restore Documentation](BACKUP_RESTORE.en.md)**
 
 ### Reviews
 - `GET /api/listings/{listing_id}/reviews`: Lists all reviews left on a listing.
@@ -292,6 +297,7 @@ Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
 - ✅ Platform & criteria columns in the "Automatic Searches" view.
 - ✅ MCP (Model Context Protocol) service to connect external AI tools.
 - ✅ Integrated AI Assistant (Ollama) to chat with listings.
+- ✅ Backup and restore system (ZIP) for admins.
 - ⬜ Create a real estate agent account system.
 - ⬜ Add a favorite system for listings and searches.
 - ⬜ Add a notification system (email, push, etc.).

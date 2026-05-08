@@ -9,6 +9,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
 import hashlib
+import zipfile
+import shutil
+import tempfile
+from fastapi.responses import StreamingResponse, FileResponse
+import io
 
 
 from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File
@@ -543,6 +548,114 @@ def update_user_admin(
     return {"status": "updated", "username": user.username}
 
 
+# ─── Administration: Backup & Restore ──────────────────────────────────────────
+
+@app.get("/api/admin/backup")
+def download_backup(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    _auth = Depends(admin_required)
+):
+    """
+    Generates a ZIP backup of the database, media, and configuration.
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"immo_boussole_backup_{timestamp}.zip"
+    
+    # Use a temporary file to build the ZIP
+    tmp_path = os.path.join(tempfile.gettempdir(), filename)
+    
+    try:
+        with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # 1. Database
+            db_path = "./immo_boussole.db"
+            if os.path.exists(db_path):
+                zipf.write(db_path, arcname="immo_boussole.db")
+            
+            # 2. Media
+            media_root = "static/media"
+            if os.path.exists(media_root):
+                for root, dirs, files in os.walk(media_root):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        # arcname is relative to the project root
+                        zipf.write(file_path, arcname=file_path)
+            
+            # 3. Environment (config)
+            env_path = ".env"
+            if os.path.exists(env_path):
+                zipf.write(env_path, arcname=".env")
+
+        return FileResponse(
+            path=tmp_path,
+            filename=filename,
+            media_type="application/zip",
+            background=background_tasks.add_task(os.remove, tmp_path) # Delete after download
+        )
+    except Exception as e:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise HTTPException(status_code=500, detail=f"Backup failed: {str(e)}")
+
+
+@app.post("/api/admin/restore")
+async def restore_backup(
+    file: UploadFile = File(...),
+    _auth = Depends(admin_required)
+):
+    """
+    Restores a ZIP backup. WARNING: Replaces current data.
+    """
+    if not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .zip file.")
+
+    # 1. Save uploaded file to a temporary location
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_zip_path = tmp.name
+
+    try:
+        # 2. Extract to a temporary directory to verify
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with zipfile.ZipFile(tmp_zip_path, 'r') as zipf:
+                zipf.extractall(tmp_dir)
+            
+            # Verify database exists in backup
+            db_in_backup = os.path.join(tmp_dir, "immo_boussole.db")
+            if not os.path.exists(db_in_backup):
+                raise HTTPException(status_code=400, detail="Invalid backup: missing database file.")
+
+            # 3. Critical: Close database connections
+            # We dispose the engine to try and release the file lock on SQLite
+            engine.dispose()
+
+            # 4. Replace files
+            # Database
+            shutil.copy2(db_in_backup, "./immo_boussole.db")
+
+            # Media
+            backup_media = os.path.join(tmp_dir, "static", "media")
+            if os.path.exists(backup_media):
+                # Clean current media or merge? 
+                # Better to clear and replace to ensure consistency with DB
+                if os.path.exists("static/media"):
+                    shutil.rmtree("static/media")
+                shutil.copytree(backup_media, "static/media")
+            
+            # Env (optional, might want to keep current secrets, but user asked for "everything")
+            backup_env = os.path.join(tmp_dir, ".env")
+            if os.path.exists(backup_env):
+                shutil.copy2(backup_env, ".env")
+
+        return {"status": "success", "message": "System restored successfully. Please restart the application for all changes to take effect."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Restore failed: {str(e)}")
+    finally:
+        if os.path.exists(tmp_zip_path):
+            os.remove(tmp_zip_path)
+
+
 def get_local_commit_hash() -> str:
     """Attempt to safely read the local git commit hash."""
     try:
@@ -776,8 +889,11 @@ def auto_searches_page(
     db: Session = Depends(get_db), 
     _auth = Depends(login_required)
 ):
-    # Fetch NEW listings
-    new_listings = db.query(Listing).filter(Listing.status == ListingStatus.NEW).order_by(Listing.date_added.desc()).all()
+    # Fetch NEW listings that come from a ReadySearch (automatic results)
+    new_listings = db.query(Listing).filter(
+        Listing.status == ListingStatus.NEW,
+        Listing.source_ready_search_id.isnot(None)
+    ).order_by(Listing.date_added.desc()).all()
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     viewed_ids = _get_viewed_listing_ids(request, db)
@@ -785,6 +901,10 @@ def auto_searches_page(
 
     # Build a lookup map of ReadySearch by ID for fast access
     ready_search_map = {rs.id: rs for rs in db.query(ReadySearch).all()}
+
+    # Get the latest sync time from active queries
+    latest_query = db.query(SearchQuery).filter(SearchQuery.active == 1).order_by(SearchQuery.last_run.desc()).first()
+    last_sync = latest_query.last_run if latest_query else None
 
     for listing in new_listings:
         listing._photos = json_to_photos(listing.photos_local)
@@ -810,6 +930,7 @@ def auto_searches_page(
         "queries": queries,
         "listings": all_listings,
         "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),
+        "last_sync": last_sync,
         "title": "Recherches Automatiques — Immo-Boussole",
     })
 
@@ -1554,7 +1675,7 @@ async def submit_listing_url(
         details = await fetch_basic_metadata(url)
         # Create listing (includes duplicate check) without photo download
         listing, is_new = await create_listing_from_details(
-            db, details, source, url, download_photos=False
+            db, details, source, url, download_photos=False, status=ListingStatus.ACTIVE
         )
         print(f"[API] Listing #{listing.id} ajouté via 'sans scraping' (metadatas OK).")
         return {
@@ -1581,7 +1702,7 @@ async def submit_listing_url(
         scraping_success = False
 
     # Create listing (includes duplicate check + photo download)
-    listing, is_new = await create_listing_from_details(db, details, source, url)
+    listing, is_new = await create_listing_from_details(db, details, source, url, status=ListingStatus.ACTIVE)
 
     response = {
         "status": "created" if is_new else "updated",
