@@ -52,6 +52,15 @@ class LeboncoinScraper(BaseScraper):
                         area = self._extract_area_from_attrs(ad.get("attributes", []))
                         rooms = self._extract_rooms_from_attrs(ad.get("attributes", []))
 
+                        # Photos: get available images from search results
+                        images = ad.get("images", {})
+                        urls = images.get("urls_large") or images.get("urls")
+                        photo_urls = []
+                        if isinstance(urls, list):
+                            photo_urls = [u for u in urls if isinstance(u, str)]
+                        elif isinstance(urls, str):
+                            photo_urls = [urls]
+
                         listings.append({
                             "external_id": f"lbc_{ad.get('list_id')}",
                             "title": ad.get("subject", "Sans titre"),
@@ -61,7 +70,7 @@ class LeboncoinScraper(BaseScraper):
                             "city": self._normalize_city(city),
                             "area": area,
                             "rooms": rooms,
-                            "photo_urls": [],  # Will be fetched on detail page
+                            "photo_urls": photo_urls,
                         })
                     return listings
                 except Exception as e:

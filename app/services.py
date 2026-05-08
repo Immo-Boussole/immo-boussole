@@ -374,6 +374,9 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             # Refresh Géorisques even for existing listings (as requested)
             await update_listing_georisques(existing, db)
         else:
+            # Check for photo_urls in item
+            photo_urls = item.get("photo_urls", [])
+            
             # Case: Brand new listing
             new_listing = Listing(
                 external_id=ext_id,
@@ -393,6 +396,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 # Store the origin ReadySearch for the auto_searches view
                 source_ready_search_id=ready_search.id if ready_search else None,
                 source_criteria=ready_search.criteria if ready_search else None,
+                original_photo_urls=json.dumps(photo_urls) if photo_urls else None,
             )
 
             # Geocoding for new listing
@@ -407,6 +411,16 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 db.commit() # Commit to get ID
                 db.refresh(new_listing)
                 
+                # Download photos if available
+                if photo_urls:
+                    try:
+                        downloaded = await download_listing_photos(new_listing.id, photo_urls)
+                        if downloaded:
+                            new_listing.photos_local = photos_to_json(downloaded)
+                            db.commit()
+                    except Exception as e:
+                        print(f"[Services] Error downloading photos for NEW listing {new_listing.id}: {e}")
+
                 await update_listing_georisques(new_listing, db)
                 new_listing_objects.append(new_listing)
                 new_count += 1

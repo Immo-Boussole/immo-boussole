@@ -57,6 +57,14 @@ class LogicimmoScraper(BaseScraper):
 
                     ext_id = url.split('-')[-1].split('.')[0]
 
+                    # Try to find a thumbnail in the DOM
+                    thumb = item.find('img')
+                    photo_urls = []
+                    if thumb:
+                        src = thumb.get('src') or thumb.get('data-src')
+                        if src and src.startswith('http'):
+                            photo_urls = [src]
+
                     listings.append({
                         "external_id": f"logic_{ext_id}",
                         "title": title,
@@ -66,7 +74,7 @@ class LogicimmoScraper(BaseScraper):
                         "city": None,
                         "area": area,
                         "rooms": rooms,
-                        "photo_urls": [],
+                        "photo_urls": photo_urls,
                     })
                 except Exception as e:
                     print(f"[LogicImmo] Error parsing item: {e}")
