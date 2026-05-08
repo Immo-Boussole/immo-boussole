@@ -47,11 +47,11 @@ services:
       - ./app:/app/app
       - ./locales:/app/locales
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 20s
 
   # ── MCP Server (Model Context Protocol) ──────────────────────────────────────
   mcp-server:

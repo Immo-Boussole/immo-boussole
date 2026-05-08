@@ -24,8 +24,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Upgrade system packages for security
+# Upgrade system packages for security and install basic tools
 RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends curl wget \
     && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="WikiJM"
