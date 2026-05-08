@@ -349,62 +349,71 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
     new_listing_objects: list[Listing] = []  # collected for notifications
     for item in scraped_listings:
         ext_id = str(item["external_id"])
-        if ext_id not in existing_ids:
-            # Case 1: Brand new or was previously disappeared
-            existing = db.query(Listing).filter(Listing.external_id == ext_id).first()
-            if existing:
-                if existing.status == ListingStatus.DISAPPEARED:
-                    existing.status = ListingStatus.NEW
-                    existing.date_updated = datetime.now(timezone.utc)
-                existing.price = item.get("price")
-                existing.scraped_at = datetime.now(timezone.utc)
-            else:
-                new_listing = Listing(
-                    external_id=ext_id,
-                    title=item.get("title", "Sans titre"),
-                    url=item.get("url", ""),
-                    original_url=item.get("url", ""),
-                    price=item.get("price"),
-                    location=item.get("location"),
-                    city=item.get("city"),
-                    area=item.get("area"),
-                    rooms=item.get("rooms"),
-                    source=query.source,
-                    status=ListingStatus.NEW,
-                    scraped_at=datetime.now(timezone.utc),
-                    is_duplicate=False,
-                    duplicate_of_id=None,
-                    # Store the origin ReadySearch for the auto_searches view
-                    source_ready_search_id=ready_search.id if ready_search else None,
-                    source_criteria=ready_search.criteria if ready_search else None,
-                )
+        item_url = item.get("url", "")
+        
+        # Check if listing already exists by external_id OR URL
+        # We check globally, not just in existing_active, to avoid UNIQUE constraint violations
+        existing = db.query(Listing).filter(
+            (Listing.external_id == ext_id) | (Listing.url == item_url)
+        ).first()
 
-                # Geocoding for new listing
-                loc = new_listing.location or new_listing.city
-                if loc:
-                    coords = get_coordinates(loc)
-                    if coords:
-                        new_listing.latitude, new_listing.longitude = coords
+        if existing:
+            # Case: Already exists (active, new, or disappeared)
+            if existing.status == ListingStatus.DISAPPEARED:
+                existing.status = ListingStatus.NEW
+                existing.date_updated = datetime.now(timezone.utc)
+            
+            # Update fields
+            existing.price = item.get("price")
+            existing.scraped_at = datetime.now(timezone.utc)
+            
+            # If external_id was None (manual) or changed, update it
+            if not existing.external_id or existing.external_id != ext_id:
+                existing.external_id = ext_id
+            
+            # Refresh Géorisques even for existing listings (as requested)
+            await update_listing_georisques(existing, db)
+        else:
+            # Case: Brand new listing
+            new_listing = Listing(
+                external_id=ext_id,
+                title=item.get("title", "Sans titre"),
+                url=item_url,
+                original_url=item_url,
+                price=item.get("price"),
+                location=item.get("location"),
+                city=item.get("city"),
+                area=item.get("area"),
+                rooms=item.get("rooms"),
+                source=query.source,
+                status=ListingStatus.NEW,
+                scraped_at=datetime.now(timezone.utc),
+                is_duplicate=False,
+                duplicate_of_id=None,
+                # Store the origin ReadySearch for the auto_searches view
+                source_ready_search_id=ready_search.id if ready_search else None,
+                source_criteria=ready_search.criteria if ready_search else None,
+            )
 
-                db.add(new_listing)
+            # Geocoding for new listing
+            loc = new_listing.location or new_listing.city
+            if loc:
+                coords = get_coordinates(loc)
+                if coords:
+                    new_listing.latitude, new_listing.longitude = coords
+
+            db.add(new_listing)
+            try:
                 db.commit() # Commit to get ID
                 db.refresh(new_listing)
                 
                 await update_listing_georisques(new_listing, db)
                 new_listing_objects.append(new_listing)
                 new_count += 1
-        else:
-            # Case 2: Already active/new and still online
-            # Find the object in our local list to update it
-            existing = next((l for l in existing_active if l.external_id == ext_id), None)
-            if existing:
-                # Always update the timestamp and price
-                existing.scraped_at = datetime.now(timezone.utc)
-                if item.get("price"):
-                    existing.price = item.get("price")
-            
-            # Refresh Géorisques even for existing listings (as requested)
-            await update_listing_georisques(existing, db)
+            except Exception as e:
+                db.rollback()
+                print(f"[Services] Erreur lors de l'insertion de l'annonce {ext_id}: {e}")
+                continue
 
     db.commit()
 
