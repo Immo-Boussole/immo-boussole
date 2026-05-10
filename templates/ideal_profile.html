@@ -287,23 +287,122 @@
         .dpe-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
         .dpe-count { font-size: 0.75rem; font-weight: 700; color: var(--text-2); width: 20px; text-align: right; }
 
-        /* Pros/Cons lists */
-        .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
-        .feedback-item { background: var(--surface-2); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; line-height: 1.5; border-left: 3px solid; }
-        .feedback-item.pro { border-color: var(--green); color: #c0fce8; }
-        .feedback-item.con { border-color: var(--red); color: #fbc5ca; }
-        .empty-feedback { color: var(--text-2); font-size: 0.82rem; font-style: italic; padding: 0.5rem; }
+        /* Pros/Cons badges */
+        .feedback-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            max-height: none;
+            overflow: visible;
+        }
+        .feedback-item {
+            background: var(--surface-2);
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1.4;
+            border: 1px solid var(--border);
+            transition: var(--trans);
+            cursor: default;
+        }
+        .feedback-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .feedback-item.pro { border-left: 4px solid var(--green); color: var(--text); }
+        .feedback-item.con { border-left: 4px solid var(--red); color: var(--text); }
+        
+        .feedback-item.pro:hover { border-color: var(--green); background: rgba(16, 217, 164, 0.05); }
+        .feedback-item.con:hover { border-color: var(--red); background: rgba(242, 92, 105, 0.05); }
 
-        /* Top listings */
-        .top-listing { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; background: var(--surface-2); border-radius: 10px; margin-bottom: 0.5rem; text-decoration: none; color: var(--text); transition: var(--trans); border: 1px solid var(--border); }
-        .top-listing:hover { border-color: var(--accent); transform: translateX(4px); }
-        .tl-dpe { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; flex-shrink: 0; }
-        .tl-info { flex: 1; min-width: 0; }
-        .tl-title { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tl-sub { font-size: 0.72rem; color: var(--text-2); }
-        .tl-price { font-size: 0.9rem; font-weight: 800; color: var(--accent); white-space: nowrap; }
+        /* Full width table for Top Listings */
+        .table-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            width: 100%;
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        thead {
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+        }
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .col-platform { font-weight: 700; text-transform: uppercase; color: var(--accent); font-size: 0.75rem; }
+        .col-criteria { font-weight: 600; color: var(--text-2); font-size: 0.8rem; }
+        .col-title { font-weight: 700; color: var(--text); }
+        .col-price { color: var(--accent); font-weight: 800; font-size: 0.95rem; }
+        
+        .badge-status {
+            display: inline-flex;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .badge-active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .badge-disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
-        ::-webkit-scrollbar { width: 4px; }
+        .dpe-tag {
+            width: 24px; height: 24px; border-radius: 4px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 0.75rem; color: #000;
+        }
+        .dpe-A { background: #00c950; } .dpe-B { background: #50d970; }
+        .dpe-C { background: #ccdf30; } .dpe-D { background: #f7c948; }
+        .dpe-E { background: #f09939; } .dpe-F { background: #e8593a; color: #fff; }
+        .dpe-G { background: #c73232; color: #fff; }
+        .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+        .btn-details {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: var(--trans);
+        }
+        .btn-details:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
     </style>
 </head>
@@ -464,8 +563,12 @@
             </div>
             <div class="feedback-list">
                 {% if profile.common_pros %}
-                {% for pro in profile.common_pros %}
-                <div class="feedback-item pro">{{ pro }}</div>
+                {% for raw_pro in profile.common_pros %}
+                    {% for pro in raw_pro.split(' - ') %}
+                        {% if pro.strip() %}
+                        <div class="feedback-item pro">{{ pro.strip().strip('-').strip() }}</div>
+                        {% endif %}
+                    {% endfor %}
                 {% endfor %}
                 {% else %}
                 <div class="empty-feedback">{{ t(request, 'ideal_profile.no_pros') }}</div>
@@ -481,8 +584,12 @@
             </div>
             <div class="feedback-list">
                 {% if profile.common_cons %}
-                {% for con in profile.common_cons %}
-                <div class="feedback-item con">{{ con }}</div>
+                {% for raw_con in profile.common_cons %}
+                    {% for con in raw_con.split(' - ') %}
+                        {% if con.strip() %}
+                        <div class="feedback-item con">{{ con.strip().strip('-').strip() }}</div>
+                        {% endif %}
+                    {% endfor %}
                 {% endfor %}
                 {% else %}
                 <div class="empty-feedback">{{ t(request, 'ideal_profile.no_cons') }}</div>
@@ -514,37 +621,77 @@
         </div>
         {% endif %}
 
-        <!-- Top listings -->
-        {% if profile.top_listings %}
-        <div class="panel">
-            <div class="panel-title"><i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> {{ t(request, 'ideal_profile.top_listings') }}</div>
+    </div><!-- end .section-grid -->
 
-            {% for listing in profile.top_listings[:6] %}
-            <a href="/listings/{{ listing.id }}" class="top-listing">
-                <div class="tl-dpe dpe-{{ listing.dpe_rating or 'NC' }}" title="DPE {{ listing.dpe_rating or '?' }}">
-                    {{ listing.dpe_rating or '?' }}
-                </div>
-                <div class="tl-info">
-                    <div class="tl-title">
-                        {% if listing.is_favorite %}
-                        <i class="fa-solid fa-heart" style="color: var(--red); margin-right: 4px;" title="Coup de coeur"></i>
-                        {% endif %}
-                        {{ listing.title[:50] }}
-                    </div>
-                    <div class="tl-sub">
-                        <a href="/carte?city={{ listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
-                            {{ listing.location or 'N/C' }}
-                        </a>
-                        {% if listing.area %}· {{ listing.area }}m²{% endif %}
-                    </div>
-                </div>
-                <div class="tl-price">
-                    {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
-                </div>
-            </a>
-            {% endfor %}
+    <!-- Top listings (Full Width Table) -->
+    {% if profile.top_listings %}
+    <div class="table-panel">
+        <div class="panel-title">
+            <i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> {{ t(request, 'ideal_profile.top_listings') }}
         </div>
-        {% endif %}
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>{{ t(request, 'ready_searches.platform') }}</th>
+                        <th>{{ t(request, 'ready_searches.criteria') }}</th>
+                        <th>{{ t(request, 'table.title') }}</th>
+                        <th>{{ t(request, 'table.location') }}</th>
+                        <th>{{ t(request, 'table.price') }}</th>
+                        <th>{{ t(request, 'table.area') }}</th>
+                        <th>{{ t(request, 'table.rooms') }}</th>
+                        <th>{{ t(request, 'table.dpe') }}</th>
+                        <th>{{ t(request, 'table.status') }}</th>
+                        <th>{{ t(request, 'table.action') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in profile.top_listings[:10] %}
+                    <tr>
+                        <td class="col-platform">{{ (listing.source or 'MANUEL')|upper }}</td>
+                        <td class="col-criteria">{{ listing.source_criteria or '-' }}</td>
+                        <td class="col-title">
+                            {% if listing.is_favorite %}
+                            <i class="fa-solid fa-heart" style="color: var(--red); margin-right: 4px;" title="Coup de coeur"></i>
+                            {% endif %}
+                            {{ listing.title|truncate(45) }}
+                        </td>
+                        <td>
+                            <a href="/carte?city={{ listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                {{ listing.location or 'N/C' }}
+                            </a>
+                        </td>
+                        <td class="col-price">
+                            {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
+                        </td>
+                        <td>{% if listing.area %}{{ listing.area|int }}m²{% else %}-{% endif %}</td>
+                        <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
+                        <td>
+                            {% if listing.dpe_rating %}
+                            <span class="dpe-tag dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</span>
+                            {% else %}
+                            <span class="dpe-tag dpe-NC">?</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set status = listing.status or 'active' %}
+                            <span class="badge-status badge-{{ status }}">
+                                {{ t(request, 'misc.' + status) | default(status|upper) }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="/listings/{{ listing.id }}" class="btn-details">
+                                {{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     </div>
     {% endif %}

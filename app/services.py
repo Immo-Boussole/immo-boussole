@@ -654,9 +654,13 @@ def generate_ideal_profile(db: Session) -> dict:
                 "title": l.title,
                 "price": l.price,
                 "area": l.area,
+                "rooms": l.rooms,
                 "location": l.location,
                 "dpe_rating": l.dpe_rating,
                 "is_favorite": l.is_favorite,
+                "source": l.source.value if l.source else None,
+                "source_criteria": l.source_criteria,
+                "status": l.status.value if l.status else None,
             }
             for l in top_listings
         ],
