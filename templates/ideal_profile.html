@@ -269,10 +269,14 @@
         .no-data h2 { font-size: 1.25rem; color: var(--text); margin-bottom: 0.5rem; }
 
         /* Section layout */
-        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-        @media (max-width: 700px) { .section-grid { grid-template-columns: 1fr; } }
+        .section-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 1.5rem; 
+            margin-bottom: 2rem; 
+        }
 
-        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; }
         .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.4rem; }
 
         /* DPE bars */
@@ -404,6 +408,11 @@
 
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+
+        /* Sorting cursor */
+        th[onclick] { cursor: pointer; user-select: none; position: relative; }
+        th[onclick]:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
+        th[onclick]::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; margin-left: 8px; opacity: 0.3; font-size: 0.6rem; }
     </style>
 </head>
 <body>
@@ -564,10 +573,14 @@
             <div class="feedback-list">
                 {% if profile.common_pros %}
                 {% for raw_pro in profile.common_pros %}
-                    {% for pro in raw_pro.split(' - ') %}
-                        {% if pro.strip() %}
-                        <div class="feedback-item pro">{{ pro.strip().strip('-').strip() }}</div>
-                        {% endif %}
+                    {# Split by newlines first, then by ' - ' #}
+                    {% for block in raw_pro.split('\n') %}
+                        {% for pro in block.split(' - ') %}
+                            {% set clean_pro = pro.strip().strip('-').strip() %}
+                            {% if clean_pro %}
+                            <div class="feedback-item pro">{{ clean_pro }}</div>
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
                 {% endfor %}
                 {% else %}
@@ -585,10 +598,14 @@
             <div class="feedback-list">
                 {% if profile.common_cons %}
                 {% for raw_con in profile.common_cons %}
-                    {% for con in raw_con.split(' - ') %}
-                        {% if con.strip() %}
-                        <div class="feedback-item con">{{ con.strip().strip('-').strip() }}</div>
-                        {% endif %}
+                    {# Split by newlines first, then by ' - ' #}
+                    {% for block in raw_con.split('\n') %}
+                        {% for con in block.split(' - ') %}
+                            {% set clean_con = con.strip().strip('-').strip() %}
+                            {% if clean_con %}
+                            <div class="feedback-item con">{{ clean_con }}</div>
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
                 {% endfor %}
                 {% else %}
@@ -631,18 +648,18 @@
         </div>
         
         <div class="table-container">
-            <table>
+            <table id="topListingsTable">
                 <thead>
                     <tr>
-                        <th>{{ t(request, 'ready_searches.platform') }}</th>
-                        <th>{{ t(request, 'ready_searches.criteria') }}</th>
-                        <th>{{ t(request, 'table.title') }}</th>
-                        <th>{{ t(request, 'table.location') }}</th>
-                        <th>{{ t(request, 'table.price') }}</th>
-                        <th>{{ t(request, 'table.area') }}</th>
-                        <th>{{ t(request, 'table.rooms') }}</th>
-                        <th>{{ t(request, 'table.dpe') }}</th>
-                        <th>{{ t(request, 'table.status') }}</th>
+                        <th onclick="sortTable(0)">{{ t(request, 'ready_searches.platform') }}</th>
+                        <th onclick="sortTable(1)">{{ t(request, 'ready_searches.criteria') }}</th>
+                        <th onclick="sortTable(2)">{{ t(request, 'table.title') }}</th>
+                        <th onclick="sortTable(3)">{{ t(request, 'table.location') }}</th>
+                        <th onclick="sortTable(4)">{{ t(request, 'table.price') }}</th>
+                        <th onclick="sortTable(5)">{{ t(request, 'table.area') }}</th>
+                        <th onclick="sortTable(6)">{{ t(request, 'table.rooms') }}</th>
+                        <th onclick="sortTable(7)">{{ t(request, 'table.dpe') }}</th>
+                        <th onclick="sortTable(8)">{{ t(request, 'table.status') }}</th>
                         <th>{{ t(request, 'table.action') }}</th>
                     </tr>
                 </thead>
@@ -674,7 +691,7 @@
                             <span class="dpe-tag dpe-NC">?</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-sort="{{ listing.status or 'active' }}">
                             {% set status = listing.status or 'active' %}
                             <span class="badge-status badge-{{ status }}">
                                 {{ t(request, 'misc.' + status) | default(status|upper) }}
@@ -699,5 +716,53 @@
 
         </div>
     </main>
+    <script>
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("topListingsTable");
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    
+                    var xVal = x.getAttribute("data-sort") || x.innerText.toLowerCase();
+                    var yVal = y.getAttribute("data-sort") || y.innerText.toLowerCase();
+                    
+                    // Numeric sort if applicable
+                    var xNum = parseFloat(xVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    var yNum = parseFloat(yVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    
+                    if (!isNaN(xNum) && !isNaN(yNum)) {
+                        if (dir == "asc") {
+                            if (xNum > yNum) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xNum < yNum) { shouldSwitch = true; break; }
+                        }
+                    } else {
+                        if (dir == "asc") {
+                            if (xVal > yVal) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xVal < yVal) { shouldSwitch = true; break; }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
