@@ -1248,7 +1248,7 @@
                 {% for listing in display_listings|default(listings) %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
                 <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.user_status }}"
-                    onclick="window.location='/listings/{{ listing.id }}'">
+                    onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">
                         {% if photos %}
