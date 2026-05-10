@@ -661,6 +661,7 @@ def generate_ideal_profile(db: Session) -> dict:
                 "source": l.source.value if l.source else None,
                 "source_criteria": l.source_criteria,
                 "status": l.status.value if l.status else None,
+                "url": l.url,
             }
             for l in top_listings
         ],
