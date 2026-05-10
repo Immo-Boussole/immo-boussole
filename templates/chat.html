@@ -7,6 +7,7 @@
     <title>Assistant IA — Immo-Boussole</title>
     
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
@@ -68,9 +69,9 @@
             text-decoration: none;
         }
 
-        .logo i {
-            -webkit-text-fill-color: var(--accent);
-            font-size: 1.4rem;
+        .logo img {
+            
+            width: 1.4rem; height: 1.4rem; object-fit: contain;
         }
 
         .stat-grid {
@@ -443,7 +444,7 @@
 <body>
     <aside class="sidebar">
         <a href="/" class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+            <img src="/static/media/app/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </a>
 
@@ -473,6 +474,7 @@
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>

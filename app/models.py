@@ -1,5 +1,8 @@
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, Text, ForeignKey, Boolean, LargeBinary
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship
+# pyrefly: ignore [missing-import]
 from sqlalchemy.sql import func
 import enum
 from app.database import Base
@@ -130,6 +133,9 @@ class Listing(Base):
     # Metadata
     source = Column(Enum(Source), nullable=False, default=Source.MANUAL)
     status = Column(Enum(ListingStatus), default=ListingStatus.NEW, nullable=False)
+    is_favorite = Column(Boolean, default=False)
+    is_liked = Column(Boolean, default=False)
+    is_disliked = Column(Boolean, default=False)
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
     date_added = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())

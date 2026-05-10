@@ -8,6 +8,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
     <style>
         :root {
             --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
@@ -16,6 +17,20 @@
             --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
             --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -97,7 +112,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -216,7 +231,7 @@
             text-decoration: none;
         }
 
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .stat-grid {
             display: grid;
@@ -460,48 +475,113 @@
 
         /* ── Fullscreen Gallery Lightbox ── */
         .gallery-overlay {
-            position: fixed; inset: 0; background: #fff; z-index: 2000;
-            display: none; align-items: stretch; justify-content: center;
+            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
+            display: none; flex-direction: column;
         }
         .gallery-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
-        .gallery-close {
-            position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; 
-            border: none; font-size: 1.5rem; color: #1a1a1a; cursor: pointer; z-index: 2010;
-            transition: color 0.2s;
-        }
-        .gallery-close:hover { color: var(--accent); }
-        .gallery-content { display: flex; flex: 1; height: 100vh; position: relative; }
+        
+        /* Mobile Header (Hidden on Desktop) */
+        .gallery-header-mobile { display: none; }
+        
+        .gallery-content { display: flex; flex: 1; height: 100vh; overflow: hidden; }
+        
         .gallery-main { 
-            flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #fff;
-            padding: 2rem;
+            flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000;
+            padding: 1rem;
         }
-        .gallery-main img { max-width: 100%; max-height: calc(100vh - 4rem); object-fit: contain; }
+        .gallery-main img { 
+            max-width: 100%; max-height: 100%; object-fit: contain; 
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-close-desk {
+            position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(0,0,0,0.5); 
+            border: 1px solid rgba(255,255,255,0.1); font-size: 1.25rem; color: #fff; 
+            width: 44px; height: 44px; border-radius: 50%;
+            cursor: pointer; z-index: 2010; display: flex; align-items: center; justify-content: center;
+            transition: var(--trans);
+        }
+        .gallery-close-desk:hover { background: var(--red); border-color: var(--red); }
+
         .gallery-btn {
             position: absolute; top: 50%; transform: translateY(-50%);
-            background: #fff; border: 1px solid #e0e0e0; color: #1a1a1a;
-            width: 48px; height: 48px; border-radius: 50%;
-            font-size: 1.2rem; cursor: pointer; z-index: 5;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff;
+            width: 56px; height: 56px; border-radius: 50%;
+            font-size: 1.5rem; cursor: pointer; z-index: 5;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: var(--trans);
+            backdrop-filter: blur(4px); transition: var(--trans);
         }
-        .gallery-btn:hover { background: #f0f0f0; }
-        .gallery-prev { left: 2rem; }
-        .gallery-next { right: 2rem; }
+        .gallery-btn:hover { background: var(--accent); border-color: var(--accent); }
+        .gallery-prev { left: 1.5rem; }
+        .gallery-next { right: 1.5rem; }
         
         .gallery-sidebar { 
-            width: 380px; background: #fff; border-left: 1px solid #e0e0e0;
-            display: flex; flex-direction: column; overflow-y: auto; color: #1a1a1a;
+            width: 420px; background: var(--surface); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow-y: auto; color: var(--text);
             flex-shrink: 0;
         }
-        .gallery-header { padding: 2rem 1.5rem 1rem; }
-        .gallery-idx { font-size: 0.75rem; font-weight: 700; color: #666; margin-bottom: 0.5rem; }
-        .gallery-title { font-size: 1rem; font-weight: 800; line-height: 1.3; margin-bottom: 1.5rem; }
+        .gallery-header-desk { padding: 2rem 1.5rem 1.5rem; }
+        .gallery-idx { font-size: 0.75rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .gallery-title { font-size: 1.1rem; font-weight: 800; line-height: 1.4; color: var(--text); }
         
-        .gallery-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 1.5rem 2rem; }
-        .gallery-thumb { width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 4px; overflow: hidden; opacity: 0.3; transition: var(--trans); }
+        .gallery-thumbs { 
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 1.5rem 2rem; 
+        }
+        .gallery-thumb { 
+            width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 10px; overflow: hidden; 
+            opacity: 0.4; transition: var(--trans); border: 2px solid transparent;
+        }
         .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
         .gallery-thumb:hover { opacity: 0.8; }
-        .gallery-thumb.active { opacity: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
+        .gallery-thumb.active { opacity: 1; border-color: var(--accent); transform: scale(0.98); }
+
+        .gallery-mobile-separator { display: none; }
+
+        /* Responsive Gallery Adjustments */
+        @media (max-width: 1024px) {
+            .gallery-sidebar { width: 320px; }
+            .gallery-thumbs { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .gallery-overlay { overflow-y: auto; display: none; flex-direction: column; height: 100%; }
+            .gallery-overlay.open { display: flex; }
+            .gallery-content { flex-direction: column; height: auto; overflow: visible; }
+            
+            .gallery-header-mobile { 
+                display: block; padding: 1.25rem 1rem; background: var(--surface); 
+                border-bottom: 1px solid var(--border); z-index: 2020;
+            }
+            .gallery-mob-l1 { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text); line-height: 1.3; }
+            .gallery-mob-l2 { display: flex; align-items: center; justify-content: space-between; }
+            .gallery-mob-actions { display: flex; gap: 0.75rem; }
+            .btn-gallery-action { 
+                width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+                background: var(--surface-2); color: var(--text); display: flex; align-items: center; justify-content: center;
+                font-size: 1.1rem; cursor: pointer; transition: var(--trans);
+            }
+            .btn-gallery-action.delete { color: var(--red); border-color: rgba(242,92,105,0.2); }
+            .btn-gallery-action:active { transform: scale(0.9); }
+
+            .gallery-main { height: 60vh; min-height: 350px; padding: 0; }
+            .gallery-btn { width: 44px; height: 44px; font-size: 1.1rem; background: rgba(0,0,0,0.3); }
+            .gallery-prev { left: 0.75rem; }
+            .gallery-next { right: 0.75rem; }
+            .gallery-close-desk { display: none; }
+
+            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow: visible; }
+            .gallery-header-desk { display: none; }
+            
+            .gallery-mobile-separator { 
+                display: block; height: 1px; background: var(--border); margin: 0 1.5rem 1.5rem; 
+                opacity: 0.5;
+            }
+            .gallery-thumbs { 
+                grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1rem 2rem;
+            }
+            .gallery-thumb { border-radius: 8px; }
+        }
+
 
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
@@ -516,7 +596,7 @@
 
     <aside class="sidebar">
         <a href="/" class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+            <img src="/static/media/app/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </a>
 
@@ -546,6 +626,7 @@
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
@@ -598,14 +679,31 @@
             </div>
             <div class="topbar-right" style="display: flex; gap: 0.75rem;">
                 {% if request.session.get('role') == 'user' %}
+                <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
+                    <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
+                </button>
+
+                <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
+
+                <button class="btn btn-heart-nav" onclick="toggleFavorite({{ listing.id }}, this)" title="{{ t(request, 'listing.favorite') }}" style="{% if listing.is_favorite %}color: #ff4757; border-color: rgba(255, 71, 87, 0.2); background: rgba(255, 71, 87, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i> <span class="btn-text">{{ t(request, 'listing.favorite') }}</span>
+                </button>
+
+                <button class="btn btn-like-nav" onclick="toggleLike({{ listing.id }}, this)" title="{{ t(request, 'listing.like') }}" style="{% if listing.is_liked %}color: var(--green); border-color: rgba(16, 217, 164, 0.2); background: rgba(16, 217, 164, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i> <span class="btn-text">{{ t(request, 'listing.like') }}</span>
+                </button>
+
+                <button class="btn btn-dislike-nav" onclick="toggleDislike({{ listing.id }}, this)" title="{{ t(request, 'listing.dislike') }}" style="{% if listing.is_disliked %}color: var(--red); border-color: rgba(242, 92, 105, 0.2); background: rgba(242, 92, 105, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i> <span class="btn-text">{{ t(request, 'listing.dislike') }}</span>
+                </button>
+
+                <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
+
                 <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'listing.refresh') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-arrows-rotate"></i> <span class="btn-text">{{ t(request, 'listing.refresh') }}</span>
                 </button>
                 <button class="btn btn-edit-nav" onclick="openEditModal()" title="{{ t(request, 'listing.edit') }}" style="color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);">
                     <i class="fa-solid fa-pen"></i> <span class="btn-text">{{ t(request, 'listing.edit') }}</span>
-                </button>
-                <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
-                    <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
                 </button>
                 <button class="btn btn-delete-nav" onclick='openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05);">
                     <i class="fa-solid fa-trash-can"></i> <span class="btn-text">{{ t(request, 'listing.delete_btn') }}</span>
@@ -657,7 +755,9 @@
                 <div class="listing-title">{{ listing.title }}</div>
                 <div class="listing-location">
                     <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i>
-                    {{ listing.location or "Localisation non disponible" }}
+                    <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                        {{ listing.location or "Localisation non disponible" }}
+                    </a>
                 </div>
 
                 <div class="price-block">
@@ -1681,22 +1781,144 @@
                 btn.classList.remove('loading');
             }
         }
-    </script>
+        
+        function updateInteractionButtons(data) {
+            // Update Favorite
+            const heartBtn = document.querySelector('.btn-heart-nav');
+            if (heartBtn) {
+                if (data.is_favorite) {
+                    heartBtn.style.color = '#ff4757';
+                    heartBtn.style.borderColor = 'rgba(255, 71, 87, 0.2)';
+                    heartBtn.style.background = 'rgba(255, 71, 87, 0.1)';
+                    heartBtn.querySelector('i').className = 'fa-solid fa-heart';
+                } else {
+                    heartBtn.style.color = 'var(--text)';
+                    heartBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    heartBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    heartBtn.querySelector('i').className = 'fa-regular fa-heart';
+                }
+            }
 
+            // Update Like
+            const likeBtn = document.querySelector('.btn-like-nav');
+            if (likeBtn) {
+                if (data.is_liked) {
+                    likeBtn.style.color = 'var(--green)';
+                    likeBtn.style.borderColor = 'rgba(16, 217, 164, 0.2)';
+                    likeBtn.style.background = 'rgba(16, 217, 164, 0.1)';
+                    likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
+                } else {
+                    likeBtn.style.color = 'var(--text)';
+                    likeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    likeBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
+                }
+            }
+
+            // Update Dislike
+            const dislikeBtn = document.querySelector('.btn-dislike-nav');
+            if (dislikeBtn) {
+                if (data.is_disliked) {
+                    dislikeBtn.style.color = 'var(--red)';
+                    dislikeBtn.style.borderColor = 'rgba(242, 92, 105, 0.2)';
+                    dislikeBtn.style.background = 'rgba(242, 92, 105, 0.1)';
+                    dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
+                } else {
+                    dislikeBtn.style.color = 'var(--text)';
+                    dislikeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    dislikeBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+                }
+            }
+        }
+
+        async function toggleFavorite(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/favorite`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+
+        async function toggleLike(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/like`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+
+        async function toggleDislike(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/dislike`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+    </script>
     <!-- ── Fullscreen Gallery Lightbox ── -->
     <div class="gallery-overlay" id="galleryOverlay">
-        <button class="gallery-close" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+        
+        <!-- Top Block (Mobile Only) -->
+        <div class="gallery-header-mobile">
+            <div class="gallery-mob-l1">{{ listing.title }}</div>
+            <div class="gallery-mob-l2">
+                <div class="gallery-idx" id="galleryIdxMob">1/1</div>
+                <div class="gallery-mob-actions">
+                    {% if request.session.get('role') == 'user' %}
+                    <button class="btn-gallery-action delete" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    {% endif %}
+                    <button class="btn-gallery-action" onclick="closeGallery()" title="Fermer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="gallery-content">
             <div class="gallery-main">
+                <button class="gallery-close-desk" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+                
                 <button class="gallery-btn gallery-prev" onclick="gallerySlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
                 <img id="galleryMainImage" src="" alt="Main photo">
                 <button class="gallery-btn gallery-next" onclick="gallerySlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
+            
             <div class="gallery-sidebar">
-                <div class="gallery-header">
-                    <div class="gallery-idx" id="galleryIdx">1/1</div>
-                    <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.5rem; margin-bottom: 1.5rem;">
-                        <div class="gallery-title" style="margin-bottom:0;">{{ listing.title }}</div>
+                <!-- Sidebar Header (Desktop Only) -->
+                <div class="gallery-header-desk">
+                    <div class="gallery-idx" id="galleryIdxDesk">1/1</div>
+                    <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.75rem; margin-bottom: 1.5rem;">
+                        <div class="gallery-title">{{ listing.title }}</div>
                         {% if request.session.get('role') == 'user' %}
                         <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
                             <i class="fa-solid fa-trash-can"></i>
@@ -1704,6 +1926,10 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <!-- Separator (Mobile Only) -->
+                <div class="gallery-mobile-separator"></div>
+
                 <div class="gallery-thumbs" id="galleryThumbs">
                     {% for photo in photos %}
                     <div class="gallery-thumb" onclick="galleryGoTo({{ loop.index0 }})">
@@ -1714,6 +1940,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Modal Select Stations -->
     <div id="stationOverlay" class="overlay">
@@ -1927,7 +2154,12 @@
             if (totalGalleryPhotos === 0) return;
             currentGalleryIdx = (idx + totalGalleryPhotos) % totalGalleryPhotos;
             document.getElementById('galleryMainImage').src = galleryPhotos[currentGalleryIdx];
-            document.getElementById('galleryIdx').textContent = `${currentGalleryIdx + 1}/${totalGalleryPhotos}`;
+            
+            const idxText = `${currentGalleryIdx + 1}/${totalGalleryPhotos}`;
+            const idxMob = document.getElementById('galleryIdxMob');
+            const idxDesk = document.getElementById('galleryIdxDesk');
+            if (idxMob) idxMob.textContent = idxText;
+            if (idxDesk) idxDesk.textContent = idxText;
             
             const thumbs = document.querySelectorAll('#galleryThumbs .gallery-thumb');
             thumbs.forEach((t, i) => {
@@ -1937,6 +2169,7 @@
                 }
             });
         }
+
 
         function gallerySlide(dir) {
             galleryGoTo(currentGalleryIdx + dir);

@@ -613,8 +613,13 @@ def generate_ideal_profile(db: Session) -> dict:
     all_pros = [r.pros for r in good_reviews if r.pros]
     all_cons = [r.cons for r in bad_reviews if r.cons]
 
-    # Get statistics from top-rated listings
+    # Get statistics from top-rated listings AND favorite listings
     top_listing_ids = list(set(r.listing_id for r in good_reviews))
+    favorite_listings = db.query(Listing).filter(Listing.is_favorite == True).all()
+    for fl in favorite_listings:
+        if fl.id not in top_listing_ids:
+            top_listing_ids.append(fl.id)
+
     top_listings = db.query(Listing).filter(Listing.id.in_(top_listing_ids)).all()
 
     # Compute averages
@@ -651,6 +656,7 @@ def generate_ideal_profile(db: Session) -> dict:
                 "area": l.area,
                 "location": l.location,
                 "dpe_rating": l.dpe_rating,
+                "is_favorite": l.is_favorite,
             }
             for l in top_listings
         ],

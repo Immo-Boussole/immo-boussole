@@ -141,6 +141,9 @@
         "reload": "Relancer le scraping"
     },
     "listing": {
+        "like": "J'aime",
+        "dislike": "Je n'aime pas",
+        "favorite": "Coup de coeur",
         "back": "Retour",
         "refresh": "Actualiser",
         "edit": "Éditer",

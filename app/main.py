@@ -739,6 +739,39 @@ def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(l
     })
 
 
+@app.get("/a-voir")
+def a_voir_page(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    # Original mixed list for sidebar
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    queries = db.query(SearchQuery).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+
+    # The "A voir" view should show imported listings (e.g. status ACTIVE or NEW)
+    # that the current user has not yet viewed.
+    unseen_query = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE])
+    )
+    if viewed_ids:
+        unseen_query = unseen_query.filter(Listing.id.notin_(viewed_ids))
+        
+    unseen_listings = unseen_query.order_by(Listing.date_added.desc()).all()
+
+    _enrich_listings(all_listings + unseen_listings, viewed_ids)
+    local_hash = get_local_commit_hash()
+
+    return templates.TemplateResponse(request=request, name="index.html", context={
+        "imported_listings": [], 
+        "rejected_listings": [], 
+        "listings": all_listings, 
+        "display_listings": unseen_listings,
+        "queries": queries,
+        "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
+        "title": "À voir — Immo-Boussole",
+        "is_a_voir": True
+    })
+
+
 @app.get("/listings/table")
 def listings_table_page(
     request: Request, 
@@ -1926,6 +1959,52 @@ def reject_listing(request: Request, listing_id: int, db: Session = Depends(get_
     listing.status = ListingStatus.REJECTED
     db.commit()
     return {"status": "rejected", "listing_id": listing.id}
+
+
+@app.patch("/api/listings/{listing_id}/favorite")
+def toggle_favorite(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.is_favorite = not listing.is_favorite
+    if listing.is_favorite:
+        listing.is_liked = True
+        listing.is_disliked = False
+    db.commit()
+    return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
+
+
+@app.patch("/api/listings/{listing_id}/like")
+def toggle_like(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.is_liked = not listing.is_liked
+    if listing.is_liked:
+        listing.is_disliked = False
+    else:
+        # If no longer liked, it cannot be a favorite
+        listing.is_favorite = False
+        
+    db.commit()
+    return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
+
+
+@app.patch("/api/listings/{listing_id}/dislike")
+def toggle_dislike(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.is_disliked = not listing.is_disliked
+    if listing.is_disliked:
+        listing.is_liked = False
+        listing.is_favorite = False
+        
+    db.commit()
+    return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
 
 
 @app.post("/api/listings/{listing_id}/photos")
