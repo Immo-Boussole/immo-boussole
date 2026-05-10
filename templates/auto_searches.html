@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ title|default(t(request, 'auto_searches.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
@@ -25,6 +26,20 @@
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -106,7 +121,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -355,7 +370,7 @@
 
     <aside class="sidebar">
         <a href="/" class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+            <img src="/static/media/app/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </a>
 
@@ -385,6 +400,7 @@
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
@@ -507,7 +523,10 @@
                                         <div style="overflow: hidden;">
                                             <div style="font-weight: 700; font-size: 1rem; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.2rem;">{{ listing.title }}</div>
                                             <div style="font-size: 0.8rem; color: var(--text-2);">
-                                                <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or t(request, 'misc.nc') }}</span> • 
+                                                <a href="/carte?city={{ listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                                    <i class="fa-solid fa-location-dot"></i> {{ listing.location or t(request, 'misc.nc') }}
+                                                </a>
+ • 
                                                 {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int }} m²</span> • {% endif %}
                                                 <span style="color: var(--accent); font-weight: 700; text-transform: uppercase; font-size: 0.7rem;">{{ listing.source.value|upper }}</span>
                                             </div>

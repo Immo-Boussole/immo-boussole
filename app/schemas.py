@@ -30,6 +30,7 @@ class ListingUpdateRequest(BaseModel):
     heating_type: Optional[str] = None
     condition: Optional[str] = None
     parking_count: Optional[int] = None
+    is_favorite: Optional[bool] = None
 
 
 class PhotoImportRequest(BaseModel):

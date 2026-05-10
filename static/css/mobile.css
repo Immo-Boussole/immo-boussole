@@ -180,22 +180,8 @@
         padding: 1.5rem !important;
         width: 95% !important;
     }
-    /* Gallery Modal */
-    .gallery-content {
-        flex-direction: column !important;
-    }
-    .gallery-sidebar {
-        width: 100% !important;
-        border-left: none !important;
-        border-top: 1px solid #e0e0e0;
-        max-height: 40vh;
-    }
-    .gallery-main {
-        padding: 1rem !important;
-    }
-    .gallery-next { right: 1rem !important; }
-    .gallery-prev { left: 1rem !important; }
 }
+
 
 /* Hide mobile menu button on desktop */
 .mobile-menu-btn {

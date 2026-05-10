@@ -11,6 +11,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -28,6 +29,20 @@
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -116,9 +131,10 @@
             background-clip: text;
         }
 
-        .logo i {
-            -webkit-text-fill-color: var(--accent);
-            font-size: 1.4rem;
+        .logo img {
+            width: 1.4rem;
+            height: 1.4rem;
+            object-fit: contain;
         }
 
         .stat-grid {
@@ -598,6 +614,40 @@
             color: var(--text);
         }
 
+        .interaction-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-right: auto;
+            margin-left: 0.75rem;
+        }
+
+        .interaction-btn {
+            background: none;
+            border: none;
+            padding: 0.1rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-2);
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.5;
+        }
+
+        .interaction-btn:hover {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+
+        .interaction-btn.active {
+            opacity: 1;
+        }
+
+        .interaction-btn.active.heart { color: #ff4757; }
+        .interaction-btn.active.like { color: var(--green); }
+        .interaction-btn.active.dislike { color: var(--red); }
+
         /* ── Empty State ── */
         .empty {
             grid-column: 1 / -1;
@@ -1074,7 +1124,7 @@
     <!-- ── Sidebar ── -->
     <aside class="sidebar">
         <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+            <img src="/static/media/app/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </div>
 
@@ -1103,7 +1153,8 @@
 
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
-            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
@@ -1152,7 +1203,7 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{{ t(request, 'dashboard.all_listings') }}</h1>
+                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
             </div>
             
             <div class="topbar-right">
@@ -1194,7 +1245,7 @@
 
         <div class="content">
             <div class="grid" id="grid">
-                {% for listing in listings %}
+                {% for listing in display_listings|default(listings) %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
                 <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.user_status }}"
                     onclick="window.location='/listings/{{ listing.id }}'">
@@ -1223,7 +1274,9 @@
                         {% endif %}
 
                         <div class="card-meta">
-                            <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</span>
+                            <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                <i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}
+                            </a>
                             {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if
                                 listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
                             {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }}
@@ -1276,6 +1329,25 @@
 
                         <div class="card-footer">
                             <span class="source-badge">{{ listing.source.value|upper }}</span>
+                            
+                            <div class="interaction-btns">
+                                <button class="interaction-btn heart {% if listing.is_favorite %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleFavorite({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.favorite') }}">
+                                    <i class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i>
+                                </button>
+                                <button class="interaction-btn like {% if listing.is_liked %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleLike({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.like') }}">
+                                    <i class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i>
+                                </button>
+                                <button class="interaction-btn dislike {% if listing.is_disliked %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleDislike({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.dislike') }}">
+                                    <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i>
+                                </button>
+                            </div>
+
                             <a href="{{ listing.url }}" target="_blank" class="card-link"
                                 onclick="event.stopPropagation()">
                                 {{ t(request, 'dashboard.see') }} <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -1616,6 +1688,70 @@
             if (e.key === 'Escape') { closeModal(); closeDeleteModal(); closeBulkModal(); }
             if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
         });
+
+        // ── Interaction Logic ────────────────────────────────────────────────
+        async function toggleFavorite(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/favorite`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function toggleLike(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/like`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function toggleDislike(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/dislike`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateInteractionButtons(footer, data) {
+            const heartBtn = footer.querySelector('.interaction-btn.heart');
+            const likeBtn = footer.querySelector('.interaction-btn.like');
+            const dislikeBtn = footer.querySelector('.interaction-btn.dislike');
+
+            // Favorite
+            if (data.is_favorite) {
+                heartBtn.classList.add('active');
+                heartBtn.querySelector('i').className = 'fa-solid fa-heart';
+            } else {
+                heartBtn.classList.remove('active');
+                heartBtn.querySelector('i').className = 'fa-regular fa-heart';
+            }
+
+            // Like
+            if (data.is_liked) {
+                likeBtn.classList.add('active');
+                likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
+            } else {
+                likeBtn.classList.remove('active');
+                likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
+            }
+
+            // Dislike
+            if (data.is_disliked) {
+                dislikeBtn.classList.add('active');
+                dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
+            } else {
+                dislikeBtn.classList.remove('active');
+                dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+            }
+        }
 
         // ── Bulk Address Modal Logic ──────────────────────────────────────────
         function openBulkModal() {

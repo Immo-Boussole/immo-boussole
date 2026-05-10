@@ -144,6 +144,11 @@ _MIGRATIONS = [
 
     # map_pins — pin type v12
     ("map_pins", "pin_type",               "TEXT NOT NULL DEFAULT 'city'"),
+
+    # listings — favorite listings v13
+    ("listings", "is_favorite",            "BOOLEAN DEFAULT 0"),
+    ("listings", "is_liked",               "BOOLEAN DEFAULT 0"),
+    ("listings", "is_disliked",            "BOOLEAN DEFAULT 0"),
 ]
 
 
