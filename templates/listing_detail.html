@@ -544,13 +544,13 @@
         }
 
         @media (max-width: 768px) {
-            .gallery-overlay { overflow-y: auto; display: none; flex-direction: column; height: 100%; }
+            .gallery-overlay { overflow: hidden; display: none; flex-direction: column; height: 100%; height: 100dvh; }
             .gallery-overlay.open { display: flex; }
-            .gallery-content { flex-direction: column; height: auto; overflow: visible; }
+            .gallery-content { flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
             
             .gallery-header-mobile { 
                 display: block; padding: 1.25rem 1rem; background: var(--surface); 
-                border-bottom: 1px solid var(--border); z-index: 2020;
+                border-bottom: 1px solid var(--border); z-index: 2020; flex-shrink: 0;
             }
             .gallery-mob-l1 { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text); line-height: 1.3; }
             .gallery-mob-l2 { display: flex; align-items: center; justify-content: space-between; }
@@ -563,21 +563,23 @@
             .btn-gallery-action.delete { color: var(--red); border-color: rgba(242,92,105,0.2); }
             .btn-gallery-action:active { transform: scale(0.9); }
 
-            .gallery-main { height: 60vh; min-height: 350px; padding: 0; }
+            .gallery-main { flex: 1; height: auto; min-height: 0; padding: 0; background: var(--bg); }
+            .gallery-main img { max-height: 100%; }
             .gallery-btn { width: 44px; height: 44px; font-size: 1.1rem; background: rgba(0,0,0,0.3); }
             .gallery-prev { left: 0.75rem; }
             .gallery-next { right: 0.75rem; }
             .gallery-close-desk { display: none; }
 
-            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); overflow: visible; }
+            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; flex-shrink: 0; max-height: 45%; }
             .gallery-header-desk { display: none; }
             
             .gallery-mobile-separator { 
-                display: block; height: 1px; background: var(--border); margin: 0 1.5rem 1.5rem; 
-                opacity: 0.5;
+                display: block; height: 1px; background: var(--border); margin: 0.75rem 1.5rem; 
+                opacity: 0.5; flex-shrink: 0;
             }
             .gallery-thumbs { 
-                grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1rem 2rem;
+                grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1.25rem 1.5rem 0.75rem;
+                overflow-y: auto; flex: 1;
             }
             .gallery-thumb { border-radius: 8px; }
         }
