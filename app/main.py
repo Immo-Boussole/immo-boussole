@@ -71,6 +71,10 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 # Mount static files (local media storage)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["t"] = get_text
 
@@ -248,6 +252,18 @@ class ChatRequest(BaseModel):
     history: list[dict] = []
 
 
+class TrainLineCreateRequest(BaseModel):
+    departure_station: str
+    arrival_station: str
+    path: list[list[float]]
+    color: str
+
+
+class DuplicateDeclarationRequest(BaseModel):
+    target_listing_id: Optional[int] = None
+    original_url: Optional[str] = None
+
+
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
 
 def _resolve_scraper(url: str):
@@ -306,8 +322,9 @@ def admin_required(request: Request, _auth = Depends(login_required)):
         raise HTTPException(status_code=403, detail="Admin access required")
 
 def user_required(request: Request, _auth = Depends(login_required)):
-    if get_current_user_role(request) != "user":
-        raise HTTPException(status_code=403, detail="User access required (Admins cannot perform this action)")
+    role = get_current_user_role(request)
+    if role not in ["user", "admin"]:
+        raise HTTPException(status_code=403, detail="Accès refusé")
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -1064,15 +1081,23 @@ def get_listings(
     db: Session = Depends(get_db),
     status: Optional[str] = None,
     source: Optional[str] = None,
+    q: Optional[str] = None,
     limit: int = 100,
     _auth = Depends(login_required)
 ):
-    """Get all listings with optional filters."""
+    """Get all listings with optional filters and search."""
     query = db.query(Listing)
     if status:
         query = query.filter(Listing.status == status)
     if source:
         query = query.filter(Listing.source == source)
+    if q:
+        search_q = f"%{q}%"
+        query = query.filter(
+            (Listing.title.ilike(search_q)) | 
+            (Listing.city.ilike(search_q)) | 
+            (Listing.location.ilike(search_q))
+        )
     listings = query.order_by(Listing.date_added.desc()).limit(limit).all()
 
     return [
@@ -1101,6 +1126,36 @@ def get_listings(
         }
         for l in listings
     ]
+
+
+@app.post("/api/listings/{listing_id}/duplicate")
+def declare_duplicate(
+    listing_id: int,
+    body: DuplicateDeclarationRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable")
+
+    if body.target_listing_id:
+        target = db.query(Listing).filter(Listing.id == body.target_listing_id).first()
+        if not target:
+            raise HTTPException(status_code=404, detail="Annonce cible introuvable")
+        listing.is_duplicate = True
+        listing.duplicate_of_id = target.id
+    elif body.original_url:
+        listing.is_duplicate = True
+        # If it's an external URL, we can save it in original_url if it's not already set
+        # or we might want a specific field for manual duplicate URLs.
+        # Looking at models.py, 'original_url' is used for canonical source.
+        listing.original_url = body.original_url
+    else:
+        raise HTTPException(status_code=400, detail="Veuillez fournir une annonce cible ou une URL")
+
+    db.commit()
+    return {"status": "success"}
 
 
 @app.get("/api/map-data")
@@ -1660,6 +1715,17 @@ async def rescrape_listing(
             print(f"[API] Re-scrape error for {url}: {e}")
             scraping_success = False
     
+    if details.get("is_disappeared"):
+        listing.status = ListingStatus.DISAPPEARED
+        listing.scraped_at = datetime.now(timezone.utc)
+        db.commit()
+        return {
+            "status": "updated",
+            "listing_id": listing.id,
+            "title": listing.title,
+            "scraping_success": True
+        }
+
     if not details or not details.get("title"):
         details = await fetch_basic_metadata(url)
         scraping_success = False
@@ -1727,6 +1793,15 @@ async def submit_listing_url(
         except Exception as e:
             print(f"[API] Erreur scraping plein pour {url}: {e}")
             scraping_success = False
+
+    if details.get("is_disappeared"):
+        listing, is_new = await create_listing_from_details(db, details, source, url, status=ListingStatus.DISAPPEARED)
+        return {
+            "status": "created" if is_new else "updated",
+            "listing_id": listing.id,
+            "title": listing.title,
+            "scraping_success": True
+        }
 
     # ── Fallback: basic metadata if full scrape failed ───────────────────
     if not details or not details.get("title"):
@@ -1839,6 +1914,9 @@ def delete_listing(
         db.query(Listing).filter(Listing.duplicate_of_id == listing_id).update(
             {"duplicate_of_id": None, "is_duplicate": False}
         )
+
+        # Delete user views
+        db.query(UserListingView).filter(UserListingView.listing_id == listing_id).delete()
 
         db.delete(listing)
         db.commit()
@@ -2288,3 +2366,62 @@ def force_scraping(
     from app.scheduler import scraping_job
     background_tasks.add_task(scraping_job)
     return {"status": "started", "message": "Scraping forcé lancé en arrière-plan."}
+@app.get("/api/geo/stations/search")
+def api_search_stations(
+    q: str,
+    _auth = Depends(login_required)
+):
+    from app.geo import search_stations
+    return search_stations(q)
+
+
+@app.get("/api/geo/train-path")
+def api_get_train_path(
+    lat1: float, lon1: float, lat2: float, lon2: float,
+    _auth = Depends(login_required)
+):
+    from app.geo import get_railway_path
+    return get_railway_path(lat1, lon1, lat2, lon2)
+
+
+@app.post("/api/geo/train-lines")
+def create_train_line(
+    request: Request,
+    body: TrainLineCreateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    line = models.TrainLine(
+        departure_station=body.departure_station,
+        arrival_station=body.arrival_station,
+        path_json=json.dumps(body.path),
+        color=body.color,
+        created_by=username
+    )
+    db.add(line)
+    db.commit()
+    db.refresh(line)
+    return line
+
+
+@app.get("/api/geo/train-lines")
+def list_train_lines(
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    return db.query(models.TrainLine).all()
+
+
+@app.delete("/api/geo/train-lines/{line_id}")
+def delete_train_line(
+    line_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    line = db.query(models.TrainLine).filter(models.TrainLine.id == line_id).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="Train line not found")
+    db.delete(line)
+    db.commit()
+    return {"status": "deleted"}

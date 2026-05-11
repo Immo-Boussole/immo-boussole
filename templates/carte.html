@@ -6,7 +6,7 @@
     <title>{{ t(request, 'nav.map', 'Carte') }} — {{ t(request, 'app.title') }}</title>
     
     <link href="/static/css/inter.css" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     
@@ -444,6 +444,53 @@
             color: var(--orange);
         }
 
+        /* Train Line Styles */
+        .train-line-search-group {
+            display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .train-input-wrapper {
+            position: relative;
+        }
+        .train-input-wrapper input {
+            width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 9px; padding: 0.65rem 1rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: var(--trans);
+        }
+        .train-input-wrapper input:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+        .train-search-results {
+            position: absolute; top: 100%; left: 0; width: 100%;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 9px; box-shadow: var(--shadow); z-index: 10;
+            max-height: 200px; overflow-y: auto; display: none; margin-top: 4px;
+        }
+        .train-search-item {
+            padding: 0.6rem 1rem; cursor: pointer; transition: var(--trans);
+            font-size: 0.85rem; border-bottom: 1px solid var(--border);
+        }
+        .train-search-item:last-child { border-bottom: none; }
+        .train-search-item:hover { background: rgba(79, 142, 247, 0.12); color: var(--accent); }
+
+        .train-line-preview {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;
+            display: none;
+        }
+        .train-line-preview.active { display: block; }
+        .train-preview-title { font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .train-preview-info { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+        .train-preview-info i { color: var(--accent); }
+
+        .color-picker { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .color-option {
+            width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: var(--trans);
+        }
+        .color-option:hover { transform: scale(1.2); }
+        .color-option.active { border-color: #fff; box-shadow: 0 0 8px currentColor; }
+
         /* ── City Info Panel ── */
         .city-info-btn {
             display: inline-flex; align-items: center; gap: 0.35rem;
@@ -572,7 +619,7 @@
 
     <aside class="sidebar">
         <a href="/" class="logo">
-            <img src="/static/media/app/favicon.ico" alt="Logo">
+            <img src="/static/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </a>
 
@@ -665,6 +712,10 @@
                 <button class="btn" onclick="openNearbyCitiesModal()" id="btn-nearby-cities">
                     <i class="fa-solid fa-city"></i>
                     {{ t(request, 'map.nearby_btn', 'Rechercher des villes aux alentours') }}
+                </button>
+                <button class="btn" onclick="openTrainLineModal()" id="btn-train-lines">
+                    <i class="fa-solid fa-train"></i>
+                    Lignes de train
                 </button>
                 <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
                     <i class="fa-solid fa-map-pin"></i>
@@ -964,6 +1015,9 @@
                 const pinCount = (data.pins || []).length;
                 document.getElementById('stats').textContent = `${markerCount} annonces · ${pinCount} adresses`;
 
+                // 5. Train Lines
+                loadTrainLines();
+
             } catch (err) {
                 console.error("Error loading map data:", err);
                 document.getElementById('stats').textContent = "Erreur lors du chargement des données";
@@ -1075,6 +1129,202 @@
                 }
             } catch (err) {
                 console.error('Error deleting pin:', err);
+            }
+        }
+
+        // ── Train Line Logic ──
+        let trainStations = { departure: null, arrival: null };
+        let currentTrainLinePath = null;
+        let selectedTrainColor = '#4f8ef7';
+        const trainLinesLayer = L.layerGroup().addTo(map);
+
+        function openTrainLineModal() {
+            document.getElementById('trainLineModal').classList.add('active');
+            resetTrainModal();
+        }
+
+        function closeTrainLineModal() {
+            document.getElementById('trainLineModal').classList.remove('active');
+            if (currentTrainLinePath) {
+                map.removeLayer(currentTrainLinePath);
+                currentTrainLinePath = null;
+            }
+        }
+
+        function resetTrainModal() {
+            trainStations = { departure: null, arrival: null };
+            document.getElementById('stationDepartureInput').value = '';
+            document.getElementById('stationArrivalInput').value = '';
+            document.getElementById('trainLinePreview').classList.remove('active');
+            document.getElementById('btnSubmitTrainLine').disabled = true;
+            document.getElementById('trainModalResult').className = 'modal-result';
+            document.getElementById('trainModalResult').textContent = '';
+            document.getElementById('resultsDeparture').style.display = 'none';
+            document.getElementById('resultsArrival').style.display = 'none';
+        }
+
+        let stationSearchTimeout = null;
+        function handleStationSearch(input, type) {
+            clearTimeout(stationSearchTimeout);
+            const query = input.value.trim();
+            const resultsDiv = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            if (query.length < 3) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            stationSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/stations/search?q=${encodeURIComponent(query)}`);
+                    const stations = await res.json();
+                    
+                    resultsDiv.innerHTML = '';
+                    if (stations.length === 0) {
+                        resultsDiv.innerHTML = '<div class="train-search-item">Aucune gare trouvée</div>';
+                    } else {
+                        stations.forEach(s => {
+                            const div = document.createElement('div');
+                            div.className = 'train-search-item';
+                            div.textContent = s.name;
+                            div.onclick = () => selectStation(s.name, s.lat, s.lon, type);
+                            resultsDiv.appendChild(div);
+                        });
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (err) {
+                    console.error("Station search error:", err);
+                }
+            }, 400);
+        }
+
+        function selectStation(name, lat, lon, type) {
+            trainStations[type] = { name, lat, lon };
+            document.getElementById(`station${type.charAt(0).toUpperCase() + type.slice(1)}Input`).value = name;
+            document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`).style.display = 'none';
+            updateTrainPreview();
+        }
+
+        async function updateTrainPreview() {
+            if (trainStations.departure && trainStations.arrival) {
+                const text = `${trainStations.departure.name} ➔ ${trainStations.arrival.name}`;
+                document.getElementById('previewStationsText').textContent = text;
+                document.getElementById('trainLinePreview').classList.add('active');
+                
+                // Show on map as preview
+                if (currentTrainLinePath) map.removeLayer(currentTrainLinePath);
+                
+                try {
+                    const res = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                    const path = await res.json();
+                    
+                    currentTrainLinePath = L.polyline(path, {
+                        color: selectedTrainColor,
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    map.fitBounds(currentTrainLinePath.getBounds(), { padding: [50, 50] });
+                    document.getElementById('btnSubmitTrainLine').disabled = false;
+                } catch (err) {
+                    console.error("Path error:", err);
+                }
+            }
+        }
+
+        function selectTrainColor(el) {
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+            selectedTrainColor = el.style.backgroundColor || el.style.background;
+            if (currentTrainLinePath) {
+                currentTrainLinePath.setStyle({ color: selectedTrainColor });
+            }
+        }
+
+        async function submitTrainLine() {
+            const btn = document.getElementById('btnSubmitTrainLine');
+            const resultEl = document.getElementById('trainModalResult');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traçage...';
+            
+            try {
+                // Get the path from the current preview or fetch again to be sure
+                const resPath = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                const path = await resPath.json();
+
+                const res = await fetch('/api/geo/train-lines', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        departure_station: trainStations.departure.name,
+                        arrival_station: trainStations.arrival.name,
+                        path: path,
+                        color: selectedTrainColor
+                    })
+                });
+
+                if (res.ok) {
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = 'Ligne ajoutée avec succès !';
+                    loadTrainLines(); // Refresh lines on map
+                    setTimeout(() => closeTrainLineModal(), 1500);
+                } else {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = 'Erreur lors de l\'enregistrement de la ligne.';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Erreur réseau : ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Tracer la ligne';
+            }
+        }
+
+        async function loadTrainLines() {
+            try {
+                const res = await fetch('/api/geo/train-lines');
+                const lines = await res.json();
+                
+                trainLinesLayer.clearLayers();
+                lines.forEach(line => {
+                    const path = JSON.parse(line.path_json);
+                    const polyline = L.polyline(path, {
+                        color: line.color,
+                        weight: 5,
+                        opacity: 0.7
+                    }).addTo(trainLinesLayer);
+                    
+                    polyline.bindPopup(`
+                        <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 5px;">
+                            <i class="fa-solid fa-train" style="color: ${line.color}"></i> Section de ligne
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-2);">
+                            <strong>De :</strong> ${line.departure_station}<br>
+                            <strong>À :</strong> ${line.arrival_station}
+                        </div>
+                        <div class="map-popup-meta" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 5px;">
+                            <i class="fa-solid fa-user"></i> ${line.created_by}
+                            <button class="map-popup-delete" onclick="deleteTrainLine(${line.id})" style="margin-left: auto;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `);
+                });
+            } catch (err) {
+                console.error("Error loading train lines:", err);
+            }
+        }
+
+        async function deleteTrainLine(id) {
+            if (!confirm('Supprimer cette section de ligne ?')) return;
+            try {
+                const res = await fetch(`/api/geo/train-lines/${id}`, { method: 'DELETE' });
+                if (res.ok) loadTrainLines();
+            } catch (err) {
+                console.error("Error deleting train line:", err);
             }
         }
 

@@ -249,17 +249,33 @@ class LeFigaroScraper(BaseScraper):
         if not html_content:
             return {}
 
+        # Check early if the page text indicates it is gone
+        gone_keywords = ["n'est plus disponible", "annonce supprimée", "déjà vendu", "déjà loué", "ne sont plus disponibles", "cette annonce a expiré", "annonce a expiré", "expiré"]
+        page_text_lower = html_content.lower()
+        if any(k in page_text_lower for k in gone_keywords):
+            print(f"[LeFigaro] Listing marked as GONE in DOM (early check): {url}", flush=True)
+            return {"is_disappeared": True}
+
         details: Dict = {"url": url}
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # ── Strategy 1: __NUXT__ ──────────────────────────────────────────
+        # Extract title from DOM as secondary fallback
+        og_title = soup.find('meta', attrs={"property": "og:title"})
+        dom_title = og_title.get("content", "") if og_title else ""
+        if not dom_title:
+            title_tag = soup.find('title')
+            dom_title = title_tag.text.strip() if title_tag else ""
+
         nuxt_data = self._extract_nuxt_data(html_content)
         if nuxt_data:
             classified = self._find_classified_detail(nuxt_data)
             if classified:
                 nuxt_details = self._classified_to_dict(classified, url=url)
-                if nuxt_details.get("title") == "Annonce Le Figaro" and details.get("title"):
-                    nuxt_details["title"] = details["title"]
+                if nuxt_details.get("title") == "Annonce Le Figaro" and dom_title:
+                    # Use DOM title if it's more descriptive than the default
+                    # but only if reconstruction failed
+                    nuxt_details["title"] = dom_title
                 
                 # Check for "vendu" or "indisponible" in description or options
                 unavail_keywords = ["vendu", "compromis", "plus disponible", "retiré"]
@@ -292,13 +308,6 @@ class LeFigaroScraper(BaseScraper):
         if loc:
             details["location"] = loc
             details["city"] = city
-
-        # Keywords that indicate the listing is GONE despite the page being up
-        gone_keywords = ["n'est plus disponible", "annonce supprimée", "déjà vendu", "déjà loué", "ne sont plus disponibles"]
-        page_text_lower = html_content.lower()
-        if any(k in page_text_lower for k in gone_keywords):
-            print(f"[LeFigaro] Listing marked as GONE in DOM: {url}", flush=True)
-            return {}
 
         # Only proceed if we find a price or specific listing markers
         price_text = soup.get_text(" ", strip=True)
@@ -461,9 +470,29 @@ class LeFigaroScraper(BaseScraper):
         if transports:
             description += "\n\nTransports : " + ", ".join(transports)
 
+        # Build descriptive title: "Vente villa 6 pièces 165 m²"
+        trans = str(classified.get("transaction") or "").capitalize()
+        p_type = str(classified.get("type") or "").lower()
+        r_label = str(classified.get("roomCountLabel") or "").lower()
+        surface = classified.get("area") or classified.get("surface")
+        
+        reconstructed_parts = []
+        if trans: reconstructed_parts.append(trans)
+        if p_type: reconstructed_parts.append(p_type)
+        if r_label: reconstructed_parts.append(r_label)
+        if surface: reconstructed_parts.append(f"{surface} m²")
+        
+        reconstructed_title = " ".join(reconstructed_parts)
+            
+        title = classified.get("title") or classified.get("subject")
+        # If title is generic or missing, use reconstructed
+        generic_keywords = ["annonce", "immobilier", "vente", "location", "maison", "appartement", "villa", "terrain"]
+        if not title or len(title) < 5 or title.lower() in generic_keywords:
+             title = reconstructed_title or "Annonce Le Figaro"
+
         return {
             "external_id": f"figaro_{ext_id}",
-            "title": classified.get("title") or classified.get("subject") or "Annonce Le Figaro",
+            "title": title,
             "url": record_link,
             "price": classified.get("price") or classified.get("priceValue") or 0.0,
             "location": location,

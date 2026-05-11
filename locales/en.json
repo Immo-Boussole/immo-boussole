@@ -245,7 +245,22 @@
         "station_1": "Closest",
         "station_2": "Second closest",
         "loading_stations": "Searching for nearby stations...",
-        "save_stations": "Save Selection"
+        "save_stations": "Save selection",
+        "declare_duplicate": "Declare a duplicate",
+        "duplicate_modal_title": "Declare a duplicate",
+        "duplicate_type": "Duplicate type",
+        "duplicate_internal": "Internal listing",
+        "duplicate_external": "External listing (URL)",
+        "search_listing": "Search for a listing",
+        "search_placeholder": "Search by title or city...",
+        "selected_listing": "Selected listing",
+        "external_url": "Original listing URL",
+        "confirm": "Confirm",
+        "duplicate_warning": "This listing is marked as a duplicate",
+        "duplicate_of_internal": "Duplicate of internal listing:",
+        "duplicate_of_external": "Duplicate of external listing:",
+        "duplicate_generic": "This listing is a duplicate.",
+        "duplicate_success": "Duplicate declared successfully!"
     },
     "setup": {
         "title": "Admin Setup",

@@ -251,3 +251,15 @@ class MapPin(Base):
 
     pin_type = Column(String(20), nullable=False, default="city") # "city" or "station"
 
+
+class TrainLine(Base):
+    __tablename__ = "train_lines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    departure_station = Column(String, nullable=False)
+    arrival_station = Column(String, nullable=False)
+    path_json = Column(Text, nullable=False) # JSON list of [lat, lon]
+    color = Column(String(20), nullable=False)
+    created_by = Column(String(50), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+

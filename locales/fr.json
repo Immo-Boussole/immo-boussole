@@ -245,7 +245,22 @@
         "station_1": "Plus proche",
         "station_2": "Seconde plus proche",
         "loading_stations": "Recherche des gares à proximité...",
-        "save_stations": "Enregistrer la sélection"
+        "save_stations": "Enregistrer la sélection",
+        "declare_duplicate": "Déclarer un duplicat",
+        "duplicate_modal_title": "Déclarer un doublon",
+        "duplicate_type": "Type de duplicat",
+        "duplicate_internal": "Annonce interne",
+        "duplicate_external": "Annonce externe (URL)",
+        "search_listing": "Rechercher une annonce",
+        "search_placeholder": "Rechercher par titre ou ville...",
+        "selected_listing": "Annonce sélectionnée",
+        "external_url": "URL de l'annonce originale",
+        "confirm": "Confirmer",
+        "duplicate_warning": "Cette annonce est marquée comme duplicat",
+        "duplicate_of_internal": "Doublon de l'annonce interne :",
+        "duplicate_of_external": "Doublon de l'annonce externe :",
+        "duplicate_generic": "Cette annonce est un doublon.",
+        "duplicate_success": "Doublon déclaré avec succès !"
     },
     "setup": {
         "title": "Création Administrateur",
