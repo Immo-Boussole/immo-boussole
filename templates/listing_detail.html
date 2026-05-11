@@ -8,7 +8,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="/static/media/app/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
             --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
@@ -598,7 +598,7 @@
 
     <aside class="sidebar">
         <a href="/" class="logo">
-            <img src="/static/media/app/favicon.ico" alt="Logo">
+            <img src="/static/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </a>
 
@@ -680,7 +680,7 @@
                 <h1 title="{{ listing.title }}">{{ listing.title[:40] }}{% if listing.title|length > 40 %}…{% endif %}</h1>
             </div>
             <div class="topbar-right" style="display: flex; gap: 0.75rem;">
-                {% if request.session.get('role') == 'user' %}
+                {% if request.session.get('role') in ['user', 'admin'] %}
                 <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
                 </button>
@@ -936,7 +936,7 @@
             <!-- Scraped at info -->
             <div style="font-size: 0.72rem; color: var(--text-2); text-align: right; padding: 0 0.25rem;">
                 {% if listing.scraped_at %}
-                {{ t(request, 'listing.data_extracted') }} {{ listing.scraped_at.strftime('%d/%m/%Y %H:%M') }}
+                {{ t(request, 'listing.data_extracted') }} <span class="local-time" data-timestamp="{{ listing.scraped_at.isoformat() }}">{{ listing.scraped_at.strftime('%d/%m/%Y %H:%M') }}</span>
                 {% endif %}
                 — <a href="{{ listing.url }}" target="_blank" style="color: var(--accent);">{{ t(request, 'listing.view_original') }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
             </div>
@@ -946,10 +946,61 @@
         <!-- ── Right Panel: Reviews ── -->
         <div class="right-panel">
 
+            {% set border_color = 'var(--border)' %}
+            {% set text_color = 'var(--text)' %}
+            {% if listing.status.value == 'nouvelle' %}
+                {% set border_color = 'rgba(16,217,164,0.3)' %}
+                {% set text_color = 'var(--green)' %}
+            {% elif listing.status.value == 'active' %}
+                {% set border_color = 'rgba(79,142,247,0.3)' %}
+                {% set text_color = 'var(--accent)' %}
+            {% elif listing.status.value == 'disparue' %}
+                {% set border_color = 'rgba(242,92,105,0.3)' %}
+                {% set text_color = 'var(--red)' %}
+            {% endif %}
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: var(--surface-2); border: 1px solid {{ border_color }}; border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.9rem; font-weight: 800; color: {{ text_color }};">
+                    {{ t(request, 'misc.' + listing.status.value) }}
+                </div>
+                {% if listing.scraped_at %}
+                <div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> MAJ le {{ listing.scraped_at.strftime('%d/%m/%Y à %H:%M') }}
+                </div>
+                {% endif %}
+            </div>
+
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>
                 {{ t(request, 'listing.open_source') }}
             </a>
+
+            <button type="button" class="ext-link" onclick="openDuplicateModal()" style="width: 100%; margin-top: 0.75rem; cursor: pointer; border-style: dashed; color: var(--text-2);">
+                <i class="fa-solid fa-clone" style="color: var(--accent);"></i>
+                {{ t(request, 'listing.declare_duplicate') }}
+            </button>
+
+            {% if listing.is_duplicate %}
+            <div class="info-card" style="border-color: var(--orange); background: rgba(248, 168, 75, 0.05); margin-top: 1rem;">
+                <div class="section-title" style="color: var(--orange);">
+                    <i class="fa-solid fa-triangle-exclamation"></i> {{ t(request, 'listing.duplicate_warning') }}
+                </div>
+                {% if duplicate_original %}
+                <p style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+                    {{ t(request, 'listing.duplicate_of_internal') }} 
+                    <a href="/listings/{{ duplicate_original.id }}" style="color: var(--accent); font-weight: 600;">{{ duplicate_original.title }}</a>
+                </p>
+                {% elif listing.original_url %}
+                <p style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+                    {{ t(request, 'listing.duplicate_of_external') }} 
+                    <a href="{{ listing.original_url }}" target="_blank" style="color: var(--accent); font-weight: 600; word-break: break-all;">{{ listing.original_url }}</a>
+                </p>
+                {% else %}
+                <p style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+                    {{ t(request, 'listing.duplicate_generic') }}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
 
             {# ── Reviews des autres utilisateurs (lecture seule) ── #}
             {% set current_user = request.session.get('username', '') %}
@@ -1894,7 +1945,7 @@
             <div class="gallery-mob-l2">
                 <div class="gallery-idx" id="galleryIdxMob">1/1</div>
                 <div class="gallery-mob-actions">
-                    {% if request.session.get('role') == 'user' %}
+                    {% if request.session.get('role') in ['user', 'admin'] %}
                     <button class="btn-gallery-action delete" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -1921,7 +1972,7 @@
                     <div class="gallery-idx" id="galleryIdxDesk">1/1</div>
                     <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.75rem; margin-bottom: 1.5rem;">
                         <div class="gallery-title">{{ listing.title }}</div>
-                        {% if request.session.get('role') == 'user' %}
+                        {% if request.session.get('role') in ['user', 'admin'] %}
                         <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -1939,6 +1990,56 @@
                     </div>
                     {% endfor %}
                 </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal: Declare Duplicate -->
+    <div id="duplicateOverlay" class="overlay">
+        <div class="modal card" style="max-width: 500px; width: 90%; padding: 1.5rem;">
+            <div class="section-title" style="margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-clone" style="color: var(--accent);"></i> {{ t(request, 'listing.declare_duplicate') }}</span>
+                <i class="fa-solid fa-xmark" style="cursor: pointer; opacity: 0.5;" onclick="closeDuplicateModal()"></i>
+            </div>
+
+            <div class="form-row">
+                <label>{{ t(request, 'listing.duplicate_type') }}</label>
+                <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+                    <button id="btn-dup-internal" class="btn primary" onclick="setDuplicateType('internal')" style="flex: 1; justify-content: center;">{{ t(request, 'listing.duplicate_internal') }}</button>
+                    <button id="btn-dup-external" class="btn" onclick="setDuplicateType('external')" style="flex: 1; justify-content: center;">{{ t(request, 'listing.duplicate_external') }}</button>
+                </div>
+            </div>
+
+            <!-- Internal Search -->
+            <div id="dup-internal-section">
+                <div class="form-row">
+                    <label>{{ t(request, 'listing.search_listing') }}</label>
+                    <input type="text" id="dup-search-input" placeholder="{{ t(request, 'listing.search_placeholder') }}" oninput="searchDuplicates()">
+                </div>
+                <div id="dup-results" style="max-height: 200px; overflow-y: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; margin-top: 0.5rem; display: none;">
+                    <!-- Results populated by JS -->
+                </div>
+                <input type="hidden" id="dup-target-id">
+                <div id="dup-selected-display" style="margin-top: 0.75rem; display: none; padding: 0.75rem; background: rgba(79, 142, 247, 0.1); border: 1px solid var(--accent); border-radius: 8px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--accent); font-weight: 800; margin-bottom: 0.25rem;">{{ t(request, 'listing.selected_listing') }}</div>
+                    <div id="dup-selected-title" style="font-weight: 700; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+
+            <!-- External URL -->
+            <div id="dup-external-section" style="display: none;">
+                <div class="form-row">
+                    <label>{{ t(request, 'listing.external_url') }}</label>
+                    <input type="url" id="dup-external-url" placeholder="https://www.leboncoin.fr/...">
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                <button class="btn" style="flex: 1;" onclick="closeDuplicateModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button id="btn-submit-duplicate" class="btn primary" style="flex: 1;" onclick="submitDuplicate()">
+                    <i class="fa-solid fa-check"></i> {{ t(request, 'listing.confirm') }}
+                </button>
             </div>
         </div>
     </div>
@@ -2197,6 +2298,169 @@
                 alert("Erreur réseau");
             }
         }
+
+        // ── Duplicate Declaration Logic ────────────────────────────────────────
+        let duplicateType = 'internal';
+        let duplicateTimer = null;
+
+        function openDuplicateModal() {
+            document.getElementById('duplicateOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            setDuplicateType('internal');
+            
+            // Clear previous state
+            document.getElementById('dup-search-input').value = '';
+            document.getElementById('dup-results').style.display = 'none';
+            document.getElementById('dup-target-id').value = '';
+            document.getElementById('dup-selected-display').style.display = 'none';
+            document.getElementById('dup-external-url').value = '';
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicateOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function setDuplicateType(type) {
+            duplicateType = type;
+            const btnInt = document.getElementById('btn-dup-internal');
+            const btnExt = document.getElementById('btn-dup-external');
+            const secInt = document.getElementById('dup-internal-section');
+            const secExt = document.getElementById('dup-external-section');
+
+            if (type === 'internal') {
+                btnInt.classList.add('primary');
+                btnExt.classList.remove('primary');
+                secInt.style.display = 'block';
+                secExt.style.display = 'none';
+            } else {
+                btnInt.classList.remove('primary');
+                btnExt.classList.add('primary');
+                secInt.style.display = 'none';
+                secExt.style.display = 'block';
+            }
+        }
+
+        function searchDuplicates() {
+            clearTimeout(duplicateTimer);
+            const q = document.getElementById('dup-search-input').value.trim();
+            if (q.length < 2) {
+                document.getElementById('dup-results').style.display = 'none';
+                return;
+            }
+
+            duplicateTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/listings?q=${encodeURIComponent(q)}&limit=10`);
+                    if (res.ok) {
+                        const listings = await res.json();
+                        renderDuplicateResults(listings);
+                    }
+                } catch (e) { console.error(e); }
+            }, 300);
+        }
+
+        function renderDuplicateResults(listings) {
+            const container = document.getElementById('dup-results');
+            container.innerHTML = '';
+            
+            // Filter out current listing
+            const filtered = listings.filter(l => l.id != {{ listing.id }});
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="padding: 0.75rem; color: var(--text-2); font-size: 0.85rem; font-style: italic;">Aucun résultat</div>';
+                container.style.display = 'block';
+                return;
+            }
+
+            filtered.forEach(l => {
+                const div = document.createElement('div');
+                div.style.padding = '0.75rem';
+                div.style.cursor = 'pointer';
+                div.style.borderBottom = '1px solid var(--border)';
+                div.style.transition = 'var(--trans)';
+                div.innerHTML = `
+                    <div style="font-weight: 700; font-size: 0.85rem;">${l.title}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-2);">${l.location || l.city || ''} - ${l.price ? l.price.toLocaleString() + '€' : ''}</div>
+                `;
+                div.onmouseenter = () => div.style.background = 'rgba(79, 142, 247, 0.1)';
+                div.onmouseleave = () => div.style.background = 'transparent';
+                div.onclick = () => selectDuplicateTarget(l);
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        }
+
+        function selectDuplicateTarget(listing) {
+            document.getElementById('dup-target-id').value = listing.id;
+            document.getElementById('dup-selected-title').textContent = listing.title;
+            document.getElementById('dup-selected-display').style.display = 'block';
+            document.getElementById('dup-results').style.display = 'none';
+            document.getElementById('dup-search-input').value = '';
+        }
+
+        async function submitDuplicate() {
+            const body = {};
+            if (duplicateType === 'internal') {
+                const targetId = document.getElementById('dup-target-id').value;
+                if (!targetId) {
+                    alert("Veuillez sélectionner une annonce.");
+                    return;
+                }
+                body.target_listing_id = parseInt(targetId);
+            } else {
+                const url = document.getElementById('dup-external-url').value.trim();
+                if (!url) {
+                    alert("Veuillez saisir une URL.");
+                    return;
+                }
+                body.original_url = url;
+            }
+
+            const btn = document.getElementById('btn-submit-duplicate');
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ...';
+
+            try {
+                const res = await fetch(`/api/listings/{{ listing.id }}/duplicate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    showToast('✓ Déclaré comme doublon !');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Inconnue"));
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erreur réseau");
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('.local-time').forEach(el => {
+                const ts = el.getAttribute('data-timestamp');
+                if (ts) {
+                    const d = new Date(ts);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        const hours = String(d.getHours()).padStart(2, '0');
+                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                        el.textContent = `${day}/${month}/${year} à ${hours}:${minutes}`;
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>
