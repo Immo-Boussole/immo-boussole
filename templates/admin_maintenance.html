@@ -21,10 +21,12 @@
             --text: #eef2ff;
             --text-2: #8b9cc8;
             --accent: #4f8ef7;
+            --accent-2: #6366f1;
             --green: #10d9a4;
             --red: #f25c69;
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 12px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
@@ -63,8 +65,9 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-decoration: none;
         }
-        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
+        .logo img { width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -133,17 +136,9 @@
             margin-top: 0.25rem;
         }
 
-        .stat-card.new .val {
-            color: var(--green);
-        }
-
-        .stat-card.act .val {
-            color: var(--accent);
-        }
-
-        .stat-card.dis .val {
-            color: var(--red);
-        }
+        .stat-card.new .val { color: var(--green); }
+        .stat-card.act .val { color: var(--accent); }
+        .stat-card.dis .val { color: var(--red); }
 
         /* ── Main Content ── */
         .main {
@@ -204,51 +199,12 @@
             color: #fff;
         }
 
-        .sidebar-lang-selector .lang-item span {
-            font-size: 1rem;
-        }
-
-        /* Queries sidebar items */
-        .query-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .query-item {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            transition: var(--trans);
-            text-decoration: none;
-            color: var(--text);
-            display: block;
-        }
-        .query-item:hover { border-color: var(--accent); }
-        .query-item .name { font-weight: 600; margin-bottom: 0.15rem; }
-        .query-item .src { color: var(--text-2); font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-lang-selector .lang-item span { font-size: 1rem; }
 
         .container {
             width: 100%;
             max-width: 800px;
             margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .back-link {
-            color: var(--text-2);
-            text-decoration: none;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .back-link:hover {
-            color: var(--accent);
         }
 
         .card {
@@ -269,10 +225,12 @@
             display: flex;
             gap: 1rem;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
         .form-group {
             flex: 1;
+            min-width: 250px;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
@@ -284,7 +242,7 @@
             font-weight: 600;
         }
 
-        input, select {
+        input {
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -304,27 +262,17 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            text-decoration: none;
+            transition: var(--trans);
+            font-size: 0.85rem;
         }
 
-        .btn.danger {
-            background: rgba(242, 92, 105, 0.1);
-            color: var(--red);
-            border: 1px solid rgba(242, 92, 105, 0.2);
-            padding: 0.4rem 0.75rem;
-            font-size: 0.8rem;
-        }
-
-        .btn.danger:hover {
-            background: var(--red);
-            color: white;
-        }
+        .btn:hover { background: var(--accent-2); }
 
         .btn.secondary {
             background: rgba(79, 142, 247, 0.1);
             color: var(--accent);
             border: 1px solid rgba(79, 142, 247, 0.2);
-            padding: 0.4rem 0.75rem;
-            font-size: 0.8rem;
         }
 
         .btn.secondary:hover {
@@ -332,82 +280,19 @@
             color: white;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            text-align: left;
-            font-size: 0.75rem;
-            color: var(--text-2);
-            text-transform: uppercase;
-            padding: 1rem;
-            border-bottom: 2px solid var(--border);
-        }
-
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .role-badge {
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            text-transform: uppercase;
-        }
-
-        .role-admin { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
-        .role-user { background: rgba(16, 217, 164, 0.15); color: var(--green); }
-
         .alert {
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
             display: none;
+            font-size: 0.9rem;
         }
 
         .alert.success { background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
         .alert.error { background: rgba(242, 92, 105, 0.1); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 2rem;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: var(--shadow);
-            transform: translateY(20px);
-            transition: var(--trans);
-        }
-        .modal-overlay.show {
-            display: flex;
-        }
-        .modal-overlay.show .modal {
-            transform: translateY(0);
-        }
-        .modal h2 {
-            margin-top: 0;
-            margin-bottom: 1.5rem;
-        }
     </style>
 </head>
 
-<body>
 <body>
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
@@ -457,11 +342,10 @@
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
-            <a href="/admin/users" class="nav-link active" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
-            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
+            <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link active" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
-
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
             <a href="/logout" class="nav-link" style="color: var(--red);">
@@ -496,7 +380,7 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{{ t(request, 'admin_users.title') }}</h1>
+                <h1>{{ t(request, 'admin_maintenance.title') }}</h1>
             </div>
         </header>
 
@@ -505,132 +389,59 @@
                 <div id="alert" class="alert"></div>
 
                 <div class="card">
-                    <h2>{{ t(request, 'admin_users.create_user') }}</h2>
-                    <form id="createUserForm">
+                    <h2>{{ t(request, 'admin_maintenance.email_title') }}</h2>
+                    <form id="emailSettingsForm">
                         <div class="form-row">
                             <div class="form-group">
-                                <label>{{ t(request, 'admin_users.username') }}</label>
-                                <input type="text" id="username" required>
+                                <label>RESEND_API_KEY</label>
+                                <input type="password" id="resend_api_key" placeholder="re_123456789...">
                             </div>
                             <div class="form-group">
-                                <label>{{ t(request, 'admin_users.password') }}</label>
-                                <input type="password" id="password" required>
-                            </div>
-                            <div class="form-group">
-                                <label>{{ t(request, 'admin_users.role') }}</label>
-                                <select id="role">
-                                    <option value="user">{{ t(request, 'admin_users.role_user') }}</option>
-                                    <option value="admin">{{ t(request, 'admin_users.role_admin') }}</option>
-                                </select>
+                                <label>Nom d'affichage de l'émetteur</label>
+                                <input type="text" id="resend_sender_name" placeholder="Immo-Boussole">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>{{ t(request, 'admin_users.email_opt') }}</label>
-                                <input type="email" id="email" placeholder="email@example.com">
+                                <label>Adresse e-mail de l'émetteur</label>
+                                <input type="email" id="resend_sender_email" placeholder="notifications@votre-domaine.com">
                             </div>
                             <div class="form-group">
-                                <label>{{ t(request, 'admin_users.phone_opt') }}</label>
-                                <input type="tel" id="phone" placeholder="06 12 34 56 78">
+                                <label>Sujet générique pour l'email</label>
+                                <input type="text" id="resend_subject" placeholder="Nouvelle annonce trouvée !">
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>{{ t(request, 'admin_users.sfr_id_opt') }}</label>
-                                <input type="text" id="sfr_identifier" placeholder="id@sfr.fr">
-                            </div>
-                            <div class="form-group">
-                                <label>{{ t(request, 'admin_users.sfr_pass_opt') }}</label>
-                                <input type="password" id="sfr_password" placeholder="••••••••">
-                            </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button type="submit" class="btn"><i class="fas fa-save"></i> Enregistrer la configuration email</button>
+                            <button type="button" class="btn secondary" onclick="testEmail()"><i class="fas fa-paper-plane"></i> Tester l'envoi (sur votre e-mail)</button>
                         </div>
-                        <button type="submit" class="btn"><i class="fas fa-user-plus"></i> {{ t(request, 'admin_users.create_btn') }}</button>
                     </form>
                 </div>
 
                 <div class="card">
-                    <h2>{{ t(request, 'admin_users.list_title') }}</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>{{ t(request, 'admin_users.username') }}</th>
-                                <th>{{ t(request, 'admin_users.role') }}</th>
-                                <th>{{ t(request, 'admin_users.actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for user in users %}
-                            <tr>
-                                <td>{{ user.username }}<br><small style="color: var(--text-2);">{{ user.email or '' }}</small></td>
-                                <td><span class="role-badge role-{{ user.role }}">{{ user.role }}</span></td>
-                                <td>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <button class="btn secondary" onclick="openEditModal({{ user.id }}, '{{ user.username }}', '{{ user.role }}', '{{ user.email or '' }}', '{{ user.phone or '' }}', '{{ user.sfr_identifier or '' }}', '{{ user.sfr_password or '' }}')" title="{{ t(request, 'admin_users.btn_edit_profile') }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn secondary" onclick="changePassword({{ user.id }}, '{{ user.username }}')" title="{{ t(request, 'admin_users.btn_change_pwd') }}">
-                                            <i class="fas fa-key"></i>
-                                        </button>
-                                        {% if user.username != request.session.get('username') %}
-                                        <button class="btn danger" onclick="deleteUser({{ user.id }})" title="{{ t(request, 'admin_users.btn_delete') }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                    <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
+                        {{ t(request, 'admin_users.backup_desc') }}
+                    </p>
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                        <a href="/api/admin/backup" class="btn">
+                            <i class="fas fa-download"></i> {{ t(request, 'admin_users.backup_btn') }}
+                        </a>
+                        
+                        <div style="border-left: 1px solid var(--border); height: 2rem; margin: 0 0.5rem;"></div>
 
+                        <label for="restoreFile" class="btn secondary" style="margin: 0; cursor: pointer;">
+                            <i class="fas fa-upload"></i> {{ t(request, 'admin_users.restore_btn') }}
+                        </label>
+                        <input type="file" id="restoreFile" style="display: none;" accept=".zip" onchange="handleRestore(this)">
+                        <span id="restoreStatus" style="font-size: 0.8rem; color: var(--text-2);"></span>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Edit Modal -->
-    <div class="modal-overlay" id="editModal">
-        <div class="modal">
-            <h2>{{ t(request, 'admin_users.edit_modal_title') }} <span id="editModalUsername" style="color: var(--accent);"></span></h2>
-            <form id="editUserForm">
-                <input type="hidden" id="editUserId">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>{{ t(request, 'admin_users.role') }}</label>
-                    <select id="editRole" style="width: 100%;">
-                        <option value="user">{{ t(request, 'admin_users.role_user') }}</option>
-                        <option value="admin">{{ t(request, 'admin_users.role_admin') }}</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>{{ t(request, 'profile.email') }}</label>
-                    <input type="email" id="editEmail" style="width: 100%;">
-                </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>{{ t(request, 'profile.phone') }}</label>
-                    <input type="tel" id="editPhone" style="width: 100%;">
-                </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>{{ t(request, 'profile.sfr_id') }}</label>
-                    <input type="text" id="editSfrId" style="width: 100%;">
-                </div>
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label>{{ t(request, 'profile.sfr_pass') }}</label>
-                    <input type="password" id="editSfrPass" style="width: 100%;">
-                </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" class="btn secondary" onclick="closeEditModal()">{{ t(request, 'admin_users.cancel') }}</button>
-                    <button type="submit" class="btn">{{ t(request, 'admin_users.save') }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <script>
-        // Initialize
-        // loadEmailSettings(); // No longer needed here
-
-
         const alertBox = document.getElementById('alert');
 
         function showAlert(msg, type) {
@@ -640,28 +451,39 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
         }
 
-        document.getElementById('createUserForm').onsubmit = async (e) => {
+        async function loadEmailSettings() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('resend_api_key').value = data.resend_api_key || '';
+                    document.getElementById('resend_sender_name').value = data.resend_sender_name || 'Immo-Boussole';
+                    document.getElementById('resend_sender_email').value = data.resend_sender_email || '';
+                    document.getElementById('resend_subject').value = data.resend_subject || '';
+                }
+            } catch (err) {
+                console.error("Failed to load email settings", err);
+            }
+        }
+
+        document.getElementById('emailSettingsForm').onsubmit = async (e) => {
             e.preventDefault();
             const payload = {
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value,
-                role: document.getElementById('role').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                sfr_identifier: document.getElementById('sfr_identifier').value,
-                sfr_password: document.getElementById('sfr_password').value
+                resend_api_key: document.getElementById('resend_api_key').value,
+                resend_sender_name: document.getElementById('resend_sender_name').value,
+                resend_sender_email: document.getElementById('resend_sender_email').value,
+                resend_subject: document.getElementById('resend_subject').value
             };
 
             try {
-                const res = await fetch('/api/admin/users', {
+                const res = await fetch('/api/admin/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
-                    showAlert('Utilisateur créé avec succès', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
+                    showAlert('Configuration email mise à jour', 'success');
                 } else {
                     const err = await res.json();
                     showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
@@ -671,36 +493,15 @@
             }
         };
 
-        async function deleteUser(id) {
-            if (!confirm('Voulez-vous vraiment supprimer cet utilisateur ?')) return;
-
+        async function testEmail() {
             try {
-                const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    showAlert('Utilisateur supprimé', 'success');
-                    setTimeout(() => window.location.reload(), 1000);
-                } else {
-                    const err = await res.json();
-                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
-                }
-            } catch (err) {
-                showAlert('Erreur de connexion', 'error');
-            }
-        }
-
-        async function changePassword(id, username) {
-            const newPassword = prompt(`Nouveau mot de passe pour ${username} :`);
-            if (!newPassword) return;
-
-            try {
-                const res = await fetch(`/api/admin/users/${id}/password`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: newPassword })
+                const res = await fetch('/api/admin/settings/test-email', {
+                    method: 'POST'
                 });
 
                 if (res.ok) {
-                    showAlert(`Mot de passe de ${username} mis à jour`, 'success');
+                    const data = await res.json();
+                    showAlert(data.message, 'success');
                 } else {
                     const err = await res.json();
                     showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
@@ -710,64 +511,42 @@
             }
         }
 
-        // Edit Modal logic
-        function openEditModal(id, username, role, email, phone, sfrId, sfrPass) {
-            document.getElementById('editUserId').value = id;
-            document.getElementById('editModalUsername').textContent = username;
-            document.getElementById('editRole').value = role;
-            document.getElementById('editEmail').value = email;
-            document.getElementById('editPhone').value = phone;
-            document.getElementById('editSfrId').value = sfrId;
-            document.getElementById('editSfrPass').value = sfrPass;
+        async function handleRestore(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            if (!confirm('ATTENTION: La restauration va écraser toutes les données actuelles. Continuer ?')) {
+                input.value = '';
+                return;
+            }
+
+            const status = document.getElementById('restoreStatus');
+            status.textContent = 'Restauration en cours...';
             
-            document.getElementById('editModal').classList.add('show');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('show');
-        }
-
-        document.getElementById('editUserForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('editUserId').value;
-            const payload = {
-                role: document.getElementById('editRole').value,
-                email: document.getElementById('editEmail').value,
-                phone: document.getElementById('editPhone').value,
-                sfr_identifier: document.getElementById('editSfrId').value,
-                sfr_password: document.getElementById('editSfrPass').value
-            };
+            const formData = new FormData();
+            formData.append('file', file);
 
             try {
-                const res = await fetch(`/api/admin/users/${id}/profile`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                const res = await fetch('/api/admin/restore', {
+                    method: 'POST',
+                    body: formData
                 });
-
+                const data = await res.json();
                 if (res.ok) {
-                    showAlert('Utilisateur mis à jour avec succès', 'success');
-                    closeEditModal();
-                    setTimeout(() => window.location.reload(), 1000);
+                    showAlert(data.message, 'success');
+                    status.textContent = 'Restauration réussie.';
                 } else {
-                    const err = await res.json();
-                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                    showAlert('Erreur: ' + (data.detail || 'Inconnue'), 'error');
+                    status.textContent = 'Échec de la restauration.';
                 }
             } catch (err) {
-                showAlert('Erreur de connexion', 'error');
+                showAlert('Erreur réseau', 'error');
+                status.textContent = 'Erreur réseau.';
             }
-        };
-
-
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registered', reg))
-                    .catch(err => console.error('Service Worker registration failed', err));
-            });
+            input.value = '';
         }
+
+        // Initialize
+        loadEmailSettings();
     </script>
 </body>
 

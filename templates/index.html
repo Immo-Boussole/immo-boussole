@@ -1166,9 +1166,13 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
@@ -1626,6 +1630,8 @@
                 } else if (data.status === 'created' || data.status === 'updated' || data.status === 'success') {
                     if (data.scraping_success === false) {
                         showAlert('Erreur de scraping, importation sans scraping en cours.', 'warning');
+                    } else if (data.forbidden_zone_warning) {
+                        showAlert(`⚠ Zone interdite ! ${data.forbidden_zone_warning.message} — Annonce ajoutée tout de même.`, 'warning');
                     } else {
                         showAlert(`✓ Annonce ajoutée ! ${data.title || ''}`, 'success');
                     }
@@ -2063,3 +2069,4 @@
 </body>
 
 </html>
+

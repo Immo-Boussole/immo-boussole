@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -279,6 +279,26 @@ class GlobalSettingsRequest(BaseModel):
     resend_subject: Optional[str] = None
 
 
+class ZoneRuleRequest(BaseModel):
+    zone_type: str   # "city" or "station"
+    name: str
+    rule: str = "forbidden"  # "forbidden" or "allowed"
+
+    @field_validator("zone_type")
+    @classmethod
+    def validate_zone_type(cls, v):
+        if v not in ["city", "station"]:
+            raise ValueError("zone_type must be 'city' or 'station'")
+        return v
+
+    @field_validator("rule")
+    @classmethod
+    def validate_rule(cls, v):
+        if v not in ["forbidden", "allowed"]:
+            raise ValueError("rule must be 'forbidden' or 'allowed'")
+        return v
+
+
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
 
 def _resolve_scraper(url: str):
@@ -486,6 +506,25 @@ def admin_users_page(
         "listings": listings,
         "title": "Gestion des Utilisateurs — Immo-Boussole",
     })
+
+
+@app.get("/admin/maintenance")
+def admin_maintenance_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+    
+    return templates.TemplateResponse(request=request, name="admin_maintenance.html", context={
+        "queries": queries,
+        "listings": listings,
+        "title": "Administration — Immo-Boussole",
+    })
+
 
 
 @app.post("/api/admin/users")
@@ -952,6 +991,24 @@ def listing_detail_page(
                 db.add(new_view)
                 db.commit()
 
+    # ─── Zone Rule Detection ──────────────────────────────────────────────────
+    all_zone_rules = db.query(ZoneRule).all()
+    city_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "city"}
+    station_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "station"}
+
+    listing_city_lower = (listing.city or "").strip().lower()
+    listing_location_lower = (listing.location or "").strip().lower()
+    
+    city_rule = city_rules.get(listing_city_lower)
+    if not city_rule:
+        for name, rule in city_rules.items():
+            if name and name in listing_location_lower:
+                city_rule = rule
+                break
+
+    station1_rule = station_rules.get((listing.nearest_sncf_station or "").strip().lower())
+    station2_rule = station_rules.get((listing.second_sncf_station or "").strip().lower())
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -962,6 +1019,9 @@ def listing_detail_page(
         "listings": all_listings,
         "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
         "title": f"{listing.title} — Immo-Boussole",
+        "city_rule": city_rule,
+        "station1_rule": station1_rule,
+        "station2_rule": station2_rule,
     })
 
 
@@ -1086,6 +1146,105 @@ def profile_page(
         "listings": listings,
         "title": "Mon Profil — Immo-Boussole",
     })
+
+
+
+@app.get("/zones")
+def zones_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Zone management page — forbidden/allowed cities and SNCF stations."""
+    zone_rules = db.query(ZoneRule).order_by(ZoneRule.created_at.desc()).all()
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="zones.html", context={
+        "zone_rules": zone_rules,
+        "queries": queries,
+        "listings": listings,
+        "title": "Gestion des Zones — Immo-Boussole",
+    })
+
+
+# ─── API: Zone Rules ──────────────────────────────────────────────────────────
+
+@app.get("/api/zones")
+def get_zone_rules(
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns all zone rules (forbidden/allowed cities and stations)."""
+    rules = db.query(ZoneRule).order_by(ZoneRule.zone_type, ZoneRule.name).all()
+    return [
+        {
+            "id": r.id,
+            "zone_type": r.zone_type,
+            "name": r.name,
+            "rule": r.rule,
+            "created_by": r.created_by,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rules
+    ]
+
+
+@app.post("/api/zones")
+def create_zone_rule(
+    request: Request,
+    body: ZoneRuleRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Creates a new zone rule. All authenticated users can manage zones."""
+    username = request.session.get("username", "unknown")
+
+    # Normalize name to avoid duplicates with different casing
+    normalized_name = body.name.strip()
+
+    # Check for duplicate
+    existing = db.query(ZoneRule).filter(
+        ZoneRule.zone_type == body.zone_type,
+        ZoneRule.name.ilike(normalized_name),
+        ZoneRule.rule == body.rule,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Cette zone existe déjà : {normalized_name}")
+
+    rule = ZoneRule(
+        zone_type=body.zone_type,
+        name=normalized_name,
+        rule=body.rule,
+        created_by=username,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return {
+        "id": rule.id,
+        "zone_type": rule.zone_type,
+        "name": rule.name,
+        "rule": rule.rule,
+        "created_by": rule.created_by,
+    }
+
+
+@app.delete("/api/zones/{zone_id}")
+def delete_zone_rule(
+    zone_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Deletes a zone rule. All authenticated users can delete zones."""
+    rule = db.query(ZoneRule).filter(ZoneRule.id == zone_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Zone introuvable")
+    db.delete(rule)
+    db.commit()
+    return {"status": "deleted", "id": zone_id}
 
 
 @app.get("/carte")
@@ -1302,7 +1461,16 @@ def get_map_data(
             }
             for p in all_pins
         ],
-        "current_user": username
+        "current_user": username,
+        "zone_rules": [
+            {
+                "id": r.id,
+                "zone_type": r.zone_type,
+                "name": r.name,
+                "rule": r.rule,
+            }
+            for r in db.query(ZoneRule).all()
+        ],
     }
 
 
@@ -1804,13 +1972,26 @@ async def rescrape_listing(
 
     # ── Update via service ──
     updated_listing, _ = await create_listing_from_details(db, details, source, url)
-    
-    return {
+
+    rescrape_response = {
         "status": "updated",
         "listing_id": updated_listing.id,
         "title": updated_listing.title,
         "scraping_success": scraping_success
     }
+
+    # ── Forbidden Zone Warning ──
+    forbidden_cities_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+    city_lower = (updated_listing.city or updated_listing.location or "").strip().lower()
+    if city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_rescrape if fc):
+        rescrape_response["forbidden_zone_warning"] = {
+            "message": f"⚠ Cette annonce est en zone interdite : {updated_listing.city or updated_listing.location}",
+            "city": updated_listing.city or updated_listing.location,
+        }
+
+    return rescrape_response
 
 
 @app.post("/api/listings/submit-url")
@@ -1902,6 +2083,17 @@ async def submit_listing_url(
             "original_listing_id": listing.duplicate_of_id,
             "original_title": original.title if original else None,
             "original_url": f"/listings/{listing.duplicate_of_id}",
+        }
+
+    # ── Forbidden Zone Warning ──
+    forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+    listing_city_lower = (listing.city or listing.location or "").strip().lower()
+    if listing_city_lower and any(fc in listing_city_lower or listing_city_lower in fc for fc in forbidden_cities if fc):
+        response["forbidden_zone_warning"] = {
+            "message": f"⚠ Cette annonce est en zone interdite : {listing.city or listing.location}",
+            "city": listing.city or listing.location,
         }
 
     return response

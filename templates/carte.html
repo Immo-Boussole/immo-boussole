@@ -231,6 +231,16 @@
             padding: 0.2rem 0.4rem; border-radius: 4px;
         }
         .map-popup-delete:hover { opacity: 1; background: rgba(242, 92, 105, 0.15); }
+        
+        .map-popup-action-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+            flex: 1; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface-2); color: var(--text); font-size: 0.7rem; font-weight: 700;
+            cursor: pointer; transition: var(--trans); font-family: inherit;
+        }
+        .map-popup-action-btn:hover { filter: brightness(1.2); }
+        .map-popup-action-btn.red { background: rgba(242, 92, 105, 0.15); border-color: rgba(242, 92, 105, 0.3); color: var(--red); }
+        .map-popup-action-btn.green { background: rgba(16, 217, 164, 0.15); border-color: rgba(16, 217, 164, 0.3); color: var(--green); }
 
         .map-legend {
             position: absolute; bottom: 2rem; right: 2rem;
@@ -662,8 +672,12 @@
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
@@ -905,6 +919,7 @@
 
         // Store pin markers layer for easy refresh
         const pinMarkersLayer = L.layerGroup().addTo(map);
+        const zoneRulesLayer = L.layerGroup().addTo(map);
         let currentUser = '';
 
         async function loadMapData() {
@@ -1021,6 +1036,9 @@
                 // 5. Train Lines
                 loadTrainLines();
 
+                // 6. Zone Rules (Forbidden/Allowed)
+                loadZoneRules(data.zone_rules || []);
+
             } catch (err) {
                 console.error("Error loading map data:", err);
                 document.getElementById('stats').textContent = "Erreur lors du chargement des données";
@@ -1077,6 +1095,31 @@
                       `</button>`
                     : `<strong class="map-popup-title">${rawTitle}</strong>`;
 
+                let stationRulesHtml = '';
+                if (isStation) {
+                    stationRulesHtml = `
+                    <div style="display: flex; gap: 0.5rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <button class="map-popup-action-btn red" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                            <i class="fa-solid fa-ban"></i> Interdire
+                        </button>
+                        <button class="map-popup-action-btn green" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                            <i class="fa-solid fa-check"></i> Autoriser
+                        </button>
+                    </div>`;
+                }
+                let stationRulesHtml = '';
+                if (isStation) {
+                    stationRulesHtml = `
+                    <div style="display: flex; gap: 0.5rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <button class="map-popup-action-btn red" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                            <i class="fa-solid fa-ban"></i> Interdire
+                        </button>
+                        <button class="map-popup-action-btn green" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                            <i class="fa-solid fa-check"></i> Autoriser
+                        </button>
+                    </div>`;
+                }
+
                 marker.bindPopup(`
                     ${titleHtml}
                     ${nearbyTag}
@@ -1084,6 +1127,7 @@
                     <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
                     </a>
+                    ${stationRulesHtml}
                     <div class="map-popup-meta">
                         <i class="fa-solid fa-user"></i>
                         <span style="color: ${color}; font-weight: 600;">${p.created_by}</span>
@@ -1730,6 +1774,14 @@
                                 <span class="chip-label">Voiture</span>
                             </div>
                         </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                                <i class="fa-solid fa-ban"></i> Interdire
+                            </button>
+                            <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                                <i class="fa-solid fa-check"></i> Autoriser
+                            </button>
+                        </div>
                     </div>`;
                 });
             } else {
@@ -1809,6 +1861,118 @@
             }
         });
 
+        // ── Zone Rules (Forbidden/Allowed) Logic ──
+        async function loadZoneRules(rules) {
+            zoneRulesLayer.clearLayers();
+            for (const rule of rules) {
+                if (rule.zone_type === 'city') {
+                    renderCityZone(rule);
+                } else if (rule.zone_type === 'station') {
+                    renderStationZone(rule);
+                }
+            }
+        }
+
+        async function renderCityZone(rule) {
+            try {
+                const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(rule.name)}&fields=nom,code,contour&format=json&geometry=contour`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    let city = data.find(c => c.nom.toLowerCase() === rule.name.toLowerCase()) || data[0];
+                    if (city.contour) {
+                        const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                        L.geoJSON(city.contour, {
+                            style: {
+                                color: color,
+                                weight: 2,
+                                opacity: 0.8,
+                                fillOpacity: 0.2,
+                                fillColor: color
+                            }
+                        }).bindPopup(`
+                                <strong>${city.nom}</strong><br>
+                                Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}
+                                <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                    <button class="map-popup-delete" onclick="deleteZoneRule(${rule.id})">
+                                        <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                                    </button>
+                                </div>
+                            `)
+                          .addTo(zoneRulesLayer);
+                    }
+                }
+            } catch (e) { console.error("Error rendering city zone:", e); }
+        }
+
+        async function renderStationZone(rule) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rule.name)}&format=json&limit=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const iconHtml = `<div style="background: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow);">
+                                        <i class="fa-solid fa-train"></i>
+                                      </div>`;
+                    
+                    const marker = L.marker([lat, lon], {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: iconHtml,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(zoneRulesLayer);
+                    
+                    marker.bindPopup(`
+                        <strong>${rule.name}</strong><br>
+                        Gare ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}
+                        <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                            <button class="map-popup-delete" onclick="deleteZoneRule(${rule.id})">
+                                <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                            </button>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering station zone:", e); }
+        }
+
+                async function deleteZoneRule(ruleId) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMapData();
+                }
+            } catch (err) { console.error("Error deleting zone rule:", err); }
+        }
+
+        async function addZoneRuleFromMap(name, type, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: type, name, rule })
+                });
+                if (res.ok) {
+                    map.closePopup();
+                    if (currentCityContourLayer) {
+                        map.removeLayer(currentCityContourLayer);
+                        currentCityContourLayer = null;
+                    }
+                    loadMapData();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
         // Function to highlight a city contour on the map
         async function highlightCityContour(cityName, fitBounds = true) {
             if (!cityName || cityName === '-' || cityName.toLowerCase() === 'n/c') return;
@@ -1877,19 +2041,24 @@
                 L.popup()
                     .setLatLng(center)
                     .setContent(`
-                        <div style="text-align: center; padding: 0.5rem 0;">
+                        <div style="text-align: center; padding: 0.5rem 0; min-width: 180px;">
                             <strong style="font-size: 1.1rem; color: var(--text);">${city.nom}</strong><br>
                             <span style="font-size: 0.85rem; color: var(--text-2);">${cp}</span><br>
-                            <button class="btn primary" style="margin-top: 12px; font-size: 0.8rem; padding: 0.5rem 0.9rem;" onclick="addSearchedCityToMap('${safeName}', '${cp}')">
-                                <i class="fa-solid fa-plus"></i> Ajouter à la carte
-                            </button>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" onclick="addSearchedCityToMap('${safeName}', '${cp}', 'allowed')">
+                                    <i class="fa-solid fa-plus"></i> Ajouter à la carte
+                                </button>
+                                <button class="btn" style="font-size: 0.8rem; padding: 0.5rem 0.9rem; border-color: var(--red); color: var(--red); background: rgba(242,92,105,0.05);" onclick="addZoneRuleFromMap('${safeName}', 'city', 'forbidden')">
+                                    <i class="fa-solid fa-ban"></i> Interdire
+                                </button>
+                            </div>
                         </div>
                     `)
                     .openOn(map);
             }
         }
 
-        async function addSearchedCityToMap(nom, cp) {
+        async function addSearchedCityToMap(nom, cp, rule = 'allowed') {
             const btn = document.querySelector('.leaflet-popup-content button');
             if (btn) {
                 btn.disabled = true;
@@ -1905,17 +2074,25 @@
             }];
 
             try {
+                // 1. Add as map pins
                 const res = await fetch('/api/map-pins/nearby', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         cities: selected,
-                        include_stations: true // Automatically include SNCF stations per requirements
+                        include_stations: true 
                     })
                 });
                 const data = await res.json();
                 
-                if (data.created > 0) {
+                // 2. Also add as an "allowed" zone rule
+                await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name: nom, rule: rule })
+                });
+
+                if (data.created >= 0) { // >= 0 because it might already exist as a pin
                     if (currentCityContourLayer) {
                         map.removeLayer(currentCityContourLayer);
                         currentCityContourLayer = null;
@@ -1964,3 +2141,4 @@
     </script>
 </body>
 </html>
+

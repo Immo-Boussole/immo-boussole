@@ -641,6 +641,7 @@
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             {% endif %}
@@ -721,6 +722,25 @@
 
 
     <div class="layout">
+
+        <!-- ── Zone Rule Banner ── -->
+        {% if city_rule == 'forbidden' %}
+        <div style="grid-column: 1 / -1; background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.4rem; flex-shrink: 0;"></i>
+            <div>
+                <strong style="color: var(--red); font-size: 0.95rem;">&#9888; En zone interdite</strong>
+                <p style="font-size: 0.82rem; color: rgba(242,92,105,0.85); margin-top: 0.2rem;">Cette annonce est localisée dans une zone géographique marquée comme interdite.</p>
+            </div>
+            <a href="/zones" style="margin-left:auto; color:var(--red); font-size:0.8rem; font-weight:600; text-decoration:none; white-space:nowrap; opacity:0.8;">Gérer les zones &rarr;</a>
+        </div>
+        {% elif city_rule == 'allowed' %}
+        <div style="grid-column: 1 / -1; background: rgba(16,217,164,0.1); border: 1.5px solid rgba(16,217,164,0.3); border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.2rem; flex-shrink: 0;"></i>
+            <div>
+                <strong style="color: var(--green); font-size: 0.88rem;">Zone autorisée</strong>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- ── Left Column ── -->
         <div class="left-col">
@@ -872,8 +892,13 @@
 
                 {# Station 1 #}
                 {% if listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND" %}
-                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
-                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_primary') }} : <strong style="color: var(--text);">{{ listing.nearest_sncf_station }}</strong>
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2); 
+                    {% if station1_rule == 'forbidden' %}background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% elif station1_rule == 'allowed' %}background: rgba(16,217,164,0.1); border: 1px solid rgba(16,217,164,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% endif %}">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_primary') }} : <strong style="color: {% if station1_rule == 'forbidden' %}var(--red){% elif station1_rule == 'allowed' %}var(--green){% else %}var(--text){% endif %};">{{ listing.nearest_sncf_station }}</strong>
+                    {% if station1_rule == 'forbidden' %}<span style="margin-left:0.5rem; background:var(--red); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">INTERDIT</span>{% endif %}
+                    {% if station1_rule == 'allowed' %}<span style="margin-left:0.5rem; background:var(--green); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">AUTORISÉ</span>{% endif %}
                 </div>
                 <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
                     {% if listing.walk_time_sncf is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf }} min</div><div class="sl">À pied</div></div>{% endif %}
@@ -884,8 +909,13 @@
 
                 {# Station 2 #}
                 {% if listing.second_sncf_station %}
-                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
-                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_secondary') }} : <strong style="color: var(--text);">{{ listing.second_sncf_station }}</strong>
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2); 
+                    {% if station2_rule == 'forbidden' %}background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% elif station2_rule == 'allowed' %}background: rgba(16,217,164,0.1); border: 1px solid rgba(16,217,164,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% endif %}">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_secondary') }} : <strong style="color: {% if station2_rule == 'forbidden' %}var(--red){% elif station2_rule == 'allowed' %}var(--green){% else %}var(--text){% endif %};">{{ listing.second_sncf_station }}</strong>
+                    {% if station2_rule == 'forbidden' %}<span style="margin-left:0.5rem; background:var(--red); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">INTERDIT</span>{% endif %}
+                    {% if station2_rule == 'allowed' %}<span style="margin-left:0.5rem; background:var(--green); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">AUTORISÉ</span>{% endif %}
                 </div>
                 <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
                     {% if listing.walk_time_sncf_2 is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf_2 }} min</div><div class="sl">À pied</div></div>{% endif %}
@@ -1823,6 +1853,9 @@
                 if (response.ok) {
                     if (result.scraping_success === false) {
                         alert("Erreur de scraping, importation sans scraping en cours. La page va s'actualiser.");
+                    }
+                    if (result.forbidden_zone_warning) {
+                        alert(result.forbidden_zone_warning.message);
                     }
                     window.location.reload();
                 } else {
