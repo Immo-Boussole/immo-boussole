@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'nav.dashboard') }} — {{ t(request, 'app.title') }}</title>
     <meta name="description"
         content="{{ t(request, 'app.description') }}">
@@ -2048,6 +2051,15 @@
         </div>
     </div>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 
 </html>
