@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ title }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
@@ -578,6 +581,36 @@
                 </div>
 
                 <div class="card">
+                    <h2>Configuration Email (Resend.com)</h2>
+                    <form id="emailSettingsForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>RESEND_API_KEY</label>
+                                <input type="password" id="resend_api_key" placeholder="re_123456789...">
+                            </div>
+                            <div class="form-group">
+                                <label>Nom d'affichage de l'émetteur</label>
+                                <input type="text" id="resend_sender_name" placeholder="Immo-Boussole">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Adresse e-mail de l'émetteur</label>
+                                <input type="email" id="resend_sender_email" placeholder="notifications@votre-domaine.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Sujet générique pour l'email</label>
+                                <input type="text" id="resend_subject" placeholder="Nouvelle annonce trouvée !">
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                            <button type="submit" class="btn"><i class="fas fa-save"></i> Enregistrer la configuration email</button>
+                            <button type="button" class="btn secondary" onclick="testEmail()"><i class="fas fa-paper-plane"></i> Tester l'envoi (sur votre e-mail)</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
                     <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
                     <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
                         {{ t(request, 'admin_users.backup_desc') }}
@@ -638,6 +671,69 @@
     </div>
 
     <script>
+        async function loadEmailSettings() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('resend_api_key').value = data.resend_api_key || '';
+                    document.getElementById('resend_sender_name').value = data.resend_sender_name || 'Immo-Boussole';
+                    document.getElementById('resend_sender_email').value = data.resend_sender_email || '';
+                    document.getElementById('resend_subject').value = data.resend_subject || '';
+                }
+            } catch (err) {
+                console.error("Failed to load email settings", err);
+            }
+        }
+
+        document.getElementById('emailSettingsForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                resend_api_key: document.getElementById('resend_api_key').value,
+                resend_sender_name: document.getElementById('resend_sender_name').value,
+                resend_sender_email: document.getElementById('resend_sender_email').value,
+                resend_subject: document.getElementById('resend_subject').value
+            };
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showAlert('Configuration email mise à jour', 'success');
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            }
+        };
+
+        async function testEmail() {
+            try {
+                const res = await fetch('/api/admin/settings/test-email', {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showAlert(data.message, 'success');
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            }
+        }
+
+        // Initialize
+        loadEmailSettings();
+
         const alertBox = document.getElementById('alert');
 
         function showAlert(msg, type) {
@@ -801,6 +897,15 @@
             } finally {
                 input.value = '';
             }
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
         }
     </script>
 </body>

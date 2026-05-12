@@ -75,6 +75,14 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def favicon():
     return FileResponse("static/favicon.ico")
 
+@app.get("/manifest.json", include_in_schema=False)
+async def manifest():
+    return FileResponse("static/manifest.json")
+
+@app.get("/sw.js", include_in_schema=False)
+async def service_worker():
+    return FileResponse("static/sw.js", media_type="application/javascript")
+
 templates = Jinja2Templates(directory="templates")
 templates.env.globals["t"] = get_text
 
@@ -262,6 +270,13 @@ class TrainLineCreateRequest(BaseModel):
 class DuplicateDeclarationRequest(BaseModel):
     target_listing_id: Optional[int] = None
     original_url: Optional[str] = None
+
+
+class GlobalSettingsRequest(BaseModel):
+    resend_api_key: Optional[str] = None
+    resend_sender_name: Optional[str] = None
+    resend_sender_email: Optional[str] = None
+    resend_subject: Optional[str] = None
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -563,6 +578,63 @@ def update_user_admin(
     
     db.commit()
     return {"status": "updated", "username": user.username}
+
+
+@app.get("/api/admin/settings")
+def get_global_settings(
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    return settings
+
+
+@app.post("/api/admin/settings")
+def update_global_settings(
+    body: GlobalSettingsRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+    
+    if body.resend_api_key is not None: settings.resend_api_key = body.resend_api_key.strip() or None
+    if body.resend_sender_name is not None: settings.resend_sender_name = body.resend_sender_name.strip() or "Immo-Boussole"
+    if body.resend_sender_email is not None: settings.resend_sender_email = body.resend_sender_email.strip() or None
+    if body.resend_subject is not None: settings.resend_subject = body.resend_subject.strip() or None
+    
+    db.commit()
+    return {"status": "updated"}
+
+
+@app.post("/api/admin/settings/test-email")
+async def test_email_configuration(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    from app.email_service import send_email
+    
+    current_username = request.session.get("username")
+    current_user = db.query(models.User).filter(models.User.username == current_username).first()
+    
+    if not current_user or not current_user.email:
+        raise HTTPException(status_code=400, detail="Votre profil n'a pas d'adresse e-mail configurée pour recevoir le test.")
+    
+    html = f"<p>Ceci est un test de configuration Resend pour <strong>Immo-Boussole</strong>.</p><p>Si vous recevez cet email, tout est bien configuré !</p>"
+    res = send_email(db, current_user.email, html, subject="Test Configuration Resend — Immo-Boussole")
+    
+    if res:
+        return {"status": "success", "message": f"Email de test envoyé à {current_user.email}"}
+    else:
+        raise HTTPException(status_code=500, detail="Échec de l'envoi de l'email. Vérifiez vos paramètres et la console.")
 
 
 # ─── Administration: Backup & Restore ──────────────────────────────────────────

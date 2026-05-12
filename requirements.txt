@@ -14,3 +14,4 @@ aiofiles
 itsdangerous
 apprise
 fastmcp
+resend

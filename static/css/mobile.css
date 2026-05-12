@@ -98,7 +98,7 @@
 
     /* Grids & Columns */
     .stat-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr 1fr !important;
     }
     .grid {
         grid-template-columns: 1fr !important;
@@ -187,3 +187,4 @@
 .mobile-menu-btn {
     display: none;
 }
+

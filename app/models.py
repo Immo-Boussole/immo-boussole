@@ -263,3 +263,13 @@ class TrainLine(Base):
     created_by = Column(String(50), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class GlobalSettings(Base):
+    __tablename__ = "global_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resend_api_key = Column(String, nullable=True)
+    resend_sender_name = Column(String, nullable=True, default="Immo-Boussole")
+    resend_sender_email = Column(String, nullable=True)
+    resend_subject = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
