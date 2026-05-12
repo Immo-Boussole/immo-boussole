@@ -273,3 +273,19 @@ class GlobalSettings(Base):
     resend_sender_email = Column(String, nullable=True)
     resend_subject = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ZoneRule(Base):
+    """
+    Stores forbidden/allowed zone rules for cities and SNCF stations.
+    zone_type: "city" or "station"
+    rule: "forbidden" or "allowed"
+    """
+    __tablename__ = "zone_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    zone_type = Column(String(20), nullable=False)   # "city" or "station"
+    name = Column(String, nullable=False, index=True) # City or station name
+    rule = Column(String(10), nullable=False)          # "forbidden" or "allowed"
+    created_by = Column(String(50), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -20,7 +20,8 @@
         "total_listings": "Total annonces",
         "users": "Utilisateurs",
         "map": "Carte",
-        "profile": "Mon Profil"
+        "profile": "Mon Profil",
+        "administration": "Administration"
     },
     "profile": {
         "title": "Mon Profil",
@@ -300,6 +301,10 @@
         "restore_error": "Erreur lors de la restauration : ",
         "backup_filename": "immo_boussole_backup",
         "backup_desc": "La sauvegarde contient la base de données, les photos et la configuration."
+    },
+    "admin_maintenance": {
+        "title": "Maintenance & Système",
+        "email_title": "Configuration Email (Resend.com)"
     },
     "auth": {
         "login_title": "Connexion — Immo-Boussole",
