@@ -1166,7 +1166,6 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
@@ -1177,6 +1176,7 @@
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -1241,6 +1241,15 @@
                 <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
                     <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
                 </button>
+                <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
+                    <i class="fa-solid fa-heart"></i> Coup de cœur
+                </button>
+                <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
+                    <i class="fa-solid fa-thumbs-up"></i> J'aime
+                </button>
+                <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
+                    <i class="fa-solid fa-thumbs-down"></i> Je n'aime pas
+                </button>
             </div>
 
             <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="margin-left: auto; border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
@@ -1255,6 +1264,9 @@
                 {% for listing in display_listings|default(listings) %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
                 <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.user_status }}"
+                    data-favorite="{{ 'true' if listing.is_favorite else 'false' }}"
+                    data-liked="{{ 'true' if listing.is_liked else 'false' }}"
+                    data-disliked="{{ 'true' if listing.is_disliked else 'false' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">
@@ -1322,9 +1334,10 @@
                         {% if listing.reviews %}
                         <div class="card-reviews">
                             {% for review in listing.reviews %}
-                            <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-dupont' else 'marie-martin' }}">
+                            {% set initials = review.reviewer[0] | upper if review.reviewer else '?' %}
+                            <div class="reviewer-chip">
                                 <i class="fa-solid fa-user"></i>
-                                {{ "JM" if review.reviewer == "jean-dupont" else "M" }}
+                                {{ initials }}
                                 {% if review.rating %}
                                 <span class="star"><i class="fa-solid fa-star" style="font-size: 0.6rem;"></i> {{
                                     review.rating }}</span>
@@ -1687,6 +1700,9 @@
             document.querySelectorAll('.card').forEach(card => {
                 let show = false;
                 if (status === 'all') show = true;
+                else if (status === 'favorite') show = card.dataset.favorite === 'true';
+                else if (status === 'liked') show = card.dataset.liked === 'true';
+                else if (status === 'disliked') show = card.dataset.disliked === 'true';
                 else show = card.dataset.status === status;
                 card.style.display = show ? '' : 'none';
             });

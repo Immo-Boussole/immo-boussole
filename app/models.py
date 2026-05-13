@@ -272,6 +272,13 @@ class GlobalSettings(Base):
     resend_sender_name = Column(String, nullable=True, default="Immo-Boussole")
     resend_sender_email = Column(String, nullable=True)
     resend_subject = Column(String, nullable=True)
+    
+    # DB Maintenance Settings
+    db_check_automate = Column(Boolean, default=False)
+    db_check_interval = Column(String, default="24h")
+    db_repair_automate = Column(Boolean, default=False)
+    db_repair_interval = Column(String, default="24h")
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 

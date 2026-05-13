@@ -86,13 +86,92 @@ def full_refresh_job():
         print("Rafraîchissement complet terminé.")
 
 
+from apscheduler.triggers.interval import IntervalTrigger
+from app.db_maintenance import identify_problems, repair_listings_batch_task, EMPTY_DESCRIPTION, GENERIC_TITLE_FIGARO
+from app.models import SearchQuery, Source, ReadySearch, GlobalSettings
+
+
+def db_check_job():
+    print("[Scheduler] Démarrage de la vérification auto de la DB...")
+    db = SessionLocal()
+    try:
+        identify_problems(db)
+    finally:
+        db.close()
+
+
+def db_repair_job():
+    print("[Scheduler] Démarrage de la réparation auto de la DB...")
+    db = SessionLocal()
+    try:
+        # Run repairs sequentially in the background
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(repair_listings_batch_task(db, EMPTY_DESCRIPTION))
+        loop.run_until_complete(repair_listings_batch_task(db, GENERIC_TITLE_FIGARO))
+        loop.close()
+    finally:
+        db.close()
+
+
+def _parse_interval(interval_str):
+    if not interval_str: return 1440
+    s = interval_str.lower().strip()
+    if "30 min" in s: return 30
+    if "1h" in s: return 60
+    if "6h" in s: return 360
+    if "12h" in s: return 720
+    if "24h" in s: return 1440
+    return 1440
+
+
+def sync_db_maintenance_jobs(scheduler):
+    db = SessionLocal()
+    try:
+        settings = db.query(GlobalSettings).first()
+        if not settings:
+            return
+
+        # 1. Check Job
+        job_id = "db_check_job"
+        if settings.db_check_automate:
+            minutes = _parse_interval(settings.db_check_interval)
+            scheduler.add_job(
+                db_check_job,
+                trigger=IntervalTrigger(minutes=minutes),
+                id=job_id,
+                replace_existing=True,
+                name="Vérification DB automatique"
+            )
+            print(f"[Scheduler] Job {job_id} configuré (toutes les {minutes} min)")
+        else:
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+                print(f"[Scheduler] Job {job_id} supprimé")
+
+        # 2. Repair Job
+        job_id = "db_repair_job"
+        if settings.db_repair_automate:
+            minutes = _parse_interval(settings.db_repair_interval)
+            scheduler.add_job(
+                db_repair_job,
+                trigger=IntervalTrigger(minutes=minutes),
+                id=job_id,
+                replace_existing=True,
+                name="Réparation DB automatique"
+            )
+            print(f"[Scheduler] Job {job_id} configuré (toutes les {minutes} min)")
+        else:
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+                print(f"[Scheduler] Job {job_id} supprimé")
+    finally:
+        db.close()
+
+
 def start_scheduler():
     """
-    Registers two APScheduler cron jobs so scraping runs every hour
-    between 06:00 and 22:30 (local server time):
-
-      - Job 1: minute=0, hour=6-22  → fires at 06:00, 07:00, …, 22:00
-      - Job 2: minute=30, hour=22   → fires at 22:30
+    Registers cron jobs and interval jobs.
     """
     scheduler = BackgroundScheduler()
 
@@ -105,6 +184,9 @@ def start_scheduler():
         name=f"Scraping auto — {get_text(None, 'auto_searches.auto_refresh_value')}",
         replace_existing=True,
     )
+
+    # Sync DB maintenance jobs
+    sync_db_maintenance_jobs(scheduler)
 
     scheduler.start()
     return scheduler

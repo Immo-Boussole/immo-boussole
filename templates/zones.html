@@ -106,6 +106,34 @@
         .modal-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem; }
         .modal-header i { color:var(--red); font-size:1.4rem; }
         .modal-header h3 { font-size:1rem; font-weight:700; color:var(--red); }
+
+        /* Autocomplete results */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+        .search-results.show { display: block; }
+        .search-result-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+            transition: var(--trans);
+        }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item:hover { background: rgba(79, 142, 247, 0.1); color: var(--accent); }
+        .search-result-item .meta { font-size: 0.7rem; color: var(--text-2); display: block; margin-top: 0.2rem; }
     </style>
 </head>
 <body>
@@ -140,7 +168,6 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/zones" class="nav-link active"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
 
             <hr style="border:none; border-top:1px solid var(--border); margin:0.5rem 0;">
@@ -151,6 +178,7 @@
         </nav>
 
         <div style="margin-top:auto; padding-top:2rem; display:flex; flex-direction:column; gap:0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color:var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -195,7 +223,10 @@
                         <span class="count-badge forbidden" id="city-forbidden-count">0 zone</span>
                     </div>
                     <div class="add-form">
-                        <input type="text" id="city-forbidden-input" placeholder="Ex: Lyon, Grenoble..." autocomplete="off">
+                        <div style="flex:1; position:relative;">
+                            <input type="text" id="city-forbidden-input" placeholder="Ex: Lyon, Grenoble..." autocomplete="off" oninput="handleSearch(this, 'city')">
+                            <div class="search-results" id="city-forbidden-results"></div>
+                        </div>
                         <button class="btn primary" onclick="addZone('city','forbidden')" id="city-forbidden-btn">
                             <i class="fa-solid fa-plus"></i> Ajouter
                         </button>
@@ -219,7 +250,10 @@
                         <span class="count-badge allowed" id="city-allowed-count">0 zone</span>
                     </div>
                     <div class="add-form">
-                        <input type="text" id="city-allowed-input" placeholder="Ex: Annecy, Chambéry..." autocomplete="off">
+                        <div style="flex:1; position:relative;">
+                            <input type="text" id="city-allowed-input" placeholder="Ex: Annecy, Chambéry..." autocomplete="off" oninput="handleSearch(this, 'city')">
+                            <div class="search-results" id="city-allowed-results"></div>
+                        </div>
                         <button class="btn green" onclick="addZone('city','allowed')" id="city-allowed-btn">
                             <i class="fa-solid fa-plus"></i> Ajouter
                         </button>
@@ -243,7 +277,10 @@
                         <span class="count-badge forbidden" id="station-forbidden-count">0 gare</span>
                     </div>
                     <div class="add-form">
-                        <input type="text" id="station-forbidden-input" placeholder="Ex: Gare de Lyon-Part-Dieu..." autocomplete="off">
+                        <div style="flex:1; position:relative;">
+                            <input type="text" id="station-forbidden-input" placeholder="Ex: Gare de Lyon-Part-Dieu..." autocomplete="off" oninput="handleSearch(this, 'station')">
+                            <div class="search-results" id="station-forbidden-results"></div>
+                        </div>
                         <button class="btn primary" onclick="addZone('station','forbidden')" id="station-forbidden-btn">
                             <i class="fa-solid fa-plus"></i> Ajouter
                         </button>
@@ -267,7 +304,10 @@
                         <span class="count-badge allowed" id="station-allowed-count">0 gare</span>
                     </div>
                     <div class="add-form">
-                        <input type="text" id="station-allowed-input" placeholder="Ex: Gare d'Annecy..." autocomplete="off">
+                        <div style="flex:1; position:relative;">
+                            <input type="text" id="station-allowed-input" placeholder="Ex: Gare d'Annecy..." autocomplete="off" oninput="handleSearch(this, 'station')">
+                            <div class="search-results" id="station-allowed-results"></div>
+                        </div>
                         <button class="btn green" onclick="addZone('station','allowed')" id="station-allowed-btn">
                             <i class="fa-solid fa-plus"></i> Ajouter
                         </button>
@@ -318,6 +358,58 @@
                 showToast('Erreur lors du chargement des zones', 'error');
             }
         }
+
+        let searchTimeout;
+        async function handleSearch(input, type) {
+            const query = input.value.trim();
+            const resultsDiv = input.nextElementSibling;
+            
+            if (query.length < 3) {
+                resultsDiv.classList.remove('show');
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const endpoint = type === 'city' ? '/api/geo/cities/search' : '/api/geo/stations/search';
+                    const res = await fetch(`${endpoint}?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    
+                    if (data && data.length > 0) {
+                        resultsDiv.innerHTML = data.map(item => {
+                            const displayName = type === 'city' ? item.name.split(',')[0] : item.name;
+                            const meta = type === 'city' ? item.name : 'Gare SNCF';
+                            return `
+                                <div class="search-result-item" onclick="selectSuggestion('${input.id}', '${displayName.replace(/'/g, "\\'")}')">
+                                    <strong>${displayName}</strong>
+                                    <span class="meta">${meta}</span>
+                                </div>
+                            `;
+                        }).join('');
+                        resultsDiv.classList.add('show');
+                    } else {
+                        resultsDiv.classList.remove('show');
+                    }
+                } catch (e) {
+                    console.error('Search failed:', e);
+                }
+            }, 300);
+        }
+
+        function selectSuggestion(inputId, value) {
+            const input = document.getElementById(inputId);
+            input.value = value;
+            input.nextElementSibling.classList.remove('show');
+            input.focus();
+        }
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.add-form')) {
+                document.querySelectorAll('.search-results').forEach(div => div.classList.remove('show'));
+            }
+        });
 
         function renderZones(type, rule) {
             const key = `${type}-${rule}`;
