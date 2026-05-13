@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
 
 <head>
@@ -337,7 +337,6 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
@@ -348,6 +347,7 @@
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -419,6 +419,79 @@
                 </div>
 
                 <div class="card">
+                    <h2>Base de données</h2>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center;">
+                        <button class="btn" id="btn_check_problems" onclick="checkProblems()"><i class="fas fa-search"></i> Relancer les vérifications</button>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto;">
+                            <input type="checkbox" id="db_check_automate" onchange="updateMaintenanceSettings()">
+                            <label for="db_check_automate" style="margin: 0;">Automatiser</label>
+                            <select id="db_check_interval" onchange="updateMaintenanceSettings()" style="background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.3rem; border-radius: 6px;">
+                                <option value="30 min">30 min</option>
+                                <option value="1h">1h</option>
+                                <option value="6h">6h</option>
+                                <option value="12h">12h</option>
+                                <option value="24h">24h</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; gap: 1rem;">
+                        <!-- Problem: Empty Descriptions -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Descriptions vides</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_empty_description">0</span> annonces concernées</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn secondary" onclick="startRepair('empty_description')" id="btn_repair_empty_description">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Problem: Generic Titles -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Titres "Annonce Le Figaro"</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_generic_title_figaro">0</span> annonces concernées</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn secondary" onclick="startRepair('generic_title_figaro')" id="btn_repair_generic_title_figaro">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div id="repair_progress_container" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span id="repair_progress_label" style="font-size: 0.85rem; font-weight: 600;">Réparation en cours...</span>
+                            <span id="repair_progress_count" style="font-size: 0.85rem; color: var(--text-2);">0 / 0</span>
+                        </div>
+                        <div style="height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden;">
+                            <div id="repair_progress_bar" style="height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; justify-content: flex-end;">
+                        <input type="checkbox" id="db_repair_automate" onchange="updateMaintenanceSettings()">
+                        <label for="db_repair_automate" style="margin: 0;">Automatiser les réparations</label>
+                        <select id="db_repair_interval" onchange="updateMaintenanceSettings()" style="background: var(--surface-2); border: 1px solid var(--border); color: var(--text); padding: 0.3rem; border-radius: 6px;">
+                            <option value="30 min">30 min</option>
+                            <option value="1h">1h</option>
+                            <option value="6h">6h</option>
+                            <option value="12h">12h</option>
+                            <option value="24h">24h</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
                     <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
                     <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
                         {{ t(request, 'admin_users.backup_desc') }}
@@ -460,9 +533,129 @@
                     document.getElementById('resend_sender_name').value = data.resend_sender_name || 'Immo-Boussole';
                     document.getElementById('resend_sender_email').value = data.resend_sender_email || '';
                     document.getElementById('resend_subject').value = data.resend_subject || '';
+                    
+                    // DB Maintenance
+                    document.getElementById('db_check_automate').checked = data.db_check_automate || false;
+                    document.getElementById('db_check_interval').value = data.db_check_interval || '24h';
+                    document.getElementById('db_repair_automate').checked = data.db_repair_automate || false;
+                    document.getElementById('db_repair_interval').value = data.db_repair_interval || '24h';
+                }
+                
+                // Also load current problem counts
+                checkProblems();
+                // Check if a repair is already running
+                pollRepairStatus(true);
+            } catch (err) {
+                console.error("Failed to load settings", err);
+            }
+        }
+
+        async function updateMaintenanceSettings() {
+            const payload = {
+                db_check_automate: document.getElementById('db_check_automate').checked,
+                db_check_interval: document.getElementById('db_check_interval').value,
+                db_repair_automate: document.getElementById('db_repair_automate').checked,
+                db_repair_interval: document.getElementById('db_repair_interval').value
+            };
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error("Failed to update maintenance settings", err);
+            }
+        }
+
+        async function checkProblems() {
+            const btn = document.getElementById('btn_check_problems');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification...';
+
+            try {
+                const res = await fetch('/api/admin/db/check', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('count_empty_description').textContent = data.empty_description || 0;
+                    document.getElementById('count_generic_title_figaro').textContent = data.generic_title_figaro || 0;
+                    showAlert('Vérification terminée.', 'success');
+                } else {
+                    showAlert('Erreur lors de la vérification.', 'error');
                 }
             } catch (err) {
-                console.error("Failed to load email settings", err);
+                console.error("Failed to check problems", err);
+                showAlert('Erreur de connexion.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+
+        async function startRepair(type) {
+            try {
+                const res = await fetch(`/api/admin/db/repair?problem_type=${type}`, {
+                    method: 'POST'
+                });
+                if (res.ok) {
+                    showAlert('Réparation lancée en arrière-plan.', 'success');
+                    pollRepairStatus();
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            }
+        }
+
+        let repairInterval = null;
+        async function pollRepairStatus(initialCheck = false) {
+            if (repairInterval) return;
+            
+            const container = document.getElementById('repair_progress_container');
+            const label = document.getElementById('repair_progress_label');
+            const count = document.getElementById('repair_progress_count');
+            const bar = document.getElementById('repair_progress_bar');
+            
+            const check = async () => {
+                try {
+                    const res = await fetch('/api/admin/db/repair/status');
+                    if (res.ok) {
+                        const status = await res.json();
+                        if (status.is_running) {
+                            container.style.display = 'block';
+                            const pct = status.total > 0 ? Math.round((status.processed / status.total) * 100) : 0;
+                            label.textContent = `Réparation en cours (${status.problem_type === 'empty_description' ? 'Descriptions' : 'Le Figaro'})...`;
+                            count.textContent = `${status.processed} / ${status.total}`;
+                            bar.style.width = `${pct}%`;
+                            return true;
+                        } else {
+                            if (!initialCheck && container.style.display === 'block') {
+                                showAlert('Réparation terminée.', 'success');
+                                checkProblems();
+                            }
+                            container.style.display = 'none';
+                            return false;
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to poll repair status", err);
+                }
+                return false;
+            };
+
+            const isRunning = await check();
+            if (isRunning) {
+                repairInterval = setInterval(async () => {
+                    const stillRunning = await check();
+                    if (!stillRunning) {
+                        clearInterval(repairInterval);
+                        repairInterval = null;
+                    }
+                }, 3000);
             }
         }
 

@@ -41,6 +41,7 @@ from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
 from app.assistant import run_assistant_step
+from app import db_maintenance
 
 # Run migrations FIRST (adds missing columns to existing tables)
 run_migrations()
@@ -52,15 +53,19 @@ os.makedirs("static/media", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
 
+# Global scheduler instance
+app_scheduler = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global app_scheduler
     # Startup: start background scheduler
     from app.scheduler import start_scheduler
-    scheduler = start_scheduler()
+    app_scheduler = start_scheduler()
     yield
     # Shutdown
-    if scheduler.running:
-        scheduler.shutdown()
+    if app_scheduler and app_scheduler.running:
+        app_scheduler.shutdown()
 
 
 app = FastAPI(title="Immo-Boussole", lifespan=lifespan)
@@ -277,6 +282,12 @@ class GlobalSettingsRequest(BaseModel):
     resend_sender_name: Optional[str] = None
     resend_sender_email: Optional[str] = None
     resend_subject: Optional[str] = None
+    
+    # DB Maintenance
+    db_check_automate: Optional[bool] = None
+    db_check_interval: Optional[str] = None
+    db_repair_automate: Optional[bool] = None
+    db_repair_interval: Optional[str] = None
 
 
 class ZoneRuleRequest(BaseModel):
@@ -649,7 +660,18 @@ def update_global_settings(
     if body.resend_sender_email is not None: settings.resend_sender_email = body.resend_sender_email.strip() or None
     if body.resend_subject is not None: settings.resend_subject = body.resend_subject.strip() or None
     
+    if body.db_check_automate is not None: settings.db_check_automate = body.db_check_automate
+    if body.db_check_interval is not None: settings.db_check_interval = body.db_check_interval
+    if body.db_repair_automate is not None: settings.db_repair_automate = body.db_repair_automate
+    if body.db_repair_interval is not None: settings.db_repair_interval = body.db_repair_interval
+    
     db.commit()
+
+    # Sync scheduler jobs
+    if app_scheduler:
+        from app.scheduler import sync_db_maintenance_jobs
+        sync_db_maintenance_jobs(app_scheduler)
+
     return {"status": "updated"}
 
 
@@ -731,9 +753,6 @@ async def restore_backup(
     file: UploadFile = File(...),
     _auth = Depends(admin_required)
 ):
-    """
-    Restores a ZIP backup. WARNING: Replaces current data.
-    """
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .zip file.")
 
@@ -1305,6 +1324,39 @@ def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_requir
     from app.scheduler import full_refresh_job
     background_tasks.add_task(full_refresh_job)
     return {"status": "success", "message": "Le rafraîchissement complet des tags et statuts a été lancé en arrière-plan."}
+
+
+# ─── Administration: Database Maintenance ──────────────────────────────────────
+
+@app.get("/api/admin/db/problems")
+def get_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
+    problems = db_maintenance.identify_problems(db)
+    # Simplify for frontend: just counts
+    return {k: v["count"] for k, v in problems.items()}
+
+@app.post("/api/admin/db/check")
+def check_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
+    # This just returns the current state
+    problems = db_maintenance.identify_problems(db)
+    return {k: v["count"] for k, v in problems.items()}
+
+@app.post("/api/admin/db/repair")
+async def repair_db_problems(
+    problem_type: str, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    status = db_maintenance.get_repair_status()
+    if status["is_running"]:
+        raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
+    
+    background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type)
+    return {"status": "started", "problem_type": problem_type}
+
+@app.get("/api/admin/db/repair/status")
+def get_db_repair_status(_auth = Depends(admin_required)):
+    return db_maintenance.get_repair_status()
 
 
 @app.get("/api/listings")
@@ -2637,6 +2689,15 @@ def api_search_stations(
 ):
     from app.geo import search_stations
     return search_stations(q)
+
+
+@app.get("/api/geo/cities/search")
+def api_search_cities(
+    q: str,
+    _auth = Depends(login_required)
+):
+    from app.geo import search_cities
+    return search_cities(q)
 
 
 @app.get("/api/geo/train-path")
