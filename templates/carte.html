@@ -1107,18 +1107,7 @@
                         </button>
                     </div>`;
                 }
-                let stationRulesHtml = '';
-                if (isStation) {
-                    stationRulesHtml = `
-                    <div style="display: flex; gap: 0.5rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-                        <button class="map-popup-action-btn red" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'forbidden')">
-                            <i class="fa-solid fa-ban"></i> Interdire
-                        </button>
-                        <button class="map-popup-action-btn green" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'allowed')">
-                            <i class="fa-solid fa-check"></i> Autoriser
-                        </button>
-                    </div>`;
-                }
+
 
                 marker.bindPopup(`
                     ${titleHtml}
