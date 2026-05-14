@@ -265,6 +265,53 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- ── Panel: Zones à Qualifier ── -->
+                <div class="panel" id="panel-to-qualify" style="grid-column: 1 / -1; background: rgba(79, 142, 247, 0.03); border-color: rgba(79, 142, 247, 0.2);">
+                    <div class="panel-header">
+                        <div class="panel-icon" style="background:rgba(249, 208, 79, 0.15); color:var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div>
+                            <h2 style="color: var(--yellow);">Zones à Qualifier</h2>
+                            <p style="font-size:0.78rem; color:var(--text-2); margin-top:0.2rem;">Villes et gares présentes dans les annonces mais non encore classées</p>
+                        </div>
+                        <span class="count-badge" style="background:rgba(249, 208, 79, 0.15); color:var(--yellow);" id="to-qualify-count">{{ to_qualify|length }} à classer</span>
+                    </div>
+
+                    <div class="zone-list" id="to-qualify-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem;">
+                        {% for item in to_qualify %}
+                        <div class="zone-item" style="border-style: dashed; border-color: rgba(249, 208, 79, 0.2);">
+                            <span class="zone-item-icon"><i class="fa-solid {{ 'fa-city' if item.type == 'city' else 'fa-train-subway' }}" style="opacity: 0.5;"></i></span>
+                            <div style="flex:1;">
+                                <div class="zone-item-name">{{ item.name }}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-2);">{{ item.count }} annonce{{ 's' if item.count > 1 else '' }}</div>
+                                {% if item.variants|length > 1 %}
+                                <div style="font-size: 0.65rem; color: var(--text-2); opacity: 0.6; margin-top: 0.2rem; font-style: italic;">
+                                    {{ item.variants|reject('equalto', item.name)|join(', ') }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <button class="btn-delete" style="color: var(--green); border-color: rgba(16, 217, 164, 0.25);" 
+                                        data-name="{{ item.name }}" data-type="{{ item.type }}"
+                                        onclick="quickAddBtn(this, 'allowed')" title="Autoriser">
+                                    <i class="fa-solid fa-check"></i>
+                                </button>
+                                <button class="btn-delete" style="color: var(--red); border-color: rgba(242, 92, 105, 0.25);" 
+                                        data-name="{{ item.name }}" data-type="{{ item.type }}"
+                                        onclick="quickAddBtn(this, 'forbidden')" title="Interdire">
+                                    <i class="fa-solid fa-ban"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <i class="fa-solid fa-thumbs-up" style="color: var(--green);"></i>
+                            <p>Toutes les zones sont qualifiées !</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
 
                 <!-- ── Panel: Gares Interdites ── -->
                 <div class="panel" id="panel-stations-forbidden">
@@ -410,6 +457,63 @@
                 document.querySelectorAll('.search-results').forEach(div => div.classList.remove('show'));
             }
         });
+
+        function quickAddBtn(btn, rule) {
+            const name = btn.getAttribute('data-name');
+            const type = btn.getAttribute('data-type');
+            quickAdd(name, type, rule);
+        }
+
+        async function quickAdd(name, type, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: type, name, rule })
+                });
+                if (res.ok) {
+                    const newZone = await res.json();
+                    const key = `${type}-${rule}`;
+                    zones[key].push(newZone);
+                    renderZones(type, rule);
+                    
+                    // Remove from "To Qualify" list in DOM
+                    const items = document.querySelectorAll('#to-qualify-list .zone-item');
+                    items.forEach(item => {
+                        if (item.querySelector('.zone-item-name').textContent.trim() === name.trim()) {
+                            item.style.opacity = '0';
+                            setTimeout(() => {
+                                item.remove();
+                                // Update count badge
+                                const countEl = document.getElementById('to-qualify-count');
+                                if (countEl) {
+                                    const currentCount = parseInt(countEl.textContent) || 0;
+                                    if (currentCount > 0) {
+                                        countEl.textContent = `${currentCount - 1} à classer`;
+                                    }
+                                }
+                                if (document.querySelectorAll('#to-qualify-list .zone-item').length === 0) {
+                                    document.getElementById('to-qualify-list').innerHTML = `
+                                        <div class="empty-state" style="grid-column: 1 / -1;">
+                                            <i class="fa-solid fa-thumbs-up" style="color: var(--green);"></i>
+                                            <p>Toutes les zones sont qualifiées !</p>
+                                        </div>
+                                    `;
+                                }
+                            }, 300);
+                        }
+                    });
+
+                    const label = rule === 'forbidden' ? 'zone interdite' : 'zone autorisée';
+                    showToast(`✅ "${name}" ajouté en ${label}`, 'success');
+                } else {
+                    const err = await res.json();
+                    showToast('⚠ ' + (err.detail || 'Erreur'), 'error');
+                }
+            } catch(e) {
+                showToast('Erreur réseau', 'error');
+            }
+        }
 
         function renderZones(type, rule) {
             const key = `${type}-${rule}`;

@@ -23,7 +23,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exception_handlers import http_exception_handler as default_http_exception_handler
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, field_validator
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
 from app import models, database
@@ -320,7 +320,8 @@ def _resolve_scraper(url: str):
     from app.scrapers import (
         LeboncoinScraper, SelogerScraper, LeFigaroScraper,
         LogicimmoScraper, BieniciScraper, IadfranceScraper,
-        NotairesScraper, VinciScraper, ImmobilierFranceScraper
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+        OrpiScraper
     )
 
     _SCRAPER_MAP = [
@@ -333,6 +334,7 @@ def _resolve_scraper(url: str):
         ("immobilier.notaires.fr", Source.NOTAIRES,        NotairesScraper),
         ("vinci-immobilier.com", Source.VINCI,             VinciScraper),
         ("immobilier-france.fr", Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper),
+        ("orpi.com",             Source.ORPI,              OrpiScraper),
     ]
 
     for domain, source, scraper_cls in _SCRAPER_MAP:
@@ -1168,6 +1170,31 @@ def profile_page(
 
 
 
+def _group_zones(items):
+    """Groups similar names together (e.g. 'Paris' and 'Paris 15')."""
+    if not items: return []
+    # Sort by name and length
+    sorted_items = sorted(items, key=lambda x: x[0].lower())
+    groups = []
+    for name, count in sorted_items:
+        found = False
+        name_lower = name.lower().strip()
+        for g in groups:
+            leader_lower = g['name'].lower().strip()
+            # Simple prefix check: if one starts with the other and prefix >= 4 chars
+            shorter = leader_lower if len(leader_lower) < len(name_lower) else name_lower
+            longer = name_lower if len(leader_lower) < len(name_lower) else leader_lower
+            if len(shorter) >= 4 and longer.startswith(shorter):
+                if name not in g['variants']: g['variants'].append(name)
+                g['count'] += count
+                if len(name) < len(g['name']): g['name'] = name
+                found = True
+                break
+        if not found:
+            groups.append({"name": name, "count": count, "variants": [name]})
+    return groups
+
+
 @app.get("/zones")
 def zones_page(
     request: Request,
@@ -1181,12 +1208,43 @@ def zones_page(
     viewed_ids = _get_viewed_listing_ids(request, db)
     _enrich_listings(listings, viewed_ids)
 
+    # Calculate zones to qualify
+    city_counts_raw = db.query(Listing.city, func.count(Listing.id)).filter(Listing.city != None).group_by(Listing.city).all()
+    
+    # Combined stations logic
+    station_counts_dict = {}
+    nearest_stations = db.query(Listing.nearest_sncf_station, func.count(Listing.id)).filter(Listing.nearest_sncf_station != None).group_by(Listing.nearest_sncf_station).all()
+    second_stations = db.query(Listing.second_sncf_station, func.count(Listing.id)).filter(Listing.second_sncf_station != None).group_by(Listing.second_sncf_station).all()
+    
+    for name, count in nearest_stations:
+        station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+    for name, count in second_stations:
+        station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+
+    existing_city_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'city'}
+    existing_station_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'station'}
+
+    to_qualify_cities_raw = [(c, cnt) for c, cnt in city_counts_raw if c.lower().strip() not in existing_city_rules]
+    to_qualify_stations_raw = [(s, cnt) for s, cnt in station_counts_dict.items() if s.lower().strip() not in existing_station_rules]
+
+    grouped_cities = _group_zones(to_qualify_cities_raw)
+    for g in grouped_cities: g['type'] = 'city'
+    
+    grouped_stations = _group_zones(to_qualify_stations_raw)
+    for g in grouped_stations: g['type'] = 'station'
+
+    to_qualify = grouped_cities + grouped_stations
+    # Sort by total count descending
+    to_qualify.sort(key=lambda x: x["count"], reverse=True)
+
     return templates.TemplateResponse(request=request, name="zones.html", context={
         "zone_rules": zone_rules,
         "queries": queries,
         "listings": listings,
+        "to_qualify": to_qualify,
         "title": "Gestion des Zones — Immo-Boussole",
     })
+
 
 
 # ─── API: Zone Rules ──────────────────────────────────────────────────────────

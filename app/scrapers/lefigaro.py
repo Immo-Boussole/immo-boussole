@@ -361,6 +361,8 @@ class LeFigaroScraper(BaseScraper):
         city_name = loc_data.get("city") or loc_data.get("cityLabel")
         zip_code = loc_data.get("zipCode") or loc_data.get("postalCode")
         if city_name:
+            # Clean city_name if it already contains the department code at the end
+            city_name = re.sub(r'\s*\(\d{2,5}\)$', '', city_name).strip()
             city = self._normalize_city(city_name)
             location = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
         else:

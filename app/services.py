@@ -12,7 +12,8 @@ from app.models import Listing, ListingStatus, SearchQuery, Source, Review
 from app.scrapers import (
     LeboncoinScraper, SelogerScraper, LeFigaroScraper,
     LogicimmoScraper, BieniciScraper, IadfranceScraper,
-    NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+    OrpiScraper
 )
 from app.media import download_listing_photos, photos_to_json, json_to_photos
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
@@ -317,6 +318,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         Source.NOTAIRES: NotairesScraper(),
         Source.VINCI: VinciScraper(),
         Source.IMMOBILIER_FRANCE: ImmobilierFranceScraper(),
+        Source.ORPI: OrpiScraper(),
     }
 
     scraper = scrapers.get(query.source)

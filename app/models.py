@@ -51,6 +51,7 @@ class Source(str, enum.Enum):
     NOTAIRES = "notaires"
     VINCI = "vinci"
     IMMOBILIER_FRANCE = "immobilier_france"
+    ORPI = "orpi"
     MANUAL = "manuel"
 
 
