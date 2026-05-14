@@ -465,6 +465,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Problem: Duplicate City Zip -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Codes postaux doublés</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_duplicate_city_zip">0</span> annonces concernées</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn secondary" onclick="startRepair('duplicate_city_zip')" id="btn_repair_duplicate_city_zip">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Progress Section -->
@@ -581,6 +597,8 @@
                     const data = await res.json();
                     document.getElementById('count_empty_description').textContent = data.empty_description || 0;
                     document.getElementById('count_generic_title_figaro').textContent = data.generic_title_figaro || 0;
+                    document.getElementById('count_duplicate_city_zip').textContent = data.duplicate_city_zip || 0;
+
                     showAlert('Vérification terminée.', 'success');
                 } else {
                     showAlert('Erreur lors de la vérification.', 'error');
@@ -628,7 +646,13 @@
                         if (status.is_running) {
                             container.style.display = 'block';
                             const pct = status.total > 0 ? Math.round((status.processed / status.total) * 100) : 0;
-                            label.textContent = `Réparation en cours (${status.problem_type === 'empty_description' ? 'Descriptions' : 'Le Figaro'})...`;
+                            let labelText = 'Réparation en cours...';
+                            if (status.problem_type === 'empty_description') labelText = 'Réparation: Descriptions...';
+                            else if (status.problem_type === 'generic_title_figaro') labelText = 'Réparation: Le Figaro...';
+                            else if (status.problem_type === 'duplicate_city_zip') labelText = 'Réparation: Codes postaux...';
+                            
+                            label.textContent = labelText;
+
                             count.textContent = `${status.processed} / ${status.total}`;
                             bar.style.width = `${pct}%`;
                             return true;
