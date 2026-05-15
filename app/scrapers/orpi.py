@@ -122,17 +122,20 @@ class OrpiScraper(BaseScraper):
 
         try:
             # Basic info
-            title_elem = soup.select_one('h1')
+            # Title
+            title_elem = soup.select_one('h1.c-estate-detail-header__title, h1')
             if title_elem:
                 details["title"] = title_elem.text.strip()
             
-            price_elem = soup.select_one('.c-estate-detail__price')
+            # Price
+            # Subagent found: .c-estate-detail-header__price
+            price_elem = soup.select_one('.c-estate-detail-header__price, .c-estate-detail__price')
             if price_elem:
                 price_str = re.sub(r'[^\d]', '', price_elem.text)
                 details["price"] = float(price_str) if price_str else 0.0
 
             # Description
-            desc_elem = soup.select_one('.u-text-pre-line') or soup.select_one('.c-estate-detail__description')
+            desc_elem = soup.select_one('.u-text-pre-line, .c-estate-detail__description, .c-estate-detail__text')
             if desc_elem:
                 details["description_text"] = desc_elem.text.strip()
 
@@ -209,35 +212,22 @@ class OrpiScraper(BaseScraper):
     async def _handle_cookie_banner(self, page):
         """Clicks the Orpi (Didomi) cookie consent button if present."""
         try:
-            # Wait longer for the banner to appear (Didomi can be slow)
-            await page.wait_for_timeout(3000)
+            # Wait for banner (Didomi can be slow)
+            await page.wait_for_timeout(4000)
             
-            # List of possible selectors for "Tout Accepter" or "Continuer sans accepter"
-            # Didomi typically uses #didomi-notice-agree-button
-            selectors = [
-                "#didomi-notice-agree-button",
-                ".didomi-continue-without-agreeing",
-                "button#didomi-notice-agree-button",
-                "a#didomi-notice-agree-button"
-            ]
+            # JS-based bypass (more robust against Shadow DOM)
+            await page.evaluate("""() => {
+                const button = document.querySelector('#didomi-notice-agree-button') || 
+                               document.querySelector('.didomi-continue-without-agreeing') ||
+                               [...document.querySelectorAll('button')].find(b => b.innerText.includes('Accepter'));
+                if (button) {
+                    button.click();
+                    return true;
+                }
+                return false;
+            }""")
             
-            for selector in selectors:
-                button = page.locator(selector)
-                if await button.count() > 0:
-                    print(f"[OrpiScraper] Cookie banner detected ({selector}). Clicking...")
-                    await button.first.click()
-                    await page.wait_for_timeout(2000)
-                    return # Success
-
-            # Fallback: Search by text (case insensitive)
-            for text in ["Tout Accepter", "Accepter tout", "Continuer sans accepter"]:
-                button = page.get_by_text(text, exact=False)
-                if await button.count() > 0:
-                    print(f"[OrpiScraper] Cookie banner detected (text: '{text}'). Clicking...")
-                    await button.first.click()
-                    await page.wait_for_timeout(2000)
-                    return
-            
-            print("[OrpiScraper] No cookie banner detected or could not find click target.")
+            await page.wait_for_timeout(2000)
+            print("[OrpiScraper] Cookie bypass JS executed.")
         except Exception as e:
             print(f"[OrpiScraper] Warning: Failed to handle cookie banner: {e}")
