@@ -125,11 +125,12 @@ class OrpiScraper(BaseScraper):
             # Title
             title_elem = soup.select_one('h1.c-estate-detail-header__title, h1')
             if title_elem:
-                details["title"] = title_elem.text.strip()
+                # Clean up title (remove excess whitespace/newlines)
+                details["title"] = re.sub(r'\s+', ' ', title_elem.text).strip()
             
             # Price
-            # Subagent found: .c-estate-detail-header__price
-            price_elem = soup.select_one('.c-estate-detail-header__price, .c-estate-detail__price')
+            # Subagent found: strong.u-h2.u-color-primary
+            price_elem = soup.select_one('strong.u-h2.u-color-primary, .c-estate-detail-header__price, .c-estate-detail__price')
             if price_elem:
                 price_str = re.sub(r'[^\d]', '', price_elem.text)
                 details["price"] = float(price_str) if price_str else 0.0
@@ -166,23 +167,27 @@ class OrpiScraper(BaseScraper):
                 details["ges_rating"] = ges_elem.text.strip().upper()[:1]
 
             # Characteristics (Surface, Rooms, etc.)
-            # New selector: ul.c-list-details li or .c-estate-characteristics__item
-            char_items = soup.select('ul.c-list-details li, .c-estate-characteristics__item')
+            # Subagent found: div#collapse-details li
+            char_items = soup.select('div#collapse-details li, ul.c-list-details li, .c-estate-characteristics__item')
             for item in char_items:
                 # Some items are label: value, others are just text
                 label_elem = item.select_one('.c-estate-characteristics__label')
                 value_elem = item.select_one('.c-estate-characteristics__value')
                 
+                # Some sites use <span> for values inside <li>
+                if not value_elem:
+                    value_elem = item.select_one('span')
+
                 if label_elem and value_elem:
                     txt_label = label_elem.text.strip().lower()
                     txt_value = value_elem.text.strip()
                 else:
-                    # Fallback for simple list items
+                    # Fallback for simple list items (e.g. "4 pièces")
                     txt_full = item.text.strip().lower()
                     txt_label = txt_full
                     txt_value = txt_full
 
-                if 'surface' in txt_label:
+                if 'surface' in txt_label or 'm2' in txt_label or 'm²' in txt_label:
                     match = re.search(r'([\d\.,]+)', txt_value)
                     if match: details["area"] = float(match.group(1).replace(',', '.'))
                 elif 'pièce' in txt_label:
@@ -194,6 +199,18 @@ class OrpiScraper(BaseScraper):
                 elif 'étage' in txt_label:
                     match = re.search(r'(\d+)', txt_value)
                     if match: details["floor"] = int(match.group(1))
+            
+            # Fallback for missing area/rooms: parse from title
+            if details.get("title") and (details.get("area") is None or details.get("rooms") is None):
+                title_txt = details["title"]
+                if details.get("area") is None:
+                    area_match = re.search(r'(\d+(?:[\.,]\d+)?)\s*m[2²]', title_txt)
+                    if area_match:
+                        details["area"] = float(area_match.group(1).replace(',', '.'))
+                if details.get("rooms") is None:
+                    rooms_match = re.search(r'(\d+)\s*pièce', title_txt, re.I)
+                    if rooms_match:
+                        details["rooms"] = int(rooms_match.group(1))
 
             # Location / City
             loc_elem = soup.select_one('.c-estate-detail__location')
@@ -215,11 +232,24 @@ class OrpiScraper(BaseScraper):
             # Wait for banner (Didomi can be slow)
             await page.wait_for_timeout(4000)
             
-            # JS-based bypass (more robust against Shadow DOM)
+            # JS-based bypass including Shadow DOM support
+            # Didomi notice is often inside a shadowRoot of #didomi-host
             await page.evaluate("""() => {
-                const button = document.querySelector('#didomi-notice-agree-button') || 
-                               document.querySelector('.didomi-continue-without-agreeing') ||
-                               [...document.querySelectorAll('button')].find(b => b.innerText.includes('Accepter'));
+                const getButton = () => {
+                    // 1. Check shadow DOM
+                    const host = document.querySelector('#didomi-host');
+                    if (host && host.shadowRoot) {
+                        const btn = host.shadowRoot.querySelector('#didomi-notice-agree-button') || 
+                                    host.shadowRoot.querySelector('.didomi-continue-without-agreeing');
+                        if (btn) return btn;
+                    }
+                    // 2. Check main document
+                    return document.querySelector('#didomi-notice-agree-button') || 
+                           document.querySelector('.didomi-continue-without-agreeing') ||
+                           [...document.querySelectorAll('button')].find(b => b.innerText.includes('Accepter'));
+                };
+                
+                const button = getButton();
                 if (button) {
                     button.click();
                     return true;
@@ -228,6 +258,6 @@ class OrpiScraper(BaseScraper):
             }""")
             
             await page.wait_for_timeout(2000)
-            print("[OrpiScraper] Cookie bypass JS executed.")
+            print("[OrpiScraper] Cookie bypass JS executed (Shadow DOM checked).")
         except Exception as e:
             print(f"[OrpiScraper] Warning: Failed to handle cookie banner: {e}")
