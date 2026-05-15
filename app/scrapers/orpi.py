@@ -209,26 +209,35 @@ class OrpiScraper(BaseScraper):
     async def _handle_cookie_banner(self, page):
         """Clicks the Orpi (Didomi) cookie consent button if present."""
         try:
-            # Wait a bit for the banner to appear (Didomi can be slightly delayed)
-            await page.wait_for_timeout(2000)
+            # Wait longer for the banner to appear (Didomi can be slow)
+            await page.wait_for_timeout(3000)
             
-            # Selector identified: #didomi-notice-agree-button
-            # We use locator() which handles shadow DOM automatically in many cases
-            button = page.locator("#didomi-notice-agree-button")
-            if await button.count() > 0:
-                print("[OrpiScraper] Cookie banner detected. Clicking 'Tout Accepter'...")
-                await button.click()
-                # Wait for the modal to disappear and content to stabilize
-                await page.wait_for_timeout(1000)
-            else:
-                # Sometimes it might be in a shadow DOM or different ID
-                # Try clicking by text as a fallback
-                fallback_button = page.locator("button:has-text('Tout Accepter')")
-                if await fallback_button.count() > 0:
-                    print("[OrpiScraper] Cookie banner detected (fallback). Clicking 'Tout Accepter'...")
-                    await fallback_button.click()
-                    await page.wait_for_timeout(1000)
-                else:
-                    print("[OrpiScraper] No cookie banner detected.")
+            # List of possible selectors for "Tout Accepter" or "Continuer sans accepter"
+            # Didomi typically uses #didomi-notice-agree-button
+            selectors = [
+                "#didomi-notice-agree-button",
+                ".didomi-continue-without-agreeing",
+                "button#didomi-notice-agree-button",
+                "a#didomi-notice-agree-button"
+            ]
+            
+            for selector in selectors:
+                button = page.locator(selector)
+                if await button.count() > 0:
+                    print(f"[OrpiScraper] Cookie banner detected ({selector}). Clicking...")
+                    await button.first.click()
+                    await page.wait_for_timeout(2000)
+                    return # Success
+
+            # Fallback: Search by text (case insensitive)
+            for text in ["Tout Accepter", "Accepter tout", "Continuer sans accepter"]:
+                button = page.get_by_text(text, exact=False)
+                if await button.count() > 0:
+                    print(f"[OrpiScraper] Cookie banner detected (text: '{text}'). Clicking...")
+                    await button.first.click()
+                    await page.wait_for_timeout(2000)
+                    return
+            
+            print("[OrpiScraper] No cookie banner detected or could not find click target.")
         except Exception as e:
             print(f"[OrpiScraper] Warning: Failed to handle cookie banner: {e}")
