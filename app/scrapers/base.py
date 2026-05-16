@@ -100,6 +100,10 @@ class BaseScraper(abc.ABC):
 
                 print(f"[Scraper] Navigation vers : {url}...")
                 await page.goto(url, wait_until="networkidle", timeout=60000)
+                
+                # Handle cookie banners if needed
+                await self._handle_cookie_banner(page)
+                
                 html = await page.content()
                 print(f"[Scraper] Succès Playwright pour {url} ({len(html)} chars)")
                 return {"html": html}
@@ -118,6 +122,10 @@ class BaseScraper(abc.ABC):
             if pw:
                 await pw.stop()
                 print("[Scraper] Playwright stoppé.")
+
+    async def _handle_cookie_banner(self, page):
+        """Override this in subclasses to click cookie consent buttons."""
+        pass
 
     def _normalize_city(self, location_str: Optional[str]) -> Optional[str]:
         """Normalizes a location string to extract just the city name."""

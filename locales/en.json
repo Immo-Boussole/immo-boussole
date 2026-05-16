@@ -20,7 +20,8 @@
         "total_listings": "Total listings",
         "users": "Users",
         "map": "Map",
-        "profile": "My Profile"
+        "profile": "My Profile",
+        "administration": "Administration"
     },
     "profile": {
         "title": "My Profile",
@@ -301,6 +302,10 @@
         "backup_filename": "immo_boussole_backup",
         "backup_desc": "The backup includes the database, photos, and configuration."
     },
+    "admin_maintenance": {
+        "title": "Maintenance & System",
+        "email_title": "Email Configuration (Resend.com)"
+    },
     "auth": {
         "login_title": "Login — Immo-Boussole",
         "welcome": "Welcome back! Login to access the dashboard.",
@@ -310,8 +315,11 @@
         "manual": "MANUAL",
         "nc": "N/A",
         "new": "NEW",
+        "nouvelle": "NEW",
         "active": "ACTIVE",
         "disappeared": "DISAPPEARED",
+        "disparue": "DISAPPEARED",
+        "rejetee": "REJECTED",
         "price_nc": "Price N/A",
         "rooms_short": "rooms",
         "bed_short": "beds",

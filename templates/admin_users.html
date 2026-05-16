@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
 
 <head>
@@ -452,14 +452,18 @@
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link active" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -580,54 +584,6 @@
                     </table>
                 </div>
 
-                <div class="card">
-                    <h2>Configuration Email (Resend.com)</h2>
-                    <form id="emailSettingsForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>RESEND_API_KEY</label>
-                                <input type="password" id="resend_api_key" placeholder="re_123456789...">
-                            </div>
-                            <div class="form-group">
-                                <label>Nom d'affichage de l'émetteur</label>
-                                <input type="text" id="resend_sender_name" placeholder="Immo-Boussole">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Adresse e-mail de l'émetteur</label>
-                                <input type="email" id="resend_sender_email" placeholder="notifications@votre-domaine.com">
-                            </div>
-                            <div class="form-group">
-                                <label>Sujet générique pour l'email</label>
-                                <input type="text" id="resend_subject" placeholder="Nouvelle annonce trouvée !">
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                            <button type="submit" class="btn"><i class="fas fa-save"></i> Enregistrer la configuration email</button>
-                            <button type="button" class="btn secondary" onclick="testEmail()"><i class="fas fa-paper-plane"></i> Tester l'envoi (sur votre e-mail)</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="card">
-                    <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
-                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
-                        {{ t(request, 'admin_users.backup_desc') }}
-                    </p>
-                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                        <a href="/api/admin/backup" class="btn">
-                            <i class="fas fa-download"></i> {{ t(request, 'admin_users.backup_btn') }}
-                        </a>
-                        
-                        <div style="border-left: 1px solid var(--border); height: 2rem; margin: 0 0.5rem;"></div>
-
-                        <label for="restoreFile" class="btn secondary" style="margin: 0; cursor: pointer;">
-                            <i class="fas fa-upload"></i> {{ t(request, 'admin_users.restore_btn') }}
-                        </label>
-                        <input type="file" id="restoreFile" style="display: none;" accept=".zip" onchange="handleRestore(this)">
-                        <span id="restoreStatus" style="font-size: 0.8rem; color: var(--text-2);"></span>
-                    </div>
                 </div>
             </div>
         </div>
@@ -671,68 +627,9 @@
     </div>
 
     <script>
-        async function loadEmailSettings() {
-            try {
-                const res = await fetch('/api/admin/settings');
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById('resend_api_key').value = data.resend_api_key || '';
-                    document.getElementById('resend_sender_name').value = data.resend_sender_name || 'Immo-Boussole';
-                    document.getElementById('resend_sender_email').value = data.resend_sender_email || '';
-                    document.getElementById('resend_subject').value = data.resend_subject || '';
-                }
-            } catch (err) {
-                console.error("Failed to load email settings", err);
-            }
-        }
-
-        document.getElementById('emailSettingsForm').onsubmit = async (e) => {
-            e.preventDefault();
-            const payload = {
-                resend_api_key: document.getElementById('resend_api_key').value,
-                resend_sender_name: document.getElementById('resend_sender_name').value,
-                resend_sender_email: document.getElementById('resend_sender_email').value,
-                resend_subject: document.getElementById('resend_subject').value
-            };
-
-            try {
-                const res = await fetch('/api/admin/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    showAlert('Configuration email mise à jour', 'success');
-                } else {
-                    const err = await res.json();
-                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
-                }
-            } catch (err) {
-                showAlert('Erreur de connexion', 'error');
-            }
-        };
-
-        async function testEmail() {
-            try {
-                const res = await fetch('/api/admin/settings/test-email', {
-                    method: 'POST'
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    showAlert(data.message, 'success');
-                } else {
-                    const err = await res.json();
-                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
-                }
-            } catch (err) {
-                showAlert('Erreur de connexion', 'error');
-            }
-        }
-
         // Initialize
-        loadEmailSettings();
+        // loadEmailSettings(); // No longer needed here
+
 
         const alertBox = document.getElementById('alert');
 
@@ -861,43 +758,7 @@
             }
         };
 
-        async function handleRestore(input) {
-            if (!input.files || input.files.length === 0) return;
-            const file = input.files[0];
-            const status = document.getElementById('restoreStatus');
-            
-            if (!confirm("Attention : Cela va écraser toutes vos données actuelles. Continuer ?")) {
-                input.value = '';
-                return;
-            }
 
-            status.textContent = "Restauration en cours...";
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const res = await fetch('/api/admin/restore', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    showAlert(data.message || 'Système restauré avec succès', 'success');
-                    status.textContent = "Restauré ! Redémarrage conseillé.";
-                    setTimeout(() => window.location.reload(), 2000);
-                } else {
-                    const err = await res.json();
-                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
-                    status.textContent = "Échec de la restauration.";
-                }
-            } catch (err) {
-                showAlert('Erreur de connexion', 'error');
-                status.textContent = "Erreur réseau.";
-            } finally {
-                input.value = '';
-            }
-        }
     </script>
     <script>
         if ('serviceWorker' in navigator) {
@@ -911,3 +772,4 @@
 </body>
 
 </html>
+

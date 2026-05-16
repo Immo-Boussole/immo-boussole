@@ -116,8 +116,7 @@ def search_stations(query_str: str) -> list:
         "q": query_str,
         "format": "json",
         "limit": 10,
-        "countrycodes": "fr",
-        "featuretype": "railway"
+        "countrycodes": "fr"
     }
     try:
         res = httpx.get(url, params=params, headers=headers, timeout=10.0)
@@ -135,6 +134,40 @@ def search_stations(query_str: str) -> list:
         return stations
     except Exception as e:
         print(f"[Geo] Station search failed for {query_str}: {e}")
+        return []
+
+def search_cities(query_str: str) -> list:
+    """Searches for cities by name via Nominatim."""
+    headers = {"User-Agent": "Immo-Boussole/1.0"}
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        "q": query_str,
+        "format": "json",
+        "limit": 10,
+        "countrycodes": "fr"
+    }
+    try:
+        res = httpx.get(url, params=params, headers=headers, timeout=10.0)
+        res.raise_for_status()
+        data = res.json()
+        cities = []
+        for item in data:
+            # Nominatim returns cities as place=city/town/village OR boundary=administrative
+            cls = item.get("class")
+            typ = item.get("type")
+            
+            is_city = (cls == "place" and typ in ["city", "town", "village", "hamlet"]) or \
+                      (cls == "boundary" and typ == "administrative")
+            
+            if is_city:
+                cities.append({
+                    "name": item["display_name"],
+                    "lat": float(item["lat"]),
+                    "lon": float(item["lon"])
+                })
+        return cities
+    except Exception as e:
+        print(f"[Geo] City search failed for {query_str}: {e}")
         return []
 
 def get_railway_path(lat1: float, lon1: float, lat2: float, lon2: float) -> list:
