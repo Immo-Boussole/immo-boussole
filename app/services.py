@@ -669,3 +669,123 @@ def generate_ideal_profile(db: Session) -> dict:
             for l in top_listings
         ],
     }
+
+# ─── Duplicate Hunting ────────────────────────────────────────────────────────
+
+def calculate_listing_similarity(l1: Listing, l2: Listing) -> Tuple[float, list]:
+    """
+    Calculates a similarity score (0 to 100) and common points between two listings.
+    """
+    import difflib
+    score = 0
+    common = []
+    
+    # 1. City (Mandatory for high score)
+    c1 = (l1.city or l1.location or "").strip().lower()
+    c2 = (l2.city or l2.location or "").strip().lower()
+    if c1 and c2 and c1 == c2:
+        score += 30
+        common.append("city")
+
+    # 2. Price (±5%)
+    if l1.price and l2.price:
+        diff = abs(l1.price - l2.price)
+        max_p = max(l1.price, l2.price)
+        if max_p > 0 and (diff / max_p) <= 0.05:
+            score += 20
+            common.append("price")
+        elif max_p > 0 and (diff / max_p) <= 0.10:
+            score += 10 # Half points for 10% range
+
+    # 3. Area (±5%)
+    if l1.area and l2.area:
+        diff = abs(l1.area - l2.area)
+        max_a = max(l1.area, l2.area)
+        if max_a > 0 and (diff / max_a) <= 0.05:
+            score += 20
+            common.append("area")
+        elif max_a > 0 and (diff / max_a) <= 0.10:
+            score += 10
+
+    # 4. Land Area (±5%) - Only if both have it
+    if l1.land_area and l2.land_area:
+        diff = abs(l1.land_area - l2.land_area)
+        max_la = max(l1.land_area, l2.land_area)
+        if max_la > 0 and (diff / max_la) <= 0.05:
+            score += 10
+            common.append("land_area")
+            
+    # 5. Description Similarity
+    if l1.description_text and l2.description_text:
+        # Use difflib for a quick ratio
+        ratio = difflib.SequenceMatcher(None, l1.description_text[:1000], l2.description_text[:1000]).ratio()
+        if ratio > 0.8:
+            score += 20
+            common.append("description")
+        elif ratio > 0.6:
+            score += 10
+
+    # 6. First Photo (Visual/Metadata hint)
+    p1 = json_to_photos(l1.photos_local)
+    p2 = json_to_photos(l2.photos_local)
+    if p1 and p2:
+        # If we had image hashes, we'd use them here. 
+        # For now, we just indicate it as a common point if other factors are high.
+        # (A better check would be comparing file sizes)
+        path1 = os.path.join(os.getcwd(), p1[0])
+        path2 = os.path.join(os.getcwd(), p2[0])
+        if os.path.exists(path1) and os.path.exists(path2):
+            if os.path.getsize(path1) == os.path.getsize(path2):
+                score += 10
+                common.append("photo")
+
+    return min(score, 100), common
+
+
+def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
+    """
+    Finds pairs of listings that might be duplicates.
+    Excludes pairs already rejected or already marked as duplicates.
+    """
+    from app.models import RejectedDuplicate
+    
+    # Get active/new listings, sorted by date (most recent first)
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW]),
+        Listing.is_duplicate == False
+    ).order_by(Listing.date_added.desc()).limit(limit_listings).all()
+    
+    # Get rejected pairs
+    rejected = db.query(RejectedDuplicate).all()
+    rejected_pairs = set()
+    for r in rejected:
+        rejected_pairs.add(tuple(sorted((r.listing_a_id, r.listing_b_id))))
+        
+    potential_pairs = []
+    
+    for i in range(len(listings)):
+        for j in range(i + 1, len(listings)):
+            l1 = listings[i]
+            l2 = listings[j]
+            
+            # Skip if same source (usually same platform doesn't have same listing twice with different IDs, 
+            # but sometimes they do. However, the goal is often cross-platform duplicates).
+            # Actually, the user might want to see them even on same source.
+            
+            # Skip if already in rejected
+            if tuple(sorted((l1.id, l2.id))) in rejected_pairs:
+                continue
+                
+            score, common = calculate_listing_similarity(l1, l2)
+            
+            if score >= 50: # Threshold for "potential"
+                potential_pairs.append({
+                    "l1": l1,
+                    "l2": l2,
+                    "score": score,
+                    "common": common
+                })
+                
+    # Sort by score descending
+    potential_pairs.sort(key=lambda x: x["score"], reverse=True)
+    return potential_pairs

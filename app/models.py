@@ -297,3 +297,13 @@ class ZoneRule(Base):
     rule = Column(String(10), nullable=False)          # "forbidden" or "allowed"
     created_by = Column(String(50), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+class RejectedDuplicate(Base):
+    """
+    Stores pairs of listings that the user has explicitly rejected as duplicates.
+    """
+    __tablename__ = "rejected_duplicates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_a_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    listing_b_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    rejected_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -28,13 +28,14 @@ from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
     get_or_create_review,
     fetch_basic_metadata,
     generate_ideal_profile,
+    find_potential_duplicates,
 )
 from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates, get_postal_code
 from app.media import json_to_photos, photos_to_json
@@ -288,6 +289,15 @@ class GlobalSettingsRequest(BaseModel):
     db_check_interval: Optional[str] = None
     db_repair_automate: Optional[bool] = None
     db_repair_interval: Optional[str] = None
+
+
+class DuplicateMergeRequest(BaseModel):
+    listing_a_id: int
+    listing_b_id: int
+
+class DuplicateRejectRequest(BaseModel):
+    listing_a_id: int
+    listing_b_id: int
 
 
 class ZoneRuleRequest(BaseModel):
@@ -989,6 +999,11 @@ def listing_detail_page(
         duplicate_original = db.query(Listing).filter(
             Listing.id == listing.duplicate_of_id
         ).first()
+    
+    # Load all duplicates of this listing (bidirectional visibility)
+    duplicate_children = db.query(Listing).filter(
+        Listing.duplicate_of_id == listing.id
+    ).all()
 
     # Sidebars context
     queries = db.query(SearchQuery).all()
@@ -1036,6 +1051,7 @@ def listing_detail_page(
         "reviews": reviews,
         "reviews_by_reviewer": reviews_by_reviewer,
         "duplicate_original": duplicate_original,
+        "duplicate_children": duplicate_children,
         "queries": queries,
         "listings": all_listings,
         "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
@@ -1134,7 +1150,7 @@ def auto_searches_page(
         "listings": all_listings,
         "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),
         "last_sync": last_sync,
-        "title": "Recherches Automatiques — Immo-Boussole",
+        "title": "Recherches Automatiques",
     })
 
 
@@ -1243,6 +1259,35 @@ def zones_page(
         "listings": listings,
         "to_qualify": to_qualify,
         "title": "Gestion des Zones — Immo-Boussole",
+    })
+
+
+@app.get("/duplicates/hunt")
+def duplicate_hunt_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """View potential duplicate listings for manual review."""
+    potential_pairs = find_potential_duplicates(db)
+    queries = db.query(SearchQuery).all()
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    
+    # Collect all listings to enrich (sidebar + pairs)
+    to_enrich = list(all_listings)
+    for pair in potential_pairs:
+        to_enrich.append(pair["l1"])
+        to_enrich.append(pair["l2"])
+    
+    _enrich_listings(to_enrich, viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="duplicate_hunt.html", context={
+        "potential_pairs": potential_pairs,
+        "queries": queries,
+        "listings": all_listings,
+        "title": "Chasse aux duplicats — Immo-Boussole",
     })
 
 
@@ -1434,11 +1479,22 @@ def get_listings(
         query = query.filter(Listing.source == source)
     if q:
         search_q = f"%{q}%"
-        query = query.filter(
+        # Base text search filters
+        filter_expr = (
             (Listing.title.ilike(search_q)) | 
             (Listing.city.ilike(search_q)) | 
             (Listing.location.ilike(search_q))
         )
+        
+        # Optional ID search if q is numeric or #number
+        try:
+            val = q.lstrip('#')
+            if val.isdigit():
+                filter_expr = filter_expr | (Listing.id == int(val))
+        except:
+            pass
+            
+        query = query.filter(filter_expr)
     listings = query.order_by(Listing.date_added.desc()).limit(limit).all()
 
     return [
@@ -1469,6 +1525,55 @@ def get_listings(
     ]
 
 
+def sync_listing_cluster(db: Session, listing_id: int):
+    """
+    Propagates shared data (status, interactions, reviews) 
+    across all listings in a duplicate cluster.
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        return
+    
+    # Identify the root of the cluster
+    root_id = listing.duplicate_of_id or listing.id
+    
+    # Get all listings in the cluster (star-topology: all point to root)
+    cluster = db.query(Listing).filter(
+        (Listing.id == root_id) | (Listing.duplicate_of_id == root_id)
+    ).all()
+    
+    if len(cluster) <= 1:
+        return
+
+    # Sync status and interaction flags from 'listing' to others
+    for other in cluster:
+        if other.id == listing.id:
+            continue
+        other.status = listing.status
+        other.is_favorite = listing.is_favorite
+        other.is_liked = listing.is_liked
+        other.is_disliked = listing.is_disliked
+    
+    # Sync Reviews
+    source_reviews = db.query(Review).filter(Review.listing_id == listing.id).all()
+    for review in source_reviews:
+        for other in cluster:
+            if other.id == listing.id:
+                continue
+            get_or_create_review(
+                db=db,
+                listing_id=other.id,
+                reviewer=review.reviewer,
+                pros=review.pros,
+                cons=review.cons,
+                rating=review.rating,
+                visit_done=review.visit_done,
+                notes=review.notes
+            )
+    
+    db.commit()
+
+
 @app.post("/api/listings/{listing_id}/duplicate")
 def declare_duplicate(
     listing_id: int,
@@ -1484,18 +1589,70 @@ def declare_duplicate(
         target = db.query(Listing).filter(Listing.id == body.target_listing_id).first()
         if not target:
             raise HTTPException(status_code=404, detail="Annonce cible introuvable")
+        
+        # Star-topology: always point to the ultimate original (root)
+        root_id = target.duplicate_of_id or target.id
         listing.is_duplicate = True
-        listing.duplicate_of_id = target.id
+        listing.duplicate_of_id = root_id
+        db.commit() # Save the link first
+        
+        # Initial sync: push data from the cluster to the newly declared duplicate
+        sync_listing_cluster(db, root_id)
     elif body.original_url:
         listing.is_duplicate = True
-        # If it's an external URL, we can save it in original_url if it's not already set
-        # or we might want a specific field for manual duplicate URLs.
-        # Looking at models.py, 'original_url' is used for canonical source.
         listing.original_url = body.original_url
+        db.commit()
     else:
         raise HTTPException(status_code=400, detail="Veuillez fournir une annonce cible ou une URL")
 
+    return {"status": "success"}
+
+
+@app.post("/api/duplicates/merge")
+def merge_duplicate(
+    body: DuplicateMergeRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Merges listing A as a duplicate of listing B."""
+    l_a = db.query(Listing).filter(Listing.id == body.listing_a_id).first()
+    l_b = db.query(Listing).filter(Listing.id == body.listing_b_id).first()
+    
+    if not l_a or not l_b:
+        raise HTTPException(status_code=404, detail="Listing not found")
+        
+    # Star-topology: always point to the ultimate original (root)
+    root_id = l_b.duplicate_of_id or l_b.id
+    l_a.is_duplicate = True
+    l_a.duplicate_of_id = root_id
     db.commit()
+    
+    # Sync data across the cluster
+    sync_listing_cluster(db, root_id)
+    return {"status": "success"}
+
+
+@app.post("/api/duplicates/reject")
+def reject_duplicate(
+    body: DuplicateRejectRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Marks a pair of listings as NOT duplicates."""
+    # Check if already exists
+    existing = db.query(RejectedDuplicate).filter(
+        (RejectedDuplicate.listing_a_id == min(body.listing_a_id, body.listing_b_id)) &
+        (RejectedDuplicate.listing_b_id == max(body.listing_a_id, body.listing_b_id))
+    ).first()
+    
+    if not existing:
+        rej = RejectedDuplicate(
+            listing_a_id=min(body.listing_a_id, body.listing_b_id),
+            listing_b_id=max(body.listing_a_id, body.listing_b_id)
+        )
+        db.add(rej)
+        db.commit()
+        
     return {"status": "success"}
 
 
@@ -2390,6 +2547,7 @@ def update_listing(
         
     db.commit()
     db.refresh(listing)
+    sync_listing_cluster(db, listing_id)
     return {"status": "updated", "listing_id": listing.id}
 
 
@@ -2400,6 +2558,7 @@ def import_listing(request: Request, listing_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     listing.status = ListingStatus.ACTIVE
     db.commit()
+    sync_listing_cluster(db, listing_id)
     return {"status": "imported", "listing_id": listing.id}
 
 
@@ -2410,6 +2569,7 @@ def reject_listing(request: Request, listing_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     listing.status = ListingStatus.REJECTED
     db.commit()
+    sync_listing_cluster(db, listing_id)
     return {"status": "rejected", "listing_id": listing.id}
 
 
@@ -2424,6 +2584,7 @@ def toggle_favorite(request: Request, listing_id: int, db: Session = Depends(get
         listing.is_liked = True
         listing.is_disliked = False
     db.commit()
+    sync_listing_cluster(db, listing_id)
     return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
 
 
@@ -2441,6 +2602,7 @@ def toggle_like(request: Request, listing_id: int, db: Session = Depends(get_db)
         listing.is_favorite = False
         
     db.commit()
+    sync_listing_cluster(db, listing_id)
     return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
 
 
@@ -2456,6 +2618,7 @@ def toggle_dislike(request: Request, listing_id: int, db: Session = Depends(get_
         listing.is_favorite = False
         
     db.commit()
+    sync_listing_cluster(db, listing_id)
     return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
 
 
@@ -2562,6 +2725,7 @@ def create_or_update_review(
         visit_done=body.visit_done,
         notes=body.notes,
     )
+    sync_listing_cluster(db, listing_id)
 
     return {
         "status": "created" if is_new else "updated",
@@ -2602,6 +2766,7 @@ def update_review(
 
     db.commit()
     db.refresh(review)
+    sync_listing_cluster(db, review.listing_id)
     return {"status": "updated", "review_id": review.id}
 
 
