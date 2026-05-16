@@ -23,12 +23,12 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exception_handlers import http_exception_handler as default_http_exception_handler
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, field_validator
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -41,6 +41,7 @@ from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
 from app.assistant import run_assistant_step
+from app import db_maintenance
 
 # Run migrations FIRST (adds missing columns to existing tables)
 run_migrations()
@@ -52,15 +53,19 @@ os.makedirs("static/media", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
 
 
+# Global scheduler instance
+app_scheduler = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global app_scheduler
     # Startup: start background scheduler
     from app.scheduler import start_scheduler
-    scheduler = start_scheduler()
+    app_scheduler = start_scheduler()
     yield
     # Shutdown
-    if scheduler.running:
-        scheduler.shutdown()
+    if app_scheduler and app_scheduler.running:
+        app_scheduler.shutdown()
 
 
 app = FastAPI(title="Immo-Boussole", lifespan=lifespan)
@@ -277,6 +282,32 @@ class GlobalSettingsRequest(BaseModel):
     resend_sender_name: Optional[str] = None
     resend_sender_email: Optional[str] = None
     resend_subject: Optional[str] = None
+    
+    # DB Maintenance
+    db_check_automate: Optional[bool] = None
+    db_check_interval: Optional[str] = None
+    db_repair_automate: Optional[bool] = None
+    db_repair_interval: Optional[str] = None
+
+
+class ZoneRuleRequest(BaseModel):
+    zone_type: str   # "city" or "station"
+    name: str
+    rule: str = "forbidden"  # "forbidden" or "allowed"
+
+    @field_validator("zone_type")
+    @classmethod
+    def validate_zone_type(cls, v):
+        if v not in ["city", "station"]:
+            raise ValueError("zone_type must be 'city' or 'station'")
+        return v
+
+    @field_validator("rule")
+    @classmethod
+    def validate_rule(cls, v):
+        if v not in ["forbidden", "allowed"]:
+            raise ValueError("rule must be 'forbidden' or 'allowed'")
+        return v
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -289,7 +320,8 @@ def _resolve_scraper(url: str):
     from app.scrapers import (
         LeboncoinScraper, SelogerScraper, LeFigaroScraper,
         LogicimmoScraper, BieniciScraper, IadfranceScraper,
-        NotairesScraper, VinciScraper, ImmobilierFranceScraper
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+        OrpiScraper
     )
 
     _SCRAPER_MAP = [
@@ -302,6 +334,7 @@ def _resolve_scraper(url: str):
         ("immobilier.notaires.fr", Source.NOTAIRES,        NotairesScraper),
         ("vinci-immobilier.com", Source.VINCI,             VinciScraper),
         ("immobilier-france.fr", Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper),
+        ("orpi.com",             Source.ORPI,              OrpiScraper),
     ]
 
     for domain, source, scraper_cls in _SCRAPER_MAP:
@@ -488,6 +521,25 @@ def admin_users_page(
     })
 
 
+@app.get("/admin/maintenance")
+def admin_maintenance_page(
+    request: Request, 
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+    
+    return templates.TemplateResponse(request=request, name="admin_maintenance.html", context={
+        "queries": queries,
+        "listings": listings,
+        "title": "Administration — Immo-Boussole",
+    })
+
+
+
 @app.post("/api/admin/users")
 def create_user(
     body: UserCreateRequest,
@@ -610,7 +662,18 @@ def update_global_settings(
     if body.resend_sender_email is not None: settings.resend_sender_email = body.resend_sender_email.strip() or None
     if body.resend_subject is not None: settings.resend_subject = body.resend_subject.strip() or None
     
+    if body.db_check_automate is not None: settings.db_check_automate = body.db_check_automate
+    if body.db_check_interval is not None: settings.db_check_interval = body.db_check_interval
+    if body.db_repair_automate is not None: settings.db_repair_automate = body.db_repair_automate
+    if body.db_repair_interval is not None: settings.db_repair_interval = body.db_repair_interval
+    
     db.commit()
+
+    # Sync scheduler jobs
+    if app_scheduler:
+        from app.scheduler import sync_db_maintenance_jobs
+        sync_db_maintenance_jobs(app_scheduler)
+
     return {"status": "updated"}
 
 
@@ -692,9 +755,6 @@ async def restore_backup(
     file: UploadFile = File(...),
     _auth = Depends(admin_required)
 ):
-    """
-    Restores a ZIP backup. WARNING: Replaces current data.
-    """
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .zip file.")
 
@@ -952,6 +1012,24 @@ def listing_detail_page(
                 db.add(new_view)
                 db.commit()
 
+    # ─── Zone Rule Detection ──────────────────────────────────────────────────
+    all_zone_rules = db.query(ZoneRule).all()
+    city_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "city"}
+    station_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "station"}
+
+    listing_city_lower = (listing.city or "").strip().lower()
+    listing_location_lower = (listing.location or "").strip().lower()
+    
+    city_rule = city_rules.get(listing_city_lower)
+    if not city_rule:
+        for name, rule in city_rules.items():
+            if name and name in listing_location_lower:
+                city_rule = rule
+                break
+
+    station1_rule = station_rules.get((listing.nearest_sncf_station or "").strip().lower())
+    station2_rule = station_rules.get((listing.second_sncf_station or "").strip().lower())
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -962,6 +1040,9 @@ def listing_detail_page(
         "listings": all_listings,
         "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
         "title": f"{listing.title} — Immo-Boussole",
+        "city_rule": city_rule,
+        "station1_rule": station1_rule,
+        "station2_rule": station2_rule,
     })
 
 
@@ -1088,6 +1169,161 @@ def profile_page(
     })
 
 
+
+def _group_zones(items):
+    """Groups similar names together (e.g. 'Paris' and 'Paris 15')."""
+    if not items: return []
+    # Sort by name and length
+    sorted_items = sorted(items, key=lambda x: x[0].lower())
+    groups = []
+    for name, count in sorted_items:
+        found = False
+        name_lower = name.lower().strip()
+        for g in groups:
+            leader_lower = g['name'].lower().strip()
+            # Simple prefix check: if one starts with the other and prefix >= 4 chars
+            shorter = leader_lower if len(leader_lower) < len(name_lower) else name_lower
+            longer = name_lower if len(leader_lower) < len(name_lower) else leader_lower
+            if len(shorter) >= 4 and longer.startswith(shorter):
+                if name not in g['variants']: g['variants'].append(name)
+                g['count'] += count
+                if len(name) < len(g['name']): g['name'] = name
+                found = True
+                break
+        if not found:
+            groups.append({"name": name, "count": count, "variants": [name]})
+    return groups
+
+
+@app.get("/zones")
+def zones_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Zone management page — forbidden/allowed cities and SNCF stations."""
+    zone_rules = db.query(ZoneRule).order_by(ZoneRule.created_at.desc()).all()
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+
+    # Calculate zones to qualify
+    city_counts_raw = db.query(Listing.city, func.count(Listing.id)).filter(Listing.city != None).group_by(Listing.city).all()
+    
+    # Combined stations logic
+    station_counts_dict = {}
+    nearest_stations = db.query(Listing.nearest_sncf_station, func.count(Listing.id)).filter(Listing.nearest_sncf_station != None).group_by(Listing.nearest_sncf_station).all()
+    second_stations = db.query(Listing.second_sncf_station, func.count(Listing.id)).filter(Listing.second_sncf_station != None).group_by(Listing.second_sncf_station).all()
+    
+    for name, count in nearest_stations:
+        station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+    for name, count in second_stations:
+        station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+
+    existing_city_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'city'}
+    existing_station_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'station'}
+
+    to_qualify_cities_raw = [(c, cnt) for c, cnt in city_counts_raw if c.lower().strip() not in existing_city_rules]
+    to_qualify_stations_raw = [(s, cnt) for s, cnt in station_counts_dict.items() if s.lower().strip() not in existing_station_rules]
+
+    grouped_cities = _group_zones(to_qualify_cities_raw)
+    for g in grouped_cities: g['type'] = 'city'
+    
+    grouped_stations = _group_zones(to_qualify_stations_raw)
+    for g in grouped_stations: g['type'] = 'station'
+
+    to_qualify = grouped_cities + grouped_stations
+    # Sort by total count descending
+    to_qualify.sort(key=lambda x: x["count"], reverse=True)
+
+    return templates.TemplateResponse(request=request, name="zones.html", context={
+        "zone_rules": zone_rules,
+        "queries": queries,
+        "listings": listings,
+        "to_qualify": to_qualify,
+        "title": "Gestion des Zones — Immo-Boussole",
+    })
+
+
+
+# ─── API: Zone Rules ──────────────────────────────────────────────────────────
+
+@app.get("/api/zones")
+def get_zone_rules(
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns all zone rules (forbidden/allowed cities and stations)."""
+    rules = db.query(ZoneRule).order_by(ZoneRule.zone_type, ZoneRule.name).all()
+    return [
+        {
+            "id": r.id,
+            "zone_type": r.zone_type,
+            "name": r.name,
+            "rule": r.rule,
+            "created_by": r.created_by,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rules
+    ]
+
+
+@app.post("/api/zones")
+def create_zone_rule(
+    request: Request,
+    body: ZoneRuleRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Creates a new zone rule. All authenticated users can manage zones."""
+    username = request.session.get("username", "unknown")
+
+    # Normalize name to avoid duplicates with different casing
+    normalized_name = body.name.strip()
+
+    # Check for duplicate
+    existing = db.query(ZoneRule).filter(
+        ZoneRule.zone_type == body.zone_type,
+        ZoneRule.name.ilike(normalized_name),
+        ZoneRule.rule == body.rule,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Cette zone existe déjà : {normalized_name}")
+
+    rule = ZoneRule(
+        zone_type=body.zone_type,
+        name=normalized_name,
+        rule=body.rule,
+        created_by=username,
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    return {
+        "id": rule.id,
+        "zone_type": rule.zone_type,
+        "name": rule.name,
+        "rule": rule.rule,
+        "created_by": rule.created_by,
+    }
+
+
+@app.delete("/api/zones/{zone_id}")
+def delete_zone_rule(
+    zone_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Deletes a zone rule. All authenticated users can delete zones."""
+    rule = db.query(ZoneRule).filter(ZoneRule.id == zone_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Zone introuvable")
+    db.delete(rule)
+    db.commit()
+    return {"status": "deleted", "id": zone_id}
+
+
 @app.get("/carte")
 def map_page(
     request: Request, 
@@ -1146,6 +1382,39 @@ def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_requir
     from app.scheduler import full_refresh_job
     background_tasks.add_task(full_refresh_job)
     return {"status": "success", "message": "Le rafraîchissement complet des tags et statuts a été lancé en arrière-plan."}
+
+
+# ─── Administration: Database Maintenance ──────────────────────────────────────
+
+@app.get("/api/admin/db/problems")
+def get_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
+    problems = db_maintenance.identify_problems(db)
+    # Simplify for frontend: just counts
+    return {k: v["count"] for k, v in problems.items()}
+
+@app.post("/api/admin/db/check")
+def check_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
+    # This just returns the current state
+    problems = db_maintenance.identify_problems(db)
+    return {k: v["count"] for k, v in problems.items()}
+
+@app.post("/api/admin/db/repair")
+async def repair_db_problems(
+    problem_type: str, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    status = db_maintenance.get_repair_status()
+    if status["is_running"]:
+        raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
+    
+    background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type)
+    return {"status": "started", "problem_type": problem_type}
+
+@app.get("/api/admin/db/repair/status")
+def get_db_repair_status(_auth = Depends(admin_required)):
+    return db_maintenance.get_repair_status()
 
 
 @app.get("/api/listings")
@@ -1302,7 +1571,16 @@ def get_map_data(
             }
             for p in all_pins
         ],
-        "current_user": username
+        "current_user": username,
+        "zone_rules": [
+            {
+                "id": r.id,
+                "zone_type": r.zone_type,
+                "name": r.name,
+                "rule": r.rule,
+            }
+            for r in db.query(ZoneRule).all()
+        ],
     }
 
 
@@ -1804,13 +2082,26 @@ async def rescrape_listing(
 
     # ── Update via service ──
     updated_listing, _ = await create_listing_from_details(db, details, source, url)
-    
-    return {
+
+    rescrape_response = {
         "status": "updated",
         "listing_id": updated_listing.id,
         "title": updated_listing.title,
         "scraping_success": scraping_success
     }
+
+    # ── Forbidden Zone Warning ──
+    forbidden_cities_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+    city_lower = (updated_listing.city or updated_listing.location or "").strip().lower()
+    if city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_rescrape if fc):
+        rescrape_response["forbidden_zone_warning"] = {
+            "message": f"⚠ Cette annonce est en zone interdite : {updated_listing.city or updated_listing.location}",
+            "city": updated_listing.city or updated_listing.location,
+        }
+
+    return rescrape_response
 
 
 @app.post("/api/listings/submit-url")
@@ -1902,6 +2193,17 @@ async def submit_listing_url(
             "original_listing_id": listing.duplicate_of_id,
             "original_title": original.title if original else None,
             "original_url": f"/listings/{listing.duplicate_of_id}",
+        }
+
+    # ── Forbidden Zone Warning ──
+    forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+    listing_city_lower = (listing.city or listing.location or "").strip().lower()
+    if listing_city_lower and any(fc in listing_city_lower or listing_city_lower in fc for fc in forbidden_cities if fc):
+        response["forbidden_zone_warning"] = {
+            "message": f"⚠ Cette annonce est en zone interdite : {listing.city or listing.location}",
+            "city": listing.city or listing.location,
         }
 
     return response
@@ -2445,6 +2747,15 @@ def api_search_stations(
 ):
     from app.geo import search_stations
     return search_stations(q)
+
+
+@app.get("/api/geo/cities/search")
+def api_search_cities(
+    q: str,
+    _auth = Depends(login_required)
+):
+    from app.geo import search_cities
+    return search_cities(q)
 
 
 @app.get("/api/geo/train-path")

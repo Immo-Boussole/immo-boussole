@@ -12,7 +12,8 @@ from app.models import Listing, ListingStatus, SearchQuery, Source, Review
 from app.scrapers import (
     LeboncoinScraper, SelogerScraper, LeFigaroScraper,
     LogicimmoScraper, BieniciScraper, IadfranceScraper,
-    NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+    OrpiScraper
 )
 from app.media import download_listing_photos, photos_to_json, json_to_photos
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
@@ -317,6 +318,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         Source.NOTAIRES: NotairesScraper(),
         Source.VINCI: VinciScraper(),
         Source.IMMOBILIER_FRANCE: ImmobilierFranceScraper(),
+        Source.ORPI: OrpiScraper(),
     }
 
     scraper = scrapers.get(query.source)
@@ -445,11 +447,12 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         await send_new_listing_notifications(new_listing_objects, db)
 
 
-async def refresh_listing_status(listing: Listing, db: Session):
+async def refresh_listing_status(listing: Listing, db: Session, force_update: bool = False):
     """
     Checks if a listing is still online by visiting its URL.
     Updates status to DISAPPEARED if not found.
     Also ensures the presentation image is valid; if not, refreshes the listing.
+    If force_update is True, always updates listing fields from scraper.
     """
     from app.main import _resolve_scraper
     source, scraper = _resolve_scraper(listing.url)
@@ -491,8 +494,8 @@ async def refresh_listing_status(listing: Listing, db: Session):
         # If it was disappeared but now it's back, OR if the photo is broken
         was_disappeared = (listing.status == ListingStatus.DISAPPEARED)
         
-        if was_disappeared or not photo_ok:
-            reason = "BACK ONLINE" if was_disappeared else "PHOTO BROKEN/MISSING"
+        if was_disappeared or not photo_ok or force_update:
+            reason = "BACK ONLINE" if was_disappeared else ("PHOTO BROKEN/MISSING" if not photo_ok else "MANUAL REPAIR")
             print(f"[Services] Listing {listing.id} is {reason}, performing full refresh...")
             
             # Update fields from details

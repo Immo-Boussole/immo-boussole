@@ -149,6 +149,15 @@ _MIGRATIONS = [
     ("listings", "is_favorite",            "BOOLEAN DEFAULT 0"),
     ("listings", "is_liked",               "BOOLEAN DEFAULT 0"),
     ("listings", "is_disliked",            "BOOLEAN DEFAULT 0"),
+
+    # zone_rules — forbidden/allowed zones v14 (table is new, handled by create_all)
+    # These entries are placeholders; the table is created by Base.metadata.create_all
+
+    # global_settings — maintenance automation v15
+    ("global_settings", "db_check_automate",  "BOOLEAN DEFAULT 0"),
+    ("global_settings", "db_check_interval",  "TEXT DEFAULT '24h'"),
+    ("global_settings", "db_repair_automate", "BOOLEAN DEFAULT 0"),
+    ("global_settings", "db_repair_interval", "TEXT DEFAULT '24h'"),
 ]
 
 
