@@ -21,7 +21,8 @@
         "users": "Users",
         "map": "Map",
         "profile": "My Profile",
-        "administration": "Administration"
+        "administration": "Administration",
+        "duplicate_hunt": "Duplicate Hunt"
     },
     "profile": {
         "title": "My Profile",
@@ -394,5 +395,23 @@
         "auto_refresh_label": "Auto Refresh",
         "auto_refresh_value": "Every 30 min (6am-10:30pm)",
         "last_sync_label": "Last sync"
+    },
+    "duplicates": {
+        "title": "Duplicate Hunt",
+        "subtitle": "Identify similar listings to clean up the database",
+        "empty_title": "No potential duplicates",
+        "empty_subtitle": "Congratulations! Your database seems clean.",
+        "merge_btn": "Merge listings",
+        "reject_btn": "Reject duplicate",
+        "similarity": "Similarity",
+        "common_points": "Common points",
+        "city": "City",
+        "price": "Price",
+        "area": "Area",
+        "land_area": "Land",
+        "description": "Description",
+        "photo": "Photo",
+        "merge_success": "Listings merged!",
+        "reject_success": "Duplicate rejected!"
     }
 }

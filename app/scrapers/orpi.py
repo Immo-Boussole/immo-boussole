@@ -136,21 +136,21 @@ class OrpiScraper(BaseScraper):
                 details["price"] = float(price_str) if price_str else 0.0
 
             # Description
-            desc_elem = soup.select_one('.u-text-pre-line, .c-estate-detail__description, .c-estate-detail__text')
+            desc_elem = soup.select_one('div.s-cms.u-p, .u-text-pre-line, .c-estate-detail__description, .c-estate-detail__text')
             if desc_elem:
                 details["description_text"] = desc_elem.text.strip()
 
             # Photos
             # Orpi uses a slider with images, sometimes in <img> with data-src or inside a specific gallery class
             photo_urls = []
-            img_elems = soup.select('.c-estate-detail__gallery img, .c-gallery__item img, img.c-estate-thumb__img')
+            img_elems = soup.select('img.u-cover, .c-estate-detail__gallery img, .c-gallery__item img, img.c-estate-thumb__img')
             for img in img_elems:
                 src = img.get('data-src') or img.get('src')
                 if src:
                     if src.startswith('//'): src = "https:" + src
                     if src.startswith('/'): src = "https://www.orpi.com" + src
                     # Avoid tracking pixels or icons
-                    if 'spacer.gif' in src or 'pixel.gif' in src: continue
+                    if 'spacer.gif' in src or 'pixel.gif' in src or 'logo' in src.lower(): continue
                     photo_urls.append(src)
             
             # Deduplicate photos
@@ -213,10 +213,21 @@ class OrpiScraper(BaseScraper):
                         details["rooms"] = int(rooms_match.group(1))
 
             # Location / City
-            loc_elem = soup.select_one('.c-estate-detail__location')
+            # Subagent found: span.u-h5.u-flex.u-mt-sm.u-text-normal
+            loc_elem = soup.select_one('span.u-h5.u-flex.u-mt-sm.u-text-normal, .c-estate-detail__location, .c-estate-detail-header__location')
             if loc_elem:
                 details["location"] = loc_elem.text.strip()
+                # Remove icons/extra text if present (Orpi sometimes puts an icon inside)
+                details["location"] = re.sub(r'\s+', ' ', details["location"]).strip()
                 details["city"] = self._normalize_city(details["location"])
+            
+            # If city still missing, try searching for it in the title or "Localisation" section
+            if not details.get("city") or details.get("city") == "France":
+                # Look for "à [Ville]" in title
+                title_txt = details.get("title", "")
+                city_match = re.search(r'(?:à|en|dans)\s+([A-Z][\w\-\s\'’]+)', title_txt)
+                if city_match:
+                    details["city"] = self._normalize_city(city_match.group(1))
 
             # External ID
             details["external_id"] = f"orpi_{url.strip('/').split('-')[-1]}"

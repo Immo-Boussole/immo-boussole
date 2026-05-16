@@ -21,7 +21,8 @@
         "users": "Utilisateurs",
         "map": "Carte",
         "profile": "Mon Profil",
-        "administration": "Administration"
+        "administration": "Administration",
+        "duplicate_hunt": "Chasse aux duplicats"
     },
     "profile": {
         "title": "Mon Profil",
@@ -394,5 +395,23 @@
         "auto_refresh_label": "Rafraîchissement auto",
         "auto_refresh_value": "Toutes les 30 min (06h-22h30)",
         "last_sync_label": "Dernière synchro"
+    },
+    "duplicates": {
+        "title": "Chasse aux duplicats",
+        "subtitle": "Identifiez les annonces similaires pour nettoyer la base",
+        "empty_title": "Aucun duplicat potentiel",
+        "empty_subtitle": "Félicitations ! Votre base semble propre.",
+        "merge_btn": "Fusionner les annonces",
+        "reject_btn": "Rejeter le duplicat",
+        "similarity": "Similitude",
+        "common_points": "Points communs",
+        "city": "Ville",
+        "price": "Prix",
+        "area": "Surface",
+        "land_area": "Terrain",
+        "description": "Description",
+        "photo": "Photo",
+        "merge_success": "Annonces fusionnées !",
+        "reject_success": "Duplicat rejeté !"
     }
 }
