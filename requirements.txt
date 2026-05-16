@@ -15,4 +15,6 @@ itsdangerous
 apprise
 fastmcp
 resend
+requests>=2.33.0
+urllib3>=2.7.0
 undetected-chromedriver
