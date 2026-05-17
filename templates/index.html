@@ -329,6 +329,12 @@
             flex-wrap: wrap;
         }
 
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
         .filter-chips {
             display: flex;
             gap: 0.5rem;
@@ -340,6 +346,14 @@
             color: var(--text-2);
             font-weight: 600;
             margin-right: 0.25rem;
+        }
+
+        .d-mobile { display: none; }
+        .d-desktop { display: inline; }
+
+        @media (max-width: 1024px) {
+            .d-mobile { display: inline; }
+            .d-desktop { display: none; }
         }
 
         .content {
@@ -1212,17 +1226,12 @@
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
-            </div>
-            
-            <div class="topbar-right">
-                <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
-                    <i class="fa-solid fa-map-pin"></i>
-                    {{ t(request, 'map.add_addresses', 'Adresses') }}
-                </button>
-                <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+                
                 {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
-                <button class="btn primary" id="btnAddUrl" onclick="openModal()">
-                    <i class="fa-solid fa-plus"></i> {{ t(request, 'dashboard.add_listing') }}
+                <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem; height: 32px; padding: 0 0.75rem;">
+                    <i class="fa-solid fa-plus d-desktop"></i>
+                    <span class="d-desktop">{{ t(request, 'dashboard.add_listing') }}</span>
+                    <span class="d-mobile">Ajouter annonce</span>
                 </button>
                 {% endif %}
             </div>
@@ -1232,7 +1241,6 @@
         <div class="filter-bar">
             <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
             <div class="filter-chips">
-                <button class="btn active" id="f-all" onclick="filter('all', this)">{{ t(request, 'dashboard.filters.all') }}</button>
                 <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
                     <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
                 </button>
@@ -1248,15 +1256,18 @@
                 <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
                     <i class="fa-solid fa-thumbs-up"></i> J'aime
                 </button>
+            </div>
+
+            <div class="filter-actions">
                 <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
                     <i class="fa-solid fa-thumbs-down"></i> Je n'aime pas
                 </button>
+                <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
+                    <i class="fa-solid fa-rotate"></i> 
+                    <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>
+                    <span class="d-mobile">Rafraîch. tags</span>
+                </button>
             </div>
-
-            <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="margin-left: auto; border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
-                <i class="fa-solid fa-rotate"></i> 
-                <span>{{ t(request, 'dashboard.refresh_tags') }}</span>
-            </button>
         </div>
 
 
@@ -1695,16 +1706,23 @@
         }
 
         function filter(status, btn) {
+            const wasActive = btn.classList.contains('active');
             document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            
+            let currentStatus = status;
+            if (wasActive) {
+                currentStatus = 'all';
+            } else {
+                btn.classList.add('active');
+            }
 
             document.querySelectorAll('.card').forEach(card => {
                 let show = false;
-                if (status === 'all') show = true;
-                else if (status === 'favorite') show = card.dataset.favorite === 'true';
-                else if (status === 'liked') show = card.dataset.liked === 'true';
-                else if (status === 'disliked') show = card.dataset.disliked === 'true';
-                else show = card.dataset.status === status;
+                if (currentStatus === 'all') show = true;
+                else if (currentStatus === 'favorite') show = card.dataset.favorite === 'true';
+                else if (currentStatus === 'liked') show = card.dataset.liked === 'true';
+                else if (currentStatus === 'disliked') show = card.dataset.disliked === 'true';
+                else show = card.dataset.status === currentStatus;
                 card.style.display = show ? '' : 'none';
             });
         }
