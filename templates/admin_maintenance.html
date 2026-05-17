@@ -290,6 +290,39 @@
 
         .alert.success { background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
         .alert.error { background: rgba(242, 92, 105, 0.1); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: var(--shadow);
+            transform: translateY(20px);
+            transition: var(--trans);
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-overlay.show .modal {
+            transform: translateY(0);
+        }
+        .modal h2 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 
@@ -539,27 +572,93 @@
                 </div>
 
                 <div class="card">
-                    <h2>{{ t(request, 'admin_users.backup_restore_title') }}</h2>
+                    <h2>{{ t(request, 'admin_users.backup_restore_title', 'Sauvegarde & Restauration') }}</h2>
                     <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
-                        {{ t(request, 'admin_users.backup_desc') }}
+                        {{ t(request, 'admin_users.backup_desc', 'Générez des sauvegardes granulaires ou restaurez des composants spécifiques de votre application.') }}
                     </p>
                     <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                        <a href="/api/admin/backup" class="btn">
-                            <i class="fas fa-download"></i> {{ t(request, 'admin_users.backup_btn') }}
-                        </a>
+                        <button class="btn" onclick="openBackupModal()">
+                            <i class="fas fa-download"></i> Créer une sauvegarde
+                        </button>
                         
                         <div style="border-left: 1px solid var(--border); height: 2rem; margin: 0 0.5rem;"></div>
 
-                        <label for="restoreFile" class="btn secondary" style="margin: 0; cursor: pointer;">
-                            <i class="fas fa-upload"></i> {{ t(request, 'admin_users.restore_btn') }}
-                        </label>
-                        <input type="file" id="restoreFile" style="display: none;" accept=".zip" onchange="handleRestore(this)">
-                        <span id="restoreStatus" style="font-size: 0.8rem; color: var(--text-2);"></span>
+                        <button class="btn secondary" onclick="openRestoreModal()">
+                            <i class="fas fa-upload"></i> Restaurer une sauvegarde
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <!-- Backup Modal -->
+    <div class="modal-overlay" id="backupModal">
+        <div class="modal">
+            <h2>Créer une sauvegarde</h2>
+            <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">Sélectionnez les composants que vous souhaitez inclure dans cette sauvegarde.</p>
+            <form id="backupForm" onsubmit="handleBackup(event)">
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="backup_env" checked> Configuration système (.env)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="backup_settings" checked> Paramètres & Zones (Requêtes, Zones)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="backup_users" checked> Utilisateurs (Comptes, Mots de passe)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="backup_listings" checked> Annonces & Avis
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="backup_media" checked> Fichiers Médias (Photos des annonces)
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn secondary" onclick="closeBackupModal()">Annuler</button>
+                    <button type="submit" class="btn"><i class="fas fa-download"></i> Télécharger</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Restore Modal -->
+    <div class="modal-overlay" id="restoreModal">
+        <div class="modal">
+            <h2>Restaurer une sauvegarde</h2>
+            <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">Sélectionnez le fichier <code>.zip</code> et choisissez ce que vous souhaitez restaurer. Les données actuelles sélectionnées seront <strong>écrasées</strong>.</p>
+            <form id="restoreForm" onsubmit="submitRestore(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <input type="file" id="restoreFile" accept=".zip" required style="width: 100%;">
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="restore_env" checked> Configuration système (.env)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="restore_settings" checked> Paramètres & Zones
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="restore_users" checked> Utilisateurs (Comptes, Mots de passe)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="restore_listings" checked> Annonces & Avis
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text); cursor: pointer;">
+                        <input type="checkbox" id="restore_media" checked> Fichiers Médias
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; align-items: center;">
+                    <span id="restoreStatus" style="font-size: 0.8rem; color: var(--text-2); margin-right: auto;"></span>
+                    <button type="button" class="btn secondary" onclick="closeRestoreModal()">Annuler</button>
+                    <button type="submit" class="btn" style="background: var(--red); color: white;"><i class="fas fa-exclamation-triangle"></i> Restaurer</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script>
         const alertBox = document.getElementById('alert');
@@ -763,19 +862,47 @@
             }
         }
 
-        async function handleRestore(input) {
-            if (!input.files || input.files.length === 0) return;
-            const file = input.files[0];
-            if (!confirm('ATTENTION: La restauration va écraser toutes les données actuelles. Continuer ?')) {
-                input.value = '';
+        function openBackupModal() { document.getElementById('backupModal').classList.add('show'); }
+        function closeBackupModal() { document.getElementById('backupModal').classList.remove('show'); }
+        function openRestoreModal() { document.getElementById('restoreModal').classList.add('show'); }
+        function closeRestoreModal() { document.getElementById('restoreModal').classList.remove('show'); }
+
+        function handleBackup(e) {
+            e.preventDefault();
+            const params = new URLSearchParams({
+                include_env: document.getElementById('backup_env').checked,
+                include_settings: document.getElementById('backup_settings').checked,
+                include_users: document.getElementById('backup_users').checked,
+                include_listings: document.getElementById('backup_listings').checked,
+                include_media: document.getElementById('backup_media').checked
+            });
+            window.location.href = '/api/admin/backup?' + params.toString();
+            closeBackupModal();
+        }
+
+        async function submitRestore(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('restoreFile');
+            if (!fileInput.files || fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+
+            if (!confirm('ATTENTION: Les données sélectionnées seront écrasées par celles de la sauvegarde. Continuer ?')) {
                 return;
             }
 
             const status = document.getElementById('restoreStatus');
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            
             status.textContent = 'Restauration en cours...';
+            submitBtn.disabled = true;
             
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('restore_env', document.getElementById('restore_env').checked);
+            formData.append('restore_settings', document.getElementById('restore_settings').checked);
+            formData.append('restore_users', document.getElementById('restore_users').checked);
+            formData.append('restore_listings', document.getElementById('restore_listings').checked);
+            formData.append('restore_media', document.getElementById('restore_media').checked);
 
             try {
                 const res = await fetch('/api/admin/restore', {
@@ -785,16 +912,17 @@
                 const data = await res.json();
                 if (res.ok) {
                     showAlert(data.message, 'success');
-                    status.textContent = 'Restauration réussie.';
+                    status.textContent = 'Réussie.';
+                    setTimeout(() => closeRestoreModal(), 2000);
                 } else {
                     showAlert('Erreur: ' + (data.detail || 'Inconnue'), 'error');
-                    status.textContent = 'Échec de la restauration.';
+                    status.textContent = 'Échec.';
                 }
             } catch (err) {
                 showAlert('Erreur réseau', 'error');
                 status.textContent = 'Erreur réseau.';
             }
-            input.value = '';
+            submitBtn.disabled = false;
         }
 
         // Initialize
