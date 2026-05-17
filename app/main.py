@@ -1001,9 +1001,15 @@ def listing_detail_page(
         ).first()
     
     # Load all duplicates of this listing (bidirectional visibility)
-    duplicate_children = db.query(Listing).filter(
-        Listing.duplicate_of_id == listing.id
-    ).all()
+    if listing.duplicate_of_id:
+        duplicate_children = db.query(Listing).filter(
+            Listing.duplicate_of_id == listing.duplicate_of_id,
+            Listing.id != listing.id
+        ).all()
+    else:
+        duplicate_children = db.query(Listing).filter(
+            Listing.duplicate_of_id == listing.id
+        ).all()
 
     # Sidebars context
     queries = db.query(SearchQuery).all()

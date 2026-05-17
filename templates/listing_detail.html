@@ -983,28 +983,31 @@
         <div class="right-panel">
 
             <!-- Duplicates Section -->
-            {% if duplicate_original or duplicate_children or listing.original_url %}
+            {% if listing.is_duplicate or duplicate_children %}
             <div style="background: rgba(249, 208, 79, 0.05); border: 1px solid var(--yellow); border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.8rem; font-weight: 800; color: var(--yellow); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fa-solid fa-triangle-exclamation"></i> CETTE ANNONCE EST DÉCLARÉE COMME DUPLICAT
                 </div>
                 
+                {% if duplicate_original %}
+                <div style="margin-bottom: 0.75rem;">
+                    <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
+                        Annonce originale
+                    </p>
+                    <a href="/listings/{{ duplicate_original.id }}" class="btn sm" style="border-color: var(--yellow); color: var(--yellow); background: rgba(249, 208, 79, 0.05); width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
+                        <i class="fa-solid fa-link"></i> #{{ duplicate_original.id }} - {{ duplicate_original.title }}
+                    </a>
+                </div>
+                {% elif listing.is_duplicate and listing.original_url and listing.original_url != listing.url %}
                 <div style="margin-bottom: 0.75rem;">
                     <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
                         Source externe
                     </p>
-                    {% if listing.original_url %}
                     <a href="{{ listing.original_url }}" target="_blank" class="btn sm" style="border-color: var(--yellow); color: var(--yellow); background: rgba(249, 208, 79, 0.05); width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ listing.original_url }}
                     </a>
-                    {% elif duplicate_original %}
-                    <a href="/listings/{{ duplicate_original.id }}" class="btn sm" style="border-color: var(--yellow); color: var(--yellow); background: rgba(249, 208, 79, 0.05); width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
-                        <i class="fa-solid fa-link"></i> #{{ duplicate_original.id }} - {{ duplicate_original.title }}
-                    </a>
-                    {% else %}
-                    <p style="font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic;">Non renseignée</p>
-                    {% endif %}
                 </div>
+                {% endif %}
 
                 <div style="margin-bottom: 0.25rem;">
                     <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
