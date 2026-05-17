@@ -69,3 +69,5 @@ def get_text(request: Request, key: str, default: str = None, **kwargs) -> str:
         return default
 
     return str(key)
+
+# Trigger reload for locales change
