@@ -716,15 +716,19 @@ async def test_email_configuration(
 def download_backup(
     request: Request,
     background_tasks: BackgroundTasks,
+    include_env: bool = True,
+    include_media: bool = True,
+    include_users: bool = True,
+    include_listings: bool = True,
+    include_settings: bool = True,
     _auth = Depends(admin_required)
 ):
     """
-    Generates a ZIP backup of the database, media, and configuration.
+    Generates a ZIP backup of the database, media, and configuration with granular control.
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"immo_boussole_backup_{timestamp}.zip"
     
-    # Use a temporary file to build the ZIP
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
     
     try:
@@ -732,27 +736,56 @@ def download_backup(
             # 1. Database
             db_path = "./immo_boussole.db"
             if os.path.exists(db_path):
-                zipf.write(db_path, arcname="immo_boussole.db")
+                import sqlite3
+                tmp_db = os.path.join(tempfile.gettempdir(), f"tmp_db_{timestamp}.sqlite")
+                shutil.copy2(db_path, tmp_db)
+                
+                try:
+                    conn = sqlite3.connect(tmp_db)
+                    conn.execute("PRAGMA foreign_keys = OFF")
+                    if not include_users:
+                        conn.execute("DELETE FROM users")
+                        conn.execute("DELETE FROM user_listing_views")
+                    if not include_listings:
+                        conn.execute("DELETE FROM listings")
+                        conn.execute("DELETE FROM reviews")
+                        conn.execute("DELETE FROM rejected_duplicates")
+                        conn.execute("DELETE FROM user_listing_views")
+                    if not include_settings:
+                        conn.execute("DELETE FROM global_settings")
+                        conn.execute("DELETE FROM zone_rules")
+                        conn.execute("DELETE FROM search_queries")
+                        conn.execute("DELETE FROM ready_searches")
+                        conn.execute("DELETE FROM review_keywords")
+                        conn.execute("DELETE FROM map_pins")
+                        conn.execute("DELETE FROM train_lines")
+                    conn.commit()
+                    conn.execute("VACUUM")
+                    conn.close()
+                    
+                    zipf.write(tmp_db, arcname="immo_boussole.db")
+                finally:
+                    if os.path.exists(tmp_db):
+                        os.remove(tmp_db)
             
             # 2. Media
             media_root = "static/media"
-            if os.path.exists(media_root):
+            if include_media and os.path.exists(media_root):
                 for root, dirs, files in os.walk(media_root):
                     for file in files:
                         file_path = os.path.join(root, file)
-                        # arcname is relative to the project root
                         zipf.write(file_path, arcname=file_path)
             
             # 3. Environment (config)
             env_path = ".env"
-            if os.path.exists(env_path):
+            if include_env and os.path.exists(env_path):
                 zipf.write(env_path, arcname=".env")
 
         return FileResponse(
             path=tmp_path,
             filename=filename,
             media_type="application/zip",
-            background=background_tasks.add_task(os.remove, tmp_path) # Delete after download
+            background=background_tasks.add_task(os.remove, tmp_path)
         )
     except Exception as e:
         if os.path.exists(tmp_path):
@@ -763,48 +796,71 @@ def download_backup(
 @app.post("/api/admin/restore")
 async def restore_backup(
     file: UploadFile = File(...),
+    restore_env: bool = Form(True),
+    restore_media: bool = Form(True),
+    restore_users: bool = Form(True),
+    restore_listings: bool = Form(True),
+    restore_settings: bool = Form(True),
     _auth = Depends(admin_required)
 ):
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .zip file.")
 
-    # 1. Save uploaded file to a temporary location
     with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_zip_path = tmp.name
 
     try:
-        # 2. Extract to a temporary directory to verify
         with tempfile.TemporaryDirectory() as tmp_dir:
             with zipfile.ZipFile(tmp_zip_path, 'r') as zipf:
                 zipf.extractall(tmp_dir)
             
-            # Verify database exists in backup
             db_in_backup = os.path.join(tmp_dir, "immo_boussole.db")
-            if not os.path.exists(db_in_backup):
-                raise HTTPException(status_code=400, detail="Invalid backup: missing database file.")
-
-            # 3. Critical: Close database connections
-            # We dispose the engine to try and release the file lock on SQLite
-            engine.dispose()
-
-            # 4. Replace files
-            # Database
-            shutil.copy2(db_in_backup, "./immo_boussole.db")
-
-            # Media
-            backup_media = os.path.join(tmp_dir, "static", "media")
-            if os.path.exists(backup_media):
-                # Clean current media or merge? 
-                # Better to clear and replace to ensure consistency with DB
-                if os.path.exists("static/media"):
-                    shutil.rmtree("static/media")
-                shutil.copytree(backup_media, "static/media")
             
-            # Env (optional, might want to keep current secrets, but user asked for "everything")
-            backup_env = os.path.join(tmp_dir, ".env")
-            if os.path.exists(backup_env):
-                shutil.copy2(backup_env, ".env")
+            # 1. Database logic
+            if os.path.exists(db_in_backup) and (restore_users or restore_listings or restore_settings):
+                engine.dispose()
+                import sqlite3
+                conn = sqlite3.connect("./immo_boussole.db")
+                conn.execute("PRAGMA foreign_keys = OFF")
+                conn.execute(f"ATTACH DATABASE '{db_in_backup}' AS backup_db")
+                
+                tables_to_restore = []
+                if restore_users:
+                    tables_to_restore.extend(["users"])
+                if restore_listings:
+                    tables_to_restore.extend(["listings", "reviews", "rejected_duplicates"])
+                if restore_users or restore_listings:
+                    # If we restore one or the other, we might as well sync views 
+                    # (it will just delete them if missing in backup)
+                    tables_to_restore.extend(["user_listing_views"])
+                if restore_settings:
+                    tables_to_restore.extend(["global_settings", "zone_rules", "search_queries", "ready_searches", "review_keywords", "map_pins", "train_lines"])
+
+                for table in set(tables_to_restore):
+                    try:
+                        conn.execute(f"DELETE FROM main.{table}")
+                        conn.execute(f"INSERT INTO main.{table} SELECT * FROM backup_db.{table}")
+                    except Exception as e:
+                        print(f"Error restoring table {table}: {e}")
+                        pass
+                
+                conn.commit()
+                conn.close()
+
+            # 2. Media
+            if restore_media:
+                backup_media = os.path.join(tmp_dir, "static", "media")
+                if os.path.exists(backup_media):
+                    if os.path.exists("static/media"):
+                        shutil.rmtree("static/media")
+                    shutil.copytree(backup_media, "static/media")
+            
+            # 3. Env
+            if restore_env:
+                backup_env = os.path.join(tmp_dir, ".env")
+                if os.path.exists(backup_env):
+                    shutil.copy2(backup_env, ".env")
 
         return {"status": "success", "message": "System restored successfully. Please restart the application for all changes to take effect."}
 
