@@ -482,6 +482,36 @@
                             </div>
                         </div>
 
+                        <!-- Problem: Anomalous Prices -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Prix anormaux (> 10M€)</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_anomalous_price">0</span> annonces concernées</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn secondary" onclick="startRepair('anomalous_price')" id="btn_repair_anomalous_price">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Problem: Orphaned Duplicates (Linked Ads None) -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Annonces liées: "Aucune"</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_linked_ads_none">0</span> annonces déclarées duplicats sans parent</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button class="btn secondary" onclick="startRepair('linked_ads_none')" id="btn_repair_linked_ads_none">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Progress Section -->
@@ -599,6 +629,8 @@
                     document.getElementById('count_empty_description').textContent = data.empty_description || 0;
                     document.getElementById('count_generic_title_figaro').textContent = data.generic_title_figaro || 0;
                     document.getElementById('count_duplicate_city_zip').textContent = data.duplicate_city_zip || 0;
+                    document.getElementById('count_anomalous_price').textContent = data.anomalous_price || 0;
+                    document.getElementById('count_linked_ads_none').textContent = data.linked_ads_none || 0;
 
                     showAlert('Vérification terminée.', 'success');
                 } else {
@@ -651,6 +683,8 @@
                             if (status.problem_type === 'empty_description') labelText = 'Réparation: Descriptions...';
                             else if (status.problem_type === 'generic_title_figaro') labelText = 'Réparation: Le Figaro...';
                             else if (status.problem_type === 'duplicate_city_zip') labelText = 'Réparation: Codes postaux...';
+                            else if (status.problem_type === 'anomalous_price') labelText = 'Réparation: Prix anormaux...';
+                            else if (status.problem_type === 'linked_ads_none') labelText = 'Réparation: Annonces liées...';
                             
                             label.textContent = labelText;
 

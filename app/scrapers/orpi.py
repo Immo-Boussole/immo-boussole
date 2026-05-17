@@ -49,8 +49,12 @@ class OrpiScraper(BaseScraper):
                     # Price
                     # Orpi uses .c-estate-thumb__price OR .c-estate-thumb__price-tag__price
                     price_elem = ad.select_one('.c-estate-thumb__price-tag__price, .c-estate-thumb__price')
-                    price_str = re.sub(r'[^\d]', '', price_elem.text) if price_elem else "0"
-                    price = float(price_str) if price_str else 0.0
+                    price = 0.0
+                    if price_elem:
+                        # Extract only the part before '€' to avoid phone numbers or other digits in the footer
+                        txt = price_elem.text.split('€')[0]
+                        price_str = re.sub(r'[^\d]', '', txt)
+                        price = float(price_str) if price_str else 0.0
                     
                     # Location
                     # Orpi uses .c-estate-thumb__infos__location OR .c-estate-thumb__location
@@ -132,7 +136,9 @@ class OrpiScraper(BaseScraper):
             # Subagent found: strong.u-h2.u-color-primary
             price_elem = soup.select_one('strong.u-h2.u-color-primary, .c-estate-detail-header__price, .c-estate-detail__price')
             if price_elem:
-                price_str = re.sub(r'[^\d]', '', price_elem.text)
+                # Extract only the part before '€' to avoid phone numbers
+                txt = price_elem.text.split('€')[0]
+                price_str = re.sub(r'[^\d]', '', txt)
                 details["price"] = float(price_str) if price_str else 0.0
 
             # Description

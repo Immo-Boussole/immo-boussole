@@ -10,6 +10,9 @@ import re
 EMPTY_DESCRIPTION = "empty_description"
 GENERIC_TITLE_FIGARO = "generic_title_figaro"
 DUPLICATE_CITY_ZIP = "duplicate_city_zip"
+ANOMALOUS_PRICE = "anomalous_price"
+LINKED_ADS_NONE = "linked_ads_none"
+
 
 
 def identify_problems(db: Session):
@@ -44,6 +47,18 @@ def identify_problems(db: Session):
             match = re.search(r'\s*\((\d{2,5})\)\s*\(\1\)$', l.location)
             if match:
                 duplicate_city_listings.append(l)
+
+    # Anomalous price (e.g. > 10M € or concatenated phone number)
+    anomalous_price_listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
+        Listing.price > 10000000
+    ).all()
+
+    # Orphaned duplicates (is_duplicate=True but no parent)
+    linked_ads_none_ids = [l.id for l in db.query(Listing).filter(
+        Listing.is_duplicate == True,
+        Listing.duplicate_of_id == None
+    ).all()]
     
     return {
         EMPTY_DESCRIPTION: {
@@ -57,6 +72,14 @@ def identify_problems(db: Session):
         DUPLICATE_CITY_ZIP: {
             "count": len(duplicate_city_listings),
             "ids": [l.id for l in duplicate_city_listings]
+        },
+        ANOMALOUS_PRICE: {
+            "count": len(anomalous_price_listings),
+            "ids": [l.id for l in anomalous_price_listings]
+        },
+        LINKED_ADS_NONE: {
+            "count": len(linked_ads_none_ids),
+            "ids": linked_ads_none_ids
         }
     }
 
@@ -99,7 +122,12 @@ async def repair_listings_batch_task(problem_type: str):
                 listing = db.query(Listing).filter(Listing.id == lid).first()
                 if listing:
                     try:
-                        await refresh_listing_status(listing, db, force_update=True)
+                        if problem_type == LINKED_ADS_NONE:
+                            # If it's a broken duplicate, reset the flag so it reappears in dashboard
+                            listing.is_duplicate = False
+                            db.commit()
+                        else:
+                            await refresh_listing_status(listing, db, force_update=True)
                     except Exception as e:
                         print(f"[DB Maintenance] Error repairing listing {lid}: {e}")
                 
