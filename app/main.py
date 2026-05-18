@@ -731,10 +731,23 @@ def download_backup(
     
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
     
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     try:
         with zipfile.ZipFile(tmp_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # 1. Database
-            db_path = "./immo_boussole.db"
+            # Try to get path from settings, fallback to BASE_DIR
+            from app.config import settings
+            if settings.DATABASE_URL.startswith("sqlite:///"):
+                db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+                if not os.path.isabs(db_path):
+                    # Remove leading './' if present
+                    if db_path.startswith("./"):
+                        db_path = db_path[2:]
+                    db_path = os.path.join(BASE_DIR, db_path)
+            else:
+                db_path = os.path.join(BASE_DIR, "immo_boussole.db")
+
             if os.path.exists(db_path):
                 import sqlite3
                 tmp_db = os.path.join(tempfile.gettempdir(), f"tmp_db_{timestamp}.sqlite")
@@ -769,23 +782,26 @@ def download_backup(
                         os.remove(tmp_db)
             
             # 2. Media
-            media_root = "static/media"
+            media_root = os.path.join(BASE_DIR, "static", "media")
             if include_media and os.path.exists(media_root):
                 for root, dirs, files in os.walk(media_root):
                     for file in files:
                         file_path = os.path.join(root, file)
-                        zipf.write(file_path, arcname=file_path)
+                        # Arcname must be relative so it unzips into static/media
+                        arcname = os.path.relpath(file_path, BASE_DIR)
+                        zipf.write(file_path, arcname=arcname)
             
             # 3. Environment (config)
-            env_path = ".env"
+            env_path = os.path.join(BASE_DIR, ".env")
             if include_env and os.path.exists(env_path):
                 zipf.write(env_path, arcname=".env")
 
+        # Do not use add_task in background parameter if it returns None, pass the callable instead
+        background_tasks.add_task(os.remove, tmp_path)
         return FileResponse(
             path=tmp_path,
             filename=filename,
-            media_type="application/zip",
-            background=background_tasks.add_task(os.remove, tmp_path)
+            media_type="application/zip"
         )
     except Exception as e:
         if os.path.exists(tmp_path):
@@ -815,13 +831,26 @@ async def restore_backup(
             with zipfile.ZipFile(tmp_zip_path, 'r') as zipf:
                 zipf.extractall(tmp_dir)
             
+            BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
+            # Resolve db path
+            from app.config import settings
+            if settings.DATABASE_URL.startswith("sqlite:///"):
+                db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+                if not os.path.isabs(db_path):
+                    if db_path.startswith("./"):
+                        db_path = db_path[2:]
+                    db_path = os.path.join(BASE_DIR, db_path)
+            else:
+                db_path = os.path.join(BASE_DIR, "immo_boussole.db")
+
             db_in_backup = os.path.join(tmp_dir, "immo_boussole.db")
             
             # 1. Database logic
             if os.path.exists(db_in_backup) and (restore_users or restore_listings or restore_settings):
                 engine.dispose()
                 import sqlite3
-                conn = sqlite3.connect("./immo_boussole.db")
+                conn = sqlite3.connect(db_path)
                 conn.execute("PRAGMA foreign_keys = OFF")
                 conn.execute(f"ATTACH DATABASE '{db_in_backup}' AS backup_db")
                 
@@ -851,16 +880,18 @@ async def restore_backup(
             # 2. Media
             if restore_media:
                 backup_media = os.path.join(tmp_dir, "static", "media")
+                target_media = os.path.join(BASE_DIR, "static", "media")
                 if os.path.exists(backup_media):
-                    if os.path.exists("static/media"):
-                        shutil.rmtree("static/media")
-                    shutil.copytree(backup_media, "static/media")
+                    if os.path.exists(target_media):
+                        shutil.rmtree(target_media)
+                    shutil.copytree(backup_media, target_media)
             
             # 3. Env
             if restore_env:
                 backup_env = os.path.join(tmp_dir, ".env")
+                target_env = os.path.join(BASE_DIR, ".env")
                 if os.path.exists(backup_env):
-                    shutil.copy2(backup_env, ".env")
+                    shutil.copy2(backup_env, target_env)
 
         return {"status": "success", "message": "System restored successfully. Please restart the application for all changes to take effect."}
 
