@@ -1786,14 +1786,67 @@ def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_requir
 @app.get("/api/admin/db/problems")
 def get_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
     problems = db_maintenance.identify_problems(db)
-    # Simplify for frontend: just counts
-    return {k: v["count"] for k, v in problems.items()}
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    
+    import json
+    try:
+        checks = json.loads(settings.last_checks_json or "{}")
+    except Exception:
+        checks = {}
+        
+    try:
+        repairs = json.loads(settings.last_repairs_json or "{}")
+    except Exception:
+        repairs = {}
+        
+    return {
+        "problems": {k: v["count"] for k, v in problems.items()},
+        "last_global_check": settings.last_global_check,
+        "last_checks": checks,
+        "last_repairs": repairs
+    }
 
 @app.post("/api/admin/db/check")
 def check_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):
-    # This just returns the current state
     problems = db_maintenance.identify_problems(db)
-    return {k: v["count"] for k, v in problems.items()}
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+    
+    import json
+    from datetime import datetime, timezone
+    now_str = datetime.now(timezone.utc).isoformat()
+    settings.last_global_check = now_str
+    
+    try:
+        checks = json.loads(settings.last_checks_json or "{}")
+    except Exception:
+        checks = {}
+    
+    for key in problems.keys():
+        checks[key] = now_str
+        
+    settings.last_checks_json = json.dumps(checks)
+    db.commit()
+    db.refresh(settings)
+    
+    try:
+        repairs = json.loads(settings.last_repairs_json or "{}")
+    except Exception:
+        repairs = {}
+
+    return {
+        "problems": {k: v["count"] for k, v in problems.items()},
+        "last_global_check": settings.last_global_check,
+        "last_checks": checks,
+        "last_repairs": repairs
+    }
 
 @app.post("/api/admin/db/repair")
 async def repair_db_problems(
@@ -1808,6 +1861,19 @@ async def repair_db_problems(
     
     background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type)
     return {"status": "started", "problem_type": problem_type}
+
+@app.post("/api/admin/db/repair-all")
+async def repair_all_db_problems(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db), 
+    _auth = Depends(admin_required)
+):
+    status = db_maintenance.get_repair_status()
+    if status["is_running"]:
+        raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
+    
+    background_tasks.add_task(db_maintenance.repair_all_sequential_task)
+    return {"status": "started"}
 
 @app.get("/api/admin/db/repair/status")
 def get_db_repair_status(_auth = Depends(admin_required)):
@@ -2042,6 +2108,22 @@ def get_map_data(
         MapPin.lon.isnot(None)
     ).all()
 
+    # Cities to qualify
+    zone_rules = db.query(ZoneRule).all()
+    existing_city_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'city'}
+    
+    active_cities_raw = db.query(Listing.city).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
+        Listing.city != None,
+        Listing.city != ""
+    ).distinct().all()
+    
+    to_qualify_cities = []
+    for c in active_cities_raw:
+        city_name = c[0].strip()
+        if city_name.lower().strip() not in existing_city_rules:
+            to_qualify_cities.append(city_name)
+
     return {
         "listings": [
             {
@@ -2088,8 +2170,9 @@ def get_map_data(
                 "name": r.name,
                 "rule": r.rule,
             }
-            for r in db.query(ZoneRule).all()
+            for r in zone_rules
         ],
+        "to_qualify_cities": to_qualify_cities,
     }
 
 
@@ -2283,6 +2366,7 @@ def delete_map_pin(
 @app.get("/api/city-info")
 async def get_city_info(
     city: str,
+    db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
     """
@@ -2290,6 +2374,7 @@ async def get_city_info(
     - total_area_km2: administrative area in km² (from Nominatim extratags)
     - stations: list of SNCF stations with walk/bike/car times (minutes)
     Results are cached in GEO_CACHE.
+    Also returns matching dynamic listings and any existing ZoneRule.
     """
     import httpx as _httpx
     from app.geo import GEO_CACHE, find_nearby_stations, calculate_station_times, haversine_km
@@ -2298,111 +2383,147 @@ async def get_city_info(
     cache_key = f"city_info:{city_key.lower()}"
 
     if cache_key in GEO_CACHE:
-        return GEO_CACHE[cache_key]
+        geo_data = GEO_CACHE[cache_key]
+    else:
+        headers = {"User-Agent": "ImmoBoussole/1.0"}
+        area_km2 = None
+        lat = None
+        lon = None
 
-    headers = {"User-Agent": "ImmoBoussole/1.0"}
-    area_km2 = None
-    lat = None
-    lon = None
-
-    try:
-        async with _httpx.AsyncClient() as client:
-            # 1a. First try: structured search for administrative boundary (has area data)
-            res_boundary = await client.get(
-                "https://nominatim.openstreetmap.org/search",
-                params={
-                    "city": city_key,
-                    "country": "France",
-                    "featuretype": "city",
-                    "format": "json",
-                    "limit": 1,
-                    "extratags": 1,
-                    "addressdetails": 0,
-                },
-                headers=headers,
-                timeout=10.0,
-            )
-            res_boundary.raise_for_status()
-            boundary_data = res_boundary.json()
-
-            if boundary_data:
-                place = boundary_data[0]
-                lat = float(place["lat"])
-                lon = float(place["lon"])
-                extratags = place.get("extratags") or {}
-                area_m2 = extratags.get("area")
-                if area_m2:
-                    try:
-                        area_km2 = round(float(area_m2) / 1_000_000, 1)
-                    except Exception:
-                        area_km2 = None
-
-            # 1b. Fallback: generic search (if boundary search found nothing)
-            if lat is None:
-                res_generic = await client.get(
+        try:
+            async with _httpx.AsyncClient() as client:
+                # 1a. First try: structured search for administrative boundary (has area data)
+                res_boundary = await client.get(
                     "https://nominatim.openstreetmap.org/search",
                     params={
-                        "q": city_key,
+                        "city": city_key,
+                        "country": "France",
+                        "featuretype": "city",
                         "format": "json",
                         "limit": 1,
                         "extratags": 1,
                         "addressdetails": 0,
-                        "countrycodes": "fr",
                     },
                     headers=headers,
                     timeout=10.0,
                 )
-                res_generic.raise_for_status()
-                generic_data = res_generic.json()
-                if generic_data:
-                    place = generic_data[0]
+                res_boundary.raise_for_status()
+                boundary_data = res_boundary.json()
+
+                if boundary_data:
+                    place = boundary_data[0]
                     lat = float(place["lat"])
                     lon = float(place["lon"])
-                    # Try area from fallback too
-                    if area_km2 is None:
-                        extratags = place.get("extratags") or {}
-                        area_m2 = extratags.get("area")
-                        if area_m2:
-                            try:
-                                area_km2 = round(float(area_m2) / 1_000_000, 1)
-                            except Exception:
-                                area_km2 = None
+                    extratags = place.get("extratags") or {}
+                    area_m2 = extratags.get("area")
+                    if area_m2:
+                        try:
+                            area_km2 = round(float(area_m2) / 1_000_000, 1)
+                        except Exception:
+                            area_km2 = None
 
-        if lat is None or lon is None:
-            raise HTTPException(status_code=404, detail=f"Ville '{city_key}' introuvable")
+                # 1b. Fallback: generic search (if boundary search found nothing)
+                if lat is None:
+                    res_generic = await client.get(
+                        "https://nominatim.openstreetmap.org/search",
+                        params={
+                            "q": city_key,
+                            "format": "json",
+                            "limit": 1,
+                            "extratags": 1,
+                            "addressdetails": 0,
+                            "countrycodes": "fr",
+                        },
+                        headers=headers,
+                        timeout=10.0,
+                    )
+                    res_generic.raise_for_status()
+                    generic_data = res_generic.json()
+                    if generic_data:
+                        place = generic_data[0]
+                        lat = float(place["lat"])
+                        lon = float(place["lon"])
+                        # Try area from fallback too
+                        if area_km2 is None:
+                            extratags = place.get("extratags") or {}
+                            area_m2 = extratags.get("area")
+                            if area_m2:
+                                try:
+                                    area_km2 = round(float(area_m2) / 1_000_000, 1)
+                                except Exception:
+                                    area_km2 = None
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erreur géocodage : {e}")
+            if lat is None or lon is None:
+                raise HTTPException(status_code=404, detail=f"Ville '{city_key}' introuvable")
 
-    # 2. Find nearby SNCF stations (up to 5) and calculate travel times
-    stations_raw = find_nearby_stations(lat, lon, radius=20000)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Erreur géocodage : {e}")
 
-    # Sort by haversine distance (proper great-circle) and take top 5
-    for s in stations_raw:
-        s["_dist_km"] = haversine_km(lat, lon, s["lat"], s["lon"])
-    stations_raw.sort(key=lambda s: s["_dist_km"])
-    stations_raw = stations_raw[:5]
+        # 2. Find nearby SNCF stations (up to 5) and calculate travel times
+        stations_raw = find_nearby_stations(lat, lon, radius=20000)
 
-    stations_out = []
-    for s in stations_raw:
-        times = calculate_station_times(lat, lon, s["lat"], s["lon"])
-        stations_out.append({
-            "name": s["name"],
-            "distance_km": round(s["_dist_km"], 1),
-            "walk": times.get("walk"),
-            "bike": times.get("bike"),
-            "car": times.get("car"),
-        })
+        # Sort by haversine distance (proper great-circle) and take top 5
+        for s in stations_raw:
+            s["_dist_km"] = haversine_km(lat, lon, s["lat"], s["lon"])
+        stations_raw.sort(key=lambda s: s["_dist_km"])
+        stations_raw = stations_raw[:5]
 
-    result = {
-        "city": city_key,
-        "area_km2": area_km2,
-        "stations": stations_out,
+        stations_out = []
+        for s in stations_raw:
+            times = calculate_station_times(lat, lon, s["lat"], s["lon"])
+            stations_out.append({
+                "name": s["name"],
+                "distance_km": round(s["_dist_km"], 1),
+                "walk": times.get("walk"),
+                "bike": times.get("bike"),
+                "car": times.get("car"),
+            })
+
+        geo_data = {
+            "city": city_key,
+            "area_km2": area_km2,
+            "stations": stations_out,
+        }
+        GEO_CACHE[cache_key] = geo_data
+
+    # Query matching listings dynamically (NOT cached, to reflect up-to-date data)
+    listings = db.query(Listing).filter(
+        (Listing.city.ilike(city_key)) | (Listing.location.ilike(f"%{city_key}%"))
+    ).order_by(Listing.date_added.desc()).all()
+
+    # Query active zone rule for this city (NOT cached)
+    zone_rule = db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city",
+        ZoneRule.name.ilike(city_key)
+    ).first()
+
+    zone_rule_info = None
+    if zone_rule:
+        zone_rule_info = {
+            "id": zone_rule.id,
+            "rule": zone_rule.rule,
+        }
+
+    return {
+        **geo_data,
+        "zone_rule": zone_rule_info,
+        "listings": [
+            {
+                "id": l.id,
+                "title": l.title,
+                "price": l.price,
+                "area": l.area,
+                "rooms": l.rooms,
+                "status": l.status.value if hasattr(l.status, 'value') else l.status,
+                "url": f"/listings/{l.id}",
+                "photos": json_to_photos(l.photos_local)
+            }
+            for l in listings
+        ]
     }
-    GEO_CACHE[cache_key] = result
-    return result
+
 
 
 @app.post("/api/profile")

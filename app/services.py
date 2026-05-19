@@ -150,6 +150,45 @@ async def fetch_basic_metadata(url: str) -> dict:
 
 # ─── Listing Creation from Scraped Data ───────────────────────────────────────
 
+def ensure_city_map_pin(city_name: str, db: Session):
+    """
+    Checks if a MapPin of type 'city' exists for the given city name (case-insensitive, cleaned).
+    If not, geocodes the city name and creates the MapPin.
+    """
+    if not city_name:
+        return
+    
+    import re
+    cleaned = city_name.strip()
+    cleaned = re.sub(r'\s*\(\d+\)\s*', '', cleaned)
+    cleaned = re.sub(r'\b\d{5}\b', '', cleaned)
+    cleaned = cleaned.strip()
+    if not cleaned:
+        return
+    
+    from app.models import MapPin
+    existing_pin = db.query(MapPin).filter(
+        MapPin.pin_type == "city",
+        db.func.lower(MapPin.title) == cleaned.lower()
+    ).first()
+    
+    if not existing_pin:
+        coords = get_coordinates(cleaned)
+        if coords:
+            lat, lon = coords
+            new_pin = MapPin(
+                title=cleaned.title(),
+                address=cleaned.title(),
+                lat=lat,
+                lon=lon,
+                pin_type="city",
+                created_by="System"
+            )
+            db.add(new_pin)
+            db.commit()
+            print(f"[Services] Automatically created MapPin for city: {cleaned.title()} at {lat}, {lon}")
+
+
 async def create_listing_from_details(
     db: Session,
     details: dict,
@@ -248,6 +287,10 @@ async def create_listing_from_details(
     # ── Géorisques Risk Report ──
     if listing.georisques_json is None:
         await update_listing_georisques(listing, db)
+
+    # ── Ensure City MapPin exists ──
+    if listing.city:
+        ensure_city_map_pin(listing.city, db)
 
     return listing, (not existing)
 
@@ -424,6 +467,8 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                         print(f"[Services] Error downloading photos for NEW listing {new_listing.id}: {e}")
 
                 await update_listing_georisques(new_listing, db)
+                if new_listing.city:
+                    ensure_city_map_pin(new_listing.city, db)
                 new_listing_objects.append(new_listing)
                 new_count += 1
             except Exception as e:
