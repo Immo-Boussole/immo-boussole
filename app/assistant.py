@@ -160,7 +160,10 @@ async def call_llm(messages: List[Dict[str, Any]], profile: Optional[AIProfile])
                 # Gemini format
                 url = f"{endpoint}?key={api_key}"
                 if not "generateContent" in endpoint:
-                    url = f"{endpoint}/models/{model}:generateContent?key={api_key}"
+                    base = endpoint.rstrip("/")
+                    if base.endswith("/models"):
+                        base = base[:-7]
+                    url = f"{base}/models/{model}:generateContent?key={api_key}"
                 
                 gemini_contents = []
                 system_prompt = ""
@@ -222,8 +225,11 @@ async def call_llm(messages: List[Dict[str, Any]], profile: Optional[AIProfile])
                     return {"message": {"role": "assistant", "content": part.get("text", "")}}
 
         except Exception as e:
-            logger.error(f"LLM API error: {e}")
-            return {"message": {"role": "assistant", "content": f"Erreur avec le fournisseur d'IA : {str(e)}" }}
+            error_str = str(e)
+            if api_key:
+                error_str = error_str.replace(api_key, "********")
+            logger.error(f"LLM API error: {error_str}")
+            return {"message": {"role": "assistant", "content": f"Erreur avec le fournisseur d'IA : {error_str}" }}
 
 async def run_assistant_step(user_input: str, history: List[Dict[str, Any]] = [], user_id: int = None, db: Session = None) -> Tuple[str, List[Dict[str, Any]]]:
     """Exécute une itération de l'assistant (gestion tool calling incluse)."""
