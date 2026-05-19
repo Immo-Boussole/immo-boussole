@@ -572,6 +572,9 @@
                                         <button class="btn secondary" onclick="changePassword({{ user.id }}, '{{ user.username }}')" title="{{ t(request, 'admin_users.btn_change_pwd') }}">
                                             <i class="fas fa-key"></i>
                                         </button>
+                                        <button class="btn secondary" onclick="openAssignAiModal({{ user.id }}, '{{ user.username }}')" title="Affecter un profil IA">
+                                            <i class="fa-solid fa-robot"></i>
+                                        </button>
                                         {% if user.username != request.session.get('username') %}
                                         <button class="btn danger" onclick="deleteUser({{ user.id }})" title="{{ t(request, 'admin_users.btn_delete') }}">
                                             <i class="fas fa-trash"></i>
@@ -622,6 +625,49 @@
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                     <button type="button" class="btn secondary" onclick="closeEditModal()">{{ t(request, 'admin_users.cancel') }}</button>
                     <button type="submit" class="btn">{{ t(request, 'admin_users.save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assign AI Profile Modal -->
+    <div class="modal-overlay" id="assignAiModal">
+        <div class="modal">
+            <h2>Affecter Profil IA à <span id="assignAiUsername" style="color: var(--accent);"></span></h2>
+            <form id="assignAiForm">
+                <input type="hidden" id="assignAiUserId">
+                
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <button type="button" class="btn sm secondary" onclick="prefillAdminAI('claude')">Claude</button>
+                    <button type="button" class="btn sm secondary" onclick="prefillAdminAI('chatgpt')">ChatGPT</button>
+                    <button type="button" class="btn sm secondary" onclick="prefillAdminAI('mistral')">Mistral</button>
+                    <button type="button" class="btn sm secondary" onclick="prefillAdminAI('google')">Gemini</button>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Nom du profil</label>
+                    <input type="text" id="adminAiName" required placeholder="Ex: ChatGPT Entreprise" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem; display:none;">
+                    <label>Fournisseur</label>
+                    <input type="text" id="adminAiProvider" required style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Point de terminaison</label>
+                    <input type="text" id="adminAiEndpoint" required style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Modèle</label>
+                    <input type="text" id="adminAiModel" required style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Clé API</label>
+                    <input type="password" id="adminAiApiKey" style="width: 100%;">
+                </div>
+                
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn secondary" onclick="closeAssignAiModal()">Annuler</button>
+                    <button type="submit" class="btn">Affecter</button>
                 </div>
             </form>
         </div>
@@ -759,6 +805,70 @@
             }
         };
 
+        // Assign AI Profile Modal Logic
+        function openAssignAiModal(id, username) {
+            document.getElementById('assignAiUserId').value = id;
+            document.getElementById('assignAiUsername').textContent = username;
+            document.getElementById('assignAiForm').reset();
+            prefillAdminAI('chatgpt');
+            document.getElementById('assignAiModal').classList.add('show');
+        }
+
+        function closeAssignAiModal() {
+            document.getElementById('assignAiModal').classList.remove('show');
+        }
+
+        function prefillAdminAI(provider) {
+            document.getElementById('adminAiProvider').value = provider;
+            
+            const mapping = {
+                'claude': {name: 'Anthropic Claude', endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-3-5-sonnet-20240620'},
+                'chatgpt': {name: 'OpenAI ChatGPT', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'},
+                'mistral': {name: 'Mistral AI', endpoint: 'https://api.mistral.ai/v1', model: 'mistral-large-latest'},
+                'google': {name: 'Google Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/models', model: 'gemini-1.5-pro-latest'}
+            };
+            
+            if (mapping[provider]) {
+                document.getElementById('adminAiName').value = mapping[provider].name + ' (Admin)';
+                document.getElementById('adminAiEndpoint').value = mapping[provider].endpoint;
+                document.getElementById('adminAiModel').value = mapping[provider].model;
+            }
+        }
+
+        document.getElementById('assignAiForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+
+            const payload = {
+                user_id: parseInt(document.getElementById('assignAiUserId').value),
+                name: document.getElementById('adminAiName').value,
+                provider: document.getElementById('adminAiProvider').value,
+                endpoint: document.getElementById('adminAiEndpoint').value,
+                model_name: document.getElementById('adminAiModel').value,
+                api_key: document.getElementById('adminAiApiKey').value
+            };
+
+            try {
+                const res = await fetch('/api/admin/ai/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showAlert('Profil IA affecté avec succès', 'success');
+                    closeAssignAiModal();
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        };
 
     </script>
     <script>
