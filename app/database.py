@@ -158,6 +158,11 @@ _MIGRATIONS = [
     ("global_settings", "db_check_interval",  "TEXT DEFAULT '24h'"),
     ("global_settings", "db_repair_automate", "BOOLEAN DEFAULT 0"),
     ("global_settings", "db_repair_interval", "TEXT DEFAULT '24h'"),
+
+    # global_settings — maintenance history v16
+    ("global_settings", "last_global_check",  "TEXT"),
+    ("global_settings", "last_checks_json",   "TEXT DEFAULT '{}'"),
+    ("global_settings", "last_repairs_json",  "TEXT DEFAULT '{}'"),
 ]
 
 

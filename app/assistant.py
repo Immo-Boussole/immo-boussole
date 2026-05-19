@@ -173,17 +173,41 @@ async def call_llm(messages: List[Dict[str, Any]], profile: Optional[AIProfile])
                     elif m["role"] == "user":
                         gemini_contents.append({"role": "user", "parts": [{"text": m["content"]}]})
                     elif m["role"] == "assistant":
+                        parts = []
                         if "tool_calls" in m:
-                            calls = []
                             for tc in m["tool_calls"]:
-                                calls.append({"functionCall": {"name": tc["function"]["name"], "args": json.loads(tc["function"]["arguments"])}})
-                            gemini_contents.append({"role": "model", "parts": calls})
+                                call_item = {
+                                    "functionCall": {
+                                        "name": tc["function"]["name"],
+                                        "args": json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"]
+                                    }
+                                }
+                                if tc.get("id") and tc["id"] != "default":
+                                    call_item["functionCall"]["id"] = tc["id"]
+                                parts.append(call_item)
                         else:
-                            gemini_contents.append({"role": "model", "parts": [{"text": m["content"]}]})
+                            parts.append({"text": m["content"]})
+                        
+                        # Preserve thought_signature if present
+                        ts = m.get("thought_signature") or m.get("thoughtSignature")
+                        if ts:
+                            parts.append({
+                                "thought_signature": ts
+                            })
+                        
+                        gemini_contents.append({"role": "model", "parts": parts})
                     elif m["role"] == "tool":
+                        response_part = {
+                            "functionResponse": {
+                                "name": m.get("name", "tool"),
+                                "response": {"result": m["content"]}
+                            }
+                        }
+                        if m.get("tool_call_id") and m["tool_call_id"] != "default":
+                            response_part["functionResponse"]["id"] = m["tool_call_id"]
                         gemini_contents.append({
                             "role": "user", 
-                            "parts": [{"functionResponse": {"name": m.get("name", "tool"), "response": {"result": m["content"]}}}]
+                            "parts": [response_part]
                         })
 
                 # Tools
@@ -205,31 +229,56 @@ async def call_llm(messages: List[Dict[str, Any]], profile: Optional[AIProfile])
                 resp.raise_for_status()
                 data = resp.json()
                 
-                part = data["candidates"][0]["content"]["parts"][0]
-                if "functionCall" in part:
-                    return {
-                        "message": {
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [{
-                                "id": "call_1",
-                                "type": "function",
-                                "function": {
-                                    "name": part["functionCall"]["name"],
-                                    "arguments": json.dumps(part["functionCall"]["args"])
-                                }
-                            }]
-                        }
+                parts = data["candidates"][0]["content"].get("parts", [])
+                fc_parts = [p["functionCall"] for p in parts if "functionCall" in p]
+                ts_parts = [p.get("thought_signature") or p.get("thoughtSignature") for p in parts if "thought_signature" in p or "thoughtSignature" in p]
+                text_content = "".join([p["text"] for p in parts if "text" in p])
+                
+                if fc_parts:
+                    tool_calls = []
+                    for i, fc in enumerate(fc_parts):
+                        fc_id = fc.get("id") or f"call_{i+1}"
+                        tool_calls.append({
+                            "id": fc_id,
+                            "type": "function",
+                            "function": {
+                                "name": fc["name"],
+                                "arguments": json.dumps(fc["args"]) if not isinstance(fc["args"], str) else fc["args"]
+                            }
+                        })
+                    msg = {
+                        "role": "assistant",
+                        "content": text_content,
+                        "tool_calls": tool_calls
                     }
+                    if ts_parts:
+                        msg["thought_signature"] = ts_parts[0]
+                    return {"message": msg}
                 else:
-                    return {"message": {"role": "assistant", "content": part.get("text", "")}}
+                    msg = {
+                        "role": "assistant",
+                        "content": text_content
+                    }
+                    if ts_parts:
+                        msg["thought_signature"] = ts_parts[0]
+                    return {"message": msg}
 
         except Exception as e:
             error_str = str(e)
-            if api_key:
-                error_str = error_str.replace(api_key, "********")
+            import re
+            error_str = re.sub(r"key=[^&'\s]+", "key=********", error_str)
+            
+            # Log detailed response body if available
+            response_body = ""
+            if hasattr(e, "response") and e.response is not None:
+                try:
+                    response_body = e.response.text
+                    logger.error(f"LLM API Detail: {response_body}")
+                except Exception:
+                    pass
+            
             logger.error(f"LLM API error: {error_str}")
-            return {"message": {"role": "assistant", "content": f"Erreur avec le fournisseur d'IA : {error_str}" }}
+            return {"message": {"role": "assistant", "content": f"Erreur avec le fournisseur d'IA : {error_str}" + (f" | Détails : {response_body}" if response_body else "") }}
 
 async def run_assistant_step(user_input: str, history: List[Dict[str, Any]] = [], user_id: int = None, db: Session = None) -> Tuple[str, List[Dict[str, Any]]]:
     """Exécute une itération de l'assistant (gestion tool calling incluse)."""

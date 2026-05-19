@@ -280,6 +280,11 @@ class GlobalSettings(Base):
     db_repair_automate = Column(Boolean, default=False)
     db_repair_interval = Column(String, default="24h")
 
+    # DB Maintenance History
+    last_global_check = Column(String, nullable=True)
+    last_checks_json = Column(String, nullable=True, default="{}")
+    last_repairs_json = Column(String, nullable=True, default="{}")
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 

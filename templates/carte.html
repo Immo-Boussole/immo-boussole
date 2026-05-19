@@ -621,6 +621,103 @@
             font-size: 0.82rem;
         }
 
+        /* Enriched City Panel Styling */
+        .city-listings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .city-listing-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            transition: var(--trans);
+            text-decoration: none;
+            color: inherit;
+        }
+        .city-listing-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: var(--surface-2);
+        }
+        .city-listing-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.05);
+        }
+        .city-listing-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex: 1;
+            min-width: 0;
+        }
+        .city-listing-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .city-listing-price {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .city-listing-details {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .city-listing-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .city-listing-status.nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .city-listing-status.active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .city-listing-status.disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        
+        .city-zone-controls {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .city-zone-rule-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .city-zone-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .city-zone-badge.forbidden { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        .city-zone-badge.allowed { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+
         @media (max-width: 768px) {
             .city-panel { width: 100%; right: -100%; }
             .city-panel.open { right: 0; }
@@ -1019,7 +1116,7 @@
                             <div class="map-popup-specs">${specs}</div>
                             <div class="map-popup-loc">
                                 <i class="fa-solid fa-location-dot"></i> 
-                                <span class="city-link" onclick="highlightCityContour('${(l.city || l.location || '').replace(/'/g, "\\'")}', true)">
+                                <span class="city-link" onclick="openCityPanel(event, '${(l.city || l.location || '').replace(/'/g, "\\'")}')">
                                     ${l.location || l.city}
                                 </span>
                             </div>
@@ -1102,7 +1199,7 @@
                 loadTrainLines();
 
                 // 6. Zone Rules (Forbidden/Allowed)
-                loadZoneRules(data.zone_rules || []);
+                loadZoneRules(data.zone_rules || [], data.to_qualify_cities || []);
 
             } catch (err) {
                 console.error("Error loading map data:", err);
@@ -1718,7 +1815,7 @@
 
         // ── City Info Panel ──
         function openCityPanel(event, cityName) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             const panel = document.getElementById('cityInfoPanel');
             const nameEl = document.getElementById('cityPanelName');
             const body = document.getElementById('cityPanelBody');
@@ -1732,7 +1829,7 @@
             panel.classList.add('open');
 
             fetchCityInfo(cityName);
-            highlightCityContour(cityName, false);
+            highlightCityContour(cityName, true);
         }
 
         function closeCityPanel() {
@@ -1773,8 +1870,46 @@
 
         function renderCityInfo(data) {
             const body = document.getElementById('cityPanelBody');
+            const cityName = data.city;
+            const safeCityName = cityName.replace(/'/g, "\\'");
 
-            // Area card
+            // 1. Zone Management Card
+            let zoneHtml = `
+            <div class="city-section-title"><i class="fa-solid fa-ban"></i> Gestion de la zone</div>
+            <div class="city-zone-controls">`;
+
+            if (data.zone_rule) {
+                const isForbidden = data.zone_rule.rule === 'forbidden';
+                const badgeClass = isForbidden ? 'forbidden' : 'allowed';
+                const badgeLabel = isForbidden ? 'Zone Interdite' : 'Zone Autorisée';
+                const badgeIcon = isForbidden ? 'fa-ban' : 'fa-check';
+
+                zoneHtml += `
+                <div class="city-zone-rule-status">
+                    <span class="city-zone-badge ${badgeClass}">
+                        <i class="fa-solid ${badgeIcon}"></i> ${badgeLabel}
+                    </span>
+                    <button class="map-popup-delete" style="margin: 0; padding: 0.4rem 0.8rem;" onclick="deleteZoneFromPanel(${data.zone_rule.id}, '${safeCityName}')">
+                        <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                    </button>
+                </div>`;
+            } else {
+                zoneHtml += `
+                <div style="font-size: 0.8rem; color: var(--text-2); line-height: 1.4;">
+                    Cette ville n'est pas configurée dans vos règles de zones géographiques.
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 4px;">
+                    <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'allowed')">
+                        <i class="fa-solid fa-check"></i> Autoriser
+                    </button>
+                    <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'forbidden')">
+                        <i class="fa-solid fa-ban"></i> Interdire
+                    </button>
+                </div>`;
+            }
+            zoneHtml += `</div>`;
+
+            // 2. Surface total Card
             let areaHtml = '';
             if (data.area_km2 != null) {
                 areaHtml = `
@@ -1799,7 +1934,61 @@
                 </div>`;
             }
 
-            // Stations section
+            // 3. Listings Section
+            let listingsHtml = '';
+            if (data.listings && data.listings.length > 0) {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières (${data.listings.length})</div>
+                <div class="city-listings-list">`;
+                
+                data.listings.forEach(l => {
+                    const priceStr = typeof l.price === 'number' ? l.price.toLocaleString('fr-FR') + ' €' : (l.price || 'N/C');
+                    const specs = `${l.area ? l.area + ' m²' : ''} ${l.area && l.rooms ? '•' : ''} ${l.rooms ? l.rooms + ' p.' : ''}`.trim() || 'N/C';
+                    
+                    // Photo handling
+                    let imgHtml = `<div class="city-listing-img" style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);"><i class="fa-solid fa-image fa-lg"></i></div>`;
+                    if (l.photos && l.photos.length > 0) {
+                        imgHtml = `<img src="${l.photos[0]}" class="city-listing-img" alt="${l.title || ''}" onerror="this.outerHTML='<div class=&quot;city-listing-img&quot; style=&quot;display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);&quot;><i class=&quot;fa-solid fa-image fa-lg&quot;></i></div>'">`;
+                    }
+
+                    // Status handling
+                    let statusLabel = '';
+                    let statusClass = '';
+                    const statusLower = (l.status || '').toLowerCase();
+                    if (statusLower === 'new' || statusLower === 'nouvelle') {
+                        statusLabel = 'Nouvelle';
+                        statusClass = 'nouvelle';
+                    } else if (statusLower === 'active') {
+                        statusLabel = 'Active';
+                        statusClass = 'active';
+                    } else if (statusLower === 'disappeared' || statusLower === 'disparue') {
+                        statusLabel = 'Disparue';
+                        statusClass = 'disparue';
+                    }
+
+                    const statusHtml = statusLabel ? `<span class="city-listing-status ${statusClass}">${statusLabel}</span>` : '';
+
+                    listingsHtml += `
+                    <a href="${l.url}" class="city-listing-card" target="_blank">
+                        ${imgHtml}
+                        <div class="city-listing-info">
+                            <div class="city-listing-title" title="${l.title || ''}">${l.title || ''}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span class="city-listing-price">${priceStr}</span>
+                                ${statusHtml}
+                            </div>
+                            <div class="city-listing-details">${specs}</div>
+                        </div>
+                    </a>`;
+                });
+                listingsHtml += `</div>`;
+            } else {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières</div>
+                <div style="color: var(--text-2); font-size: 0.82rem; padding: 0.5rem 0;">Aucune annonce active dans cette ville.</div>`;
+            }
+
+            // 4. Stations section
             let stationsHtml = '';
             if (data.stations && data.stations.length > 0) {
                 stationsHtml = `<div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF à proximité</div>`;
@@ -1844,7 +2033,43 @@
                 <div style="color: var(--text-2); font-size: 0.82rem;">Aucune gare trouvée dans un rayon de 20 km.</div>`;
             }
 
-            body.innerHTML = areaHtml + stationsHtml;
+            body.innerHTML = zoneHtml + areaHtml + listingsHtml + stationsHtml;
+        }
+
+        async function addZoneFromPanel(name, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name, rule })
+                });
+                if (res.ok) {
+                    delete _cityInfoCache[name];
+                    loadMapData();
+                    fetchCityInfo(name);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
+        async function deleteZoneFromPanel(ruleId, cityName) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    delete _cityInfoCache[cityName];
+                    loadMapData();
+                    fetchCityInfo(cityName);
+                } else {
+                    alert("Erreur: Action impossible");
+                }
+            } catch (err) {
+                console.error("Error deleting zone rule:", err);
+            }
         }
 
         // ── Main City Search Logic ──
@@ -1916,7 +2141,7 @@
         });
 
         // ── Zone Rules (Forbidden/Allowed) Logic ──
-        async function loadZoneRules(rules) {
+        async function loadZoneRules(rules, toQualifyCities = []) {
             zoneRulesLayer.clearLayers();
             for (const rule of rules) {
                 if (rule.zone_type === 'city') {
@@ -1924,6 +2149,9 @@
                 } else if (rule.zone_type === 'station') {
                     renderStationZone(rule);
                 }
+            }
+            for (const cityName of toQualifyCities) {
+                renderToQualifyCityZone(cityName);
             }
         }
 
@@ -1936,7 +2164,7 @@
                     let city = data.find(c => c.nom.toLowerCase() === rule.name.toLowerCase()) || data[0];
                     if (city.contour) {
                         const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
-                        L.geoJSON(city.contour, {
+                        const geoJsonLayer = L.geoJSON(city.contour, {
                             style: {
                                 color: color,
                                 weight: 2,
@@ -1944,19 +2172,80 @@
                                 fillOpacity: 0.2,
                                 fillColor: color
                             }
-                        }).bindPopup(`
-                                <strong>${city.nom}</strong><br>
-                                Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}
-                                <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
-                                    <button class="map-popup-delete" onclick="deleteZoneRule(${rule.id})">
+                        }).addTo(zoneRulesLayer);
+
+                        // Click opens the city panel
+                        geoJsonLayer.on('click', function(e) {
+                            openCityPanel(e.originalEvent, city.nom);
+                        });
+
+                        // Premium layout for Leaflet Popup
+                        geoJsonLayer.bindPopup(`
+                            <div style="text-align: center; min-width: 180px;">
+                                <strong style="font-size: 1.05rem; color: var(--text);">${city.nom}</strong><br>
+                                <span style="font-size: 0.85rem; color: var(--text-2);">Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}</span>
+                                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                    <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${city.nom.replace(/'/g, "\\'")}')">
+                                        <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                    </button>
+                                    <button class="map-popup-delete" style="justify-content: center; margin: 0;" onclick="deleteZoneRule(${rule.id})">
                                         <i class="fa-solid fa-trash-can"></i> Supprimer la règle
                                     </button>
                                 </div>
-                            `)
-                          .addTo(zoneRulesLayer);
+                            </div>
+                        `);
                     }
                 }
             } catch (e) { console.error("Error rendering city zone:", e); }
+        }
+
+        async function renderToQualifyCityZone(cityName) {
+            try {
+                const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityName)}&fields=nom,code,contour&format=json&geometry=contour`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    let city = data.find(c => c.nom.toLowerCase() === cityName.toLowerCase()) || data[0];
+                    if (city.contour) {
+                        const color = 'var(--yellow)';
+                        const geoJsonLayer = L.geoJSON(city.contour, {
+                            style: {
+                                color: color,
+                                weight: 2,
+                                opacity: 0.8,
+                                fillOpacity: 0.2,
+                                fillColor: color
+                            }
+                        }).addTo(zoneRulesLayer);
+
+                        // Click opens the city panel
+                        geoJsonLayer.on('click', function(e) {
+                            openCityPanel(e.originalEvent, city.nom);
+                        });
+
+                        // Premium layout for Leaflet Popup
+                        geoJsonLayer.bindPopup(`
+                            <div style="text-align: center; min-width: 180px;">
+                                <strong style="font-size: 1.05rem; color: var(--text);">${city.nom}</strong><br>
+                                <span style="font-size: 0.85rem; color: var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Zone à Qualifier</span>
+                                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                    <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${city.nom.replace(/'/g, "\\'")}')">
+                                        <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                    </button>
+                                    <div style="display: flex; gap: 4px;">
+                                        <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--green); color: white;" onclick="addZoneRuleFromMap('${city.nom.replace(/'/g, "\\'")}', 'city', 'allowed')">
+                                            Autoriser
+                                        </button>
+                                        <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--red); color: white;" onclick="addZoneRuleFromMap('${city.nom.replace(/'/g, "\\'")}', 'city', 'forbidden')">
+                                            Interdire
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                }
+            } catch (e) { console.error("Error rendering to_qualify city zone:", e); }
         }
 
         async function renderStationZone(rule) {
@@ -2061,6 +2350,11 @@
                             }
                         }).addTo(map);
 
+                        // Click opens the city panel
+                        window.currentCityLayer.on('click', function(e) {
+                            openCityPanel(e.originalEvent, city.nom);
+                        });
+
                         if (fitBounds) {
                             map.fitBounds(window.currentCityLayer.getBounds(), { padding: [50, 50] });
                         }
@@ -2086,6 +2380,11 @@
                     }
                 }).addTo(map);
                 
+                // Click opens the city panel
+                currentCityContourLayer.on('click', function(e) {
+                    openCityPanel(e.originalEvent, city.nom);
+                });
+
                 map.fitBounds(currentCityContourLayer.getBounds(), { padding: [50, 50] });
 
                 const center = currentCityContourLayer.getBounds().getCenter();
