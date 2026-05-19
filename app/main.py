@@ -337,6 +337,8 @@ class AIProfileAssignAdmin(BaseModel):
     api_key: Optional[str] = None
 
 
+from pydantic import BaseModel, field_serializer
+
 class AIProfileResponse(BaseModel):
     id: int
     user_id: int
@@ -351,11 +353,9 @@ class AIProfileResponse(BaseModel):
     class Config:
         from_attributes = True
 
-    def dict(self, *args, **kwargs):
-        d = super().model_dump(*args, **kwargs)
-        if d.get("api_key"):
-            d["api_key"] = "********"
-        return d
+    @field_serializer("api_key")
+    def mask_api_key(self, api_key: Optional[str], _info):
+        return "********" if api_key else None
 
 
 
