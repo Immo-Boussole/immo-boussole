@@ -397,6 +397,24 @@
                             <i class="fa-solid fa-paper-plane"></i> {{ t(request, 'profile.test_notif_btn', 'Tester la notification') }}
                         </button>
                     </div>
+                    <!-- Section: Assistant IA -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-robot"></i>
+                            <h2>Profils Assistant IA</h2>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
+                            Gérez vos clés d'API et modèles pour l'Assistant IA. Le profil par défaut sera utilisé pour le chat.
+                        </p>
+                        
+                        <div id="ai_profiles_list" style="margin-bottom: 1rem;">
+                            <!-- AI Profiles injected here -->
+                        </div>
+
+                        <button type="button" class="btn" style="width: 100%; justify-content: center;" onclick="showAddProfileModal()">
+                            <i class="fa-solid fa-plus"></i> Ajouter un profil IA
+                        </button>
+                    </div>
 
                     <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                         <button type="submit" class="btn primary" id="saveBtn">
@@ -411,8 +429,210 @@
 
     <div id="toast" class="toast">{{ t(request, 'profile.saved_msg', 'Profil mis à jour avec succès !') }}</div>
 
+    <!-- Modal pour ajouter un profil IA -->
+    <div id="addProfileModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
+        <div class="card" style="width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; position:relative;">
+            <button onclick="hideAddProfileModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:var(--text); cursor:pointer; font-size:1.2rem;"><i class="fa-solid fa-times"></i></button>
+            <h2 style="margin-bottom: 1rem;"><i class="fa-solid fa-robot" style="color:var(--accent); margin-right:0.5rem;"></i> Nouveau profil IA</h2>
+            
+            <div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap;">
+                <button type="button" class="btn sm" onclick="prefillAI('claude')">Claude</button>
+                <button type="button" class="btn sm" onclick="prefillAI('chatgpt')">ChatGPT</button>
+                <button type="button" class="btn sm" onclick="prefillAI('mistral')">Mistral</button>
+                <button type="button" class="btn sm" onclick="prefillAI('google')">Google Gemini</button>
+                <button type="button" class="btn sm" onclick="prefillAI('openai-compatible')">Autre (OpenAI)</button>
+            </div>
+
+            <form id="aiProfileForm" onsubmit="saveAiProfile(event)">
+                <div class="form-group">
+                    <label>Nom du profil</label>
+                    <input type="text" id="ai_name" required placeholder="Ex: Mon ChatGPT Personnel">
+                </div>
+                <div class="form-group" style="display:none;">
+                    <label>Fournisseur</label>
+                    <input type="text" id="ai_provider" required>
+                </div>
+                <div class="form-group">
+                    <label>Point de terminaison (Endpoint)</label>
+                    <input type="text" id="ai_endpoint" required placeholder="Ex: https://api.openai.com/v1">
+                </div>
+                <div class="form-group">
+                    <label>Nom du modèle</label>
+                    <input type="text" id="ai_model" required placeholder="Ex: gpt-4o">
+                </div>
+                <div class="form-group">
+                    <label>Clé d'API (Optionnel si géré localement)</label>
+                    <input type="password" id="ai_apikey" placeholder="sk-...">
+                </div>
+                <button type="submit" class="btn primary" style="width:100%; justify-content:center;">Ajouter le profil</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         let pois = {{ (user.poi_json or '[]') | safe }};
+        let aiProfiles = [];
+
+        async function loadAiProfiles() {
+            try {
+                const res = await fetch('/api/ai/profiles');
+                if (res.ok) {
+                    aiProfiles = await res.json();
+                    renderAiProfiles();
+                }
+            } catch (err) {
+                console.error("Erreur de chargement des profils IA", err);
+            }
+        }
+
+        function renderAiProfiles() {
+            const list = document.getElementById('ai_profiles_list');
+            list.innerHTML = '';
+            
+            if (aiProfiles.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-2); font-size:0.9rem; font-style:italic;">Aucun profil IA configuré.</p>';
+                return;
+            }
+
+            aiProfiles.forEach(p => {
+                const isDefault = p.is_default;
+                const isAdmin = p.created_by_admin;
+                const row = document.createElement('div');
+                row.style.cssText = `background: var(--surface-2); border: 1px solid ${isDefault ? 'var(--accent)' : 'var(--border)'}; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; position: relative;`;
+                
+                row.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                        <div>
+                            <div style="font-weight:700; font-size:1rem; display:flex; align-items:center; gap:0.5rem;">
+                                ${p.name}
+                                ${isDefault ? '<span style="background:var(--accent); color:#fff; font-size:0.6rem; padding:0.1rem 0.4rem; border-radius:4px; text-transform:uppercase;">Défaut</span>' : ''}
+                                ${isAdmin ? '<span style="background:var(--orange); color:#000; font-size:0.6rem; padding:0.1rem 0.4rem; border-radius:4px; text-transform:uppercase;"><i class="fa-solid fa-lock"></i> Admin</span>' : ''}
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-2); margin-top:0.25rem;">
+                                <span style="text-transform:uppercase; font-size:0.7rem; border:1px solid var(--border); padding:0.1rem 0.3rem; border-radius:4px;">${p.provider}</span>
+                                ${p.model_name}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:0.5rem;">
+                            ${!isDefault ? `<button type="button" class="btn sm" onclick="setDefaultProfile(${p.id})" title="Définir par défaut"><i class="fa-solid fa-star"></i></button>` : ''}
+                            <button type="button" class="btn sm" onclick="checkQuota(${p.id})" title="Vérifier le quota" id="btn_quota_${p.id}"><i class="fa-solid fa-bolt"></i></button>
+                            ${!isAdmin ? `<button type="button" class="btn sm danger" onclick="deleteProfile(${p.id})" title="Supprimer"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-2); margin-top:0.5rem; background:rgba(0,0,0,0.2); padding:0.5rem; border-radius:6px; font-family:monospace;">
+                        API Key: ${p.api_key || 'Non définie'}
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function showAddProfileModal() {
+            document.getElementById('addProfileModal').style.display = 'flex';
+            document.getElementById('aiProfileForm').reset();
+            prefillAI('openai-compatible'); // default
+        }
+
+        function hideAddProfileModal() {
+            document.getElementById('addProfileModal').style.display = 'none';
+        }
+
+        function prefillAI(provider) {
+            document.getElementById('ai_provider').value = provider;
+            
+            const mapping = {
+                'claude': {name: 'Anthropic Claude', endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-3-5-sonnet-20240620'},
+                'chatgpt': {name: 'OpenAI ChatGPT', endpoint: 'https://api.openai.com/v1', model: 'gpt-4o'},
+                'mistral': {name: 'Mistral AI', endpoint: 'https://api.mistral.ai/v1', model: 'mistral-large-latest'},
+                'google': {name: 'Google Gemini', endpoint: 'https://generativelanguage.googleapis.com/v1beta/models', model: 'gemini-1.5-pro-latest'},
+                'openai-compatible': {name: 'Serveur Local (Ollama, LMStudio, etc)', endpoint: 'http://localhost:11434/v1', model: 'llama3'}
+            };
+            
+            if (mapping[provider]) {
+                document.getElementById('ai_name').value = mapping[provider].name;
+                document.getElementById('ai_endpoint').value = mapping[provider].endpoint;
+                document.getElementById('ai_model').value = mapping[provider].model;
+            }
+        }
+
+        async function saveAiProfile(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Ajout...';
+
+            const payload = {
+                name: document.getElementById('ai_name').value,
+                provider: document.getElementById('ai_provider').value,
+                endpoint: document.getElementById('ai_endpoint').value,
+                model_name: document.getElementById('ai_model').value,
+                api_key: document.getElementById('ai_apikey').value
+            };
+
+            try {
+                const res = await fetch('/api/ai/profiles', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    hideAddProfileModal();
+                    await loadAiProfiles();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Impossible d'ajouter le profil"));
+                }
+            } catch(err) {
+                console.error(err);
+                alert("Erreur réseau");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Ajouter le profil';
+            }
+        }
+
+        async function deleteProfile(id) {
+            if(!confirm("Supprimer ce profil ?")) return;
+            try {
+                const res = await fetch(`/api/ai/profiles/${id}`, {method: 'DELETE'});
+                if(res.ok) await loadAiProfiles();
+            } catch(e) { console.error(e); }
+        }
+
+        async function setDefaultProfile(id) {
+            try {
+                const res = await fetch(`/api/ai/profiles/${id}/default`, {method: 'PUT'});
+                if(res.ok) await loadAiProfiles();
+            } catch(e) { console.error(e); }
+        }
+
+        async function checkQuota(id) {
+            const btn = document.getElementById(`btn_quota_${id}`);
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/ai/profiles/${id}/quota`, {method: 'POST'});
+                const data = await res.json();
+                
+                if (data.status === 'ok') {
+                    alert("Succès : " + data.message);
+                } else if (data.status === 'error') {
+                    alert("Erreur : " + data.message);
+                } else {
+                    alert("Attention : " + data.message);
+                }
+            } catch(e) {
+                alert("Erreur lors de la vérification");
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+
+
 
         function renderPois() {
             const list = document.getElementById('poi_list');
@@ -520,6 +740,7 @@
 
         // Init
         renderPois();
+        loadAiProfiles();
     </script>
     <script>
         if ('serviceWorker' in navigator) {

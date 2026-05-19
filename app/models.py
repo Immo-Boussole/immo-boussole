@@ -307,3 +307,25 @@ class RejectedDuplicate(Base):
     listing_a_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
     listing_b_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
     rejected_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIProfile(Base):
+    """
+    Stores API profiles for the AI Assistant.
+    """
+    __tablename__ = "ai_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    provider = Column(String, nullable=False)  # claude, chatgpt, mistral, google, openai-compatible
+    endpoint = Column(String, nullable=False)
+    model_name = Column(String, nullable=False)
+    api_key = Column(String, nullable=True)
+    is_default = Column(Boolean, default=False)
+    created_by_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", backref="ai_profiles")
+

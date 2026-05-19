@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -318,6 +318,45 @@ class ZoneRuleRequest(BaseModel):
         if v not in ["forbidden", "allowed"]:
             raise ValueError("rule must be 'forbidden' or 'allowed'")
         return v
+
+
+class AIProfileCreate(BaseModel):
+    name: str
+    provider: str
+    endpoint: str
+    model_name: str
+    api_key: Optional[str] = None
+
+
+class AIProfileAssignAdmin(BaseModel):
+    user_id: int
+    name: str
+    provider: str
+    endpoint: str
+    model_name: str
+    api_key: Optional[str] = None
+
+
+class AIProfileResponse(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    provider: str
+    endpoint: str
+    model_name: str
+    is_default: bool
+    created_by_admin: bool
+    api_key: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+    def dict(self, *args, **kwargs):
+        d = super().model_dump(*args, **kwargs)
+        if d.get("api_key"):
+            d["api_key"] = "********"
+        return d
+
 
 
 # ─── Scraper Resolution Helper ────────────────────────────────────────────
@@ -1498,15 +1537,235 @@ def chat_page(
     })
 
 
+# ─── API: AI Profiles ─────────────────────────────────────────────────────────
+
+@app.get("/api/ai/profiles", response_model=list[AIProfileResponse])
+def get_ai_profiles(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    profiles = db.query(AIProfile).filter(AIProfile.user_id == user.id).order_by(AIProfile.created_at.asc()).all()
+    return profiles
+
+
+@app.post("/api/ai/profiles", response_model=AIProfileResponse)
+def create_ai_profile(
+    request: Request,
+    body: AIProfileCreate,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    # If this is their first profile, make it default
+    is_first = db.query(AIProfile).filter(AIProfile.user_id == user.id).count() == 0
+    
+    profile = AIProfile(
+        user_id=user.id,
+        name=body.name.strip(),
+        provider=body.provider,
+        endpoint=body.endpoint.strip(),
+        model_name=body.model_name.strip(),
+        api_key=body.api_key.strip() if body.api_key else None,
+        is_default=is_first,
+        created_by_admin=False
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+@app.delete("/api/ai/profiles/{profile_id}")
+def delete_ai_profile(
+    request: Request,
+    profile_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    profile = db.query(AIProfile).filter(AIProfile.id == profile_id, AIProfile.user_id == user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+        
+    was_default = profile.is_default
+    db.delete(profile)
+    db.commit()
+    
+    # If we deleted the default profile, set another one as default if any exist
+    if was_default:
+        next_profile = db.query(AIProfile).filter(AIProfile.user_id == user.id).first()
+        if next_profile:
+            next_profile.is_default = True
+            db.commit()
+            
+    return {"status": "deleted"}
+
+
+@app.put("/api/ai/profiles/{profile_id}/default")
+def set_default_ai_profile(
+    request: Request,
+    profile_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    profile = db.query(AIProfile).filter(AIProfile.id == profile_id, AIProfile.user_id == user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+        
+    # Unset default for all other profiles of this user
+    db.query(AIProfile).filter(AIProfile.user_id == user.id).update({"is_default": False})
+    
+    profile.is_default = True
+    db.commit()
+    return {"status": "success"}
+
+
+@app.post("/api/ai/profiles/{profile_id}/quota")
+async def check_ai_profile_quota(
+    request: Request,
+    profile_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    import httpx
+    
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    profile = db.query(AIProfile).filter(AIProfile.id == profile_id, AIProfile.user_id == user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+        
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            if profile.provider in ["chatgpt", "openai-compatible"]:
+                # Try to list models (lightweight endpoint)
+                headers = {"Authorization": f"Bearer {profile.api_key}"} if profile.api_key else {}
+                endpoint = profile.endpoint.rstrip("/")
+                if not endpoint.endswith("/v1"):
+                    endpoint = f"{endpoint}/v1"
+                resp = await client.get(f"{endpoint}/models", headers=headers)
+                if resp.status_code == 200:
+                    return {"status": "ok", "message": "Connexion réussie et clé valide."}
+                elif resp.status_code == 401:
+                    return {"status": "error", "message": "Clé API invalide ou non autorisée."}
+                elif resp.status_code == 429:
+                    return {"status": "error", "message": "Quota dépassé (Too Many Requests)."}
+                else:
+                    return {"status": "warning", "message": f"Statut inattendu: {resp.status_code}"}
+                    
+            elif profile.provider == "claude":
+                # Anthropic API test
+                headers = {
+                    "x-api-key": profile.api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json"
+                }
+                # Create a minimal message
+                data = {
+                    "model": profile.model_name or "claude-3-haiku-20240307",
+                    "max_tokens": 1,
+                    "messages": [{"role": "user", "content": "Hello"}]
+                }
+                endpoint = profile.endpoint or "https://api.anthropic.com/v1/messages"
+                resp = await client.post(endpoint, headers=headers, json=data)
+                if resp.status_code == 200:
+                    return {"status": "ok", "message": "Connexion réussie et clé valide."}
+                elif resp.status_code in [401, 403]:
+                    return {"status": "error", "message": "Clé API invalide ou refusée."}
+                elif resp.status_code == 429:
+                    return {"status": "error", "message": "Quota dépassé / Plus de crédits."}
+                else:
+                    return {"status": "warning", "message": f"Erreur {resp.status_code}."}
+                    
+            elif profile.provider == "mistral":
+                headers = {"Authorization": f"Bearer {profile.api_key}"}
+                endpoint = profile.endpoint or "https://api.mistral.ai/v1/models"
+                resp = await client.get(endpoint, headers=headers)
+                if resp.status_code == 200:
+                    return {"status": "ok", "message": "Connexion réussie et clé valide."}
+                elif resp.status_code == 401:
+                    return {"status": "error", "message": "Clé API invalide."}
+                elif resp.status_code == 429:
+                    return {"status": "error", "message": "Quota dépassé."}
+                else:
+                    return {"status": "warning", "message": f"Statut: {resp.status_code}"}
+                    
+            elif profile.provider == "google":
+                # Google Gemini test
+                # Endpoint is typically: https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY
+                endpoint = profile.endpoint or "https://generativelanguage.googleapis.com/v1beta/models"
+                url = f"{endpoint}?key={profile.api_key}"
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    return {"status": "ok", "message": "Connexion réussie et clé valide."}
+                elif resp.status_code in [400, 403]:
+                    return {"status": "error", "message": "Clé API invalide ou accès refusé."}
+                elif resp.status_code == 429:
+                    return {"status": "error", "message": "Quota dépassé."}
+                else:
+                    return {"status": "warning", "message": f"Statut: {resp.status_code}"}
+            else:
+                return {"status": "warning", "message": "Test non supporté pour ce fournisseur."}
+    except Exception as e:
+        return {"status": "error", "message": f"Erreur réseau: {str(e)}"}
+
+
+@app.post("/api/admin/ai/profiles", response_model=AIProfileResponse)
+def create_ai_profile_admin(
+    body: AIProfileAssignAdmin,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    user = db.query(models.User).filter(models.User.id == body.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur cible non trouvé")
+        
+    profile = AIProfile(
+        user_id=user.id,
+        name=body.name.strip(),
+        provider=body.provider,
+        endpoint=body.endpoint.strip(),
+        model_name=body.model_name.strip(),
+        api_key=body.api_key.strip() if body.api_key else None,
+        is_default=False, # Do not overwrite user's default!
+        created_by_admin=True
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
 @app.post("/api/chat")
+
 async def chat_api(
+    request: Request,
     body: ChatRequest,
+    db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
     """
-    Endpoint de discussion avec l'assistant IA (Ollama).
+    Endpoint de discussion avec l'assistant IA.
     """
-    content, new_history = await run_assistant_step(body.message, body.history)
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    user_id = user.id if user else None
+
+    content, new_history = await run_assistant_step(body.message, body.history, user_id=user_id, db=db)
     # Filter out system prompt and internal messages for the frontend if necessary
     # or just return everything
     return {"content": content, "history": new_history}
