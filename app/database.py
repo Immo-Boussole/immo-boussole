@@ -163,6 +163,9 @@ _MIGRATIONS = [
     ("global_settings", "last_global_check",  "TEXT"),
     ("global_settings", "last_checks_json",   "TEXT DEFAULT '{}'"),
     ("global_settings", "last_repairs_json",  "TEXT DEFAULT '{}'"),
+
+    # global_settings - allowed departments v17
+    ("global_settings", "allowed_departments", "TEXT"),
 ]
 
 

@@ -348,6 +348,14 @@
             margin-right: 0.25rem;
         }
 
+        .vertical-separator {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 0.25rem;
+            align-self: center;
+        }
+
         .d-mobile { display: none; }
         .d-desktop { display: inline; }
 
@@ -1250,18 +1258,23 @@
                 <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
                     <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
                 </button>
+                <div class="vertical-separator"></div>
+                <button class="btn" id="f-rejected" onclick="filter('rejetee', this)" style="color: var(--orange);">
+                    <i class="fa-solid fa-ban"></i> {{ t(request, 'dashboard.rejected', 'Rejetées') }}
+                </button>
+                <div class="vertical-separator"></div>
                 <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
                     <i class="fa-solid fa-heart"></i> Coup de cœur
                 </button>
                 <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
                     <i class="fa-solid fa-thumbs-up"></i> J'aime
                 </button>
-            </div>
-
-            <div class="filter-actions">
                 <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
                     <i class="fa-solid fa-thumbs-down"></i> Je n'aime pas
                 </button>
+            </div>
+
+            <div class="filter-actions">
                 <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
                     <i class="fa-solid fa-rotate"></i> 
                     <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>

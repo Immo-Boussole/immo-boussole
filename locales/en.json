@@ -346,7 +346,16 @@
         "no_pros": "No pros recorded yet.",
         "no_cons": "No cons recorded yet.",
         "dpe_dist": "DPE Distribution",
-        "top_listings": "Top listings"
+        "top_listings": "Top listings",
+        "coup_de_coeur_title": "Favorites Selection",
+        "coup_de_coeur_desc": "Listings highly rated by the team (ratings ≥ 7.0/10)",
+        "filter_all": "All",
+        "filter_general": "General favorite (100%)",
+        "filter_user": "{user}'s favorite",
+        "voted_by": "Voted by",
+        "no_favorites_found": "No favorites found with this filter",
+        "no_favorites_at_all": "No favorites recorded yet.",
+        "no_favorites_desc": "When a standard user gives a property a rating of ≥ 7.0, it will appear here."
     },
     "ready_searches": {
         "title": "Ready to search",

@@ -243,10 +243,15 @@
         .map-popup-action-btn.green { background: rgba(16, 217, 164, 0.15); border-color: rgba(16, 217, 164, 0.3); color: var(--green); }
 
         .map-legend {
-            position: absolute; bottom: 2rem; right: 2rem;
+            position: absolute; bottom: 4.5rem; right: 2rem;
             background: var(--surface); border: 1px solid var(--border);
             padding: 1rem; border-radius: 12px; box-shadow: var(--shadow);
             z-index: 1000; font-size: 0.8rem; max-height: 60vh; overflow-y: auto;
+            display: none;
+        }
+        .btn-toggle-legend {
+            position: absolute; bottom: 2rem; right: 2rem; z-index: 1000;
+            box-shadow: var(--shadow);
         }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
         .legend-item:last-child { margin-bottom: 0; }
@@ -874,6 +879,10 @@
             <div class="legend-item"><i class="fa-solid fa-location-dot" style="color: var(--yellow);"></i> {{ t(request, 'map.poi', 'Point d\'intérêt') }}</div>
             <div id="legend-pins-section"></div>
         </div>
+        
+        <button class="btn btn-toggle-legend" onclick="const l = document.getElementById('map-legend'); l.style.display = (window.getComputedStyle(l).display === 'none') ? 'block' : 'none';">
+            <i class="fa-solid fa-layer-group"></i> {{ t(request, 'map.legend_btn', 'Légende') }}
+        </button>
     </main>
 
     <!-- ── Bulk Address Modal ── -->
@@ -2155,95 +2164,156 @@
             }
         }
 
-        async function renderCityZone(rule) {
+        // Helper to fetch commune contour from geo.api.gouv.fr supporting "City Name (Zip)" format
+        async function fetchCommuneData(cityNameOrRuleName) {
+            if (!cityNameOrRuleName) return null;
+            let cityNameOnly = cityNameOrRuleName.trim();
+            let zipCode = null;
+
+            // Extract zip code from parentheses if present, e.g. "Colombier (07430)"
+            const parenMatch = cityNameOrRuleName.match(/\(([^)]+)\)/);
+            if (parenMatch) {
+                cityNameOnly = cityNameOrRuleName.replace(parenMatch[0], '').trim();
+                const content = parenMatch[1].trim();
+                if (content.match(/^\d{5}$/)) {
+                    zipCode = content;
+                }
+            }
+
+            // Also clean trailing zip codes not in parentheses if any
+            const endMatch = cityNameOnly.match(/\b\d{5}\b$/);
+            if (endMatch) {
+                zipCode = endMatch[0];
+                cityNameOnly = cityNameOnly.substring(0, endMatch.index).trim();
+            }
+
+            let url = '';
+            // Strategy 1: query by codePostal if we extracted a 5-digit zip code
+            if (zipCode) {
+                url = `https://geo.api.gouv.fr/communes?codePostal=${zipCode}&fields=nom,code,contour&format=json&geometry=contour`;
+            } else {
+                url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+            }
+
             try {
-                const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(rule.name)}&fields=nom,code,contour&format=json&geometry=contour`;
                 const res = await fetch(url);
                 const data = await res.json();
+                
                 if (data && data.length > 0) {
-                    let city = data.find(c => c.nom.toLowerCase() === rule.name.toLowerCase()) || data[0];
-                    if (city.contour) {
-                        const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
-                        const geoJsonLayer = L.geoJSON(city.contour, {
-                            style: {
-                                color: color,
-                                weight: 2,
-                                opacity: 0.8,
-                                fillOpacity: 0.2,
-                                fillColor: color
-                            }
-                        }).addTo(zoneRulesLayer);
-
-                        // Click opens the city panel
-                        geoJsonLayer.on('click', function(e) {
-                            openCityPanel(e.originalEvent, city.nom);
-                        });
-
-                        // Premium layout for Leaflet Popup
-                        geoJsonLayer.bindPopup(`
-                            <div style="text-align: center; min-width: 180px;">
-                                <strong style="font-size: 1.05rem; color: var(--text);">${city.nom}</strong><br>
-                                <span style="font-size: 0.85rem; color: var(--text-2);">Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}</span>
-                                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
-                                    <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${city.nom.replace(/'/g, "\\'")}')">
-                                        <i class="fa-solid fa-house-chimney"></i> Voir les annonces
-                                    </button>
-                                    <button class="map-popup-delete" style="justify-content: center; margin: 0;" onclick="deleteZoneRule(${rule.id})">
-                                        <i class="fa-solid fa-trash-can"></i> Supprimer la règle
-                                    </button>
-                                </div>
-                            </div>
-                        `);
+                    // Try to find exact match by name ignoring case
+                    const lowerName = cityNameOnly.toLowerCase();
+                    let match = data.find(c => c.nom.toLowerCase() === lowerName);
+                    
+                    // Fallback: search ignoring accents or hyphens
+                    if (!match) {
+                        const normStr = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                        const normCityName = normStr(cityNameOnly);
+                        match = data.find(c => normStr(c.nom) === normCityName);
                     }
+
+                    // Fallback: first result
+                    if (!match) {
+                        match = data[0];
+                    }
+                    return match;
+                }
+                
+                // If Strategy 1 by zipCode returned nothing, fallback to Strategy 2 by name only
+                if (zipCode) {
+                    const fallbackUrl = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+                    const fallbackRes = await fetch(fallbackUrl);
+                    const fallbackData = await fallbackRes.json();
+                    if (fallbackData && fallbackData.length > 0) {
+                        const lowerName = cityNameOnly.toLowerCase();
+                        let match = fallbackData.find(c => c.nom.toLowerCase() === lowerName) || fallbackData[0];
+                        return match;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching commune data from geo.api.gouv.fr:", e);
+            }
+            return null;
+        }
+
+        async function renderCityZone(rule) {
+            try {
+                const city = await fetchCommuneData(rule.name);
+                if (city && city.contour) {
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
+
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, rule.name);
+                    });
+
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${rule.name}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-2);">Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${rule.name.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <button class="map-popup-delete" style="justify-content: center; margin: 0;" onclick="deleteZoneRule(${rule.id})">
+                                    <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                                </button>
+                            </div>
+                        </div>
+                    `);
                 }
             } catch (e) { console.error("Error rendering city zone:", e); }
         }
 
         async function renderToQualifyCityZone(cityName) {
             try {
-                const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityName)}&fields=nom,code,contour&format=json&geometry=contour`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    let city = data.find(c => c.nom.toLowerCase() === cityName.toLowerCase()) || data[0];
-                    if (city.contour) {
-                        const color = 'var(--yellow)';
-                        const geoJsonLayer = L.geoJSON(city.contour, {
-                            style: {
-                                color: color,
-                                weight: 2,
-                                opacity: 0.8,
-                                fillOpacity: 0.2,
-                                fillColor: color
-                            }
-                        }).addTo(zoneRulesLayer);
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    const color = 'var(--yellow)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
 
-                        // Click opens the city panel
-                        geoJsonLayer.on('click', function(e) {
-                            openCityPanel(e.originalEvent, city.nom);
-                        });
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
 
-                        // Premium layout for Leaflet Popup
-                        geoJsonLayer.bindPopup(`
-                            <div style="text-align: center; min-width: 180px;">
-                                <strong style="font-size: 1.05rem; color: var(--text);">${city.nom}</strong><br>
-                                <span style="font-size: 0.85rem; color: var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Zone à Qualifier</span>
-                                <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
-                                    <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${city.nom.replace(/'/g, "\\'")}')">
-                                        <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${cityName}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Zone à Qualifier</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${cityName.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--green); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'allowed')">
+                                        Autoriser
                                     </button>
-                                    <div style="display: flex; gap: 4px;">
-                                        <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--green); color: white;" onclick="addZoneRuleFromMap('${city.nom.replace(/'/g, "\\'")}', 'city', 'allowed')">
-                                            Autoriser
-                                        </button>
-                                        <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--red); color: white;" onclick="addZoneRuleFromMap('${city.nom.replace(/'/g, "\\'")}', 'city', 'forbidden')">
-                                            Interdire
-                                        </button>
-                                    </div>
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--red); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'forbidden')">
+                                        Interdire
+                                    </button>
                                 </div>
                             </div>
-                        `);
-                    }
+                        </div>
+                    `);
                 }
             } catch (e) { console.error("Error rendering to_qualify city zone:", e); }
         }
@@ -2329,35 +2399,25 @@
                     window.currentCityLayer = null;
                 }
 
-                // Search for the city in Geo API
-                const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityName)}&fields=nom,code,contour&format=json&geometry=contour`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    // Take the first exact match if possible, otherwise first result
-                    let city = data.find(c => c.nom.toLowerCase() === cityName.toLowerCase());
-                    if (!city) city = data[0];
-
-                    if (city.contour) {
-                        window.currentCityLayer = L.geoJSON(city.contour, {
-                            style: {
-                                color: 'var(--accent)',
-                                weight: 2,
-                                opacity: 0.8,
-                                fillOpacity: 0.15,
-                                fillColor: 'var(--accent)'
-                            }
-                        }).addTo(map);
-
-                        // Click opens the city panel
-                        window.currentCityLayer.on('click', function(e) {
-                            openCityPanel(e.originalEvent, city.nom);
-                        });
-
-                        if (fitBounds) {
-                            map.fitBounds(window.currentCityLayer.getBounds(), { padding: [50, 50] });
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    window.currentCityLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: 'var(--accent)',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.15,
+                            fillColor: 'var(--accent)'
                         }
+                    }).addTo(map);
+
+                    // Click opens the city panel
+                    window.currentCityLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
+
+                    if (fitBounds) {
+                        map.fitBounds(window.currentCityLayer.getBounds(), { padding: [50, 50] });
                     }
                 }
             } catch (error) {

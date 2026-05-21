@@ -1095,7 +1095,11 @@ def listing_detail_page(
         
     # Lazy geocoding backfill
     if listing.city and listing.nearest_sncf_station is None:
-        sncf_data = fetch_sncf_times_for_city(listing.city)
+        from app.models import ZoneRule
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        sncf_data = fetch_sncf_times_for_city(listing.city, forbidden_stations)
         if sncf_data is not None:
             listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
             listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
@@ -1206,10 +1210,48 @@ def ideal_profile_page(
     viewed_ids = _get_viewed_listing_ids(request, db)
     _enrich_listings(listings, viewed_ids)
     
+    # Extract standard users (role == "user")
+    std_users = db.query(models.User).filter(models.User.role == "user").all()
+    std_usernames = [u.username.lower() for u in std_users]
+    
+    coup_de_coeur_listings = []
+    if std_usernames:
+        # Fetch reviews from standard users with a rating >= 7.0
+        reviews = db.query(models.Review).filter(
+            models.Review.rating >= 7.0,
+            models.Review.reviewer.in_(std_usernames)
+        ).all()
+        
+        # Group reviews by listing ID
+        from collections import defaultdict
+        listing_votes = defaultdict(list)
+        for r in reviews:
+            listing_votes[r.listing_id].append(r.reviewer)
+            
+        if listing_votes:
+            # Query all listings that received a vote
+            voted_listings = db.query(models.Listing).filter(
+                models.Listing.id.in_(list(listing_votes.keys()))
+            ).all()
+            _enrich_listings(voted_listings, viewed_ids)
+            
+            num_std_users = len(std_users)
+            for l in voted_listings:
+                votes = listing_votes[l.id]
+                # is_general is true if 100% of standard users voted for this listing
+                is_general = all(uname in votes for uname in std_usernames)
+                coup_de_coeur_listings.append({
+                    "listing": l,
+                    "votes": votes,
+                    "is_general": is_general
+                })
+                
     return templates.TemplateResponse(request=request, name="ideal_profile.html", context={
         "profile": profile,
         "queries": queries,
         "listings": listings,
+        "std_users": std_users,
+        "coup_de_coeur_listings": coup_de_coeur_listings,
         "title": "Fiche de Bien Idéal — Immo-Boussole",
     })
 
@@ -1422,7 +1464,69 @@ def duplicate_hunt_page(
         "title": "Chasse aux duplicats — Immo-Boussole",
     })
 
+# ─── API: Allowed Departments ─────────────────────────────────────────────────
 
+@app.get("/api/departments")
+def get_allowed_departments(db: Session = Depends(get_db), _auth = Depends(login_required)):
+    settings = db.query(models.GlobalSettings).first()
+    if not settings or not settings.allowed_departments:
+        return []
+    try:
+        import json
+        return json.loads(settings.allowed_departments)
+    except:
+        return []
+
+class DepartmentsRequest(BaseModel):
+    departments: list[str]
+
+@app.post("/api/departments")
+def update_allowed_departments(
+    body: DepartmentsRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+    import json
+    settings.allowed_departments = json.dumps(body.departments)
+    db.commit()
+    return {"status": "success", "departments": body.departments}
+
+def _is_city_in_allowed_departments(city: str, db: Session) -> bool:
+    """
+    Checks if a city belongs to one of the allowed departments.
+    Returns True if allowed or if no restrictions are set.
+    """
+    settings = db.query(models.GlobalSettings).first()
+    if not settings or not settings.allowed_departments:
+        return True
+        
+    try:
+        import json
+        allowed = json.loads(settings.allowed_departments)
+        if not allowed:
+            return True
+    except:
+        return True
+        
+    if not city:
+        return True
+        
+    import re
+    match = re.search(r'\((\d{5})\)', city)
+    if not match:
+        return True
+        
+    zipcode = match.group(1)
+    if zipcode.startswith('97') and len(zipcode) >= 3:
+        dept = zipcode[:3]
+    else:
+        dept = zipcode[:2]
+        
+    return dept in allowed
 
 # ─── API: Zone Rules ──────────────────────────────────────────────────────────
 
@@ -1458,6 +1562,11 @@ def create_zone_rule(
 
     # Normalize name to avoid duplicates with different casing
     normalized_name = body.name.strip()
+    if body.zone_type == "city":
+        from app.geo import standardize_and_enrich_city
+        std_city, _, _ = standardize_and_enrich_city(normalized_name)
+        if std_city:
+            normalized_name = std_city
 
     # Check for duplicate
     existing = db.query(ZoneRule).filter(
@@ -2379,7 +2488,9 @@ async def get_city_info(
     import httpx as _httpx
     from app.geo import GEO_CACHE, find_nearby_stations, calculate_station_times, haversine_km
 
-    city_key = city.strip()
+    from app.geo import standardize_and_enrich_city
+    std_city, _, _ = standardize_and_enrich_city(city)
+    city_key = std_city if std_city else city.strip()
     cache_key = f"city_info:{city_key.lower()}"
 
     if cache_key in GEO_CACHE:
@@ -2463,6 +2574,11 @@ async def get_city_info(
 
         # 2. Find nearby SNCF stations (up to 5) and calculate travel times
         stations_raw = find_nearby_stations(lat, lon, radius=20000)
+
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        stations_raw = [s for s in stations_raw if s["name"].lower().strip() not in forbidden_stations]
 
         # Sort by haversine distance (proper great-circle) and take top 5
         for s in stations_raw:
@@ -2724,10 +2840,15 @@ async def rescrape_listing(
     forbidden_cities_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
+    
     city_lower = (updated_listing.city or updated_listing.location or "").strip().lower()
-    if city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_rescrape if fc):
+    in_forbidden_city = city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_rescrape if fc)
+
+    if in_forbidden_city:
+        updated_listing.status = ListingStatus.REJECTED
+        db.commit()
         rescrape_response["forbidden_zone_warning"] = {
-            "message": f"⚠ Cette annonce est en zone interdite : {updated_listing.city or updated_listing.location}",
+            "message": f"⛔ Cette annonce a été rejetée car elle est en zone interdite.",
             "city": updated_listing.city or updated_listing.location,
         }
 
@@ -2765,10 +2886,33 @@ async def submit_listing_url(
     if body.skip_scraping:
         # ── Fast path: fetch only basic metadata ───────────────────────────
         details = await fetch_basic_metadata(url)
+        
+        city_to_check = details.get("city") or details.get("location")
+        if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
+            return {
+                "status": "rejected_department",
+                "message": f"⛔ Cette annonce est hors des départements autorisés : {city_to_check}",
+                "listing_id": None,
+                "title": details.get("title")
+            }
+            
         # Create listing (includes duplicate check) without photo download
         listing, is_new = await create_listing_from_details(
             db, details, source, url, download_photos=False, status=ListingStatus.ACTIVE
         )
+        
+        # ── Fast path: Forbidden Zone Check ──
+        forbidden_cities_fast = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+        ).all()}
+        
+        city_lower = (listing.city or listing.location or "").strip().lower()
+        in_forbidden_city = city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_fast if fc)
+            
+        if in_forbidden_city:
+            listing.status = ListingStatus.REJECTED
+            db.commit()
+
         print(f"[API] Listing #{listing.id} ajouté via 'sans scraping' (metadatas OK).")
         return {
             "status": "created" if is_new else "already_exists",
@@ -2802,6 +2946,15 @@ async def submit_listing_url(
         details.update(fb_details)
         scraping_success = False
 
+    city_to_check = details.get("city") or details.get("location")
+    if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
+        return {
+            "status": "rejected_department",
+            "message": f"⛔ Cette annonce est hors des départements autorisés : {city_to_check}",
+            "listing_id": None,
+            "title": details.get("title")
+        }
+
     # Create listing (includes duplicate check + photo download)
     listing, is_new = await create_listing_from_details(db, details, source, url, status=ListingStatus.ACTIVE)
 
@@ -2829,10 +2982,15 @@ async def submit_listing_url(
     forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
+    
     listing_city_lower = (listing.city or listing.location or "").strip().lower()
-    if listing_city_lower and any(fc in listing_city_lower or listing_city_lower in fc for fc in forbidden_cities if fc):
+    in_forbidden_city = listing_city_lower and any(fc in listing_city_lower or listing_city_lower in fc for fc in forbidden_cities if fc)
+
+    if in_forbidden_city:
+        listing.status = ListingStatus.REJECTED
+        db.commit()
         response["forbidden_zone_warning"] = {
-            "message": f"⚠ Cette annonce est en zone interdite : {listing.city or listing.location}",
+            "message": f"⛔ Cette annonce a été rejetée car elle est en zone interdite.",
             "city": listing.city or listing.location,
         }
 
@@ -2988,6 +3146,16 @@ def update_listing(
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
 
     update_data = body.model_dump(exclude_unset=True)
+    
+    # Standardize city and location if either is being updated
+    if ("city" in update_data and update_data["city"]) or ("location" in update_data and update_data["location"]):
+        from app.geo import standardize_and_enrich_city
+        src_val = update_data.get("city") or update_data.get("location") or listing.city or listing.location
+        if src_val:
+            std_city, _, _ = standardize_and_enrich_city(src_val)
+            if std_city:
+                update_data["city"] = std_city
+                update_data["location"] = std_city
     
     # If location or city is changed, we need to re-geocode
     re_geocode = False

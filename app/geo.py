@@ -246,7 +246,7 @@ def calculate_station_times(start_lat: float, start_lon: float, end_lat: float, 
 
     return times
 
-def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
+def fetch_sncf_times_for_city(city_or_location: str, forbidden_stations: set = None) -> Optional[Dict]:
     """
     Geocodes a city/location, finds the 2 nearest stations,
     and returns their names and travel times.
@@ -267,6 +267,13 @@ def fetch_sncf_times_for_city(city_or_location: str) -> Optional[Dict]:
 
     # 2. Find stations
     stations = find_nearby_stations(lat, lon)
+    if not stations:
+        GEO_CACHE[city_key] = None
+        return None
+
+    if forbidden_stations:
+        stations = [s for s in stations if s['name'].lower().strip() not in forbidden_stations]
+
     if not stations:
         GEO_CACHE[city_key] = None
         return None
@@ -408,3 +415,213 @@ def fetch_georisques_data(address: str = None, insee_code: str = None) -> Option
     except Exception as e:
         print(f"[Geo] Géorisques API failed (addr={address}, insee={insee_code}): {e}")
         return None
+
+
+def parse_city_input(city_str: str) -> Tuple[str, Optional[str], Optional[str]]:
+    """
+    Parses a raw city string to extract the potential city name,
+    postal code (5 digits), or department code (2-3 digits).
+    Examples:
+      - "Saint-Clair-du-Rhône" -> ("Saint-Clair-du-Rhône", None, None)
+      - "saint-clair-du-rhône (38)" -> ("saint-clair-du-rhône", None, "38")
+      - "saint-clair-du-rhône (38370)" -> ("saint-clair-du-rhône", "38370", None)
+      - "Saint-Clair-du-Rhône 38370" -> ("Saint-Clair-du-Rhône", "38370", None)
+    """
+    import re
+    if not city_str:
+        return "", None, None
+
+    city_str = city_str.strip()
+
+    # 1. Look for parentheses first: e.g. "Name (digits)"
+    match_paren = re.search(r'\(([^)]+)\)', city_str)
+    if match_paren:
+        content = match_paren.group(1).strip()
+        name_part = city_str.replace(match_paren.group(0), '').strip()
+        if content.isdigit():
+            if len(content) == 5:
+                return name_part, content, None
+            elif 2 <= len(content) <= 3:
+                return name_part, None, content
+
+    # 2. Look for trailing digits at the end of the string
+    match_end = re.search(r'\b(\d{2,5})\b$', city_str)
+    if match_end:
+        digits = match_end.group(1)
+        name_part = city_str[:match_end.start()].strip()
+        # Clean any remaining trailing punctuation or parentheses
+        name_part = re.sub(r'[\s()\-]+$', '', name_part).strip()
+        if len(digits) == 5:
+            return name_part, digits, None
+        elif 2 <= len(digits) <= 3:
+            return name_part, None, digits
+
+    return city_str, None, None
+
+
+def clean_arrondissement(name: str) -> str:
+    """
+    Cleans arrondissement suffixes from French city names.
+    Examples:
+      - "Paris 15e" -> "Paris"
+      - "Lyon 6ème" -> "Lyon"
+      - "Marseille 08" -> "Marseille"
+    """
+    import re
+    name = re.sub(r'\b\d+(?:er|ème|eme|e)?\b', '', name, flags=re.I)
+    name = re.sub(r'\barrondissements?\b', '', name, flags=re.I)
+    name = re.sub(r'\barr\.?\b', '', name, flags=re.I)
+    name = re.sub(r'\s+', ' ', name).strip()
+    name = name.strip(' -')
+    return name
+
+
+def fallback_standardize_city(city_str: str) -> str:
+    """
+    Local fallback normalization if the API fails or returns no results.
+    """
+    import re
+    if not city_str:
+        return ""
+    cleaned = city_str.strip()
+    cleaned = re.sub(r'\s+', ' ', cleaned)
+    words = cleaned.split()
+    capitalized_words = []
+    for w in words:
+        parts = w.split('-')
+        capitalized_parts = [p.capitalize() for p in parts]
+        capitalized_words.append('-'.join(capitalized_parts))
+    return ' '.join(capitalized_words)
+
+
+@lru_cache(maxsize=2048)
+def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Optional[str]]:
+    """
+    Standardizes a city name and retrieves its full 5-digit postal code
+    and INSEE code via geo.api.gouv.fr.
+    Returns:
+      (standardized_name_with_zip, zip_code, insee_code)
+      Example: ("Saint-Clair-du-Rhône (38370)", "38370", "38370")
+    """
+    if not city_str:
+        return "", None, None
+
+    import re
+    city_str_cleaned = city_str.strip()
+    if not city_str_cleaned:
+        return "", None, None
+
+    name, zip_code, dept_code = parse_city_input(city_str_cleaned)
+    name_cleaned = clean_arrondissement(name)
+
+    results = []
+
+    # Strategy 1: Search by name and department if we have a department code
+    if name_cleaned:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            params = {"nom": name_cleaned, "boost": "population", "limit": 10}
+            if dept_code:
+                params["codeDepartement"] = dept_code
+            res = httpx.get(url, params=params, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] Search by name {name_cleaned} failed: {e}")
+
+    # Strategy 1b: Search by name only if name+dept returned nothing
+    if not results and name_cleaned and dept_code:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            res = httpx.get(url, params={"nom": name_cleaned, "boost": "population", "limit": 10}, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] Search by name only {name_cleaned} failed: {e}")
+
+    # Strategy 2: Search by zip code if Strategy 1 failed or if we didn't have a name
+    if not results and zip_code:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            res = httpx.get(url, params={"codePostal": zip_code}, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] Search by zip {zip_code} failed: {e}")
+
+    # Strategy 3: Fuzzy or broad word match fallback
+    if not results and name_cleaned:
+        m = re.match(r'^([a-zA-Z\s\-]+)', name_cleaned)
+        if m:
+            broad_name = m.group(1).strip()
+            if broad_name != name_cleaned:
+                try:
+                    url = "https://geo.api.gouv.fr/communes"
+                    res = httpx.get(url, params={"nom": broad_name, "boost": "population", "limit": 10}, timeout=5.0)
+                    if res.status_code == 200:
+                        results = res.json()
+                except Exception:
+                    pass
+
+    if not results:
+        # Fallback to local standardized formatting
+        fallback_name = fallback_standardize_city(city_str_cleaned)
+        return fallback_name, zip_code, None
+
+    best_commune = None
+
+    # First try to find a commune that matches both the name (case-insensitive) and zip/dept
+    if name_cleaned:
+        normalized_name_cleaned = name_cleaned.lower().replace('-', ' ').strip()
+        for c in results:
+            c_nom = c.get("nom", "").lower().replace('-', ' ').strip()
+            if normalized_name_cleaned in c_nom or c_nom in normalized_name_cleaned:
+                if zip_code:
+                    if zip_code in c.get("codesPostaux", []):
+                        best_commune = c
+                        break
+                elif dept_code:
+                    if c.get("codeDepartement") == dept_code:
+                        best_commune = c
+                        break
+                else:
+                    best_commune = c
+                    break
+
+    # Second try: try to match zip or dept code only
+    if not best_commune:
+        if zip_code:
+            for c in results:
+                if zip_code in c.get("codesPostaux", []):
+                    best_commune = c
+                    break
+        elif dept_code:
+            for c in results:
+                if c.get("codeDepartement") == dept_code:
+                    best_commune = c
+                    break
+
+    if not best_commune:
+        best_commune = results[0]
+
+    postalcodes = best_commune.get("codesPostaux", [])
+    selected_zip = zip_code if (zip_code and zip_code in postalcodes) else (postalcodes[0] if postalcodes else None)
+
+    # If we had a 2-digit department but no full zip_code, pick a postal code matching the department
+    if not selected_zip and dept_code and postalcodes:
+        for pc in postalcodes:
+            if pc.startswith(dept_code):
+                selected_zip = pc
+                break
+
+    if not selected_zip and postalcodes:
+        selected_zip = postalcodes[0]
+
+    if not selected_zip:
+        selected_zip = best_commune.get("codeDepartement", "") + "000"
+
+    official_name = best_commune.get("nom", "")
+    insee_code = best_commune.get("code", "")
+
+    standardized_display = f"{official_name} ({selected_zip})"
+    return standardized_display, selected_zip, insee_code

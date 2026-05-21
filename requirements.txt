@@ -18,3 +18,5 @@ resend
 requests>=2.33.0
 urllib3>=2.7.0
 undetected-chromedriver
+Pillow>=10.0.0
+

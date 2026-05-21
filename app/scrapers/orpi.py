@@ -193,9 +193,22 @@ class OrpiScraper(BaseScraper):
                     txt_label = txt_full
                     txt_value = txt_full
 
-                if 'surface' in txt_label or 'm2' in txt_label or 'm²' in txt_label:
-                    match = re.search(r'([\d\.,]+)', txt_value)
-                    if match: details["area"] = float(match.group(1).replace(',', '.'))
+                txt_label_lower = txt_label.lower()
+                if 'terrain' in txt_label_lower:
+                    val_clean = re.sub(r'\s+', '', txt_value)
+                    match = re.search(r'([\d\.,]+)', val_clean)
+                    if match:
+                        details["land_area"] = float(match.group(1).replace(',', '.'))
+                    continue
+
+                if any(x in txt_label_lower for x in ['séjour', 'salon', 'terrasse', 'balcon', 'cave', 'garage', 'jardin']):
+                    continue
+
+                if 'surface' in txt_label_lower or 'm2' in txt_label_lower or 'm²' in txt_label_lower:
+                    val_clean = re.sub(r'\s+', '', txt_value)
+                    match = re.search(r'([\d\.,]+)', val_clean)
+                    if match:
+                        details["area"] = float(match.group(1).replace(',', '.'))
                 elif 'pièce' in txt_label:
                     match = re.search(r'(\d+)', txt_value)
                     if match: details["rooms"] = int(match.group(1))
