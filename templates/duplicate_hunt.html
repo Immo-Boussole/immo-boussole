@@ -439,6 +439,147 @@
                 font-size: 0.75rem;
             }
         }
+
+        /* Filter Control Bar */
+        .filter-bar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .filter-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .filter-bar-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--surface-2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-2);
+        }
+
+        /* Custom modern switch slider */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #1a2236;
+            border: 1px solid var(--border);
+            transition: var(--trans);
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-2);
+            transition: var(--trans);
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: #fff;
+        }
+
+        /* Counters Grid */
+        .counters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .counter-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.6rem 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--trans);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .counter-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .counter-card.active {
+            background: rgba(79, 142, 247, 0.12);
+            border-color: var(--accent);
+            box-shadow: 0 0 12px rgba(79, 142, 247, 0.2);
+        }
+
+        .counter-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            transition: var(--trans);
+        }
+
+        .counter-pct {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-2);
+            margin-top: 0.1rem;
+        }
+
+        /* Color palettes per percentage */
+        .pct-100 .counter-val { color: var(--green); }
+        .pct-90 .counter-val { color: var(--green); }
+        .pct-80 .counter-val { color: var(--accent); }
+        .pct-70 .counter-val { color: var(--accent-2); }
+        .pct-60 .counter-val { color: var(--yellow); }
+        .pct-50 .counter-val { color: var(--orange); }
+        .pct-40 .counter-val { color: #ff6b6b; }
+        .pct-30 .counter-val { color: #a0aec0; }
     </style>
 </head>
 
@@ -548,8 +689,57 @@
 
         <div class="content">
             {% if potential_pairs %}
+                <div class="filter-bar">
+                    <div class="filter-bar-header">
+                        <div class="filter-bar-title">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Filtres de similitude</span>
+                        </div>
+                        <div class="toggle-container">
+                            <span class="toggle-label">Afficher les similitudes faibles (50%)</span>
+                            <label class="switch">
+                                <input type="checkbox" id="toggle-low-similarity">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="counters-grid">
+                        <div class="counter-card pct-100" id="card-100" onclick="togglePctFilter(100)">
+                            <div class="counter-val" id="count-100">0</div>
+                            <div class="counter-pct">100%</div>
+                        </div>
+                        <div class="counter-card pct-90" id="card-90" onclick="togglePctFilter(90)">
+                            <div class="counter-val" id="count-90">0</div>
+                            <div class="counter-pct">90%</div>
+                        </div>
+                        <div class="counter-card pct-80" id="card-80" onclick="togglePctFilter(80)">
+                            <div class="counter-val" id="count-80">0</div>
+                            <div class="counter-pct">80%</div>
+                        </div>
+                        <div class="counter-card pct-70" id="card-70" onclick="togglePctFilter(70)">
+                            <div class="counter-val" id="count-70">0</div>
+                            <div class="counter-pct">70%</div>
+                        </div>
+                        <div class="counter-card pct-60" id="card-60" onclick="togglePctFilter(60)">
+                            <div class="counter-val" id="count-60">0</div>
+                            <div class="counter-pct">60%</div>
+                        </div>
+                        <div class="counter-card pct-50" id="card-50" onclick="togglePctFilter(50)">
+                            <div class="counter-val" id="count-50">0</div>
+                            <div class="counter-pct">50%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" id="filter-empty-state" style="display: none;">
+                    <i class="fa-solid fa-filter"></i>
+                    <h2>Aucun duplicat visible</h2>
+                    <p>Tous les duplicats potentiels sont masqués par les filtres actuels. Activez l'affichage des similitudes faibles ou changez de pourcentage.</p>
+                </div>
+
                 {% for pair in potential_pairs %}
-                    <div class="comparison-row" id="pair-{{ pair.l1.id }}-{{ pair.l2.id }}">
+                    <div class="comparison-row" id="pair-{{ pair.l1.id }}-{{ pair.l2.id }}" data-score="{{ pair.score }}">
                         <!-- Listing 1 -->
                         <div class="listing-card-mini listing-1">
                             {% set p1 = pair.l1._photos %}
@@ -625,6 +815,115 @@
     </main>
 
     <script>
+        // Keep track of active filters
+        let activePctFilter = null;
+
+        // Populate initial counts for counters
+        const counts = { 100: 0, 90: 0, 80: 0, 70: 0, 60: 0, 50: 0 };
+        document.querySelectorAll('.comparison-row').forEach(row => {
+            const score = parseInt(row.getAttribute('data-score')) || 0;
+            if (counts[score] !== undefined) {
+                counts[score]++;
+            }
+        });
+
+        // Update UI counters initially
+        Object.keys(counts).forEach(pct => {
+            const countEl = document.getElementById(`count-${pct}`);
+            if (countEl) {
+                countEl.textContent = counts[pct];
+                // Dim cards that have 0 count
+                const card = document.getElementById(`card-${pct}`);
+                if (card && counts[pct] === 0) {
+                    card.style.opacity = '0.4';
+                }
+            }
+        });
+
+        const toggleLowSim = document.getElementById('toggle-low-similarity');
+
+        function applyFilters() {
+            const showLow = toggleLowSim ? toggleLowSim.checked : false;
+            let visibleCount = 0;
+            
+            document.querySelectorAll('.comparison-row').forEach(row => {
+                const score = parseInt(row.getAttribute('data-score')) || 0;
+                let visible = true;
+                
+                // Hide <= 50% if toggle is unchecked
+                if (!showLow && score <= 50) {
+                    visible = false;
+                }
+                
+                // If specific percentage filter is active, only show that exact percentage
+                if (activePctFilter !== null && score !== activePctFilter) {
+                    visible = false;
+                }
+                
+                row.style.display = visible ? 'grid' : 'none';
+                if (visible) {
+                    visibleCount++;
+                }
+            });
+            
+            // Check if there are visible pairs
+            const emptyState = document.getElementById('filter-empty-state');
+            if (emptyState) {
+                emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+
+        // Set up event listeners
+        if (toggleLowSim) {
+            toggleLowSim.addEventListener('change', applyFilters);
+        }
+
+        function togglePctFilter(pct) {
+            const card = document.getElementById(`card-${pct}`);
+            if (!card) return;
+            
+            if (activePctFilter === pct) {
+                // Clear filter
+                activePctFilter = null;
+                card.classList.remove('active');
+            } else {
+                // Clear previous active card
+                if (activePctFilter !== null) {
+                    const prevCard = document.getElementById(`card-${activePctFilter}`);
+                    if (prevCard) prevCard.classList.remove('active');
+                }
+                activePctFilter = pct;
+                card.classList.add('active');
+                
+                // Auto-check low similarity toggle if <= 50% is selected
+                if (pct <= 50 && toggleLowSim && !toggleLowSim.checked) {
+                    toggleLowSim.checked = true;
+                }
+            }
+            applyFilters();
+        }
+
+        // Run initial filter (hides <= 50% by default)
+        applyFilters();
+
+        // Helper to decrement count when merged or rejected
+        function decrementCount(score) {
+            if (counts[score] !== undefined && counts[score] > 0) {
+                counts[score]--;
+                const countEl = document.getElementById(`count-${score}`);
+                if (countEl) countEl.textContent = counts[score];
+                
+                const card = document.getElementById(`card-${score}`);
+                if (card && counts[score] === 0) {
+                    card.style.opacity = '0.4';
+                    card.classList.remove('active');
+                    if (activePctFilter === score) {
+                        activePctFilter = null;
+                    }
+                }
+            }
+        }
+
         async function mergeListings(idA, idB) {
             if (!confirm("Fusionner ces deux annonces ? L'une sera marquée comme duplicat de l'autre.")) return;
             
@@ -637,14 +936,21 @@
                 
                 if (response.ok) {
                     const el = document.getElementById(`pair-${idA}-${idB}`);
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateX(20px)';
-                    setTimeout(() => {
-                        el.remove();
-                        if (document.querySelectorAll('.comparison-row').length === 0) {
-                            location.reload();
-                        }
-                    }, 300);
+                    if (el) {
+                        const score = parseInt(el.getAttribute('data-score')) || 0;
+                        el.style.opacity = '0';
+                        el.style.transform = 'translateX(20px)';
+                        setTimeout(() => {
+                            decrementCount(score);
+                            el.remove();
+                            applyFilters();
+                            
+                            // If no pairs remain at all globally
+                            if (document.querySelectorAll('.comparison-row').length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
                 } else {
                     alert("Erreur lors de la fusion.");
                 }
@@ -664,14 +970,21 @@
                 
                 if (response.ok) {
                     const el = document.getElementById(`pair-${idA}-${idB}`);
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateX(-20px)';
-                    setTimeout(() => {
-                        el.remove();
-                        if (document.querySelectorAll('.comparison-row').length === 0) {
-                            location.reload();
-                        }
-                    }, 300);
+                    if (el) {
+                        const score = parseInt(el.getAttribute('data-score')) || 0;
+                        el.style.opacity = '0';
+                        el.style.transform = 'translateX(-20px)';
+                        setTimeout(() => {
+                            decrementCount(score);
+                            el.remove();
+                            applyFilters();
+                            
+                            // If no pairs remain at all globally
+                            if (document.querySelectorAll('.comparison-row').length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    }
                 } else {
                     alert("Erreur lors du rejet.");
                 }

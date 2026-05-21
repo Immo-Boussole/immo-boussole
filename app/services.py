@@ -15,7 +15,7 @@ from app.scrapers import (
     NotairesScraper, VinciScraper, ImmobilierFranceScraper,
     OrpiScraper
 )
-from app.media import download_listing_photos, photos_to_json, json_to_photos
+from app.media import download_listing_photos, photos_to_json, json_to_photos, calculate_images_similarity, compute_image_dhash, compute_image_ahash
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
 from app.notifications import send_new_listing_notifications
 import httpx
@@ -166,10 +166,11 @@ def ensure_city_map_pin(city_name: str, db: Session):
     if not cleaned:
         return
     
+    from sqlalchemy import func
     from app.models import MapPin
     existing_pin = db.query(MapPin).filter(
         MapPin.pin_type == "city",
-        db.func.lower(MapPin.title) == cleaned.lower()
+        func.lower(MapPin.title) == cleaned.lower()
     ).first()
     
     if not existing_pin:
@@ -225,7 +226,21 @@ async def create_listing_from_details(
             # Skip fields handled specially or problematic
             if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
                 continue
+            if key in ("city", "location"):
+                from app.geo import standardize_and_enrich_city
+                std_city, _, _ = standardize_and_enrich_city(value)
+                if std_city:
+                    value = std_city
             setattr(listing, key, value)
+
+    # Ensure both listing.city and listing.location are standardized and synchronized
+    if listing.city or listing.location:
+        from app.geo import standardize_and_enrich_city
+        src_val = listing.city or listing.location
+        std_city, _, _ = standardize_and_enrich_city(src_val)
+        if std_city:
+            listing.city = std_city
+            listing.location = std_city
     
     if details.get("photo_urls"):
         listing.original_photo_urls = json.dumps(details.get("photo_urls"))
@@ -269,7 +284,11 @@ async def create_listing_from_details(
 
     # ── Pre-calculate SNCF Distances ──
     if listing.city and listing.nearest_sncf_station is None:
-        sncf_data = fetch_sncf_times_for_city(listing.city)
+        from app.models import ZoneRule
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        sncf_data = fetch_sncf_times_for_city(listing.city, forbidden_stations)
         if sncf_data:
             listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
             listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
@@ -396,6 +415,15 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         ext_id = str(item["external_id"])
         item_url = item.get("url", "")
         
+        city_val = item.get("city")
+        loc_val = item.get("location") or city_val
+        city_to_check = loc_val or city_val
+        
+        if city_to_check:
+            from app.main import _is_city_in_allowed_departments
+            if not _is_city_in_allowed_departments(city_to_check, db):
+                continue
+        
         # Check if listing already exists by external_id OR URL
         # We check globally, not just in existing_active, to avoid UNIQUE constraint violations
         existing = db.query(Listing).filter(
@@ -423,14 +451,25 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             photo_urls = item.get("photo_urls", [])
             
             # Case: Brand new listing
+            city_val = item.get("city")
+            loc_val = item.get("location") or city_val
+            if city_val or loc_val:
+                from app.geo import standardize_and_enrich_city
+                std_city, _, _ = standardize_and_enrich_city(city_val or loc_val)
+                if std_city:
+                    city_val = std_city
+                    loc_val = std_city
+            else:
+                loc_val = item.get("location")
+            
             new_listing = Listing(
                 external_id=ext_id,
                 title=item.get("title", "Sans titre"),
                 url=item_url,
                 original_url=item_url,
                 price=item.get("price"),
-                location=item.get("location"),
-                city=item.get("city"),
+                location=loc_val,
+                city=city_val,
                 area=item.get("area"),
                 rooms=item.get("rooms"),
                 source=query.source,
@@ -641,6 +680,28 @@ def get_or_create_review(
 
 # ─── Ideal Property Profile ───────────────────────────────────────────────────
 
+def _parse_keywords(raw_list: list) -> list:
+    """
+    Parse a list of raw pros/cons strings into deduplicated, counted, sorted items.
+    Each raw string may contain multiple items separated by newlines or ' - '.
+    Returns: [{"text": str, "count": int}, ...] sorted by count desc, then alpha asc.
+    """
+    from collections import Counter
+    counts: Counter = Counter()
+    for raw in raw_list:
+        if not raw:
+            continue
+        for block in raw.split('\n'):
+            for item in block.split(' - '):
+                clean = item.strip().strip('-').strip()
+                if clean:
+                    counts[clean] += 1
+    return [
+        {"text": text, "count": count}
+        for text, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
+    ]
+
+
 def generate_ideal_profile(db: Session) -> dict:
     """
     Aggregates all well-rated reviews (≥ 7/10) to generate
@@ -657,9 +718,13 @@ def generate_ideal_profile(db: Session) -> dict:
         Review.cons != None,
     ).all()
 
-    # Collect pros and cons
-    all_pros = [r.pros for r in good_reviews if r.pros]
-    all_cons = [r.cons for r in bad_reviews if r.cons]
+    # Collect pros and cons as raw strings
+    raw_pros = [r.pros for r in good_reviews if r.pros]
+    raw_cons = [r.cons for r in bad_reviews if r.cons]
+
+    # Deduplicate, count occurrences, and sort (most frequent first, then alpha)
+    all_pros = _parse_keywords(raw_pros)
+    all_cons = _parse_keywords(raw_cons)
 
     # Get statistics from top-rated listings AND favorite listings
     top_listing_ids = list(set(r.listing_id for r in good_reviews))
@@ -717,7 +782,7 @@ def generate_ideal_profile(db: Session) -> dict:
 
 # ─── Duplicate Hunting ────────────────────────────────────────────────────────
 
-def calculate_listing_similarity(l1: Listing, l2: Listing) -> Tuple[float, list]:
+def calculate_listing_similarity(l1: Listing, l2: Listing, hash_cache: dict = None) -> Tuple[float, list]:
     """
     Calculates a similarity score (0 to 100) and common points between two listings.
     """
@@ -770,19 +835,44 @@ def calculate_listing_similarity(l1: Listing, l2: Listing) -> Tuple[float, list]
         elif ratio > 0.6:
             score += 10
 
-    # 6. First Photo (Visual/Metadata hint)
+    # 6. First Photo (Visual/Metadata hint via perceptual hashing)
     p1 = json_to_photos(l1.photos_local)
     p2 = json_to_photos(l2.photos_local)
     if p1 and p2:
-        # If we had image hashes, we'd use them here. 
-        # For now, we just indicate it as a common point if other factors are high.
-        # (A better check would be comparing file sizes)
         path1 = os.path.join(os.getcwd(), p1[0])
         path2 = os.path.join(os.getcwd(), p2[0])
         if os.path.exists(path1) and os.path.exists(path2):
-            if os.path.getsize(path1) == os.path.getsize(path2):
-                score += 10
+            if hash_cache is not None:
+                if path1 not in hash_cache:
+                    hash_cache[path1] = (compute_image_dhash(path1), compute_image_ahash(path1))
+                if path2 not in hash_cache:
+                    hash_cache[path2] = (compute_image_dhash(path2), compute_image_ahash(path2))
+                d1, a1 = hash_cache[path1]
+                d2, a2 = hash_cache[path2]
+                
+                if d1 and d2 and a1 and a2:
+                    def hamming_distance(h1, h2):
+                        return sum(bin(int(c1, 16) ^ int(c2, 16)).count('1') for c1, c2 in zip(h1, h2))
+                    
+                    dist_d = hamming_distance(d1, d2)
+                    dist_a = hamming_distance(a1, a2)
+                    
+                    sim_d = (64 - dist_d) / 64 * 100
+                    sim_a = (64 - dist_a) / 64 * 100
+                    img_sim = (sim_d + sim_a) / 2.0
+                else:
+                    img_sim = 0.0
+            else:
+                img_sim = calculate_images_similarity(path1, path2)
+
+            if img_sim >= 90.0:
+                score += 30
                 common.append("photo")
+            elif img_sim >= 75.0:
+                score += 20
+                common.append("photo")
+            elif img_sim >= 60.0:
+                score += 10
 
     return min(score, 100), common
 
@@ -807,6 +897,7 @@ def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
         rejected_pairs.add(tuple(sorted((r.listing_a_id, r.listing_b_id))))
         
     potential_pairs = []
+    hash_cache = {}
     
     for i in range(len(listings)):
         for j in range(i + 1, len(listings)):
@@ -821,9 +912,9 @@ def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
             if tuple(sorted((l1.id, l2.id))) in rejected_pairs:
                 continue
                 
-            score, common = calculate_listing_similarity(l1, l2)
+            score, common = calculate_listing_similarity(l1, l2, hash_cache=hash_cache)
             
-            if score >= 50: # Threshold for "potential"
+            if score >= 50: # Threshold for "potential" (ignores duplicates strictly below 50% for performance)
                 potential_pairs.append({
                     "l1": l1,
                     "l2": l2,

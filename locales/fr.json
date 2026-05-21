@@ -346,7 +346,16 @@
         "no_pros": "Aucun point positif enregistré.",
         "no_cons": "Aucun point négatif enregistré.",
         "dpe_dist": "Distribution DPE",
-        "top_listings": "Meilleures annonces"
+        "top_listings": "Meilleures annonces",
+        "coup_de_coeur_title": "Sélection Coup de Cœur",
+        "coup_de_coeur_desc": "Annonces plébiscitées par l'équipe (notes ≥ 7.0/10)",
+        "filter_all": "Tous",
+        "filter_general": "Coup de cœur général (100%)",
+        "filter_user": "Coup de cœur de {user}",
+        "voted_by": "Voté par",
+        "no_favorites_found": "Aucun coup de cœur avec ce filtre",
+        "no_favorites_at_all": "Aucun coup de cœur enregistré pour le moment.",
+        "no_favorites_desc": "Lorsqu'un utilisateur standard attribue une note ≥ 7.0 à un bien, il apparaîtra ici."
     },
     "ready_searches": {
         "title": "Prêt à rechercher",

@@ -13,6 +13,9 @@ DUPLICATE_CITY_ZIP = "duplicate_city_zip"
 ANOMALOUS_PRICE = "anomalous_price"
 LINKED_ADS_NONE = "linked_ads_none"
 MISSING_CITY_PINS = "missing_city_pins"
+UNSTANDARDIZED_CITY = "unstandardized_city"
+FORBIDDEN_DEPARTMENT = "forbidden_department"
+FORBIDDEN_ZONE = "forbidden_zone"
 
 
 
@@ -88,7 +91,56 @@ def identify_problems(db: Session):
             c_lower_clean = re.sub(r'\s*\(\d{5}\)$', '', c_lower).strip()
             if c_lower_clean not in existing_pin_names:
                 missing_city_names.append(c_clean)
-    
+                
+    # Unstandardized cities (missing official zip code or standardized format in either city or location)
+    unstd_city_candidates = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
+        ((Listing.city != None) & (Listing.city != "")) | ((Listing.location != None) & (Listing.location != ""))
+    ).all()
+    unstd_city_listings = []
+    for l in unstd_city_candidates:
+        city_val = l.city.strip() if l.city else ""
+        loc_val = l.location.strip() if l.location else ""
+        
+        city_ok = bool(city_val and re.match(r'^.+\s\(\d{5}\)$', city_val))
+        loc_ok = bool(loc_val and re.match(r'^.+\s\(\d{5}\)$', loc_val))
+        
+        if not city_ok or not loc_ok:
+            unstd_city_listings.append(l)
+
+    # Forbidden Department
+    forbidden_dept_listings = []
+    from app.main import _is_city_in_allowed_departments
+    active_listings_all = db.query(Listing).filter(Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])).all()
+    for l in empty_desc_listings + generic_title_listings + duplicate_city_listings + anomalous_price_listings + unstd_city_listings + active_listings_all:
+        city_to_check = l.location or l.city
+        if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
+            if l not in forbidden_dept_listings:
+                forbidden_dept_listings.append(l)
+
+    # Forbidden Zones
+    from app.models import ZoneRule
+    forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+
+    forbidden_zone_listings = []
+    for l in active_listings_all:
+        city_match = False
+        c_clean = l.city.lower().strip() if l.city else ""
+        loc_clean = l.location.lower().strip() if l.location else ""
+        
+        if c_clean in forbidden_cities or loc_clean in forbidden_cities:
+            city_match = True
+        else:
+            c_no_zip = re.sub(r'\s*\(\d{5}\)$', '', c_clean).strip()
+            loc_no_zip = re.sub(r'\s*\(\d{5}\)$', '', loc_clean).strip()
+            if c_no_zip in forbidden_cities or loc_no_zip in forbidden_cities:
+                city_match = True
+
+        if city_match:
+            forbidden_zone_listings.append(l)
+
     return {
         EMPTY_DESCRIPTION: {
             "count": len(empty_desc_listings),
@@ -113,6 +165,18 @@ def identify_problems(db: Session):
         MISSING_CITY_PINS: {
             "count": len(missing_city_names),
             "ids": missing_city_names
+        },
+        UNSTANDARDIZED_CITY: {
+            "count": len(unstd_city_listings),
+            "ids": [l.id for l in unstd_city_listings]
+        },
+        FORBIDDEN_DEPARTMENT: {
+            "count": len(forbidden_dept_listings),
+            "ids": [l.id for l in forbidden_dept_listings]
+        },
+        FORBIDDEN_ZONE: {
+            "count": len(forbidden_zone_listings),
+            "ids": [l.id for l in forbidden_zone_listings]
         }
     }
 
@@ -212,6 +276,23 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                             if problem_type == LINKED_ADS_NONE:
                                 # If it's a broken duplicate, reset the flag so it reappears in dashboard
                                 listing.is_duplicate = False
+                                db.commit()
+                            elif problem_type == UNSTANDARDIZED_CITY:
+                                from app.geo import standardize_and_enrich_city, get_coordinates
+                                std_city, _, _ = standardize_and_enrich_city(listing.city or listing.location)
+                                if std_city:
+                                    listing.city = std_city
+                                    listing.location = std_city
+                                    # Also re-geocode
+                                    coords = get_coordinates(std_city)
+                                    if coords:
+                                        listing.latitude, listing.longitude = coords
+                                    db.commit()
+                            elif problem_type == FORBIDDEN_DEPARTMENT:
+                                listing.status = ListingStatus.REJECTED
+                                db.commit()
+                            elif problem_type == FORBIDDEN_ZONE:
+                                listing.status = ListingStatus.REJECTED
                                 db.commit()
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)

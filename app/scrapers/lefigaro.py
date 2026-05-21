@@ -364,7 +364,7 @@ class LeFigaroScraper(BaseScraper):
             # Clean city_name if it already contains the department code at the end
             city_name = re.sub(r'\s*\(\d{2,5}\)$', '', city_name).strip()
             city = self._normalize_city(city_name)
-            location = f"{city_name} ({zip_code[:2]})" if zip_code else city_name
+            location = f"{city_name} ({zip_code})" if zip_code else city_name
         else:
             city = None
             location = "France"
@@ -542,7 +542,7 @@ class LeFigaroScraper(BaseScraper):
         if match:
             city_name = match.group(1).strip()
             zip_code = match.group(2).strip()
-            return f"{city_name} ({zip_code[:2]})", self._normalize_city(city_name)
+            return f"{city_name} ({zip_code})", self._normalize_city(city_name)
 
         # Pattern: "Paris 3ème (75)" (already formatted)
         match = re.search(r'([A-Za-zÀ-ÿ\s\-]+)\s+\((\d{2,5})\)', text)

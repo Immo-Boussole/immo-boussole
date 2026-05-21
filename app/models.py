@@ -285,6 +285,8 @@ class GlobalSettings(Base):
     last_checks_json = Column(String, nullable=True, default="{}")
     last_repairs_json = Column(String, nullable=True, default="{}")
 
+    allowed_departments = Column(Text, nullable=True) # JSON list of ["38", "73"]
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
