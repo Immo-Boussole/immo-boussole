@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'nav.map', 'Carte') }} — {{ t(request, 'app.title') }}</title>
     
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     
@@ -18,8 +22,22 @@
             --border: rgba(255,255,255,0.07); --text: #eef2ff; --text-2: #8b9cc8;
             --accent: #4f8ef7; --accent-2: #6366f1;
             --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
-            --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.5);            --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -83,7 +101,59 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            text-align: center;
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.act .val {
+            color: var(--accent);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
         .sidebar-section-title {
             font-size: 0.7rem; font-weight: 700; color: var(--text-2);
             text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem;
@@ -161,12 +231,27 @@
             padding: 0.2rem 0.4rem; border-radius: 4px;
         }
         .map-popup-delete:hover { opacity: 1; background: rgba(242, 92, 105, 0.15); }
+        
+        .map-popup-action-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+            flex: 1; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--surface-2); color: var(--text); font-size: 0.7rem; font-weight: 700;
+            cursor: pointer; transition: var(--trans); font-family: inherit;
+        }
+        .map-popup-action-btn:hover { filter: brightness(1.2); }
+        .map-popup-action-btn.red { background: rgba(242, 92, 105, 0.15); border-color: rgba(242, 92, 105, 0.3); color: var(--red); }
+        .map-popup-action-btn.green { background: rgba(16, 217, 164, 0.15); border-color: rgba(16, 217, 164, 0.3); color: var(--green); }
 
         .map-legend {
-            position: absolute; bottom: 2rem; right: 2rem;
+            position: absolute; bottom: 4.5rem; right: 2rem;
             background: var(--surface); border: 1px solid var(--border);
             padding: 1rem; border-radius: 12px; box-shadow: var(--shadow);
             z-index: 1000; font-size: 0.8rem; max-height: 60vh; overflow-y: auto;
+            display: none;
+        }
+        .btn-toggle-legend {
+            position: absolute; bottom: 2rem; right: 2rem; z-index: 1000;
+            box-shadow: var(--shadow);
         }
         .legend-item { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
         .legend-item:last-child { margin-bottom: 0; }
@@ -215,40 +300,55 @@
         }
         .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
         .modal-instructions {
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1.25rem;
-            font-size: 0.8rem; color: var(--text-2); line-height: 1.6;
+            background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);
+            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
+            font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
+            display: flex; gap: 1rem; align-items: flex-start;
         }
+        .modal-instructions i {
+            color: var(--accent); font-size: 1.1rem; margin-top: 0.15rem;
+        }
+        .modal-instructions .instructions-content { flex: 1; }
         .modal-instructions code {
-            background: rgba(79, 142, 247, 0.15); color: var(--accent);
-            padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;
-            font-family: monospace;
+            background: rgba(79, 142, 247, 0.15); color: #8eb7f9;
+            padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            display: inline-block; margin-top: 0.5rem;
         }
-        .modal-instructions .format-example {
-            color: var(--text); font-weight: 500; margin-top: 0.4rem;
-            display: block;
-        }
+
         .modal textarea {
-            width: 100%; min-height: 180px; resize: vertical;
+            width: 100%; min-height: 220px; resize: none;
             background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 10px; padding: 1rem; color: var(--text);
-            font-family: 'Inter', sans-serif; font-size: 0.85rem;
+            border-radius: 12px; padding: 1.25rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
             line-height: 1.6; transition: var(--trans);
+            margin-bottom: 1rem;
         }
-        .modal textarea::placeholder { color: var(--text-2); opacity: 0.6; }
+        .modal textarea::placeholder { color: var(--text-2); opacity: 0.4; }
         .modal textarea:focus {
             outline: none; border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
         }
+
         .modal-actions {
-            display: flex; gap: 0.75rem; margin-top: 1.25rem; justify-content: flex-end;
+            display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;
         }
         .modal-result {
-            margin-top: 1rem; font-size: 0.8rem; border-radius: 8px; padding: 0.75rem 1rem;
-            display: none;
+            margin-top: 1rem; font-size: 0.85rem; border-radius: 12px; padding: 1rem 1.25rem;
+            display: none; line-height: 1.5;
         }
-        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.12); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.25); }
-        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.12); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.25); }
+        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
+        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.08); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+        .modal-error-list {
+            list-style: none; padding: 0; margin: 0.5rem 0 0 0;
+        }
+        .modal-error-list li {
+            position: relative; padding-left: 1.2rem; margin-bottom: 0.25rem;
+            opacity: 0.9; font-size: 0.8rem;
+        }
+        .modal-error-list li::before {
+            content: '•'; position: absolute; left: 0; color: var(--red);
+        }
 
         /* ── Nearby Cities Modal ── */
         .modal-nearby { max-width: 720px; }
@@ -361,36 +461,330 @@
             border-radius: 6px; font-size: 0.7rem; font-weight: 600;
             color: var(--orange);
         }
+
+        /* Train Line Styles */
+        .train-line-search-group {
+            display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .train-input-wrapper {
+            position: relative;
+        }
+        .train-input-wrapper input {
+            width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 9px; padding: 0.65rem 1rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: var(--trans);
+        }
+        .train-input-wrapper input:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+        .train-search-results {
+            position: absolute; top: 100%; left: 0; width: 100%;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 9px; box-shadow: var(--shadow); z-index: 10;
+            max-height: 200px; overflow-y: auto; display: none; margin-top: 4px;
+        }
+        .train-search-item {
+            padding: 0.6rem 1rem; cursor: pointer; transition: var(--trans);
+            font-size: 0.85rem; border-bottom: 1px solid var(--border);
+        }
+        .train-search-item:last-child { border-bottom: none; }
+        .train-search-item:hover { background: rgba(79, 142, 247, 0.12); color: var(--accent); }
+
+        .train-line-preview {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;
+            display: none;
+        }
+        .train-line-preview.active { display: block; }
+        .train-preview-title { font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .train-preview-info { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+        .train-preview-info i { color: var(--accent); }
+
+        .color-picker { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .color-option {
+            width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: var(--trans);
+        }
+        .color-option:hover { transform: scale(1.2); }
+        .color-option.active { border-color: #fff; box-shadow: 0 0 8px currentColor; }
+
+        /* ── City Info Panel ── */
+        .city-info-btn {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            background: none; border: none; padding: 0;
+            color: var(--text); font-weight: 800; font-size: 0.95rem;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            transition: var(--trans); text-align: left;
+        }
+        .city-info-btn:hover { color: var(--accent); }
+        .city-info-btn .city-btn-icon {
+            font-size: 0.65rem; color: var(--accent); opacity: 0.7;
+            transition: var(--trans);
+        }
+        .city-info-btn:hover .city-btn-icon { opacity: 1; }
+
+        .city-panel {
+            position: fixed; top: 0; right: -420px; width: 400px;
+            height: 100vh; background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+            z-index: 9998; display: flex; flex-direction: column;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+        .city-panel.open { right: 0; }
+
+        .city-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .city-panel-header h2 {
+            font-size: 1.1rem; font-weight: 800;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-panel-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.1rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .city-panel-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .city-panel-body {
+            flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;
+            display: flex; flex-direction: column; gap: 1.25rem;
+        }
+
+        .city-stat-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem 1.25rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .city-stat-icon {
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .city-stat-icon.area { background: rgba(79,142,247,0.15); color: var(--accent); }
+        .city-stat-label { font-size: 0.7rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; }
+        .city-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); line-height: 1; margin-top: 2px; }
+        .city-stat-unit { font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-left: 2px; }
+
+        .city-section-title {
+            font-size: 0.7rem; font-weight: 700; color: var(--text-2);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-section-title::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        .station-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 0.85rem 1rem;
+            transition: var(--trans);
+        }
+        .station-card:hover { border-color: rgba(79,142,247,0.25); }
+        .station-name {
+            font-size: 0.9rem; font-weight: 700; color: var(--text);
+            margin-bottom: 0.6rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .station-name i { color: var(--accent); }
+        .station-dist {
+            font-size: 0.65rem; font-weight: 700; color: var(--orange);
+            margin-left: auto; white-space: nowrap;
+            background: rgba(248,168,75,0.12); padding: 0.15rem 0.5rem;
+            border-radius: 6px; font-family: monospace;
+        }
+        .station-times {
+            display: flex; gap: 0.5rem;
+        }
+        .station-time-chip {
+            flex: 1; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.4rem 0.5rem;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+        }
+        .station-time-chip .chip-icon { font-size: 0.85rem; }
+        .station-time-chip .chip-icon.walk { color: var(--green); }
+        .station-time-chip .chip-icon.bike { color: var(--orange); }
+        .station-time-chip .chip-icon.car  { color: var(--accent); }
+        .station-time-chip .chip-val { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+        .station-time-chip .chip-label { font-size: 0.6rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .city-panel-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 1rem; padding: 3rem;
+            color: var(--text-2); font-size: 0.85rem;
+        }
+        .city-panel-loading i { font-size: 2rem; color: var(--accent); }
+        .city-panel-error {
+            background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.25);
+            border-radius: 10px; padding: 1rem; color: var(--red);
+            font-size: 0.82rem;
+        }
+
+        /* Enriched City Panel Styling */
+        .city-listings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .city-listing-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            transition: var(--trans);
+            text-decoration: none;
+            color: inherit;
+        }
+        .city-listing-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: var(--surface-2);
+        }
+        .city-listing-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.05);
+        }
+        .city-listing-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex: 1;
+            min-width: 0;
+        }
+        .city-listing-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .city-listing-price {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .city-listing-details {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .city-listing-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .city-listing-status.nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .city-listing-status.active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .city-listing-status.disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        
+        .city-zone-controls {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .city-zone-rule-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .city-zone-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .city-zone-badge.forbidden { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        .city-zone-badge.allowed { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+
+        @media (max-width: 768px) {
+            .city-panel { width: 100%; right: -100%; }
+            .city-panel.open { right: 0; }
+        }
     </style>
 </head>
 <body>
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+        <a href="/" class="logo">
+            <img src="/static/favicon.ico" alt="Logo">
+            {{ t(request, 'app.title') }}
+        </a>
+
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link active"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-        </nav>
-
-        <br>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
+        </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -411,15 +805,31 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
 
     <main class="main">
         <header class="topbar">
-            <h1>{{ t(request, 'nav.map', 'Exploration Carte') }}</h1>
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>{{ t(request, 'nav.map', 'Exploration Carte') }}</h1>
+            </div>
+            
+            <div style="flex: 1; max-width: 400px; margin: 0 1rem; position: relative;" id="citySearchContainer">
+                <div style="display: flex; align-items: center; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.55rem 0.9rem; transition: var(--trans);">
+                    <i class="fa-solid fa-magnifying-glass" style="color: var(--text-2); font-size: 0.9rem; margin-right: 0.5rem;"></i>
+                    <input type="text" id="mainCitySearchInput" placeholder="Rechercher par ville ou code postal..." style="flex: 1; background: none; border: none; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; width: 100%;">
+                    <div id="mainCitySearchLoader" style="display: none; color: var(--accent);"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                </div>
+                <div id="mainCitySearchResults" style="display: none; position: absolute; top: calc(100% + 0.5rem); left: 0; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); z-index: 1010; max-height: 300px; overflow-y: auto;">
+                </div>
+            </div>
+
             <div class="topbar-right">
                 <div id="stats" style="font-size: 0.8rem; color: var(--text-2);">
                     Chargement des données...
@@ -427,6 +837,10 @@
                 <button class="btn" onclick="openNearbyCitiesModal()" id="btn-nearby-cities">
                     <i class="fa-solid fa-city"></i>
                     {{ t(request, 'map.nearby_btn', 'Rechercher des villes aux alentours') }}
+                </button>
+                <button class="btn" onclick="openTrainLineModal()" id="btn-train-lines">
+                    <i class="fa-solid fa-train"></i>
+                    Lignes de train
                 </button>
                 <button class="btn" onclick="openBulkModal()" id="btn-add-addresses">
                     <i class="fa-solid fa-map-pin"></i>
@@ -437,7 +851,23 @@
 
 
         <div id="map"></div>
-        
+
+        <!-- ── City Info Side Panel ── -->
+        <div class="city-panel" id="cityInfoPanel">
+            <div class="city-panel-header">
+                <h2>
+                    <i class="fa-solid fa-city" style="color: var(--orange);"></i>
+                    <span id="cityPanelName">—</span>
+                </h2>
+                <button class="city-panel-close" onclick="closeCityPanel()" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="city-panel-body" id="cityPanelBody">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
         <div class="map-legend" id="map-legend">
             <div class="legend-section-title">{{ t(request, 'nav.listings_table', 'Annonces') }}</div>
             <div class="legend-item"><div class="dot" style="background: var(--accent);"></div> {{ t(request, 'map.new', 'Nouveauté') }}</div>
@@ -445,9 +875,14 @@
             <div class="legend-item"><div class="dot" style="background: var(--red);"></div> {{ t(request, 'map.disappeared', 'Disparue') }}</div>
             <div class="legend-separator"></div>
             <div class="legend-item" style="margin-top: 0.2rem;"><i class="fa-solid fa-briefcase" style="color: var(--accent);"></i> {{ t(request, 'map.work', 'Travail') }}</div>
+            <div class="legend-item"><i class="fa-solid fa-train" style="color: var(--yellow);"></i> Gares</div>
             <div class="legend-item"><i class="fa-solid fa-location-dot" style="color: var(--yellow);"></i> {{ t(request, 'map.poi', 'Point d\'intérêt') }}</div>
             <div id="legend-pins-section"></div>
         </div>
+        
+        <button class="btn btn-toggle-legend" onclick="const l = document.getElementById('map-legend'); l.style.display = (window.getComputedStyle(l).display === 'none') ? 'block' : 'none';">
+            <i class="fa-solid fa-layer-group"></i> {{ t(request, 'map.legend_btn', 'Légende') }}
+        </button>
     </main>
 
     <!-- ── Bulk Address Modal ── -->
@@ -459,9 +894,11 @@
             </div>
 
             <div class="modal-instructions">
-                <i class="fa-solid fa-circle-info" style="color: var(--accent); margin-right: 4px;"></i>
-                {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format :') }}
-                <span class="format-example"><code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Adresse physique') }}</code></span>
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="instructions-content">
+                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
+                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                </div>
             </div>
 
             <textarea id="bulkTextarea"
@@ -474,7 +911,7 @@
                 <button class="btn" onclick="closeBulkModal()">
                     <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
                 </button>
-                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk">
+                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk" style="padding-left: 1.25rem; padding-right: 1.25rem;">
                     <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
                 </button>
             </div>
@@ -491,8 +928,8 @@
 
             <div class="nearby-form-row">
                 <div class="nearby-form-group">
-                    <label for="nearbyCP"><i class="fa-solid fa-envelope" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Code Postal') }}</label>
-                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: 91190') }}" maxlength="5" inputmode="numeric">
+                    <label for="nearbyCP"><i class="fa-solid fa-city" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Ville ou Code Postal') }}</label>
+                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: Lyon ou 69000') }}">
                 </div>
                 <div class="nearby-form-group nearby-range-group">
                     <div class="nearby-range-label">
@@ -531,14 +968,81 @@
                     </table>
                 </div>
 
-                <div class="modal-actions" style="margin-top: 0;">
-                    <button class="btn" onclick="closeNearbyCitiesModal()">
-                        <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
-                    </button>
-                    <button class="btn primary" onclick="addNearbyCitiesToMap()" id="btnAddNearby">
-                        <i class="fa-solid fa-plus"></i> {{ t(request, 'map.nearby_add_btn', 'Ajouter à la carte') }}
-                    </button>
+                <div class="modal-actions" style="margin-top: 0; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="addStationsNearCities" class="nearby-cb" style="margin: 0;">
+                        <label for="addStationsNearCities" style="font-size: 0.8rem; color: var(--text-2); cursor: pointer;">
+                            ajouter les gares à proximité des villes à importer (20 Km)
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem;">
+                        <button class="btn primary" onclick="addNearbyCitiesToMap()" id="btnAddNearby">
+                            <i class="fa-solid fa-plus"></i> {{ t(request, 'map.nearby_add_btn', 'Ajouter à la carte') }}
+                        </button>
+                        <button class="btn" onclick="closeNearbyCitiesModal()">
+                            <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                        </button>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Train Line Modal ── -->
+    <div class="modal-backdrop" id="trainLineModal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-train" style="color: var(--accent);"></i> Ajouter une ligne de train</h2>
+                <button class="modal-close" onclick="closeTrainLineModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="train-line-search-group">
+                <div class="train-input-wrapper">
+                    <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.4rem;">Gare de départ</label>
+                    <div style="position: relative;">
+                        <input type="text" id="stationDepartureInput" placeholder="Rechercher une gare..." oninput="handleStationSearch(this, 'departure')" autocomplete="off">
+                        <div class="train-search-results" id="resultsDeparture"></div>
+                    </div>
+                </div>
+                <div class="train-input-wrapper">
+                    <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.4rem;">Gare d'arrivée</label>
+                    <div style="position: relative;">
+                        <input type="text" id="stationArrivalInput" placeholder="Rechercher une gare..." oninput="handleStationSearch(this, 'arrival')" autocomplete="off">
+                        <div class="train-search-results" id="resultsArrival"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="train-line-preview" id="trainLinePreview">
+                <div class="train-preview-title">Aperçu de la ligne</div>
+                <div class="train-preview-info">
+                    <i class="fa-solid fa-train"></i>
+                    <span id="previewStationsText">—</span>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem;">Couleur de la ligne</div>
+                    <div class="color-picker">
+                        <div class="color-option active" style="background: #4f8ef7;" onclick="selectTrainColor(this)" title="Bleu"></div>
+                        <div class="color-option" style="background: #10d9a4;" onclick="selectTrainColor(this)" title="Vert"></div>
+                        <div class="color-option" style="background: #f25c69;" onclick="selectTrainColor(this)" title="Rouge"></div>
+                        <div class="color-option" style="background: #f8a84b;" onclick="selectTrainColor(this)" title="Orange"></div>
+                        <div class="color-option" style="background: #f9d04f;" onclick="selectTrainColor(this)" title="Jaune"></div>
+                        <div class="color-option" style="background: #a29bfe;" onclick="selectTrainColor(this)" title="Violet"></div>
+                        <div class="color-option" style="background: #fd79a8;" onclick="selectTrainColor(this)" title="Rose"></div>
+                        <div class="color-option" style="background: #fff;" onclick="selectTrainColor(this)" title="Blanc"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-result" id="trainModalResult"></div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeTrainLineModal()">
+                    <i class="fa-solid fa-xmark"></i> Annuler
+                </button>
+                <button class="btn primary" id="btnSubmitTrainLine" onclick="submitTrainLine()" disabled>
+                    <i class="fa-solid fa-plus"></i> Tracer la ligne
+                </button>
             </div>
         </div>
     </div>
@@ -586,6 +1090,7 @@
 
         // Store pin markers layer for easy refresh
         const pinMarkersLayer = L.layerGroup().addTo(map);
+        const zoneRulesLayer = L.layerGroup().addTo(map);
         let currentUser = '';
 
         async function loadMapData() {
@@ -618,7 +1123,12 @@
                             <a href="/listings/${l.id}" class="map-popup-title">${l.title}</a>
                             <div class="map-popup-price">${priceStr}</div>
                             <div class="map-popup-specs">${specs}</div>
-                            <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${l.location || l.city}</div>
+                            <div class="map-popup-loc">
+                                <i class="fa-solid fa-location-dot"></i> 
+                                <span class="city-link" onclick="openCityPanel(event, '${(l.city || l.location || '').replace(/'/g, "\\'")}')">
+                                    ${l.location || l.city}
+                                </span>
+                            </div>
                             <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
                             </a>
@@ -694,6 +1204,12 @@
                 const pinCount = (data.pins || []).length;
                 document.getElementById('stats').textContent = `${markerCount} annonces · ${pinCount} adresses`;
 
+                // 5. Train Lines
+                loadTrainLines();
+
+                // 6. Zone Rules (Forbidden/Allowed)
+                loadZoneRules(data.zone_rules || [], data.to_qualify_cities || []);
+
             } catch (err) {
                 console.error("Error loading map data:", err);
                 document.getElementById('stats').textContent = "Erreur lors du chargement des données";
@@ -710,11 +1226,18 @@
 
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
                 
+                const isStation = p.pin_type === 'station';
+                const pinBg = isStation ? 'var(--yellow)' : color;
+                const pinColor = isStation ? '#000' : '#fff';
+                const iconHtml = isStation
+                    ? `<i class="fa-solid fa-train"></i>`
+                    : `<i class="fa-solid fa-house-chimney"></i>`;
+                
                 const marker = L.marker([p.lat, p.lon], {
                     icon: L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div style="background: ${color}; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
-                                <i class="fa-solid fa-house-chimney"></i>
+                        html: `<div style="background: ${pinBg}; color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
+                                ${iconHtml}
                                </div>`,
                         iconSize: [26, 26],
                         iconAnchor: [13, 13]
@@ -732,13 +1255,39 @@
                     ? `<div class="map-nearby-tag"><i class="fa-solid fa-location-crosshairs"></i> ${nearbyTagTpl.replace('{distance}', p.nearby_distance_km.toLocaleString('fr-FR')).replace('{city}', p.nearby_ref_commune).replace('{cp}', p.nearby_ref_cp)}</div>`
                     : '';
 
+                // City name – clickable to open info panel for nearby city pins
+                const isNearbyPin = (p.nearby_distance_km != null);
+                // Extract plain city name (strip CP suffix like "Lyon (69000)")
+                const rawTitle = p.title || '';
+                const cityNameForPanel = rawTitle.replace(/\s*\(\d{5}\)$/, '').trim();
+                const titleHtml = isNearbyPin
+                    ? `<button class="city-info-btn" onclick="openCityPanel(event, '${cityNameForPanel.replace(/'/g, "\\'")}')">` +
+                      `<i class="fa-solid fa-up-right-from-square city-btn-icon"></i>${rawTitle}` +
+                      `</button>`
+                    : `<strong class="map-popup-title">${rawTitle}</strong>`;
+
+                let stationRulesHtml = '';
+                if (isStation) {
+                    stationRulesHtml = `
+                    <div style="display: flex; gap: 0.5rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <button class="map-popup-action-btn red" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                            <i class="fa-solid fa-ban"></i> Interdire
+                        </button>
+                        <button class="map-popup-action-btn green" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                            <i class="fa-solid fa-check"></i> Autoriser
+                        </button>
+                    </div>`;
+                }
+
+
                 marker.bindPopup(`
-                    <strong class="map-popup-title">${p.title}</strong>
+                    ${titleHtml}
                     ${nearbyTag}
                     <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${p.address}</div>
                     <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
                         <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
                     </a>
+                    ${stationRulesHtml}
                     <div class="map-popup-meta">
                         <i class="fa-solid fa-user"></i>
                         <span style="color: ${color}; font-weight: 600;">${p.created_by}</span>
@@ -787,6 +1336,202 @@
                 }
             } catch (err) {
                 console.error('Error deleting pin:', err);
+            }
+        }
+
+        // ── Train Line Logic ──
+        let trainStations = { departure: null, arrival: null };
+        let currentTrainLinePath = null;
+        let selectedTrainColor = '#4f8ef7';
+        const trainLinesLayer = L.layerGroup().addTo(map);
+
+        function openTrainLineModal() {
+            document.getElementById('trainLineModal').classList.add('active');
+            resetTrainModal();
+        }
+
+        function closeTrainLineModal() {
+            document.getElementById('trainLineModal').classList.remove('active');
+            if (currentTrainLinePath) {
+                map.removeLayer(currentTrainLinePath);
+                currentTrainLinePath = null;
+            }
+        }
+
+        function resetTrainModal() {
+            trainStations = { departure: null, arrival: null };
+            document.getElementById('stationDepartureInput').value = '';
+            document.getElementById('stationArrivalInput').value = '';
+            document.getElementById('trainLinePreview').classList.remove('active');
+            document.getElementById('btnSubmitTrainLine').disabled = true;
+            document.getElementById('trainModalResult').className = 'modal-result';
+            document.getElementById('trainModalResult').textContent = '';
+            document.getElementById('resultsDeparture').style.display = 'none';
+            document.getElementById('resultsArrival').style.display = 'none';
+        }
+
+        let stationSearchTimeout = null;
+        function handleStationSearch(input, type) {
+            clearTimeout(stationSearchTimeout);
+            const query = input.value.trim();
+            const resultsDiv = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            if (query.length < 3) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            stationSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/stations/search?q=${encodeURIComponent(query)}`);
+                    const stations = await res.json();
+                    
+                    resultsDiv.innerHTML = '';
+                    if (stations.length === 0) {
+                        resultsDiv.innerHTML = '<div class="train-search-item">Aucune gare trouvée</div>';
+                    } else {
+                        stations.forEach(s => {
+                            const div = document.createElement('div');
+                            div.className = 'train-search-item';
+                            div.textContent = s.name;
+                            div.onclick = () => selectStation(s.name, s.lat, s.lon, type);
+                            resultsDiv.appendChild(div);
+                        });
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (err) {
+                    console.error("Station search error:", err);
+                }
+            }, 400);
+        }
+
+        function selectStation(name, lat, lon, type) {
+            trainStations[type] = { name, lat, lon };
+            document.getElementById(`station${type.charAt(0).toUpperCase() + type.slice(1)}Input`).value = name;
+            document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`).style.display = 'none';
+            updateTrainPreview();
+        }
+
+        async function updateTrainPreview() {
+            if (trainStations.departure && trainStations.arrival) {
+                const text = `${trainStations.departure.name} ➔ ${trainStations.arrival.name}`;
+                document.getElementById('previewStationsText').textContent = text;
+                document.getElementById('trainLinePreview').classList.add('active');
+                
+                // Show on map as preview
+                if (currentTrainLinePath) map.removeLayer(currentTrainLinePath);
+                
+                try {
+                    const res = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                    const path = await res.json();
+                    
+                    currentTrainLinePath = L.polyline(path, {
+                        color: selectedTrainColor,
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    map.fitBounds(currentTrainLinePath.getBounds(), { padding: [50, 50] });
+                    document.getElementById('btnSubmitTrainLine').disabled = false;
+                } catch (err) {
+                    console.error("Path error:", err);
+                }
+            }
+        }
+
+        function selectTrainColor(el) {
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+            selectedTrainColor = el.style.backgroundColor || el.style.background;
+            if (currentTrainLinePath) {
+                currentTrainLinePath.setStyle({ color: selectedTrainColor });
+            }
+        }
+
+        async function submitTrainLine() {
+            const btn = document.getElementById('btnSubmitTrainLine');
+            const resultEl = document.getElementById('trainModalResult');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traçage...';
+            
+            try {
+                // Get the path from the current preview or fetch again to be sure
+                const resPath = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                const path = await resPath.json();
+
+                const res = await fetch('/api/geo/train-lines', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        departure_station: trainStations.departure.name,
+                        arrival_station: trainStations.arrival.name,
+                        path: path,
+                        color: selectedTrainColor
+                    })
+                });
+
+                if (res.ok) {
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = 'Ligne ajoutée avec succès !';
+                    loadTrainLines(); // Refresh lines on map
+                    setTimeout(() => closeTrainLineModal(), 1500);
+                } else {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = 'Erreur lors de l\'enregistrement de la ligne.';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Erreur réseau : ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Tracer la ligne';
+            }
+        }
+
+        async function loadTrainLines() {
+            try {
+                const res = await fetch('/api/geo/train-lines');
+                const lines = await res.json();
+                
+                trainLinesLayer.clearLayers();
+                lines.forEach(line => {
+                    const path = JSON.parse(line.path_json);
+                    const polyline = L.polyline(path, {
+                        color: line.color,
+                        weight: 5,
+                        opacity: 0.7
+                    }).addTo(trainLinesLayer);
+                    
+                    polyline.bindPopup(`
+                        <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 5px;">
+                            <i class="fa-solid fa-train" style="color: ${line.color}"></i> Section de ligne
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-2);">
+                            <strong>De :</strong> ${line.departure_station}<br>
+                            <strong>À :</strong> ${line.arrival_station}
+                        </div>
+                        <div class="map-popup-meta" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 5px;">
+                            <i class="fa-solid fa-user"></i> ${line.created_by}
+                            <button class="map-popup-delete" onclick="deleteTrainLine(${line.id})" style="margin-left: auto;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `);
+                });
+            } catch (err) {
+                console.error("Error loading train lines:", err);
+            }
+        }
+
+        async function deleteTrainLine(id) {
+            if (!confirm('Supprimer cette section de ligne ?')) return;
+            try {
+                const res = await fetch(`/api/geo/train-lines/${id}`, { method: 'DELETE' });
+                if (res.ok) loadTrainLines();
+            } catch (err) {
+                console.error("Error deleting train line:", err);
             }
         }
 
@@ -847,33 +1592,36 @@
                 const data = await res.json();
 
                 if (data.created > 0) {
-                    let msg = `${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) !") }}`;
+                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
                     if (data.errors && data.errors.length > 0) {
-                        msg += `\n⚠️ ${data.errors.length} {{ t(request, "map.geocode_failed", "erreur(s) de géolocalisation") }}:`;
+                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                        msg += `<ul class="modal-error-list">`;
                         data.errors.forEach(e => {
-                            msg += `\n  • ${e.title} — ${e.address}`;
+                            msg += `<li>${e.title} — ${e.address}</li>`;
                         });
+                        msg += `</ul>`;
                     }
                     resultEl.className = 'modal-result success';
-                    resultEl.textContent = msg;
-                    resultEl.style.whiteSpace = 'pre-line';
+                    resultEl.innerHTML = msg;
 
                     // Reload map data
                     loadMapData();
 
-                    // Close modal after a short delay
-                    setTimeout(() => closeBulkModal(), 2500);
+                    // Close modal after a short delay if no errors
+                    if (!data.errors || data.errors.length === 0) {
+                        setTimeout(() => closeBulkModal(), 2000);
+                    }
                 } else {
-                    let errMsg = '{{ t(request, "map.geocode_failed", "Géolocalisation échouée") }}';
+                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
                     if (data.errors && data.errors.length > 0) {
-                        errMsg += ':\n';
+                        errMsg += `<ul class="modal-error-list">`;
                         data.errors.forEach(e => {
-                            errMsg += `  • ${e.title} — ${e.address}\n`;
+                            errMsg += `<li>${e.title} — ${e.address}</li>`;
                         });
+                        errMsg += `</ul>`;
                     }
                     resultEl.className = 'modal-result error';
-                    resultEl.textContent = errMsg;
-                    resultEl.style.whiteSpace = 'pre-line';
+                    resultEl.innerHTML = errMsg;
                 }
             } catch (err) {
                 resultEl.className = 'modal-result error';
@@ -894,7 +1642,7 @@
 
         // Close modal on Escape
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') { closeBulkModal(); closeNearbyCitiesModal(); }
+            if (e.key === 'Escape') { closeBulkModal(); closeNearbyCitiesModal(); closeCityPanel(); }
         });
 
         // ── Nearby Cities Modal Logic ──
@@ -920,14 +1668,14 @@
         }
 
         async function searchNearbyCities() {
-            const cp = document.getElementById('nearbyCP').value.trim();
+            const query = document.getElementById('nearbyCP').value.trim();
             const rayon = document.getElementById('nearbyRayon').value;
             const resultEl = document.getElementById('nearbySearchResult');
             const btn = document.getElementById('btnSearchNearby');
 
-            if (!/^\d{5}$/.test(cp)) {
+            if (!query) {
                 resultEl.className = 'modal-result error';
-                resultEl.textContent = '{{ t(request, "map.nearby_invalid_cp", "Veuillez saisir un code postal valide (5 chiffres).") }}';
+                resultEl.textContent = '{{ t(request, "map.nearby_invalid_query", "Veuillez saisir une ville ou un code postal.") }}';
                 return;
             }
 
@@ -938,22 +1686,24 @@
             document.getElementById('nearbyResultsWrapper').classList.remove('visible');
 
             try {
-                const res = await fetch(`/api/nearby-cities?cp=${encodeURIComponent(cp)}&rayon=${rayon}`);
+                const res = await fetch(`/api/nearby-cities?query=${encodeURIComponent(query)}&rayon=${rayon}`);
                 if (!res.ok) {
                     const err = await res.json();
                     throw new Error(err.detail || `HTTP ${res.status}`);
                 }
-                const cities = await res.json();
+                const data = await res.json();
+                const cities = data.cities;
+                const reference = data.reference;
 
                 if (!cities || cities.length === 0) {
                     resultEl.className = 'modal-result error';
-                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouv\u00e9e pour ce code postal et ce rayon.") }}';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouvée pour cette recherche.") }}';
                     return;
                 }
 
-                // Deduce reference city: first entry with smallest distance
-                nearbyRefCommune = cities[0].nom_commune || '';
-                nearbyRefCp = cities[0].code_postal || cp;
+                // Use reference info from API
+                nearbyRefCommune = reference.name;
+                nearbyRefCp = reference.cp;
 
                 // Populate table
                 const tbody = document.getElementById('nearbyCitiesTableBody');
@@ -1037,7 +1787,10 @@
                 const res = await fetch('/api/map-pins/nearby', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cities: selected })
+                    body: JSON.stringify({ 
+                        cities: selected,
+                        include_stations: document.getElementById('addStationsNearCities').checked
+                    })
                 });
                 const data = await res.json();
 
@@ -1069,7 +1822,736 @@
             if (e.key === 'Enter') searchNearbyCities();
         });
 
+        // ── City Info Panel ──
+        function openCityPanel(event, cityName) {
+            if (event) event.stopPropagation();
+            const panel = document.getElementById('cityInfoPanel');
+            const nameEl = document.getElementById('cityPanelName');
+            const body = document.getElementById('cityPanelBody');
+
+            nameEl.textContent = cityName;
+            body.innerHTML = `
+                <div class="city-panel-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Chargement des données…
+                </div>`;
+            panel.classList.add('open');
+
+            fetchCityInfo(cityName);
+            highlightCityContour(cityName, true);
+        }
+
+        function closeCityPanel() {
+            document.getElementById('cityInfoPanel').classList.remove('open');
+        }
+
+        const _cityInfoCache = {};
+
+        async function fetchCityInfo(cityName) {
+            const body = document.getElementById('cityPanelBody');
+
+            if (_cityInfoCache[cityName]) {
+                renderCityInfo(_cityInfoCache[cityName]);
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/city-info?city=${encodeURIComponent(cityName)}`);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                _cityInfoCache[cityName] = data;
+                renderCityInfo(data);
+            } catch (err) {
+                body.innerHTML = `<div class="city-panel-error"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</div>`;
+            }
+        }
+
+        function fmtMin(min) {
+            if (min == null) return '—';
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+        }
+
+        function renderCityInfo(data) {
+            const body = document.getElementById('cityPanelBody');
+            const cityName = data.city;
+            const safeCityName = cityName.replace(/'/g, "\\'");
+
+            // 1. Zone Management Card
+            let zoneHtml = `
+            <div class="city-section-title"><i class="fa-solid fa-ban"></i> Gestion de la zone</div>
+            <div class="city-zone-controls">`;
+
+            if (data.zone_rule) {
+                const isForbidden = data.zone_rule.rule === 'forbidden';
+                const badgeClass = isForbidden ? 'forbidden' : 'allowed';
+                const badgeLabel = isForbidden ? 'Zone Interdite' : 'Zone Autorisée';
+                const badgeIcon = isForbidden ? 'fa-ban' : 'fa-check';
+
+                zoneHtml += `
+                <div class="city-zone-rule-status">
+                    <span class="city-zone-badge ${badgeClass}">
+                        <i class="fa-solid ${badgeIcon}"></i> ${badgeLabel}
+                    </span>
+                    <button class="map-popup-delete" style="margin: 0; padding: 0.4rem 0.8rem;" onclick="deleteZoneFromPanel(${data.zone_rule.id}, '${safeCityName}')">
+                        <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                    </button>
+                </div>`;
+            } else {
+                zoneHtml += `
+                <div style="font-size: 0.8rem; color: var(--text-2); line-height: 1.4;">
+                    Cette ville n'est pas configurée dans vos règles de zones géographiques.
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 4px;">
+                    <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'allowed')">
+                        <i class="fa-solid fa-check"></i> Autoriser
+                    </button>
+                    <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'forbidden')">
+                        <i class="fa-solid fa-ban"></i> Interdire
+                    </button>
+                </div>`;
+            }
+            zoneHtml += `</div>`;
+
+            // 2. Surface total Card
+            let areaHtml = '';
+            if (data.area_km2 != null) {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div>
+                            <span class="city-stat-value">${data.area_km2.toLocaleString('fr-FR')}</span>
+                            <span class="city-stat-unit">km²</span>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div style="color: var(--text-2); font-size: 0.82rem; margin-top: 4px;">Donnée non disponible</div>
+                    </div>
+                </div>`;
+            }
+
+            // 3. Listings Section
+            let listingsHtml = '';
+            if (data.listings && data.listings.length > 0) {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières (${data.listings.length})</div>
+                <div class="city-listings-list">`;
+                
+                data.listings.forEach(l => {
+                    const priceStr = typeof l.price === 'number' ? l.price.toLocaleString('fr-FR') + ' €' : (l.price || 'N/C');
+                    const specs = `${l.area ? l.area + ' m²' : ''} ${l.area && l.rooms ? '•' : ''} ${l.rooms ? l.rooms + ' p.' : ''}`.trim() || 'N/C';
+                    
+                    // Photo handling
+                    let imgHtml = `<div class="city-listing-img" style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);"><i class="fa-solid fa-image fa-lg"></i></div>`;
+                    if (l.photos && l.photos.length > 0) {
+                        imgHtml = `<img src="${l.photos[0]}" class="city-listing-img" alt="${l.title || ''}" onerror="this.outerHTML='<div class=&quot;city-listing-img&quot; style=&quot;display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);&quot;><i class=&quot;fa-solid fa-image fa-lg&quot;></i></div>'">`;
+                    }
+
+                    // Status handling
+                    let statusLabel = '';
+                    let statusClass = '';
+                    const statusLower = (l.status || '').toLowerCase();
+                    if (statusLower === 'new' || statusLower === 'nouvelle') {
+                        statusLabel = 'Nouvelle';
+                        statusClass = 'nouvelle';
+                    } else if (statusLower === 'active') {
+                        statusLabel = 'Active';
+                        statusClass = 'active';
+                    } else if (statusLower === 'disappeared' || statusLower === 'disparue') {
+                        statusLabel = 'Disparue';
+                        statusClass = 'disparue';
+                    }
+
+                    const statusHtml = statusLabel ? `<span class="city-listing-status ${statusClass}">${statusLabel}</span>` : '';
+
+                    listingsHtml += `
+                    <a href="${l.url}" class="city-listing-card" target="_blank">
+                        ${imgHtml}
+                        <div class="city-listing-info">
+                            <div class="city-listing-title" title="${l.title || ''}">${l.title || ''}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span class="city-listing-price">${priceStr}</span>
+                                ${statusHtml}
+                            </div>
+                            <div class="city-listing-details">${specs}</div>
+                        </div>
+                    </a>`;
+                });
+                listingsHtml += `</div>`;
+            } else {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières</div>
+                <div style="color: var(--text-2); font-size: 0.82rem; padding: 0.5rem 0;">Aucune annonce active dans cette ville.</div>`;
+            }
+
+            // 4. Stations section
+            let stationsHtml = '';
+            if (data.stations && data.stations.length > 0) {
+                stationsHtml = `<div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF à proximité</div>`;
+                data.stations.forEach(s => {
+                    const distLabel = s.distance_km != null ? ` <span class="station-dist">${s.distance_km} km</span>` : '';
+                    stationsHtml += `
+                    <div class="station-card">
+                        <div class="station-name">
+                            <i class="fa-solid fa-train-subway"></i>
+                            ${s.name}${distLabel}
+                        </div>
+                        <div class="station-times">
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-person-walking chip-icon walk"></i>
+                                <span class="chip-val">${fmtMin(s.walk)}</span>
+                                <span class="chip-label">À pied</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-bicycle chip-icon bike"></i>
+                                <span class="chip-val">${fmtMin(s.bike)}</span>
+                                <span class="chip-label">Vélo</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-car chip-icon car"></i>
+                                <span class="chip-val">${fmtMin(s.car)}</span>
+                                <span class="chip-label">Voiture</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                                <i class="fa-solid fa-ban"></i> Interdire
+                            </button>
+                            <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                                <i class="fa-solid fa-check"></i> Autoriser
+                            </button>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                stationsHtml = `
+                <div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF</div>
+                <div style="color: var(--text-2); font-size: 0.82rem;">Aucune gare trouvée dans un rayon de 20 km.</div>`;
+            }
+
+            body.innerHTML = zoneHtml + areaHtml + listingsHtml + stationsHtml;
+        }
+
+        async function addZoneFromPanel(name, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name, rule })
+                });
+                if (res.ok) {
+                    delete _cityInfoCache[name];
+                    loadMapData();
+                    fetchCityInfo(name);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
+        async function deleteZoneFromPanel(ruleId, cityName) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    delete _cityInfoCache[cityName];
+                    loadMapData();
+                    fetchCityInfo(cityName);
+                } else {
+                    alert("Erreur: Action impossible");
+                }
+            } catch (err) {
+                console.error("Error deleting zone rule:", err);
+            }
+        }
+
+        // ── Main City Search Logic ──
+        let currentCityContourLayer = null;
+        const mainCitySearchInput = document.getElementById('mainCitySearchInput');
+        const mainCitySearchResults = document.getElementById('mainCitySearchResults');
+        const mainCitySearchLoader = document.getElementById('mainCitySearchLoader');
+        let searchTimeout = null;
+
+        mainCitySearchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                mainCitySearchResults.style.display = 'none';
+                return;
+            }
+            mainCitySearchLoader.style.display = 'block';
+            searchTimeout = setTimeout(() => performMainCitySearch(query), 500);
+        });
+
+        async function performMainCitySearch(query) {
+            try {
+                let url = '';
+                if (/^\d+$/.test(query)) {
+                    url = `https://geo.api.gouv.fr/communes?codePostal=${query}&fields=nom,code,codesPostaux,contour&format=json&geometry=contour`;
+                } else {
+                    url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(query)}&fields=nom,code,codesPostaux,contour&format=json&geometry=contour`;
+                }
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                mainCitySearchResults.innerHTML = '';
+                if (data.length === 0) {
+                    mainCitySearchResults.innerHTML = '<div style="padding: 1rem; color: var(--text-2); font-size: 0.85rem; text-align: center;">Aucune ville trouvée.</div>';
+                } else {
+                    data.slice(0, 8).forEach(city => {
+                        const div = document.createElement('div');
+                        div.style.padding = '0.75rem 1rem';
+                        div.style.cursor = 'pointer';
+                        div.style.borderBottom = '1px solid var(--border)';
+                        div.style.fontSize = '0.85rem';
+                        div.style.transition = 'var(--trans)';
+                        div.innerHTML = `<strong>${city.nom}</strong> <span style="color: var(--text-2); font-family: monospace; font-size: 0.8rem; margin-left: 4px;">(${city.codesPostaux[0]})</span>`;
+                        
+                        div.addEventListener('mouseenter', () => div.style.background = 'rgba(79, 142, 247, 0.08)');
+                        div.addEventListener('mouseleave', () => div.style.background = 'transparent');
+                        
+                        div.addEventListener('click', () => {
+                            mainCitySearchResults.style.display = 'none';
+                            mainCitySearchInput.value = `${city.nom} (${city.codesPostaux[0]})`;
+                            displaySearchedCity(city);
+                        });
+                        mainCitySearchResults.appendChild(div);
+                    });
+                }
+                mainCitySearchResults.style.display = 'block';
+            } catch (err) {
+                console.error("City search error:", err);
+            } finally {
+                mainCitySearchLoader.style.display = 'none';
+            }
+        }
+
+        // Close results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!document.getElementById('citySearchContainer').contains(e.target)) {
+                mainCitySearchResults.style.display = 'none';
+            }
+        });
+
+        // ── Zone Rules (Forbidden/Allowed) Logic ──
+        async function loadZoneRules(rules, toQualifyCities = []) {
+            zoneRulesLayer.clearLayers();
+            for (const rule of rules) {
+                if (rule.zone_type === 'city') {
+                    renderCityZone(rule);
+                } else if (rule.zone_type === 'station') {
+                    renderStationZone(rule);
+                }
+            }
+            for (const cityName of toQualifyCities) {
+                renderToQualifyCityZone(cityName);
+            }
+        }
+
+        // Helper to fetch commune contour from geo.api.gouv.fr supporting "City Name (Zip)" format
+        async function fetchCommuneData(cityNameOrRuleName) {
+            if (!cityNameOrRuleName) return null;
+            let cityNameOnly = cityNameOrRuleName.trim();
+            let zipCode = null;
+
+            // Extract zip code from parentheses if present, e.g. "Colombier (07430)"
+            const parenMatch = cityNameOrRuleName.match(/\(([^)]+)\)/);
+            if (parenMatch) {
+                cityNameOnly = cityNameOrRuleName.replace(parenMatch[0], '').trim();
+                const content = parenMatch[1].trim();
+                if (content.match(/^\d{5}$/)) {
+                    zipCode = content;
+                }
+            }
+
+            // Also clean trailing zip codes not in parentheses if any
+            const endMatch = cityNameOnly.match(/\b\d{5}\b$/);
+            if (endMatch) {
+                zipCode = endMatch[0];
+                cityNameOnly = cityNameOnly.substring(0, endMatch.index).trim();
+            }
+
+            let url = '';
+            // Strategy 1: query by codePostal if we extracted a 5-digit zip code
+            if (zipCode) {
+                url = `https://geo.api.gouv.fr/communes?codePostal=${zipCode}&fields=nom,code,contour&format=json&geometry=contour`;
+            } else {
+                url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data && data.length > 0) {
+                    // Try to find exact match by name ignoring case
+                    const lowerName = cityNameOnly.toLowerCase();
+                    let match = data.find(c => c.nom.toLowerCase() === lowerName);
+                    
+                    // Fallback: search ignoring accents or hyphens
+                    if (!match) {
+                        const normStr = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                        const normCityName = normStr(cityNameOnly);
+                        match = data.find(c => normStr(c.nom) === normCityName);
+                    }
+
+                    // Fallback: first result
+                    if (!match) {
+                        match = data[0];
+                    }
+                    return match;
+                }
+                
+                // If Strategy 1 by zipCode returned nothing, fallback to Strategy 2 by name only
+                if (zipCode) {
+                    const fallbackUrl = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+                    const fallbackRes = await fetch(fallbackUrl);
+                    const fallbackData = await fallbackRes.json();
+                    if (fallbackData && fallbackData.length > 0) {
+                        const lowerName = cityNameOnly.toLowerCase();
+                        let match = fallbackData.find(c => c.nom.toLowerCase() === lowerName) || fallbackData[0];
+                        return match;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching commune data from geo.api.gouv.fr:", e);
+            }
+            return null;
+        }
+
+        async function renderCityZone(rule) {
+            try {
+                const city = await fetchCommuneData(rule.name);
+                if (city && city.contour) {
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
+
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, rule.name);
+                    });
+
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${rule.name}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-2);">Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${rule.name.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <button class="map-popup-delete" style="justify-content: center; margin: 0;" onclick="deleteZoneRule(${rule.id})">
+                                    <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering city zone:", e); }
+        }
+
+        async function renderToQualifyCityZone(cityName) {
+            try {
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    const color = 'var(--yellow)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
+
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
+
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${cityName}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Zone à Qualifier</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${cityName.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--green); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'allowed')">
+                                        Autoriser
+                                    </button>
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--red); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'forbidden')">
+                                        Interdire
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering to_qualify city zone:", e); }
+        }
+
+        async function renderStationZone(rule) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rule.name)}&format=json&limit=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const iconHtml = `<div style="background: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow);">
+                                        <i class="fa-solid fa-train"></i>
+                                      </div>`;
+                    
+                    const marker = L.marker([lat, lon], {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: iconHtml,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(zoneRulesLayer);
+                    
+                    marker.bindPopup(`
+                        <strong>${rule.name}</strong><br>
+                        Gare ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}
+                        <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                            <button class="map-popup-delete" onclick="deleteZoneRule(${rule.id})">
+                                <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                            </button>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering station zone:", e); }
+        }
+
+                async function deleteZoneRule(ruleId) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMapData();
+                }
+            } catch (err) { console.error("Error deleting zone rule:", err); }
+        }
+
+        async function addZoneRuleFromMap(name, type, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: type, name, rule })
+                });
+                if (res.ok) {
+                    map.closePopup();
+                    if (currentCityContourLayer) {
+                        map.removeLayer(currentCityContourLayer);
+                        currentCityContourLayer = null;
+                    }
+                    loadMapData();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
+        // Function to highlight a city contour on the map
+        async function highlightCityContour(cityName, fitBounds = true) {
+            if (!cityName || cityName === '-' || cityName.toLowerCase() === 'n/c') return;
+            
+            console.log("Highlighting city contour for:", cityName);
+            
+            try {
+                // Clear existing city layer if any
+                if (window.currentCityLayer) {
+                    map.removeLayer(window.currentCityLayer);
+                    window.currentCityLayer = null;
+                }
+
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    window.currentCityLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: 'var(--accent)',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.15,
+                            fillColor: 'var(--accent)'
+                        }
+                    }).addTo(map);
+
+                    // Click opens the city panel
+                    window.currentCityLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
+
+                    if (fitBounds) {
+                        map.fitBounds(window.currentCityLayer.getBounds(), { padding: [50, 50] });
+                    }
+                }
+            } catch (error) {
+                console.error("Error highlighting city contour:", error);
+            }
+        }
+
+        function displaySearchedCity(city) {
+            if (currentCityContourLayer) {
+                map.removeLayer(currentCityContourLayer);
+            }
+            if (city.contour) {
+                currentCityContourLayer = L.geoJSON(city.contour, {
+                    style: {
+                        color: 'var(--accent)',
+                        weight: 3,
+                        opacity: 0.9,
+                        fillColor: 'var(--accent)',
+                        fillOpacity: 0.15
+                    }
+                }).addTo(map);
+                
+                // Click opens the city panel
+                currentCityContourLayer.on('click', function(e) {
+                    openCityPanel(e.originalEvent, city.nom);
+                });
+
+                map.fitBounds(currentCityContourLayer.getBounds(), { padding: [50, 50] });
+
+                const center = currentCityContourLayer.getBounds().getCenter();
+                const cp = city.codesPostaux ? city.codesPostaux[0] : '';
+                const safeName = city.nom.replace(/'/g, "\\'");
+                
+                L.popup()
+                    .setLatLng(center)
+                    .setContent(`
+                        <div style="text-align: center; padding: 0.5rem 0; min-width: 180px;">
+                            <strong style="font-size: 1.1rem; color: var(--text);">${city.nom}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-2);">${cp}</span><br>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" onclick="addSearchedCityToMap('${safeName}', '${cp}', 'allowed')">
+                                    <i class="fa-solid fa-plus"></i> Ajouter à la carte
+                                </button>
+                                <button class="btn" style="font-size: 0.8rem; padding: 0.5rem 0.9rem; border-color: var(--red); color: var(--red); background: rgba(242,92,105,0.05);" onclick="addZoneRuleFromMap('${safeName}', 'city', 'forbidden')">
+                                    <i class="fa-solid fa-ban"></i> Interdire
+                                </button>
+                            </div>
+                        </div>
+                    `)
+                    .openOn(map);
+            }
+        }
+
+        async function addSearchedCityToMap(nom, cp, rule = 'allowed') {
+            const btn = document.querySelector('.leaflet-popup-content button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ajout en cours...';
+            }
+
+            const selected = [{
+                nom_commune: nom,
+                code_postal: cp,
+                distance: 0,
+                ref_commune: nom,
+                ref_cp: cp
+            }];
+
+            try {
+                // 1. Add as map pins
+                const res = await fetch('/api/map-pins/nearby', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        cities: selected,
+                        include_stations: true 
+                    })
+                });
+                const data = await res.json();
+                
+                // 2. Also add as an "allowed" zone rule
+                await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name: nom, rule: rule })
+                });
+
+                if (data.created >= 0) { // >= 0 because it might already exist as a pin
+                    if (currentCityContourLayer) {
+                        map.removeLayer(currentCityContourLayer);
+                        currentCityContourLayer = null;
+                    }
+                    map.closePopup();
+                    mainCitySearchInput.value = '';
+                    loadMapData();
+                } else {
+                    alert("Erreur: Impossible de géolocaliser cette ville.");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter à la carte';
+                    }
+                }
+            } catch (err) {
+                alert("Erreur réseau: " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter à la carte';
+                }
+            }
+        }
+
         loadMapData();
+
+        // Check for city parameter in URL on load
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cityParam = urlParams.get('city');
+            if (cityParam) {
+                // Delay slightly to ensure map is ready and centered
+                setTimeout(() => {
+                    highlightCityContour(cityParam, true);
+                }, 800);
+            }
+        });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
     </script>
 </body>
 </html>
+

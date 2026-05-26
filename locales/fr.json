@@ -20,7 +20,9 @@
         "total_listings": "Total annonces",
         "users": "Utilisateurs",
         "map": "Carte",
-        "profile": "Mon Profil"
+        "profile": "Mon Profil",
+        "administration": "Administration",
+        "duplicate_hunt": "Chasse aux duplicats"
     },
     "profile": {
         "title": "Mon Profil",
@@ -59,8 +61,8 @@
         "success": "adresse(s) ajoutée(s) avec succès !",
         "nearby_btn": "Rechercher des villes aux alentours",
         "nearby_title": "Rechercher des villes aux alentours",
-        "nearby_cp_label": "Code Postal",
-        "nearby_cp_placeholder": "ex: 91190",
+        "nearby_cp_label": "Ville ou Code Postal",
+        "nearby_cp_placeholder": "ex: Lyon ou 69000",
         "nearby_radius_label": "Rayon",
         "nearby_search_btn": "Rechercher",
         "nearby_searching": "Recherche...",
@@ -71,8 +73,8 @@
         "nearby_uncheck_all": "Tout décocher",
         "nearby_add_btn": "Ajouter à la carte",
         "nearby_adding": "Ajout en cours...",
-        "nearby_invalid_cp": "Veuillez saisir un code postal valide (5 chiffres).",
-        "nearby_no_results": "Aucune ville trouvée pour ce code postal et ce rayon.",
+        "nearby_invalid_query": "Veuillez saisir une ville ou un code postal.",
+        "nearby_no_results": "Aucune ville trouvée pour cette recherche.",
         "nearby_none_selected": "Veuillez cocher au moins une ville.",
         "nearby_success": "ville(s) ajoutée(s) à la carte !",
         "nearby_geocode_errors": "erreur(s) de géolocalisation.",
@@ -103,9 +105,12 @@
         },
         "stats": {
             "new": "Nouvelles",
-            "disappeared": "Disparues"
+            "active": "Actives",
+            "disappeared": "Disparues",
+            "duplicates": "Doublons"
         },
         "filter_label": "Filtrer :",
+        "refresh_tags": "Forcer le rafraîchissement des tags",
         "see": "Voir",
         "add_listings_title": "Ajouter des annonces",
         "add_listings_desc_single": "Collez l'URL d'une annonce immobilière.",
@@ -138,6 +143,9 @@
         "reload": "Relancer le scraping"
     },
     "listing": {
+        "like": "J'aime",
+        "dislike": "Je n'aime pas",
+        "favorite": "Coup de coeur",
         "back": "Retour",
         "refresh": "Actualiser",
         "edit": "Éditer",
@@ -239,7 +247,22 @@
         "station_1": "Plus proche",
         "station_2": "Seconde plus proche",
         "loading_stations": "Recherche des gares à proximité...",
-        "save_stations": "Enregistrer la sélection"
+        "save_stations": "Enregistrer la sélection",
+        "declare_duplicate": "Déclarer un duplicat",
+        "duplicate_modal_title": "Déclarer un doublon",
+        "duplicate_type": "Type de duplicat",
+        "duplicate_internal": "Annonce interne",
+        "duplicate_external": "Annonce externe (URL)",
+        "search_listing": "Rechercher une annonce",
+        "search_placeholder": "Rechercher par titre ou ville...",
+        "selected_listing": "Annonce sélectionnée",
+        "external_url": "URL de l'annonce originale",
+        "confirm": "Confirmer",
+        "duplicate_warning": "Cette annonce est marquée comme duplicat",
+        "duplicate_of_internal": "Doublon de l'annonce interne :",
+        "duplicate_of_external": "Doublon de l'annonce externe :",
+        "duplicate_generic": "Cette annonce est un doublon.",
+        "duplicate_success": "Doublon déclaré avec succès !"
     },
     "setup": {
         "title": "Création Administrateur",
@@ -271,7 +294,18 @@
         "save": "Enregistrer",
         "btn_edit_profile": "Éditer le profil",
         "btn_change_pwd": "Changer le mot de passe",
-        "btn_delete": "Supprimer"
+        "btn_delete": "Supprimer",
+        "backup_restore_title": "Sauvegarde & Restauration",
+        "backup_btn": "Télécharger une sauvegarde",
+        "restore_btn": "Restaurer une sauvegarde",
+        "restore_success": "Système restauré avec succès !",
+        "restore_error": "Erreur lors de la restauration : ",
+        "backup_filename": "immo_boussole_backup",
+        "backup_desc": "La sauvegarde contient la base de données, les photos et la configuration."
+    },
+    "admin_maintenance": {
+        "title": "Maintenance & Système",
+        "email_title": "Configuration Email (Resend.com)"
     },
     "auth": {
         "login_title": "Connexion — Immo-Boussole",
@@ -282,8 +316,11 @@
         "manual": "MANUEL",
         "nc": "NC",
         "new": "NOUVELLE",
+        "nouvelle": "NOUVELLE",
         "active": "ACTIVE",
         "disappeared": "DISPARUE",
+        "disparue": "DISPARUE",
+        "rejetee": "REJETÉE",
         "price_nc": "Prix N/C",
         "rooms_short": "p.",
         "bed_short": "ch.",
@@ -309,7 +346,16 @@
         "no_pros": "Aucun point positif enregistré.",
         "no_cons": "Aucun point négatif enregistré.",
         "dpe_dist": "Distribution DPE",
-        "top_listings": "Meilleures annonces"
+        "top_listings": "Meilleures annonces",
+        "coup_de_coeur_title": "Sélection Coup de Cœur",
+        "coup_de_coeur_desc": "Annonces plébiscitées par l'équipe (notes ≥ 7.0/10)",
+        "filter_all": "Tous",
+        "filter_general": "Coup de cœur général (100%)",
+        "filter_user": "Coup de cœur de {user}",
+        "voted_by": "Voté par",
+        "no_favorites_found": "Aucun coup de cœur avec ce filtre",
+        "no_favorites_at_all": "Aucun coup de cœur enregistré pour le moment.",
+        "no_favorites_desc": "Lorsqu'un utilisateur standard attribue une note ≥ 7.0 à un bien, il apparaîtra ici."
     },
     "ready_searches": {
         "title": "Prêt à rechercher",
@@ -354,6 +400,27 @@
         "view_listing": "Voir l'annonce",
         "import_error": "Erreur lors de l'importation",
         "reject_error": "Erreur lors du rejet",
-        "network_error": "Erreur de réseau"
+        "network_error": "Erreur de réseau",
+        "auto_refresh_label": "Rafraîchissement auto",
+        "auto_refresh_value": "Toutes les 30 min (06h-22h30)",
+        "last_sync_label": "Dernière synchro"
+    },
+    "duplicates": {
+        "title": "Chasse aux duplicats",
+        "subtitle": "Identifiez les annonces similaires pour nettoyer la base",
+        "empty_title": "Aucun duplicat potentiel",
+        "empty_subtitle": "Félicitations ! Votre base semble propre.",
+        "merge_btn": "Fusionner",
+        "reject_btn": "Rejeter",
+        "similarity": "Similitude",
+        "common_points": "Points communs",
+        "city": "Ville",
+        "price": "Prix",
+        "area": "Surface",
+        "land_area": "Terrain",
+        "description": "Description",
+        "photo": "Photo",
+        "merge_success": "Annonces fusionnées !",
+        "reject_success": "Duplicat rejeté !"
     }
 }

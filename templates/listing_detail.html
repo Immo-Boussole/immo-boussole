@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ listing.title|default(t(request, 'listing.details')) }} — {{ t(request, 'app.title') }}</title>
 
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
             --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
@@ -16,6 +20,20 @@
             --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
             --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -97,7 +115,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -149,22 +167,154 @@
 
         .content { flex: 1; overflow-y: auto; padding: 1.5rem 2rem 2rem; }
 
-        /* Queries sidebar items */
-        .query-list { display: flex; flex-direction: column; gap: 0.5rem; }
-        .query-item {
+        /* Language Selector in Sidebar */
+        .sidebar-lang-selector {
+            display: flex;
             background: var(--surface-2);
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            transition: var(--trans);
-            text-decoration: none;
-            color: var(--text);
-            display: block;
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
         }
-        .query-item:hover { border-color: var(--accent); }
-        .query-item .name { font-weight: 600; margin-bottom: 0.15rem; }
-        .query-item .src { color: var(--text-2); font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sidebar-lang-selector .lang-item.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .sidebar-lang-selector .lang-item span {
+            font-size: 1rem;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 270px;
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.75rem 1.5rem;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            text-align: center;
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.act .val {
+            color: var(--accent);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
+
+        .sidebar-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 9px;
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--trans);
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(79, 142, 247, 0.12);
+            color: var(--accent);
+        }
 
         .nav-back {
             display: inline-flex;
@@ -242,10 +392,9 @@
         .dpe-G { background: #c73232; color: #fff; } .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
 
         /* Description */
-        .description { font-size: 0.875rem; line-height: 1.7; color: var(--text-2); max-height: 140px; overflow: hidden; position: relative; }
+        .description { font-size: 0.875rem; line-height: 1.7; color: var(--text-2); max-height: 140px; overflow: hidden; position: relative; white-space: pre-wrap; }
         .description.expanded { max-height: none; }
-        .description::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface)); }
-        .description.expanded::after { display: none; }
+        .description:not(.expanded).has-overflow::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, var(--surface)); pointer-events: none; }
         .read-more { font-size: 0.78rem; color: var(--accent); cursor: pointer; margin-top: 0.5rem; display: none; font-weight: 600; }
 
 
@@ -329,48 +478,115 @@
 
         /* ── Fullscreen Gallery Lightbox ── */
         .gallery-overlay {
-            position: fixed; inset: 0; background: #fff; z-index: 2000;
-            display: none; align-items: stretch; justify-content: center;
+            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
+            display: none; flex-direction: column;
         }
         .gallery-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
-        .gallery-close {
-            position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; 
-            border: none; font-size: 1.5rem; color: #1a1a1a; cursor: pointer; z-index: 2010;
-            transition: color 0.2s;
-        }
-        .gallery-close:hover { color: var(--accent); }
-        .gallery-content { display: flex; flex: 1; height: 100vh; position: relative; }
+        
+        /* Mobile Header (Hidden on Desktop) */
+        .gallery-header-mobile { display: none; }
+        
+        .gallery-content { display: flex; flex: 1; height: 100vh; overflow: hidden; }
+        
         .gallery-main { 
-            flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #fff;
-            padding: 2rem;
+            flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #000;
+            padding: 0;
         }
-        .gallery-main img { max-width: 100%; max-height: calc(100vh - 4rem); object-fit: contain; }
+        .gallery-main img { 
+            width: 100%; height: 100%; object-fit: contain; 
+            transition: transform 0.3s ease;
+        }
+        
+        .gallery-close-desk {
+            position: absolute; top: 1.5rem; right: 1.5rem; background: rgba(0,0,0,0.5); 
+            border: 1px solid rgba(255,255,255,0.1); font-size: 1.25rem; color: #fff; 
+            width: 44px; height: 44px; border-radius: 50%;
+            cursor: pointer; z-index: 2010; display: flex; align-items: center; justify-content: center;
+            transition: var(--trans);
+        }
+        .gallery-close-desk:hover { background: var(--red); border-color: var(--red); }
+
         .gallery-btn {
             position: absolute; top: 50%; transform: translateY(-50%);
-            background: #fff; border: 1px solid #e0e0e0; color: #1a1a1a;
-            width: 48px; height: 48px; border-radius: 50%;
-            font-size: 1.2rem; cursor: pointer; z-index: 5;
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff;
+            width: 56px; height: 56px; border-radius: 50%;
+            font-size: 1.5rem; cursor: pointer; z-index: 5;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: var(--trans);
+            backdrop-filter: blur(4px); transition: var(--trans);
         }
-        .gallery-btn:hover { background: #f0f0f0; }
-        .gallery-prev { left: 2rem; }
-        .gallery-next { right: 2rem; }
+        .gallery-btn:hover { background: var(--accent); border-color: var(--accent); }
+        .gallery-prev { left: 1.5rem; }
+        .gallery-next { right: 1.5rem; }
         
         .gallery-sidebar { 
-            width: 380px; background: #fff; border-left: 1px solid #e0e0e0;
-            display: flex; flex-direction: column; overflow-y: auto; color: #1a1a1a;
+            width: 420px; background: var(--surface); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow-y: auto; color: var(--text);
             flex-shrink: 0;
         }
-        .gallery-header { padding: 2rem 1.5rem 1rem; }
-        .gallery-idx { font-size: 0.75rem; font-weight: 700; color: #666; margin-bottom: 0.5rem; }
-        .gallery-title { font-size: 1rem; font-weight: 800; line-height: 1.3; margin-bottom: 1.5rem; }
+        .gallery-header-desk { padding: 2rem 1.5rem 1.5rem; }
+        .gallery-idx { font-size: 0.75rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .gallery-title { font-size: 1.1rem; font-weight: 800; line-height: 1.4; color: var(--text); }
         
-        .gallery-thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 1.5rem 2rem; }
-        .gallery-thumb { width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 4px; overflow: hidden; opacity: 0.3; transition: var(--trans); }
+        .gallery-thumbs { 
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 1.5rem 2rem; 
+        }
+        .gallery-thumb { 
+            width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 10px; overflow: hidden; 
+            opacity: 0.4; transition: var(--trans); border: 2px solid transparent;
+        }
         .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
         .gallery-thumb:hover { opacity: 0.8; }
-        .gallery-thumb.active { opacity: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
+        .gallery-thumb.active { opacity: 1; border-color: var(--accent); transform: scale(0.98); }
+
+        .gallery-mobile-separator { display: none; }
+
+        /* Responsive Gallery Adjustments */
+        @media (max-width: 1024px) {
+            .gallery-sidebar { width: 320px; }
+            .gallery-thumbs { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .gallery-overlay { overflow: hidden; display: none; flex-direction: column; height: 100%; height: 100dvh; }
+            .gallery-overlay.open { display: flex; }
+            .gallery-content { flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+            
+            .gallery-header-mobile { 
+                display: block; padding: 1.25rem 1rem; background: var(--surface); 
+                border-bottom: 1px solid var(--border); z-index: 2020; flex-shrink: 0;
+            }
+            .gallery-mob-l1 { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text); line-height: 1.3; }
+            .gallery-mob-l2 { display: flex; align-items: center; justify-content: space-between; }
+            .gallery-mob-actions { display: flex; gap: 0.75rem; }
+            .btn-gallery-action { 
+                width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+                background: var(--surface-2); color: var(--text); display: flex; align-items: center; justify-content: center;
+                font-size: 1.1rem; cursor: pointer; transition: var(--trans);
+            }
+            .btn-gallery-action.delete { color: var(--red); border-color: rgba(242,92,105,0.2); }
+            .btn-gallery-action:active { transform: scale(0.9); }
+
+            .gallery-main { flex: 1; height: auto; min-height: 0; padding: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+            .gallery-main img { width: 100%; height: 100%; object-fit: contain; }
+            .gallery-btn { width: 44px; height: 44px; font-size: 1.1rem; background: rgba(0,0,0,0.3); }
+            .gallery-prev { left: 0.75rem; }
+            .gallery-next { right: 0.75rem; }
+            .gallery-close-desk { display: none; }
+
+            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; flex-shrink: 0; max-height: 45%; }
+            .gallery-header-desk { display: none; }
+            
+            .gallery-mobile-separator { 
+                display: block; height: 1px; background: var(--border); margin: 0.75rem 1.5rem; 
+                opacity: 0.5; flex-shrink: 0;
+            }
+            .gallery-thumbs { 
+                grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1.25rem 1.5rem 0.75rem;
+                overflow-y: auto; flex: 1;
+            }
+            .gallery-thumb { border-radius: 8px; }
+        }
+
 
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
@@ -384,28 +600,55 @@
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+        <a href="/" class="logo">
+            <img src="/static/favicon.ico" alt="Logo">
+            {{ t(request, 'app.title') }}
+        </a>
+
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             {% endif %}
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -426,8 +669,8 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
@@ -442,15 +685,32 @@
                 <h1 title="{{ listing.title }}">{{ listing.title[:40] }}{% if listing.title|length > 40 %}…{% endif %}</h1>
             </div>
             <div class="topbar-right" style="display: flex; gap: 0.75rem;">
-                {% if request.session.get('role') == 'user' %}
+                {% if request.session.get('role') in ['user', 'admin'] %}
+                <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
+                    <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
+                </button>
+
+                <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
+
+                <button class="btn btn-heart-nav" onclick="toggleFavorite({{ listing.id }}, this)" title="{{ t(request, 'listing.favorite') }}" style="{% if listing.is_favorite %}color: #ff4757; border-color: rgba(255, 71, 87, 0.2); background: rgba(255, 71, 87, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i> <span class="btn-text">{{ t(request, 'listing.favorite') }}</span>
+                </button>
+
+                <button class="btn btn-like-nav" onclick="toggleLike({{ listing.id }}, this)" title="{{ t(request, 'listing.like') }}" style="{% if listing.is_liked %}color: var(--green); border-color: rgba(16, 217, 164, 0.2); background: rgba(16, 217, 164, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i> <span class="btn-text">{{ t(request, 'listing.like') }}</span>
+                </button>
+
+                <button class="btn btn-dislike-nav" onclick="toggleDislike({{ listing.id }}, this)" title="{{ t(request, 'listing.dislike') }}" style="{% if listing.is_disliked %}color: var(--red); border-color: rgba(242, 92, 105, 0.2); background: rgba(242, 92, 105, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
+                    <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i> <span class="btn-text">{{ t(request, 'listing.dislike') }}</span>
+                </button>
+
+                <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
+
                 <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'listing.refresh') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-arrows-rotate"></i> <span class="btn-text">{{ t(request, 'listing.refresh') }}</span>
                 </button>
                 <button class="btn btn-edit-nav" onclick="openEditModal()" title="{{ t(request, 'listing.edit') }}" style="color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);">
                     <i class="fa-solid fa-pen"></i> <span class="btn-text">{{ t(request, 'listing.edit') }}</span>
-                </button>
-                <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
-                    <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
                 </button>
                 <button class="btn btn-delete-nav" onclick='openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05);">
                     <i class="fa-solid fa-trash-can"></i> <span class="btn-text">{{ t(request, 'listing.delete_btn') }}</span>
@@ -463,6 +723,25 @@
 
 
     <div class="layout">
+
+        <!-- ── Zone Rule Banner ── -->
+        {% if city_rule == 'forbidden' %}
+        <div style="grid-column: 1 / -1; background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.4rem; flex-shrink: 0;"></i>
+            <div>
+                <strong style="color: var(--red); font-size: 0.95rem;">&#9888; En zone interdite</strong>
+                <p style="font-size: 0.82rem; color: rgba(242,92,105,0.85); margin-top: 0.2rem;">Cette annonce est localisée dans une zone géographique marquée comme interdite.</p>
+            </div>
+            <a href="/zones" style="margin-left:auto; color:var(--red); font-size:0.8rem; font-weight:600; text-decoration:none; white-space:nowrap; opacity:0.8;">Gérer les zones &rarr;</a>
+        </div>
+        {% elif city_rule == 'allowed' %}
+        <div style="grid-column: 1 / -1; background: rgba(16,217,164,0.1); border: 1.5px solid rgba(16,217,164,0.3); border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.2rem; flex-shrink: 0;"></i>
+            <div>
+                <strong style="color: var(--green); font-size: 0.88rem;">Zone autorisée</strong>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- ── Left Column ── -->
         <div class="left-col">
@@ -502,7 +781,9 @@
                 <div class="listing-title">{{ listing.title }}</div>
                 <div class="listing-location">
                     <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i>
-                    {{ listing.location or "Localisation non disponible" }}
+                    <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                        {{ listing.location or "Localisation non disponible" }}
+                    </a>
                 </div>
 
                 <div class="price-block">
@@ -561,6 +842,8 @@
                 </div>
 
 
+
+
                 <!-- Caractéristiques détaillées -->
                 <div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
                     <div class="attr-list">
@@ -612,8 +895,13 @@
 
                 {# Station 1 #}
                 {% if listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND" %}
-                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
-                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_primary') }} : <strong style="color: var(--text);">{{ listing.nearest_sncf_station }}</strong>
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2); 
+                    {% if station1_rule == 'forbidden' %}background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% elif station1_rule == 'allowed' %}background: rgba(16,217,164,0.1); border: 1px solid rgba(16,217,164,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% endif %}">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_primary') }} : <strong style="color: {% if station1_rule == 'forbidden' %}var(--red){% elif station1_rule == 'allowed' %}var(--green){% else %}var(--text){% endif %};">{{ listing.nearest_sncf_station }}</strong>
+                    {% if station1_rule == 'forbidden' %}<span style="margin-left:0.5rem; background:var(--red); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">INTERDIT</span>{% endif %}
+                    {% if station1_rule == 'allowed' %}<span style="margin-left:0.5rem; background:var(--green); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">AUTORISÉ</span>{% endif %}
                 </div>
                 <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
                     {% if listing.walk_time_sncf is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf }} min</div><div class="sl">À pied</div></div>{% endif %}
@@ -624,8 +912,13 @@
 
                 {# Station 2 #}
                 {% if listing.second_sncf_station %}
-                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2);">
-                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_secondary') }} : <strong style="color: var(--text);">{{ listing.second_sncf_station }}</strong>
+                <div class="cost-item" style="margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-2); 
+                    {% if station2_rule == 'forbidden' %}background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% elif station2_rule == 'allowed' %}background: rgba(16,217,164,0.1); border: 1px solid rgba(16,217,164,0.3); border-radius: 8px; padding: 0.5rem 0.75rem;
+                    {% endif %}">
+                    <i class="fa-solid fa-location-dot"></i> {{ t(request, 'listing.station_secondary') }} : <strong style="color: {% if station2_rule == 'forbidden' %}var(--red){% elif station2_rule == 'allowed' %}var(--green){% else %}var(--text){% endif %};">{{ listing.second_sncf_station }}</strong>
+                    {% if station2_rule == 'forbidden' %}<span style="margin-left:0.5rem; background:var(--red); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">INTERDIT</span>{% endif %}
+                    {% if station2_rule == 'allowed' %}<span style="margin-left:0.5rem; background:var(--green); color:#000; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:0.15rem 0.45rem; border-radius:5px; letter-spacing:0.05em;">AUTORISÉ</span>{% endif %}
                 </div>
                 <div class="specs-grid" style="grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
                     {% if listing.walk_time_sncf_2 is not none %}<div class="spec" style="padding: 0.4rem;"><div class="sv" style="font-size:1rem; color:var(--text);"><i class="fa-solid fa-person-walking" style="color:var(--accent);"></i> {{ listing.walk_time_sncf_2 }} min</div><div class="sl">À pied</div></div>{% endif %}
@@ -679,7 +972,7 @@
             <!-- Scraped at info -->
             <div style="font-size: 0.72rem; color: var(--text-2); text-align: right; padding: 0 0.25rem;">
                 {% if listing.scraped_at %}
-                {{ t(request, 'listing.data_extracted') }} {{ listing.scraped_at.strftime('%d/%m/%Y %H:%M') }}
+                {{ t(request, 'listing.data_extracted') }} <span class="local-time" data-timestamp="{{ listing.scraped_at.isoformat() }}">{{ listing.scraped_at.strftime('%d/%m/%Y %H:%M') }}</span>
                 {% endif %}
                 — <a href="{{ listing.url }}" target="_blank" style="color: var(--accent);">{{ t(request, 'listing.view_original') }} <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
             </div>
@@ -689,10 +982,86 @@
         <!-- ── Right Panel: Reviews ── -->
         <div class="right-panel">
 
+            <!-- Duplicates Section -->
+            {% if listing.is_duplicate or duplicate_children %}
+            <div style="background: rgba(249, 208, 79, 0.05); border: 1px solid var(--yellow); border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.8rem; font-weight: 800; color: var(--yellow); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> CETTE ANNONCE EST DÉCLARÉE COMME DUPLICAT
+                </div>
+                
+                {% if duplicate_original %}
+                <div style="margin-bottom: 0.75rem;">
+                    <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
+                        Annonce originale
+                    </p>
+                    <a href="/listings/{{ duplicate_original.id }}" class="btn sm" style="border-color: var(--yellow); color: var(--yellow); background: rgba(249, 208, 79, 0.05); width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
+                        <i class="fa-solid fa-link"></i> #{{ duplicate_original.id }} - {{ duplicate_original.title }}
+                    </a>
+                </div>
+                {% elif listing.is_duplicate and listing.original_url and listing.original_url != listing.url %}
+                <div style="margin-bottom: 0.75rem;">
+                    <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
+                        Source externe
+                    </p>
+                    <a href="{{ listing.original_url }}" target="_blank" class="btn sm" style="border-color: var(--yellow); color: var(--yellow); background: rgba(249, 208, 79, 0.05); width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ listing.original_url }}
+                    </a>
+                </div>
+                {% endif %}
+
+                <div style="margin-bottom: 0.25rem;">
+                    <p style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 800;">
+                        Annonces liées
+                    </p>
+                    {% if duplicate_children %}
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        {% for child in duplicate_children %}
+                        <a href="/listings/{{ child.id }}" class="btn sm" style="width: 100%; justify-content: flex-start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem;">
+                            <i class="fa-solid fa-copy"></i> #{{ child.id }} - {{ child.title }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="font-size: 0.7rem; color: var(--text-2); opacity: 0.5; font-style: italic;">Aucune</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% set border_color = 'var(--border)' %}
+            {% set text_color = 'var(--text)' %}
+            {% if listing.status.value == 'nouvelle' %}
+                {% set border_color = 'rgba(16,217,164,0.3)' %}
+                {% set text_color = 'var(--green)' %}
+            {% elif listing.status.value == 'active' %}
+                {% set border_color = 'rgba(79,142,247,0.3)' %}
+                {% set text_color = 'var(--accent)' %}
+            {% elif listing.status.value == 'disparue' %}
+                {% set border_color = 'rgba(242,92,105,0.3)' %}
+                {% set text_color = 'var(--red)' %}
+            {% endif %}
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: var(--surface-2); border: 1px solid {{ border_color }}; border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.9rem; font-weight: 800; color: {{ text_color }};">
+                    {{ t(request, 'misc.' + listing.status.value) }}
+                </div>
+                {% if listing.scraped_at %}
+                <div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> MAJ le {{ listing.scraped_at.strftime('%d/%m/%Y à %H:%M') }}
+                </div>
+                {% endif %}
+            </div>
+
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>
                 {{ t(request, 'listing.open_source') }}
             </a>
+
+            <button type="button" class="ext-link" onclick="openDuplicateModal()" style="width: 100%; margin-top: 0.75rem; cursor: pointer;">
+                <i class="fa-solid fa-clone" style="color: var(--accent);"></i>
+                {{ t(request, 'listing.declare_duplicate') }}
+            </button>
+
+
 
             {# ── Reviews des autres utilisateurs (lecture seule) ── #}
             {% set current_user = request.session.get('username', '') %}
@@ -1224,8 +1593,9 @@
     // ── Description toggle ────────────────────────────────────────────────────
     const desc = document.getElementById('desc');
     const readMore = document.getElementById('readMore');
-    if (desc && desc.scrollHeight > desc.offsetHeight + 20) {
+    if (desc && desc.scrollHeight > desc.offsetHeight + 1) {
         readMore.style.display = 'block';
+        desc.classList.add('has-overflow');
     }
     function toggleDesc() {
         desc.classList.toggle('expanded');
@@ -1512,6 +1882,9 @@
                     if (result.scraping_success === false) {
                         alert("Erreur de scraping, importation sans scraping en cours. La page va s'actualiser.");
                     }
+                    if (result.forbidden_zone_warning) {
+                        alert(result.forbidden_zone_warning.message);
+                    }
                     window.location.reload();
                 } else {
                     alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));
@@ -1525,22 +1898,156 @@
                 btn.classList.remove('loading');
             }
         }
-    </script>
+        
+        function updateInteractionButtons(data) {
+            // Update Favorite
+            const heartBtn = document.querySelector('.btn-heart-nav');
+            if (heartBtn) {
+                if (data.is_favorite) {
+                    heartBtn.style.color = '#ff4757';
+                    heartBtn.style.borderColor = 'rgba(255, 71, 87, 0.2)';
+                    heartBtn.style.background = 'rgba(255, 71, 87, 0.1)';
+                    heartBtn.querySelector('i').className = 'fa-solid fa-heart';
+                } else {
+                    heartBtn.style.color = 'var(--text)';
+                    heartBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    heartBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    heartBtn.querySelector('i').className = 'fa-regular fa-heart';
+                }
+            }
 
+            // Update Like
+            const likeBtn = document.querySelector('.btn-like-nav');
+            if (likeBtn) {
+                if (data.is_liked) {
+                    likeBtn.style.color = 'var(--green)';
+                    likeBtn.style.borderColor = 'rgba(16, 217, 164, 0.2)';
+                    likeBtn.style.background = 'rgba(16, 217, 164, 0.1)';
+                    likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
+                } else {
+                    likeBtn.style.color = 'var(--text)';
+                    likeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    likeBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
+                }
+            }
+
+            // Update Dislike
+            const dislikeBtn = document.querySelector('.btn-dislike-nav');
+            if (dislikeBtn) {
+                if (data.is_disliked) {
+                    dislikeBtn.style.color = 'var(--red)';
+                    dislikeBtn.style.borderColor = 'rgba(242, 92, 105, 0.2)';
+                    dislikeBtn.style.background = 'rgba(242, 92, 105, 0.1)';
+                    dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
+                } else {
+                    dislikeBtn.style.color = 'var(--text)';
+                    dislikeBtn.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    dislikeBtn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+                }
+            }
+        }
+
+        async function toggleFavorite(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/favorite`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+
+        async function toggleLike(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/like`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+
+        async function toggleDislike(listingId, btn) {
+            try {
+                const response = await fetch(`/api/listings/${listingId}/dislike`, {
+                    method: 'PATCH'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    updateInteractionButtons(data);
+                } else {
+                    alert("Erreur lors de la mise à jour.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau.");
+            }
+        }
+
+    </script>
     <!-- ── Fullscreen Gallery Lightbox ── -->
     <div class="gallery-overlay" id="galleryOverlay">
-        <button class="gallery-close" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+        
+        <!-- Top Block (Mobile Only) -->
+        <div class="gallery-header-mobile">
+            <div class="gallery-mob-l1">{{ listing.title }}</div>
+            <div class="gallery-mob-l2">
+                <div class="gallery-idx" id="galleryIdxMob">1/1</div>
+                <div class="gallery-mob-actions">
+                    {% if request.session.get('role') in ['user', 'admin'] %}
+                    <button class="btn-gallery-action delete" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    {% endif %}
+                    <button class="btn-gallery-action" onclick="closeGallery()" title="Fermer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="gallery-content">
             <div class="gallery-main">
+                <button class="gallery-close-desk" onclick="closeGallery()"><i class="fa-solid fa-xmark"></i></button>
+                
                 <button class="gallery-btn gallery-prev" onclick="gallerySlide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
                 <img id="galleryMainImage" src="" alt="Main photo">
                 <button class="gallery-btn gallery-next" onclick="gallerySlide(1)"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
+            
             <div class="gallery-sidebar">
-                <div class="gallery-header">
-                    <div class="gallery-idx" id="galleryIdx">1/1</div>
-                    <div class="gallery-title">{{ listing.title }}</div>
+                <!-- Sidebar Header (Desktop Only) -->
+                <div class="gallery-header-desk">
+                    <div class="gallery-idx" id="galleryIdxDesk">1/1</div>
+                    <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.75rem; margin-bottom: 1.5rem;">
+                        <div class="gallery-title">{{ listing.title }}</div>
+                        {% if request.session.get('role') in ['user', 'admin'] %}
+                        <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
+
+                <!-- Separator (Mobile Only) -->
+                <div class="gallery-mobile-separator"></div>
+
                 <div class="gallery-thumbs" id="galleryThumbs">
                     {% for photo in photos %}
                     <div class="gallery-thumb" onclick="galleryGoTo({{ loop.index0 }})">
@@ -1551,6 +2058,57 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Modal: Declare Duplicate -->
+    <div id="duplicateOverlay" class="overlay">
+        <div class="modal card" style="max-width: 500px; width: 90%; padding: 1.5rem;">
+            <div class="section-title" style="margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-clone" style="color: var(--accent);"></i> {{ t(request, 'listing.declare_duplicate') }}</span>
+                <i class="fa-solid fa-xmark" style="cursor: pointer; opacity: 0.5;" onclick="closeDuplicateModal()"></i>
+            </div>
+
+            <div class="form-row">
+                <label>{{ t(request, 'listing.duplicate_type') }}</label>
+                <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+                    <button id="btn-dup-internal" class="btn primary" onclick="setDuplicateType('internal')" style="flex: 1; justify-content: center;">{{ t(request, 'listing.duplicate_internal') }}</button>
+                    <button id="btn-dup-external" class="btn" onclick="setDuplicateType('external')" style="flex: 1; justify-content: center;">{{ t(request, 'listing.duplicate_external') }}</button>
+                </div>
+            </div>
+
+            <!-- Internal Search -->
+            <div id="dup-internal-section">
+                <div class="form-row">
+                    <label>{{ t(request, 'listing.search_listing') }}</label>
+                    <input type="text" id="dup-search-input" placeholder="{{ t(request, 'listing.search_placeholder') }}" oninput="searchDuplicates()">
+                </div>
+                <div id="dup-results" style="max-height: 200px; overflow-y: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; margin-top: 0.5rem; display: none;">
+                    <!-- Results populated by JS -->
+                </div>
+                <input type="hidden" id="dup-target-id">
+                <div id="dup-selected-display" style="margin-top: 0.75rem; display: none; padding: 0.75rem; background: rgba(79, 142, 247, 0.1); border: 1px solid var(--accent); border-radius: 8px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--accent); font-weight: 800; margin-bottom: 0.25rem;">{{ t(request, 'listing.selected_listing') }}</div>
+                    <div id="dup-selected-title" style="font-weight: 700; font-size: 0.9rem;"></div>
+                </div>
+            </div>
+
+            <!-- External URL -->
+            <div id="dup-external-section" style="display: none;">
+                <div class="form-row">
+                    <label>{{ t(request, 'listing.external_url') }}</label>
+                    <input type="url" id="dup-external-url" placeholder="https://www.leboncoin.fr/...">
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                <button class="btn" style="flex: 1;" onclick="closeDuplicateModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button id="btn-submit-duplicate" class="btn primary" style="flex: 1;" onclick="submitDuplicate()">
+                    <i class="fa-solid fa-check"></i> {{ t(request, 'listing.confirm') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Modal Select Stations -->
     <div id="stationOverlay" class="overlay">
@@ -1764,7 +2322,12 @@
             if (totalGalleryPhotos === 0) return;
             currentGalleryIdx = (idx + totalGalleryPhotos) % totalGalleryPhotos;
             document.getElementById('galleryMainImage').src = galleryPhotos[currentGalleryIdx];
-            document.getElementById('galleryIdx').textContent = `${currentGalleryIdx + 1}/${totalGalleryPhotos}`;
+            
+            const idxText = `${currentGalleryIdx + 1}/${totalGalleryPhotos}`;
+            const idxMob = document.getElementById('galleryIdxMob');
+            const idxDesk = document.getElementById('galleryIdxDesk');
+            if (idxMob) idxMob.textContent = idxText;
+            if (idxDesk) idxDesk.textContent = idxText;
             
             const thumbs = document.querySelectorAll('#galleryThumbs .gallery-thumb');
             thumbs.forEach((t, i) => {
@@ -1775,8 +2338,202 @@
             });
         }
 
+
         function gallerySlide(dir) {
             galleryGoTo(currentGalleryIdx + dir);
+        }
+
+        async function deleteCurrentPhoto() {
+            if (!confirm("{{ t(request, 'listing.confirm_delete_photo', 'Voulez-vous vraiment supprimer cette photo ?') }}")) return;
+            
+            try {
+                const res = await fetch(`/api/listings/{{ listing.id }}/photos/${currentGalleryIdx}`, {
+                    method: 'DELETE'
+                });
+                
+                if (res.ok) {
+                    showToast("{{ t(request, 'listing.photo_deleted', 'Photo supprimée avec succès !') }}");
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur lors de la suppression: " + (err.detail || "Inconnue"));
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Erreur réseau");
+            }
+        }
+
+        // ── Duplicate Declaration Logic ────────────────────────────────────────
+        let duplicateType = 'internal';
+        let duplicateTimer = null;
+
+        function openDuplicateModal() {
+            document.getElementById('duplicateOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            setDuplicateType('internal');
+            
+            // Clear previous state
+            document.getElementById('dup-search-input').value = '';
+            document.getElementById('dup-results').style.display = 'none';
+            document.getElementById('dup-target-id').value = '';
+            document.getElementById('dup-selected-display').style.display = 'none';
+            document.getElementById('dup-external-url').value = '';
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicateOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function setDuplicateType(type) {
+            duplicateType = type;
+            const btnInt = document.getElementById('btn-dup-internal');
+            const btnExt = document.getElementById('btn-dup-external');
+            const secInt = document.getElementById('dup-internal-section');
+            const secExt = document.getElementById('dup-external-section');
+
+            if (type === 'internal') {
+                btnInt.classList.add('primary');
+                btnExt.classList.remove('primary');
+                secInt.style.display = 'block';
+                secExt.style.display = 'none';
+            } else {
+                btnInt.classList.remove('primary');
+                btnExt.classList.add('primary');
+                secInt.style.display = 'none';
+                secExt.style.display = 'block';
+            }
+        }
+
+        function searchDuplicates() {
+            clearTimeout(duplicateTimer);
+            const q = document.getElementById('dup-search-input').value.trim();
+            if (q.length < 2) {
+                document.getElementById('dup-results').style.display = 'none';
+                return;
+            }
+
+            duplicateTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/listings?q=${encodeURIComponent(q)}&limit=10`);
+                    if (res.ok) {
+                        const listings = await res.json();
+                        renderDuplicateResults(listings);
+                    }
+                } catch (e) { console.error(e); }
+            }, 300);
+        }
+
+        function renderDuplicateResults(listings) {
+            const container = document.getElementById('dup-results');
+            container.innerHTML = '';
+            
+            // Filter out current listing
+            const filtered = listings.filter(l => l.id != {{ listing.id }});
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="padding: 0.75rem; color: var(--text-2); font-size: 0.85rem; font-style: italic;">Aucun résultat</div>';
+                container.style.display = 'block';
+                return;
+            }
+
+            filtered.forEach(l => {
+                const div = document.createElement('div');
+                div.style.padding = '0.75rem';
+                div.style.cursor = 'pointer';
+                div.style.borderBottom = '1px solid var(--border)';
+                div.style.transition = 'var(--trans)';
+                div.innerHTML = `
+                    <div style="font-weight: 700; font-size: 0.85rem;">${l.title}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-2);">${l.location || l.city || ''} - ${l.price ? l.price.toLocaleString() + '€' : ''}</div>
+                `;
+                div.onmouseenter = () => div.style.background = 'rgba(79, 142, 247, 0.1)';
+                div.onmouseleave = () => div.style.background = 'transparent';
+                div.onclick = () => selectDuplicateTarget(l);
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        }
+
+        function selectDuplicateTarget(listing) {
+            document.getElementById('dup-target-id').value = listing.id;
+            document.getElementById('dup-selected-title').textContent = listing.title;
+            document.getElementById('dup-selected-display').style.display = 'block';
+            document.getElementById('dup-results').style.display = 'none';
+            document.getElementById('dup-search-input').value = '';
+        }
+
+        async function submitDuplicate() {
+            const body = {};
+            if (duplicateType === 'internal') {
+                const targetId = document.getElementById('dup-target-id').value;
+                if (!targetId) {
+                    alert("Veuillez sélectionner une annonce.");
+                    return;
+                }
+                body.target_listing_id = parseInt(targetId);
+            } else {
+                const url = document.getElementById('dup-external-url').value.trim();
+                if (!url) {
+                    alert("Veuillez saisir une URL.");
+                    return;
+                }
+                body.original_url = url;
+            }
+
+            const btn = document.getElementById('btn-submit-duplicate');
+            const oldHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> ...';
+
+            try {
+                const res = await fetch(`/api/listings/{{ listing.id }}/duplicate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (res.ok) {
+                    showToast('✓ Déclaré comme doublon !');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Inconnue"));
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erreur réseau");
+                btn.disabled = false;
+                btn.innerHTML = oldHtml;
+            }
+        }
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('.local-time').forEach(el => {
+                const ts = el.getAttribute('data-timestamp');
+                if (ts) {
+                    const d = new Date(ts);
+                    if (!isNaN(d.getTime())) {
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const year = d.getFullYear();
+                        const hours = String(d.getHours()).padStart(2, '0');
+                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                        el.textContent = `${day}/${month}/${year} à ${hours}:${minutes}`;
+                    }
+                }
+            });
+        });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
         }
     </script>
 </body>

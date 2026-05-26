@@ -34,6 +34,12 @@ services:
       - db-data:/app/data
       # Persistent storage for downloaded photos
       - media-data:/app/static/media
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
   # NOTE: No "ports:" block is present.
   # The application is only accessible via the Docker network or the Tunnel.
 

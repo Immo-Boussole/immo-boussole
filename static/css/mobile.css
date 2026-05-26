@@ -13,21 +13,39 @@
     /* Topbar adjustments */
     .topbar, .topnav {
         padding: 1rem !important;
-        flex-wrap: wrap;
-        gap: 0.5rem !important;
-    }
-    .topbar h1, .topnav .nav-title {
-        font-size: 1.15rem !important;
-        flex: 1; /* allow it to take space next to the hamburger menu */
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
     }
     .topbar-left {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         width: 100%;
-        gap: 0.5rem !important;
+        gap: 0.75rem !important;
+    }
+    .topbar h1, .topnav .nav-title {
+        font-size: 1.1rem !important;
+        flex: 1;
+        margin: 0;
     }
     .topbar-right {
+        display: flex;
         gap: 0.5rem !important;
-        flex-wrap: wrap;
         width: 100%;
+        overflow-x: auto;
+        padding-bottom: 5px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .topbar-right::-webkit-scrollbar {
+        display: none;
+    }
+    .topbar-right .btn {
+        flex: 0 0 auto !important;
+        justify-content: center;
+        padding: 0.55rem 0.75rem !important;
+        font-size: 0.75rem !important;
     }
 
     /* Fixed Sidebar Navigation with sliding effect */
@@ -87,7 +105,7 @@
 
     /* Grids & Columns */
     .stat-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr 1fr !important;
     }
     .grid {
         grid-template-columns: 1fr !important;
@@ -110,8 +128,48 @@
     .filter-bar {
         padding: 1rem !important;
         flex-direction: column;
-        align-items: flex-start !important;
+        align-items: stretch !important;
+        gap: 0.75rem;
+    }
+
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .filter-chips .btn {
+        flex: 1 1 calc(25% - 0.3rem); /* Try to fit 4 on one line */
+        min-width: 70px;
+        justify-content: center;
+        padding: 0.5rem 0.4rem !important;
+        font-size: 0.7rem !important;
+    }
+
+    .filter-actions {
+        display: flex;
         gap: 0.5rem;
+        width: 100%;
+        order: 3;
+    }
+    .filter-actions .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: 0.75rem !important;
+        padding: 0.6rem 0.5rem !important;
+    }
+    #btnRefreshTags {
+        margin-left: 0 !important;
+    }
+
+    .filter-label {
+        margin-bottom: -0.25rem;
+        order: 1;
+    }
+
+    .filter-chips {
+        order: 2;
     }
     .detail-header {
         flex-direction: column;
@@ -138,24 +196,11 @@
         padding: 1.5rem !important;
         width: 95% !important;
     }
-    /* Gallery Modal */
-    .gallery-content {
-        flex-direction: column !important;
-    }
-    .gallery-sidebar {
-        width: 100% !important;
-        border-left: none !important;
-        border-top: 1px solid #e0e0e0;
-        max-height: 40vh;
-    }
-    .gallery-main {
-        padding: 1rem !important;
-    }
-    .gallery-next { right: 1rem !important; }
-    .gallery-prev { left: 1rem !important; }
 }
+
 
 /* Hide mobile menu button on desktop */
 .mobile-menu-btn {
     display: none;
 }
+

@@ -212,3 +212,9 @@ __marimo__/
 
 # Scratch and temporary scripts
 scratch/
+
+# Media
+static/media/*
+!static/media/app/
+!static/media/demo/
+!static/media/.gitkeep

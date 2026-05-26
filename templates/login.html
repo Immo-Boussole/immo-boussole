@@ -2,10 +2,14 @@
 <html lang="{{ request.session.get('lang', 'fr') }}">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'auth.login_title') }}</title>
 
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
@@ -65,8 +69,8 @@
             background-clip: text;
         }
 
-        .logo i {
-            -webkit-text-fill-color: var(--accent);
+        .logo img { width: 1.4rem; height: 1.4rem; object-fit: contain;
+            
         }
 
         h1 {
@@ -221,7 +225,7 @@
     </div>
     <div class="login-card">
         <div class="logo">
-            <i class="fas fa-compass"></i>
+            <img src="/static/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </div>
         <h1>{{ t(request, 'auth.login_title').split('—')[0].strip() }}</h1>
@@ -255,5 +259,14 @@
         </form>
 
     </div>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 </html>

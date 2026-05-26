@@ -141,6 +141,31 @@ _MIGRATIONS = [
     ("users", "phone",                     "TEXT"),
     ("users", "sfr_identifier",            "TEXT"),
     ("users", "sfr_password",              "TEXT"),
+
+    # map_pins — pin type v12
+    ("map_pins", "pin_type",               "TEXT NOT NULL DEFAULT 'city'"),
+
+    # listings — favorite listings v13
+    ("listings", "is_favorite",            "BOOLEAN DEFAULT 0"),
+    ("listings", "is_liked",               "BOOLEAN DEFAULT 0"),
+    ("listings", "is_disliked",            "BOOLEAN DEFAULT 0"),
+
+    # zone_rules — forbidden/allowed zones v14 (table is new, handled by create_all)
+    # These entries are placeholders; the table is created by Base.metadata.create_all
+
+    # global_settings — maintenance automation v15
+    ("global_settings", "db_check_automate",  "BOOLEAN DEFAULT 0"),
+    ("global_settings", "db_check_interval",  "TEXT DEFAULT '24h'"),
+    ("global_settings", "db_repair_automate", "BOOLEAN DEFAULT 0"),
+    ("global_settings", "db_repair_interval", "TEXT DEFAULT '24h'"),
+
+    # global_settings — maintenance history v16
+    ("global_settings", "last_global_check",  "TEXT"),
+    ("global_settings", "last_checks_json",   "TEXT DEFAULT '{}'"),
+    ("global_settings", "last_repairs_json",  "TEXT DEFAULT '{}'"),
+
+    # global_settings - allowed departments v17
+    ("global_settings", "allowed_departments", "TEXT"),
 ]
 
 

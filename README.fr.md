@@ -2,7 +2,7 @@
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
-[![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3Ac109e1fc20751ef81108028fc148899a53b44f13-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
+[![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A9df30e515697693e80757fde33b22591061acd10-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 
 *Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
 
@@ -25,6 +25,8 @@
 - **Avis Collaboratifs** : Système de notation et de commentaires séparés.
 - **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
 - **Carte Interactive** : Visualisation géographique de toutes les annonces actives et nouvelles.
+- **Sauvegarde & Restauration** : Solution d'administration intégrée pour exporter/importer tout le système (DB, photos, config) en un seul fichier ZIP.
+- **Assistant IA & Service MCP** : Discutez avec vos annonces via un assistant intelligent intégré (Ollama) ou connectez vos propres outils IA (Claude Desktop) grâce au protocole MCP.
 - **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
 
 ---
@@ -76,6 +78,11 @@ Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une 
 ![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
 
 *Aperçu de la bannière indiquant une mise à jour disponible.*
+
+### 🤖 8. Assistant IA & Service MCP
+L'application intègre désormais un assistant conversationnel capable d'analyser vos annonces, de répondre à vos questions et de fournir des statistiques. Vous pouvez également exposer vos données à des outils externes comme Claude Desktop via le protocole **MCP (Model Context Protocol)**.
+
+👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP](MCP_SETUP.fr.md)**
 
 ## 🛠️ Installation & Lancement
 
@@ -152,6 +159,8 @@ Variables clés dans `.env` :
 | `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Libellé lisible** du planning cron, affiché dans l'interface à côté du bouton "Forcer la recherche". |
 | `GEORISQUES_API_KEY` | *(optionnel)* | Clé API pour le service de données de risques Géorisques. |
 | `APP_VERSION` | `1.1.1-dev` | Version affichée dans le pied de page de la barre latérale. |
+| `OLLAMA_URL` | `http://host.docker.internal:11434` | URL de votre instance Ollama locale. |
+| `OLLAMA_MODEL` | `llama3` | Modèle utilisé par l'assistant IA. |
 
 ---
 
@@ -214,10 +223,18 @@ L'application expose une API REST complète construite avec **FastAPI**. Tous le
 - `PUT /api/searches/ready/{id}` : Met à jour une recherche existante.
 - `DELETE /api/searches/ready/{id}` : Supprime une recherche.
 
+### Assistant IA & MCP
+- `POST /api/chat` : Endpoint de discussion avec l'assistant (Ollama).
+- **Service MCP** : Serveur stdio/SSE disponible pour connecter des clients externes (Claude Desktop).
+
 ### Administration (Admin uniquement)
 - `GET /admin/users` : Interface de gestion des utilisateurs.
 - `POST /api/admin/users` : Crée un nouveau compte utilisateur.
 - `DELETE /api/admin/users/{user_id}` : Supprime un compte utilisateur.
+- `GET /api/admin/backup` : Télécharge une sauvegarde complète du système en ZIP.
+- `POST /api/admin/restore` : Restaure le système à partir d'une sauvegarde ZIP.
+
+👉 **Consultez le guide : [Documentation Sauvegarde & Restauration](BACKUP_RESTORE.fr.md)**
 
 ### Avis (Reviews)
 - `GET /api/listings/{listing_id}/reviews` : Liste tous les avis d'une annonce.
@@ -244,6 +261,7 @@ L'API est entièrement documentée et testable via l'interface Swagger intégré
 - `tests/` : Scripts de tests unitaires et d'intégration.
 - `Dockerfile` & `docker-compose.yml` : Configuration Docker.
 - `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
+- `MCP_SETUP.fr.md` : Guide complet de configuration de l'IA et du MCP.
 - `.ai/` : Documentation spécialisée et contexte lié à l'IA.
 
 ## 🧪 Tests
@@ -277,6 +295,9 @@ Une documentation détaillée est disponible dans [.ai/TESTING.md](.ai/TESTING.m
 - ✅ Recherches automatiques planifiées (toutes les heures, 6h–22h30) depuis les entrées "Prêt à Rechercher".
 - ✅ Bouton "Forcer la recherche" pour déclencher un cycle immédiat.
 - ✅ Colonnes Plateforme & Critères dans la vue "Recherches Automatiques".
+- ✅ Service MCP (Model Context Protocol) pour connecter des outils IA externes.
+- ✅ Assistant IA intégré (Ollama) pour discuter avec les annonces.
+- ✅ Système de sauvegarde et restauration (ZIP) pour les administrateurs.
 - ⬜ Créer un système de création de compte conseiller immobilier.
 - ⬜ Ajouter un système de favoris pour les annonces et les recherches.
 - ⬜ Ajouter un système de notifications (email, push, etc.).

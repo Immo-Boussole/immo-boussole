@@ -2,7 +2,7 @@
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
-[![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3Ac109e1fc20751ef81108028fc148899a53b44f13-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
+[![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A9df30e515697693e80757fde33b22591061acd10-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 
 *Note: At its core, this project targets French platforms for property search. / Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens.*
 
@@ -24,6 +24,8 @@
 - **Collaborative Reviews**: Separate rating and comment system.
 - **Ideal Property Profile**: Generation of a dynamic profile based on top-rated listings (average price, area, recurring pros/cons).
 - **Interactive Map**: Visualize all active and new listings on a geographic map.
+- **Backup & Restore**: Built-in admin solution to export/import the entire system (DB, photos, config) in a single ZIP file.
+- **AI Assistant & MCP Service**: Chat with your listings via an integrated intelligent assistant (Ollama) or connect your own AI tools (Claude Desktop) using the MCP protocol.
 - **Premium Interface**: Modern dark design, descriptive cards, photo carousels, and a secure delete button with confirmation (slide).
 
 ---
@@ -75,6 +77,11 @@ A banner automatically appears at the bottom of the home screen when a new versi
 ![Version Alert Demo](static/media/demo/demo_alert_banner.png)
 
 *Preview of the banner indicating an available update.*
+
+### 🤖 8. AI Assistant & MCP Service
+The application now features a conversational assistant capable of analyzing your listings, answering your questions, and providing statistics. You can also expose your data to external tools like Claude Desktop via the **MCP (Model Context Protocol)**.
+
+👉 **Check the guide: [AI Assistant & MCP Service Configuration](MCP_SETUP.en.md)**
 
 ## 🛠️ Installation & Launch
 
@@ -151,6 +158,8 @@ Key variables in `.env`:
 | `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Human-readable** cron description displayed in the UI next to the "Force Search" button. |
 | `GEORISQUES_API_KEY` | *(optional)* | API key for the French Géorisques risk data service. |
 | `APP_VERSION` | `1.1.1-dev` | Version string shown in the sidebar footer. |
+| `OLLAMA_URL` | `http://host.docker.internal:11434` | URL of your local Ollama instance. |
+| `OLLAMA_MODEL` | `llama3` | Model used by the AI assistant. |
 
 ---
 
@@ -214,10 +223,18 @@ The application exposes a comprehensive REST API built with **FastAPI**. All end
 - `PUT /api/searches/ready/{id}`: Updates an existing ready search.
 - `DELETE /api/searches/ready/{id}`: Removes a ready search.
 
+### AI Assistant & MCP
+- `POST /api/chat`: Assistant chat endpoint (Ollama).
+- **MCP Service**: Stdio/SSE server available for connecting external clients (Claude Desktop).
+
 ### Administration (Admin only)
 - `GET /admin/users`: Interface for managing users.
 - `POST /api/admin/users`: Creates a new user account.
 - `DELETE /api/admin/users/{user_id}`: Deletes a user account.
+- `GET /api/admin/backup`: Downloads a full ZIP backup of the system.
+- `POST /api/admin/restore`: Restores the system from a ZIP backup.
+
+👉 **Check the guide: [Backup & Restore Documentation](BACKUP_RESTORE.en.md)**
 
 ### Reviews
 - `GET /api/listings/{listing_id}/reviews`: Lists all reviews left on a listing.
@@ -244,6 +261,7 @@ The API is also fully documented and testable via the integrated Swagger interfa
 - `tests/`: Unit and integration test scripts.
 - `Dockerfile` & `docker-compose.yml`: Docker configuration.
 - `immo_boussole.db`: SQLite database (managed automatically).
+- `MCP_SETUP.en.md`: Comprehensive AI and MCP configuration guide.
 - `.ai/`: Specialized documentation and AI-related context.
 
 ## 🧪 Testing
@@ -277,6 +295,9 @@ Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
 - ✅ Automatic scheduled searches (hourly, 6h–22h30) from "Ready to Search" entries.
 - ✅ "Force Search" button to trigger an immediate scraping cycle.
 - ✅ Platform & criteria columns in the "Automatic Searches" view.
+- ✅ MCP (Model Context Protocol) service to connect external AI tools.
+- ✅ Integrated AI Assistant (Ollama) to chat with listings.
+- ✅ Backup and restore system (ZIP) for admins.
 - ⬜ Create a real estate agent account system.
 - ⬜ Add a favorite system for listings and searches.
 - ⬜ Add a notification system (email, push, etc.).

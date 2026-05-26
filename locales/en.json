@@ -20,7 +20,9 @@
         "total_listings": "Total listings",
         "users": "Users",
         "map": "Map",
-        "profile": "My Profile"
+        "profile": "My Profile",
+        "administration": "Administration",
+        "duplicate_hunt": "Duplicate Hunt"
     },
     "profile": {
         "title": "My Profile",
@@ -59,8 +61,8 @@
         "success": "address(es) added successfully!",
         "nearby_btn": "Search nearby towns",
         "nearby_title": "Search nearby towns",
-        "nearby_cp_label": "Postal Code",
-        "nearby_cp_placeholder": "e.g. 91190",
+        "nearby_cp_label": "Town or Postal Code",
+        "nearby_cp_placeholder": "e.g. Lyon or 69000",
         "nearby_radius_label": "Radius",
         "nearby_search_btn": "Search",
         "nearby_searching": "Searching...",
@@ -71,8 +73,8 @@
         "nearby_uncheck_all": "Deselect all",
         "nearby_add_btn": "Add to map",
         "nearby_adding": "Adding...",
-        "nearby_invalid_cp": "Please enter a valid 5-digit postal code.",
-        "nearby_no_results": "No towns found for this postal code and radius.",
+        "nearby_invalid_query": "Please enter a town or postal code.",
+        "nearby_no_results": "No towns found for this search.",
         "nearby_none_selected": "Please select at least one town.",
         "nearby_success": "town(s) added to the map!",
         "nearby_geocode_errors": "geocoding error(s).",
@@ -103,9 +105,12 @@
         },
         "stats": {
             "new": "New",
-            "disappeared": "Disappeared"
+            "active": "Active",
+            "disappeared": "Disappeared",
+            "duplicates": "Duplicates"
         },
         "filter_label": "Filter:",
+        "refresh_tags": "Force Tags Refresh",
         "see": "View",
         "add_listings_title": "Add listings",
         "add_listings_desc_single": "Paste the URL of a real estate listing.",
@@ -138,6 +143,9 @@
         "reload": "Reload scraping"
     },
     "listing": {
+        "like": "Like",
+        "dislike": "Dislike",
+        "favorite": "Favorite",
         "back": "Back",
         "refresh": "Refresh",
         "edit": "Edit",
@@ -239,7 +247,22 @@
         "station_1": "Closest",
         "station_2": "Second closest",
         "loading_stations": "Searching for nearby stations...",
-        "save_stations": "Save Selection"
+        "save_stations": "Save selection",
+        "declare_duplicate": "Declare a duplicate",
+        "duplicate_modal_title": "Declare a duplicate",
+        "duplicate_type": "Duplicate type",
+        "duplicate_internal": "Internal listing",
+        "duplicate_external": "External listing (URL)",
+        "search_listing": "Search for a listing",
+        "search_placeholder": "Search by title or city...",
+        "selected_listing": "Selected listing",
+        "external_url": "Original listing URL",
+        "confirm": "Confirm",
+        "duplicate_warning": "This listing is marked as a duplicate",
+        "duplicate_of_internal": "Duplicate of internal listing:",
+        "duplicate_of_external": "Duplicate of external listing:",
+        "duplicate_generic": "This listing is a duplicate.",
+        "duplicate_success": "Duplicate declared successfully!"
     },
     "setup": {
         "title": "Admin Setup",
@@ -271,7 +294,18 @@
         "save": "Save",
         "btn_edit_profile": "Edit profile",
         "btn_change_pwd": "Change password",
-        "btn_delete": "Delete"
+        "btn_delete": "Delete",
+        "backup_restore_title": "Backup & Restore",
+        "backup_btn": "Download backup",
+        "restore_btn": "Restore backup",
+        "restore_success": "System restored successfully !",
+        "restore_error": "Error during restoration: ",
+        "backup_filename": "immo_boussole_backup",
+        "backup_desc": "The backup includes the database, photos, and configuration."
+    },
+    "admin_maintenance": {
+        "title": "Maintenance & System",
+        "email_title": "Email Configuration (Resend.com)"
     },
     "auth": {
         "login_title": "Login — Immo-Boussole",
@@ -282,8 +316,11 @@
         "manual": "MANUAL",
         "nc": "N/A",
         "new": "NEW",
+        "nouvelle": "NEW",
         "active": "ACTIVE",
         "disappeared": "DISAPPEARED",
+        "disparue": "DISAPPEARED",
+        "rejetee": "REJECTED",
         "price_nc": "Price N/A",
         "rooms_short": "rooms",
         "bed_short": "beds",
@@ -309,7 +346,16 @@
         "no_pros": "No pros recorded yet.",
         "no_cons": "No cons recorded yet.",
         "dpe_dist": "DPE Distribution",
-        "top_listings": "Top listings"
+        "top_listings": "Top listings",
+        "coup_de_coeur_title": "Favorites Selection",
+        "coup_de_coeur_desc": "Listings highly rated by the team (ratings ≥ 7.0/10)",
+        "filter_all": "All",
+        "filter_general": "General favorite (100%)",
+        "filter_user": "{user}'s favorite",
+        "voted_by": "Voted by",
+        "no_favorites_found": "No favorites found with this filter",
+        "no_favorites_at_all": "No favorites recorded yet.",
+        "no_favorites_desc": "When a standard user gives a property a rating of ≥ 7.0, it will appear here."
     },
     "ready_searches": {
         "title": "Ready to search",
@@ -354,6 +400,27 @@
         "view_listing": "View listing",
         "import_error": "Error during import",
         "reject_error": "Error during rejection",
-        "network_error": "Network error"
+        "network_error": "Network error",
+        "auto_refresh_label": "Auto Refresh",
+        "auto_refresh_value": "Every 30 min (6am-10:30pm)",
+        "last_sync_label": "Last sync"
+    },
+    "duplicates": {
+        "title": "Duplicate Hunt",
+        "subtitle": "Identify similar listings to clean up the database",
+        "empty_title": "No potential duplicates",
+        "empty_subtitle": "Congratulations! Your database seems clean.",
+        "merge_btn": "Merge",
+        "reject_btn": "Reject",
+        "similarity": "Similarity",
+        "common_points": "Common points",
+        "city": "City",
+        "price": "Price",
+        "area": "Area",
+        "land_area": "Land",
+        "description": "Description",
+        "photo": "Photo",
+        "merge_success": "Listings merged!",
+        "reject_success": "Duplicate rejected!"
     }
 }

@@ -2,6 +2,7 @@
 Business logic services: scraping, duplicate detection, listing creation.
 """
 import json
+import os
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -11,9 +12,10 @@ from app.models import Listing, ListingStatus, SearchQuery, Source, Review
 from app.scrapers import (
     LeboncoinScraper, SelogerScraper, LeFigaroScraper,
     LogicimmoScraper, BieniciScraper, IadfranceScraper,
-    NotairesScraper, VinciScraper, ImmobilierFranceScraper
+    NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+    OrpiScraper
 )
-from app.media import download_listing_photos, photos_to_json
+from app.media import download_listing_photos, photos_to_json, json_to_photos, calculate_images_similarity, compute_image_dhash, compute_image_ahash
 from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
 from app.notifications import send_new_listing_notifications
 import httpx
@@ -148,12 +150,53 @@ async def fetch_basic_metadata(url: str) -> dict:
 
 # ─── Listing Creation from Scraped Data ───────────────────────────────────────
 
+def ensure_city_map_pin(city_name: str, db: Session):
+    """
+    Checks if a MapPin of type 'city' exists for the given city name (case-insensitive, cleaned).
+    If not, geocodes the city name and creates the MapPin.
+    """
+    if not city_name:
+        return
+    
+    import re
+    cleaned = city_name.strip()
+    cleaned = re.sub(r'\s*\(\d+\)\s*', '', cleaned)
+    cleaned = re.sub(r'\b\d{5}\b', '', cleaned)
+    cleaned = cleaned.strip()
+    if not cleaned:
+        return
+    
+    from sqlalchemy import func
+    from app.models import MapPin
+    existing_pin = db.query(MapPin).filter(
+        MapPin.pin_type == "city",
+        func.lower(MapPin.title) == cleaned.lower()
+    ).first()
+    
+    if not existing_pin:
+        coords = get_coordinates(cleaned)
+        if coords:
+            lat, lon = coords
+            new_pin = MapPin(
+                title=cleaned.title(),
+                address=cleaned.title(),
+                lat=lat,
+                lon=lon,
+                pin_type="city",
+                created_by="System"
+            )
+            db.add(new_pin)
+            db.commit()
+            print(f"[Services] Automatically created MapPin for city: {cleaned.title()} at {lat}, {lon}")
+
+
 async def create_listing_from_details(
     db: Session,
     details: dict,
     source: Source,
     original_url: str,
     download_photos: bool = True,
+    status: Optional[ListingStatus] = None,
 ) -> Tuple[Listing, bool]:
     """
     Creates or updates a listing from scraped details.
@@ -183,7 +226,21 @@ async def create_listing_from_details(
             # Skip fields handled specially or problematic
             if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
                 continue
+            if key in ("city", "location"):
+                from app.geo import standardize_and_enrich_city
+                std_city, _, _ = standardize_and_enrich_city(value)
+                if std_city:
+                    value = std_city
             setattr(listing, key, value)
+
+    # Ensure both listing.city and listing.location are standardized and synchronized
+    if listing.city or listing.location:
+        from app.geo import standardize_and_enrich_city
+        src_val = listing.city or listing.location
+        std_city, _, _ = standardize_and_enrich_city(src_val)
+        if std_city:
+            listing.city = std_city
+            listing.location = std_city
     
     if details.get("photo_urls"):
         listing.original_photo_urls = json.dumps(details.get("photo_urls"))
@@ -191,7 +248,12 @@ async def create_listing_from_details(
     # Store source and update timestamp
     listing.source = source
     listing.scraped_at = datetime.now(timezone.utc)
-    listing.status = ListingStatus.NEW
+    
+    # Set status only for new listings or if explicitly provided
+    if status:
+        listing.status = status
+    elif not existing:
+        listing.status = ListingStatus.NEW
 
     if not existing:
         db.add(listing)
@@ -222,7 +284,11 @@ async def create_listing_from_details(
 
     # ── Pre-calculate SNCF Distances ──
     if listing.city and listing.nearest_sncf_station is None:
-        sncf_data = fetch_sncf_times_for_city(listing.city)
+        from app.models import ZoneRule
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        sncf_data = fetch_sncf_times_for_city(listing.city, forbidden_stations)
         if sncf_data:
             listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
             listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
@@ -240,6 +306,10 @@ async def create_listing_from_details(
     # ── Géorisques Risk Report ──
     if listing.georisques_json is None:
         await update_listing_georisques(listing, db)
+
+    # ── Ensure City MapPin exists ──
+    if listing.city:
+        ensure_city_map_pin(listing.city, db)
 
     return listing, (not existing)
 
@@ -310,6 +380,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         Source.NOTAIRES: NotairesScraper(),
         Source.VINCI: VinciScraper(),
         Source.IMMOBILIER_FRANCE: ImmobilierFranceScraper(),
+        Source.ORPI: OrpiScraper(),
     }
 
     scraper = scrapers.get(query.source)
@@ -329,74 +400,120 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 
     existing_ids = [l.external_id for l in existing_active]
 
-    # 1. Mark disappeared listings
+    # 1. DISAPPEARED logic (DISABLED here because it's too aggressive with overlapping searches)
+    # Disappearance is now handled by refresh_all_listings_status which checks URLs individually.
     disappeared_count = 0
-    for listing in existing_active:
-        if listing.external_id not in scraped_ids:
-            listing.status = ListingStatus.DISAPPEARED
-            disappeared_count += 1
+    # for listing in existing_active:
+    #     if listing.external_id not in scraped_ids:
+    #         listing.status = ListingStatus.DISAPPEARED
+    #         disappeared_count += 1
 
     # 2. Process new listings
     new_count = 0
     new_listing_objects: list[Listing] = []  # collected for notifications
     for item in scraped_listings:
         ext_id = str(item["external_id"])
-        if ext_id not in existing_ids:
-            # Case 1: Brand new or was previously disappeared
-            existing = db.query(Listing).filter(Listing.external_id == ext_id).first()
-            if existing:
-                if existing.status == ListingStatus.DISAPPEARED:
-                    existing.status = ListingStatus.NEW
-                    existing.date_updated = datetime.now(timezone.utc)
-                existing.price = item.get("price")
-                existing.scraped_at = datetime.now(timezone.utc)
-            else:
-                new_listing = Listing(
-                    external_id=ext_id,
-                    title=item.get("title", "Sans titre"),
-                    url=item.get("url", ""),
-                    original_url=item.get("url", ""),
-                    price=item.get("price"),
-                    location=item.get("location"),
-                    city=item.get("city"),
-                    area=item.get("area"),
-                    rooms=item.get("rooms"),
-                    source=query.source,
-                    status=ListingStatus.NEW,
-                    scraped_at=datetime.now(timezone.utc),
-                    is_duplicate=False,
-                    duplicate_of_id=None,
-                    # Store the origin ReadySearch for the auto_searches view
-                    source_ready_search_id=ready_search.id if ready_search else None,
-                    source_criteria=ready_search.criteria if ready_search else None,
-                )
+        item_url = item.get("url", "")
+        
+        city_val = item.get("city")
+        loc_val = item.get("location") or city_val
+        city_to_check = loc_val or city_val
+        
+        if city_to_check:
+            from app.main import _is_city_in_allowed_departments
+            if not _is_city_in_allowed_departments(city_to_check, db):
+                continue
+        
+        # Check if listing already exists by external_id OR URL
+        # We check globally, not just in existing_active, to avoid UNIQUE constraint violations
+        existing = db.query(Listing).filter(
+            (Listing.external_id == ext_id) | (Listing.url == item_url)
+        ).first()
 
-                # Geocoding for new listing
-                loc = new_listing.location or new_listing.city
-                if loc:
-                    coords = get_coordinates(loc)
-                    if coords:
-                        new_listing.latitude, new_listing.longitude = coords
-
-                db.add(new_listing)
-                db.commit() # Commit to get ID
-                db.refresh(new_listing)
-                
-                await update_listing_georisques(new_listing, db)
-                new_listing_objects.append(new_listing)
-                new_count += 1
-        else:
-            # Case 2: Already active/new and still online
-            # Find the object in our local list to update it
-            existing = next((l for l in existing_active if l.external_id == ext_id), None)
-            if existing:
-                # Always update the timestamp and price
-                existing.scraped_at = datetime.now(timezone.utc)
-                if item.get("price"):
-                    existing.price = item.get("price")
+        if existing:
+            # Case: Already exists (active, new, or disappeared)
+            if existing.status == ListingStatus.DISAPPEARED:
+                existing.status = ListingStatus.NEW
+                existing.date_updated = datetime.now(timezone.utc)
+            
+            # Update fields
+            existing.price = item.get("price")
+            existing.scraped_at = datetime.now(timezone.utc)
+            
+            # If external_id was None (manual) or changed, update it
+            if not existing.external_id or existing.external_id != ext_id:
+                existing.external_id = ext_id
             
             # Refresh Géorisques even for existing listings (as requested)
             await update_listing_georisques(existing, db)
+        else:
+            # Check for photo_urls in item
+            photo_urls = item.get("photo_urls", [])
+            
+            # Case: Brand new listing
+            city_val = item.get("city")
+            loc_val = item.get("location") or city_val
+            if city_val or loc_val:
+                from app.geo import standardize_and_enrich_city
+                std_city, _, _ = standardize_and_enrich_city(city_val or loc_val)
+                if std_city:
+                    city_val = std_city
+                    loc_val = std_city
+            else:
+                loc_val = item.get("location")
+            
+            new_listing = Listing(
+                external_id=ext_id,
+                title=item.get("title", "Sans titre"),
+                url=item_url,
+                original_url=item_url,
+                price=item.get("price"),
+                location=loc_val,
+                city=city_val,
+                area=item.get("area"),
+                rooms=item.get("rooms"),
+                source=query.source,
+                status=ListingStatus.NEW,
+                scraped_at=datetime.now(timezone.utc),
+                is_duplicate=False,
+                duplicate_of_id=None,
+                # Store the origin ReadySearch for the auto_searches view
+                source_ready_search_id=ready_search.id if ready_search else None,
+                source_criteria=ready_search.criteria if ready_search else None,
+                original_photo_urls=json.dumps(photo_urls) if photo_urls else None,
+            )
+
+            # Geocoding for new listing
+            loc = new_listing.location or new_listing.city
+            if loc:
+                coords = get_coordinates(loc)
+                if coords:
+                    new_listing.latitude, new_listing.longitude = coords
+
+            db.add(new_listing)
+            try:
+                db.commit() # Commit to get ID
+                db.refresh(new_listing)
+                
+                # Download photos if available
+                if photo_urls:
+                    try:
+                        downloaded = await download_listing_photos(new_listing.id, photo_urls)
+                        if downloaded:
+                            new_listing.photos_local = photos_to_json(downloaded)
+                            db.commit()
+                    except Exception as e:
+                        print(f"[Services] Error downloading photos for NEW listing {new_listing.id}: {e}")
+
+                await update_listing_georisques(new_listing, db)
+                if new_listing.city:
+                    ensure_city_map_pin(new_listing.city, db)
+                new_listing_objects.append(new_listing)
+                new_count += 1
+            except Exception as e:
+                db.rollback()
+                print(f"[Services] Erreur lors de l'insertion de l'annonce {ext_id}: {e}")
+                continue
 
     db.commit()
 
@@ -406,12 +523,106 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 
     print(
         f"[Services] Diff terminé: {len(scraped_ids)} annonces scrapées, "
-        f"{new_count} nouvelles, {disappeared_count} disparues."
+        f"{new_count} nouvelles."
     )
 
     # ── Send push notifications for new listings ──
     if new_listing_objects:
         await send_new_listing_notifications(new_listing_objects, db)
+
+
+async def refresh_listing_status(listing: Listing, db: Session, force_update: bool = False):
+    """
+    Checks if a listing is still online by visiting its URL.
+    Updates status to DISAPPEARED if not found.
+    Also ensures the presentation image is valid; if not, refreshes the listing.
+    If force_update is True, always updates listing fields from scraper.
+    """
+    from app.main import _resolve_scraper
+    source, scraper = _resolve_scraper(listing.url)
+    
+    print(f"[Services] Refreshing status for listing {listing.id} ({listing.url})")
+    
+    is_online = True
+    details = {}
+    try:
+        if scraper:
+            details = await scraper.get_listing_details(listing.url)
+            # If scraper returns empty or a title indicating an error/removed page
+            if not details or not details.get("external_id") or "Erreur" in details.get("title", ""):
+                is_online = False
+        else:
+            # Fallback for manual or unknown sources
+            details = await fetch_basic_metadata(listing.url)
+            if not details or "Erreur" in details.get("title", ""):
+                is_online = False
+    except Exception as e:
+        print(f"[Services] Error checking status for {listing.id}: {e}")
+        # In case of network error, we don't assume it's disappeared
+        return
+
+    # Check if presentation photo (the first one) is valid on disk
+    photo_ok = False
+    photos = json_to_photos(listing.photos_local)
+    if photos:
+        first_photo_path = photos[0]
+        if os.path.exists(first_photo_path) and os.path.getsize(first_photo_path) > 0:
+            photo_ok = True
+
+    if not is_online:
+        if listing.status != ListingStatus.DISAPPEARED:
+            print(f"[Services] Listing {listing.id} has DISAPPEARED")
+            listing.status = ListingStatus.DISAPPEARED
+            db.commit()
+    else:
+        # If it was disappeared but now it's back, OR if the photo is broken
+        was_disappeared = (listing.status == ListingStatus.DISAPPEARED)
+        
+        if was_disappeared or not photo_ok or force_update:
+            reason = "BACK ONLINE" if was_disappeared else ("PHOTO BROKEN/MISSING" if not photo_ok else "MANUAL REPAIR")
+            print(f"[Services] Listing {listing.id} is {reason}, performing full refresh...")
+            
+            # Update fields from details
+            for key, value in details.items():
+                if hasattr(listing, key) and value is not None:
+                    # Skip fields handled specially or problematic
+                    if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
+                        continue
+                    setattr(listing, key, value)
+            
+            # Re-download photos
+            photo_urls = details.get("photo_urls", [])
+            if photo_urls:
+                try:
+                    downloaded = await download_listing_photos(listing.id, photo_urls)
+                    if downloaded:
+                        listing.photos_local = photos_to_json(downloaded)
+                except Exception as e:
+                    print(f"[Services] Error re-downloading photos for listing {listing.id}: {e}")
+            
+            if was_disappeared:
+                print(f"[Services] Listing {listing.id} is BACK ONLINE")
+                listing.status = ListingStatus.ACTIVE
+            
+            db.commit()
+    
+    listing.scraped_at = datetime.now(timezone.utc)
+    db.commit()
+
+
+async def refresh_all_listings_status(db: Session):
+    """
+    Iterates through all ACTIVE, NEW and DISAPPEARED listings 
+    to refresh their online status.
+    """
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, ListingStatus.DISAPPEARED])
+    ).all()
+    
+    print(f"[Services] Starting global status refresh for {len(listings)} listings...")
+    for l in listings:
+        await refresh_listing_status(l, db)
+    print("[Services] Global status refresh completed.")
 
 
 # ─── Review Management ────────────────────────────────────────────────────────
@@ -469,6 +680,28 @@ def get_or_create_review(
 
 # ─── Ideal Property Profile ───────────────────────────────────────────────────
 
+def _parse_keywords(raw_list: list) -> list:
+    """
+    Parse a list of raw pros/cons strings into deduplicated, counted, sorted items.
+    Each raw string may contain multiple items separated by newlines or ' - '.
+    Returns: [{"text": str, "count": int}, ...] sorted by count desc, then alpha asc.
+    """
+    from collections import Counter
+    counts: Counter = Counter()
+    for raw in raw_list:
+        if not raw:
+            continue
+        for block in raw.split('\n'):
+            for item in block.split(' - '):
+                clean = item.strip().strip('-').strip()
+                if clean:
+                    counts[clean] += 1
+    return [
+        {"text": text, "count": count}
+        for text, count in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
+    ]
+
+
 def generate_ideal_profile(db: Session) -> dict:
     """
     Aggregates all well-rated reviews (≥ 7/10) to generate
@@ -485,12 +718,21 @@ def generate_ideal_profile(db: Session) -> dict:
         Review.cons != None,
     ).all()
 
-    # Collect pros and cons
-    all_pros = [r.pros for r in good_reviews if r.pros]
-    all_cons = [r.cons for r in bad_reviews if r.cons]
+    # Collect pros and cons as raw strings
+    raw_pros = [r.pros for r in good_reviews if r.pros]
+    raw_cons = [r.cons for r in bad_reviews if r.cons]
 
-    # Get statistics from top-rated listings
+    # Deduplicate, count occurrences, and sort (most frequent first, then alpha)
+    all_pros = _parse_keywords(raw_pros)
+    all_cons = _parse_keywords(raw_cons)
+
+    # Get statistics from top-rated listings AND favorite listings
     top_listing_ids = list(set(r.listing_id for r in good_reviews))
+    favorite_listings = db.query(Listing).filter(Listing.is_favorite == True).all()
+    for fl in favorite_listings:
+        if fl.id not in top_listing_ids:
+            top_listing_ids.append(fl.id)
+
     top_listings = db.query(Listing).filter(Listing.id.in_(top_listing_ids)).all()
 
     # Compute averages
@@ -525,9 +767,161 @@ def generate_ideal_profile(db: Session) -> dict:
                 "title": l.title,
                 "price": l.price,
                 "area": l.area,
+                "rooms": l.rooms,
                 "location": l.location,
                 "dpe_rating": l.dpe_rating,
+                "is_favorite": l.is_favorite,
+                "source": l.source.value if l.source else None,
+                "source_criteria": l.source_criteria,
+                "status": l.status.value if l.status else None,
+                "url": l.url,
             }
             for l in top_listings
         ],
     }
+
+# ─── Duplicate Hunting ────────────────────────────────────────────────────────
+
+def calculate_listing_similarity(l1: Listing, l2: Listing, hash_cache: dict = None) -> Tuple[float, list]:
+    """
+    Calculates a similarity score (0 to 100) and common points between two listings.
+    """
+    import difflib
+    score = 0
+    common = []
+    
+    # 1. City (Mandatory for high score)
+    c1 = (l1.city or l1.location or "").strip().lower()
+    c2 = (l2.city or l2.location or "").strip().lower()
+    if c1 and c2 and c1 == c2:
+        score += 30
+        common.append("city")
+
+    # 2. Price (±5%)
+    if l1.price and l2.price:
+        diff = abs(l1.price - l2.price)
+        max_p = max(l1.price, l2.price)
+        if max_p > 0 and (diff / max_p) <= 0.05:
+            score += 20
+            common.append("price")
+        elif max_p > 0 and (diff / max_p) <= 0.10:
+            score += 10 # Half points for 10% range
+
+    # 3. Area (±5%)
+    if l1.area and l2.area:
+        diff = abs(l1.area - l2.area)
+        max_a = max(l1.area, l2.area)
+        if max_a > 0 and (diff / max_a) <= 0.05:
+            score += 20
+            common.append("area")
+        elif max_a > 0 and (diff / max_a) <= 0.10:
+            score += 10
+
+    # 4. Land Area (±5%) - Only if both have it
+    if l1.land_area and l2.land_area:
+        diff = abs(l1.land_area - l2.land_area)
+        max_la = max(l1.land_area, l2.land_area)
+        if max_la > 0 and (diff / max_la) <= 0.05:
+            score += 10
+            common.append("land_area")
+            
+    # 5. Description Similarity
+    if l1.description_text and l2.description_text:
+        # Use difflib for a quick ratio
+        ratio = difflib.SequenceMatcher(None, l1.description_text[:1000], l2.description_text[:1000]).ratio()
+        if ratio > 0.8:
+            score += 20
+            common.append("description")
+        elif ratio > 0.6:
+            score += 10
+
+    # 6. First Photo (Visual/Metadata hint via perceptual hashing)
+    p1 = json_to_photos(l1.photos_local)
+    p2 = json_to_photos(l2.photos_local)
+    if p1 and p2:
+        path1 = os.path.join(os.getcwd(), p1[0])
+        path2 = os.path.join(os.getcwd(), p2[0])
+        if os.path.exists(path1) and os.path.exists(path2):
+            if hash_cache is not None:
+                if path1 not in hash_cache:
+                    hash_cache[path1] = (compute_image_dhash(path1), compute_image_ahash(path1))
+                if path2 not in hash_cache:
+                    hash_cache[path2] = (compute_image_dhash(path2), compute_image_ahash(path2))
+                d1, a1 = hash_cache[path1]
+                d2, a2 = hash_cache[path2]
+                
+                if d1 and d2 and a1 and a2:
+                    def hamming_distance(h1, h2):
+                        return sum(bin(int(c1, 16) ^ int(c2, 16)).count('1') for c1, c2 in zip(h1, h2))
+                    
+                    dist_d = hamming_distance(d1, d2)
+                    dist_a = hamming_distance(a1, a2)
+                    
+                    sim_d = (64 - dist_d) / 64 * 100
+                    sim_a = (64 - dist_a) / 64 * 100
+                    img_sim = (sim_d + sim_a) / 2.0
+                else:
+                    img_sim = 0.0
+            else:
+                img_sim = calculate_images_similarity(path1, path2)
+
+            if img_sim >= 90.0:
+                score += 30
+                common.append("photo")
+            elif img_sim >= 75.0:
+                score += 20
+                common.append("photo")
+            elif img_sim >= 60.0:
+                score += 10
+
+    return min(score, 100), common
+
+
+def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
+    """
+    Finds pairs of listings that might be duplicates.
+    Excludes pairs already rejected or already marked as duplicates.
+    """
+    from app.models import RejectedDuplicate
+    
+    # Get active/new listings, sorted by date (most recent first)
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW]),
+        Listing.is_duplicate == False
+    ).order_by(Listing.date_added.desc()).limit(limit_listings).all()
+    
+    # Get rejected pairs
+    rejected = db.query(RejectedDuplicate).all()
+    rejected_pairs = set()
+    for r in rejected:
+        rejected_pairs.add(tuple(sorted((r.listing_a_id, r.listing_b_id))))
+        
+    potential_pairs = []
+    hash_cache = {}
+    
+    for i in range(len(listings)):
+        for j in range(i + 1, len(listings)):
+            l1 = listings[i]
+            l2 = listings[j]
+            
+            # Skip if same source (usually same platform doesn't have same listing twice with different IDs, 
+            # but sometimes they do. However, the goal is often cross-platform duplicates).
+            # Actually, the user might want to see them even on same source.
+            
+            # Skip if already in rejected
+            if tuple(sorted((l1.id, l2.id))) in rejected_pairs:
+                continue
+                
+            score, common = calculate_listing_similarity(l1, l2, hash_cache=hash_cache)
+            
+            if score >= 50: # Threshold for "potential" (ignores duplicates strictly below 50% for performance)
+                potential_pairs.append({
+                    "l1": l1,
+                    "l2": l2,
+                    "score": score,
+                    "common": common
+                })
+                
+    # Sort by score descending
+    potential_pairs.sort(key=lambda x: x["score"], reverse=True)
+    return potential_pairs

@@ -1,5 +1,8 @@
+# pyrefly: ignore [missing-import]
 from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, Text, ForeignKey, Boolean, LargeBinary
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship
+# pyrefly: ignore [missing-import]
 from sqlalchemy.sql import func
 import enum
 from app.database import Base
@@ -48,6 +51,7 @@ class Source(str, enum.Enum):
     NOTAIRES = "notaires"
     VINCI = "vinci"
     IMMOBILIER_FRANCE = "immobilier_france"
+    ORPI = "orpi"
     MANUAL = "manuel"
 
 
@@ -130,13 +134,16 @@ class Listing(Base):
     # Metadata
     source = Column(Enum(Source), nullable=False, default=Source.MANUAL)
     status = Column(Enum(ListingStatus), default=ListingStatus.NEW, nullable=False)
+    is_favorite = Column(Boolean, default=False)
+    is_liked = Column(Boolean, default=False)
+    is_disliked = Column(Boolean, default=False)
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
     date_added = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Duplicate detection
     is_duplicate = Column(Boolean, default=False)
-    duplicate_of_id = Column(Integer, ForeignKey("listings.id"), nullable=True)
+    duplicate_of_id = Column(Integer, ForeignKey("listings.id", ondelete="SET NULL"), nullable=True)
 
     # SNCF Station routing
     nearest_sncf_station = Column(String, nullable=True)
@@ -181,6 +188,19 @@ class Review(Base):
 
     # Relationships
     listing = relationship("Listing", back_populates="reviews")
+
+
+class UserListingView(Base):
+    __tablename__ = "user_listing_views"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    viewed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", backref="views")
+    listing = relationship("Listing", backref="user_views")
 
 
 class SearchQuery(Base):
@@ -229,4 +249,90 @@ class MapPin(Base):
     nearby_distance_km = Column(Float, nullable=True)   # Distance from the search origin in km
     nearby_ref_commune = Column(String, nullable=True)  # Name of the reference city searched
     nearby_ref_cp      = Column(String, nullable=True)  # Postal code of the reference city
+
+    pin_type = Column(String(20), nullable=False, default="city") # "city" or "station"
+
+
+class TrainLine(Base):
+    __tablename__ = "train_lines"
+
+    id = Column(Integer, primary_key=True, index=True)
+    departure_station = Column(String, nullable=False)
+    arrival_station = Column(String, nullable=False)
+    path_json = Column(Text, nullable=False) # JSON list of [lat, lon]
+    color = Column(String(20), nullable=False)
+    created_by = Column(String(50), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class GlobalSettings(Base):
+    __tablename__ = "global_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    resend_api_key = Column(String, nullable=True)
+    resend_sender_name = Column(String, nullable=True, default="Immo-Boussole")
+    resend_sender_email = Column(String, nullable=True)
+    resend_subject = Column(String, nullable=True)
+    
+    # DB Maintenance Settings
+    db_check_automate = Column(Boolean, default=False)
+    db_check_interval = Column(String, default="24h")
+    db_repair_automate = Column(Boolean, default=False)
+    db_repair_interval = Column(String, default="24h")
+
+    # DB Maintenance History
+    last_global_check = Column(String, nullable=True)
+    last_checks_json = Column(String, nullable=True, default="{}")
+    last_repairs_json = Column(String, nullable=True, default="{}")
+
+    allowed_departments = Column(Text, nullable=True) # JSON list of ["38", "73"]
+
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ZoneRule(Base):
+    """
+    Stores forbidden/allowed zone rules for cities and SNCF stations.
+    zone_type: "city" or "station"
+    rule: "forbidden" or "allowed"
+    """
+    __tablename__ = "zone_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    zone_type = Column(String(20), nullable=False)   # "city" or "station"
+    name = Column(String, nullable=False, index=True) # City or station name
+    rule = Column(String(10), nullable=False)          # "forbidden" or "allowed"
+    created_by = Column(String(50), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+class RejectedDuplicate(Base):
+    """
+    Stores pairs of listings that the user has explicitly rejected as duplicates.
+    """
+    __tablename__ = "rejected_duplicates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_a_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    listing_b_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    rejected_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AIProfile(Base):
+    """
+    Stores API profiles for the AI Assistant.
+    """
+    __tablename__ = "ai_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    provider = Column(String, nullable=False)  # claude, chatgpt, mistral, google, openai-compatible
+    endpoint = Column(String, nullable=False)
+    model_name = Column(String, nullable=False)
+    api_key = Column(String, nullable=True)
+    is_default = Column(Boolean, default=False)
+    created_by_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", backref="ai_profiles")
 
