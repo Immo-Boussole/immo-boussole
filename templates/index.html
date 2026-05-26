@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'nav.dashboard') }} — {{ t(request, 'app.title') }}</title>
     <meta name="description"
         content="{{ t(request, 'app.description') }}">
@@ -11,6 +14,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -28,6 +32,20 @@
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -116,9 +134,10 @@
             background-clip: text;
         }
 
-        .logo i {
-            -webkit-text-fill-color: var(--accent);
-            font-size: 1.4rem;
+        .logo img {
+            width: 1.4rem;
+            height: 1.4rem;
+            object-fit: contain;
         }
 
         .stat-grid {
@@ -132,7 +151,12 @@
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1rem;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
             text-align: center;
             transition: var(--trans);
         }
@@ -160,12 +184,12 @@
             color: var(--green);
         }
 
-        .stat-card.dis .val {
-            color: var(--red);
+        .stat-card.act .val {
+            color: var(--accent);
         }
 
-        .stat-card.dup .val {
-            color: var(--orange);
+        .stat-card.dis .val {
+            color: var(--red);
         }
 
         .sidebar-section-title {
@@ -305,11 +329,39 @@
             flex-wrap: wrap;
         }
 
+        .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
         .filter-label {
             font-size: 0.75rem;
             color: var(--text-2);
             font-weight: 600;
             margin-right: 0.25rem;
+        }
+
+        .vertical-separator {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+            margin: 0 0.25rem;
+            align-self: center;
+        }
+
+        .d-mobile { display: none; }
+        .d-desktop { display: inline; }
+
+        @media (max-width: 1024px) {
+            .d-mobile { display: inline; }
+            .d-desktop { display: none; }
         }
 
         .content {
@@ -587,6 +639,40 @@
             color: var(--text);
         }
 
+        .interaction-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-right: auto;
+            margin-left: 0.75rem;
+        }
+
+        .interaction-btn {
+            background: none;
+            border: none;
+            padding: 0.1rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-2);
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.5;
+        }
+
+        .interaction-btn:hover {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+
+        .interaction-btn.active {
+            opacity: 1;
+        }
+
+        .interaction-btn.active.heart { color: #ff4757; }
+        .interaction-btn.active.like { color: var(--green); }
+        .interaction-btn.active.dislike { color: var(--red); }
+
         /* ── Empty State ── */
         .empty {
             grid-column: 1 / -1;
@@ -787,7 +873,80 @@
         }
 
         .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        /* ── Bulk Address Modal ── */
+        .modal-instructions {
+            background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);
+            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
+            font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
+            display: flex; gap: 1rem; align-items: flex-start;
+            text-align: left;
+        }
+        .modal-instructions i {
+            color: var(--accent); font-size: 1.1rem; margin-top: 0.15rem;
+        }
+        .modal-instructions .instructions-content { flex: 1; }
+        .modal-instructions code {
+            background: rgba(79, 142, 247, 0.15); color: #8eb7f9;
+            padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            display: inline-block; margin-top: 0.5rem;
+        }
+
+        #bulkModal .modal {
+            max-width: 560px;
+        }
+        #bulkModal textarea {
+            width: 100%; min-height: 220px; resize: none;
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.25rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
+            line-height: 1.6; transition: var(--trans);
             margin-bottom: 1rem;
+        }
+        #bulkModal textarea::placeholder { color: var(--text-2); opacity: 0.4; }
+        #bulkModal textarea:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+
+        .modal-result {
+            margin-top: 1rem; font-size: 0.85rem; border-radius: 12px; padding: 1rem 1.25rem;
+            display: none; line-height: 1.5; text-align: left;
+        }
+        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
+        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.08); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
+        
+        .modal-error-list {
+            list-style: none; padding: 0; margin: 0.5rem 0 0 0;
+        }
+        .modal-error-list li {
+            position: relative; padding-left: 1.2rem; margin-bottom: 0.25rem;
+            opacity: 0.9; font-size: 0.8rem;
+        }
+        .modal-error-list li::before {
+            content: '•'; position: absolute; left: 0; color: var(--red);
+        }
+
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h2 {
+            font-size: 1.1rem; font-weight: 700;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .modal-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.2rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .modal-actions {
+            display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;
         }
 
         .form-group label {
@@ -990,21 +1149,26 @@
     <!-- ── Sidebar ── -->
     <aside class="sidebar">
         <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+            <img src="/static/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
         </div>
 
         {% set total = listings|length %}
-        {% set new_cnt = listings|selectattr("status", "equalto", "nouvelle")|list|length %}
-        {% set dis_cnt = listings|selectattr("status", "equalto", "disparue")|list|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
         <div class="stat-grid">
-            <div class="stat-card" style="grid-column: 1 / -1;">
+            <div class="stat-card">
                 <div class="val">{{ total }}</div>
                 <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
             <div class="stat-card new">
                 <div class="val">{{ new_cnt }}</div>
                 <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
             </div>
             <div class="stat-card dis">
                 <div class="val">{{ dis_cnt }}</div>
@@ -1014,21 +1178,28 @@
 
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
-            <a href="/" class="nav-link active"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -1049,8 +1220,8 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
@@ -1062,14 +1233,13 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{{ t(request, 'dashboard.all_listings') }}</h1>
-            </div>
-            
-            <div class="topbar-right">
-                <a href="/profile/ideal" class="btn"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-                {% if request.session.get('role') == 'user' %}
-                <button class="btn primary" id="btnAddUrl" onclick="openModal()">
-                    <i class="fa-solid fa-plus"></i> {{ t(request, 'dashboard.add_listing') }}
+                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
+                
+                {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
+                <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem; height: 32px; padding: 0 0.75rem;">
+                    <i class="fa-solid fa-plus d-desktop"></i>
+                    <span class="d-desktop">{{ t(request, 'dashboard.add_listing') }}</span>
+                    <span class="d-mobile">Ajouter annonce</span>
                 </button>
                 {% endif %}
             </div>
@@ -1078,25 +1248,51 @@
 
         <div class="filter-bar">
             <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
-            <button class="btn active" id="f-all" onclick="filter('all', this)">{{ t(request, 'dashboard.filters.all') }}</button>
-            <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-                <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
-            </button>
-            <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-                <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
-            </button>
-            <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-                <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
-            </button>
+            <div class="filter-chips">
+                <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
+                    <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
+                </button>
+                <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
+                    <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
+                </button>
+                <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
+                    <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
+                </button>
+                <div class="vertical-separator"></div>
+                <button class="btn" id="f-rejected" onclick="filter('rejetee', this)" style="color: var(--orange);">
+                    <i class="fa-solid fa-ban"></i> {{ t(request, 'dashboard.rejected', 'Rejetées') }}
+                </button>
+                <div class="vertical-separator"></div>
+                <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
+                    <i class="fa-solid fa-heart"></i> Coup de cœur
+                </button>
+                <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
+                    <i class="fa-solid fa-thumbs-up"></i> J'aime
+                </button>
+                <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
+                    <i class="fa-solid fa-thumbs-down"></i> Je n'aime pas
+                </button>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
+                    <i class="fa-solid fa-rotate"></i> 
+                    <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>
+                    <span class="d-mobile">Rafraîch. tags</span>
+                </button>
+            </div>
         </div>
 
 
         <div class="content">
             <div class="grid" id="grid">
-                {% for listing in listings %}
+                {% for listing in display_listings|default(listings) %}
                 {% set photos = listing._photos if listing._photos is defined else [] %}
-                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.status.value }}"
-                    onclick="window.location='/listings/{{ listing.id }}'">
+                <div class="card" data-id="{{ listing.id }}" data-status="{{ listing.user_status }}"
+                    data-favorite="{{ 'true' if listing.is_favorite else 'false' }}"
+                    data-liked="{{ 'true' if listing.is_liked else 'false' }}"
+                    data-disliked="{{ 'true' if listing.is_disliked else 'false' }}"
+                    onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">
                         {% if photos %}
@@ -1105,7 +1301,7 @@
                         <div class="card-img-placeholder"><i class="fa-regular fa-image"></i></div>
                         {% endif %}
                         <div class="card-overlay"></div>
-                        <span class="badge {{ listing.status.value }}">{{ listing.status.value }}</span>
+                        <span class="badge {{ listing.user_status }}">{{ listing.user_status }}</span>
                         {% if listing.dpe_rating %}
                         <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
                         {% endif %}
@@ -1122,7 +1318,9 @@
                         {% endif %}
 
                         <div class="card-meta">
-                            <span><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</span>
+                            <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                <i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}
+                            </a>
                             {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if
                                 listing.area == listing.area|int else listing.area }} m²</span>{% endif %}
                             {% if listing.rooms %}<span><i class="fa-solid fa-door-open"></i> {{ listing.rooms }}
@@ -1161,9 +1359,10 @@
                         {% if listing.reviews %}
                         <div class="card-reviews">
                             {% for review in listing.reviews %}
-                            <div class="reviewer-chip {{ 'jm' if review.reviewer == 'jean-dupont' else 'marie-martin' }}">
+                            {% set initials = review.reviewer[0] | upper if review.reviewer else '?' %}
+                            <div class="reviewer-chip">
                                 <i class="fa-solid fa-user"></i>
-                                {{ "JM" if review.reviewer == "jean-dupont" else "M" }}
+                                {{ initials }}
                                 {% if review.rating %}
                                 <span class="star"><i class="fa-solid fa-star" style="font-size: 0.6rem;"></i> {{
                                     review.rating }}</span>
@@ -1175,12 +1374,31 @@
 
                         <div class="card-footer">
                             <span class="source-badge">{{ listing.source.value|upper }}</span>
+                            
+                            <div class="interaction-btns">
+                                <button class="interaction-btn heart {% if listing.is_favorite %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleFavorite({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.favorite') }}">
+                                    <i class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i>
+                                </button>
+                                <button class="interaction-btn like {% if listing.is_liked %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleLike({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.like') }}">
+                                    <i class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i>
+                                </button>
+                                <button class="interaction-btn dislike {% if listing.is_disliked %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleDislike({{ listing.id }}, this)"
+                                        title="{{ t(request, 'listing.dislike') }}">
+                                    <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i>
+                                </button>
+                            </div>
+
                             <a href="{{ listing.url }}" target="_blank" class="card-link"
                                 onclick="event.stopPropagation()">
                                 {{ t(request, 'dashboard.see') }} <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                             <button class="btn-delete"
-                                onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson }})'
+                                onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|forceescape }})'
                                 title="{{ t(request, 'dashboard.delete_title') }}" aria-label="{{ t(request, 'listing.delete_btn') }}">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
@@ -1450,6 +1668,8 @@
                 } else if (data.status === 'created' || data.status === 'updated' || data.status === 'success') {
                     if (data.scraping_success === false) {
                         showAlert('Erreur de scraping, importation sans scraping en cours.', 'warning');
+                    } else if (data.forbidden_zone_warning) {
+                        showAlert(`⚠ Zone interdite ! ${data.forbidden_zone_warning.message} — Annonce ajoutée tout de même.`, 'warning');
                     } else {
                         showAlert(`✓ Annonce ajoutée ! ${data.title || ''}`, 'success');
                     }
@@ -1470,23 +1690,225 @@
             }
         }
 
+        async function refreshTags() {
+            const btn = document.getElementById('btnRefreshTags');
+            const icon = btn.querySelector('i');
+            const span = btn.querySelector('span');
+            
+            btn.disabled = true;
+            icon.classList.add('fa-spin');
+            const originalText = span.textContent;
+            span.textContent = 'Traitement...';
+
+            try {
+                const res = await fetch('/api/listings/refresh-tags', { method: 'POST' });
+                if (res.ok) {
+                    alert('Rafraîchissement lancé en arrière-plan. Les tags seront mis à jour progressivement.');
+                } else {
+                    alert('Erreur lors du lancement du rafraîchissement.');
+                }
+            } catch (e) {
+                alert('Erreur réseau.');
+            } finally {
+                setTimeout(() => {
+                    btn.disabled = false;
+                    icon.classList.remove('fa-spin');
+                    span.textContent = originalText;
+                }, 3000);
+            }
+        }
+
         function filter(status, btn) {
+            const wasActive = btn.classList.contains('active');
             document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            
+            let currentStatus = status;
+            if (wasActive) {
+                currentStatus = 'all';
+            } else {
+                btn.classList.add('active');
+            }
 
             document.querySelectorAll('.card').forEach(card => {
                 let show = false;
-                if (status === 'all') show = true;
-                else show = card.dataset.status === status;
+                if (currentStatus === 'all') show = true;
+                else if (currentStatus === 'favorite') show = card.dataset.favorite === 'true';
+                else if (currentStatus === 'liked') show = card.dataset.liked === 'true';
+                else if (currentStatus === 'disliked') show = card.dataset.disliked === 'true';
+                else show = card.dataset.status === currentStatus;
                 card.style.display = show ? '' : 'none';
             });
         }
 
         // Keyboard shortcut: Escape to close modal
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
+            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); closeBulkModal(); }
             if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
         });
+
+        // ── Interaction Logic ────────────────────────────────────────────────
+        async function toggleFavorite(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/favorite`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function toggleLike(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/like`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function toggleDislike(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/dislike`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    updateInteractionButtons(btn.closest('.card-footer'), data);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateInteractionButtons(footer, data) {
+            const heartBtn = footer.querySelector('.interaction-btn.heart');
+            const likeBtn = footer.querySelector('.interaction-btn.like');
+            const dislikeBtn = footer.querySelector('.interaction-btn.dislike');
+
+            // Favorite
+            if (data.is_favorite) {
+                heartBtn.classList.add('active');
+                heartBtn.querySelector('i').className = 'fa-solid fa-heart';
+            } else {
+                heartBtn.classList.remove('active');
+                heartBtn.querySelector('i').className = 'fa-regular fa-heart';
+            }
+
+            // Like
+            if (data.is_liked) {
+                likeBtn.classList.add('active');
+                likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
+            } else {
+                likeBtn.classList.remove('active');
+                likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
+            }
+
+            // Dislike
+            if (data.is_disliked) {
+                dislikeBtn.classList.add('active');
+                dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
+            } else {
+                dislikeBtn.classList.remove('active');
+                dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+            }
+        }
+
+        // ── Bulk Address Modal Logic ──────────────────────────────────────────
+        function openBulkModal() {
+            document.getElementById('bulkModal').classList.add('open');
+            document.getElementById('bulkTextarea').value = '';
+            document.getElementById('bulkResult').style.display = 'none';
+            document.getElementById('bulkResult').innerHTML = '';
+            document.getElementById('btnSubmitBulk').disabled = false;
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').classList.remove('open');
+        }
+
+        async function submitBulk() {
+            const textarea = document.getElementById('bulkTextarea');
+            const resultEl = document.getElementById('bulkResult');
+            const btn = document.getElementById('btnSubmitBulk');
+            const raw = textarea.value.trim();
+
+            if (!raw) return;
+
+            const lines = raw.split('\n').filter(l => l.trim());
+            const pins = [];
+
+            for (const line of lines) {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    const title = parts[0].trim();
+                    const address = parts.slice(1).join(';').trim();
+                    if (title && address) {
+                        pins.push({ title, address });
+                    }
+                }
+            }
+
+            if (pins.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.no_valid_entries", "Format invalide. Utilisez: Titre ; Adresse") }}';
+                resultEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout...") }}';
+            resultEl.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/map-pins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pins })
+                });
+
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                        msg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            msg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        msg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.innerHTML = msg;
+                    resultEl.style.display = 'block';
+
+                    if (!data.errors || data.errors.length === 0) {
+                        setTimeout(() => {
+                            closeBulkModal();
+                            // If we're not on the map, maybe we want to go there? 
+                            // Or just stay here. Let's stay here but notify.
+                        }, 2000);
+                    }
+                } else {
+                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        errMsg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            errMsg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        errMsg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result error';
+                    resultEl.innerHTML = errMsg;
+                    resultEl.style.display = 'block';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Erreur réseau: ' + err.message;
+                resultEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
 
         // ── Delete flow ──────────────────────────────────────────────────────
         let pendingDeleteId = null;
@@ -1650,6 +2072,49 @@
         </div>
     </div>
 
+    <!-- ── Bulk Address Modal ── -->
+    <div class="modal-backdrop" id="bulkModal" onclick="if(event.target===this) closeBulkModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request, 'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
+                <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-instructions">
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="instructions-content">
+                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
+                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                </div>
+            </div>
+
+            <textarea id="bulkTextarea"
+                placeholder="{{ t(request, 'map.bulk_placeholder', 'Mon Café Préféré ; 12 Rue de la Paix, Paris') }}"
+            ></textarea>
+
+            <div class="modal-result" id="bulkResult"></div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeBulkModal()">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                </button>
+                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk" style="padding-left: 1.25rem; padding-right: 1.25rem;">
+                    <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 
 </html>
+

@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ title|default(t(request, 'ideal_profile.title')) }} — {{ t(request, 'app.title') }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
@@ -15,6 +19,20 @@
             --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
             --shadow: 0 8px 32px rgba(0,0,0,0.5);
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -54,7 +72,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -81,6 +99,58 @@
         .nav-link:hover, .nav-link.active {
             background: rgba(79, 142, 247, 0.12);
             color: var(--accent);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
+            text-align: center;
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.act .val {
+            color: var(--accent);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
         }
 
         /* ── Main Content ── */
@@ -167,23 +237,8 @@
         .nav-back { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-2); text-decoration: none; font-size: 0.85rem; font-weight: 600; transition: var(--trans); }
         .nav-back:hover { color: var(--accent); }
 
-        .hero {
-            background: linear-gradient(160deg, #0e1628 0%, #131929 100%);
-            border-bottom: 1px solid var(--border);
-            padding: 3rem 2rem 2.5rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero::before {
-            content: '';
-            position: absolute; inset: 0;
-            background: radial-gradient(ellipse at 50% 0%, rgba(79,142,247,0.12) 0%, transparent 70%);
-        }
-        .hero-icon { font-size: 3rem; margin-bottom: 1rem; position: relative; }
-        .hero h1 { font-size: 2rem; font-weight: 900; position: relative; }
-        .hero p { color: var(--text-2); margin-top: 0.5rem; font-size: 0.9rem; position: relative; }
-        .hero-based { display: inline-block; margin-top: 0.75rem; background: rgba(79,142,247,0.12); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; color: var(--accent); position: relative; }
+        /* Badge "Basé sur N avis" dans la topbar */
+        .hero-based { display: inline-flex; align-items: center; gap: 0.3rem; background: rgba(79,142,247,0.12); border: 1px solid rgba(79,142,247,0.25); border-radius: 20px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; color: var(--accent); }
 
         .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
 
@@ -202,10 +257,14 @@
         .no-data h2 { font-size: 1.25rem; color: var(--text); margin-bottom: 0.5rem; }
 
         /* Section layout */
-        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-        @media (max-width: 700px) { .section-grid { grid-template-columns: 1fr; } }
+        .section-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 1.5rem; 
+            margin-bottom: 2rem; 
+        }
 
-        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; display: flex; flex-direction: column; }
         .panel-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.4rem; }
 
         /* DPE bars */
@@ -220,52 +279,294 @@
         .dpe-bar-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
         .dpe-count { font-size: 0.75rem; font-weight: 700; color: var(--text-2); width: 20px; text-align: right; }
 
-        /* Pros/Cons lists */
-        .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto; }
-        .feedback-item { background: var(--surface-2); border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; line-height: 1.5; border-left: 3px solid; }
-        .feedback-item.pro { border-color: var(--green); color: #c0fce8; }
-        .feedback-item.con { border-color: var(--red); color: #fbc5ca; }
-        .empty-feedback { color: var(--text-2); font-size: 0.82rem; font-style: italic; padding: 0.5rem; }
+        /* Pros/Cons badges */
+        .feedback-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            max-height: none;
+            overflow: visible;
+        }
+        .feedback-item {
+            background: var(--surface-2);
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1.4;
+            border: 1px solid var(--border);
+            transition: var(--trans);
+            cursor: default;
+        }
+        .feedback-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .feedback-item.pro { border-left: 4px solid var(--green); color: var(--text); }
+        .feedback-item.con { border-left: 4px solid var(--red); color: var(--text); }
+        
+        .feedback-item.pro:hover { border-color: var(--green); background: rgba(16, 217, 164, 0.05); }
+        .feedback-item.con:hover { border-color: var(--red); background: rgba(242, 92, 105, 0.05); }
 
-        /* Top listings */
-        .top-listing { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; background: var(--surface-2); border-radius: 10px; margin-bottom: 0.5rem; text-decoration: none; color: var(--text); transition: var(--trans); border: 1px solid var(--border); }
-        .top-listing:hover { border-color: var(--accent); transform: translateX(4px); }
-        .tl-dpe { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; flex-shrink: 0; }
-        .tl-info { flex: 1; min-width: 0; }
-        .tl-title { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tl-sub { font-size: 0.72rem; color: var(--text-2); }
-        .tl-price { font-size: 0.9rem; font-weight: 800; color: var(--accent); white-space: nowrap; }
+        /* Occurrence badge on pros/cons items */
+        .feedback-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .feedback-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            line-height: 1;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-2);
+            flex-shrink: 0;
+        }
+        .feedback-item.pro .feedback-count { background: rgba(16, 217, 164, 0.18); color: var(--green); }
+        .feedback-item.con .feedback-count { background: rgba(242, 92, 105, 0.18); color: var(--red); }
 
-        ::-webkit-scrollbar { width: 4px; }
+        /* Full width table for Top Listings */
+        .table-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            width: 100%;
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        thead {
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            padding: 1rem 1.25rem;
+            font-weight: 700;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.7rem;
+        }
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .col-platform { font-weight: 700; text-transform: uppercase; color: var(--accent); font-size: 0.75rem; }
+        .col-criteria { font-weight: 600; color: var(--text-2); font-size: 0.8rem; }
+        .col-title { font-weight: 700; color: var(--text); }
+        .col-title a { color: inherit; text-decoration: none; transition: var(--trans); }
+        .col-title a:hover { color: var(--accent); text-decoration: underline; }
+        .col-price { color: var(--accent); font-weight: 800; font-size: 0.95rem; }
+        
+        .badge-status {
+            display: inline-flex;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .badge-nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .badge-active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .badge-disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+
+        .dpe-tag {
+            width: 24px; height: 24px; border-radius: 4px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 0.75rem; color: #000;
+        }
+        .dpe-A { background: #00c950; } .dpe-B { background: #50d970; }
+        .dpe-C { background: #ccdf30; } .dpe-D { background: #f7c948; }
+        .dpe-E { background: #f09939; } .dpe-F { background: #e8593a; color: #fff; }
+        .dpe-G { background: #c73232; color: #fff; }
+        .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+        .btn-details {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 8px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.75rem;
+            transition: var(--trans);
+        }
+        .btn-details:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+
+        /* Sorting cursor */
+        th[onclick] { cursor: pointer; user-select: none; position: relative; }
+        th[onclick]:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
+        th[onclick]::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; margin-left: 8px; opacity: 0.3; font-size: 0.6rem; }
+
+        /* Coup de coeur Premium Custom Styles */
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.4rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .filter-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+            background: rgba(79, 142, 247, 0.08);
+        }
+        .filter-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(79, 142, 247, 0.3);
+        }
+        .filter-select {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.4rem 2rem 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--trans);
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b9cc8'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.6rem center;
+            outline: none;
+        }
+        .filter-select:hover, .filter-select:focus {
+            border-color: var(--accent);
+            color: var(--text);
+            background-color: rgba(79, 142, 247, 0.08);
+        }
+        .filter-select.active {
+            border-color: var(--green);
+            color: var(--green);
+            background-color: rgba(16, 217, 164, 0.08);
+        }
+        .filter-select option {
+            background: #1a2236;
+            color: var(--text);
+            font-weight: 600;
+        }
+        .voter-avatar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: var(--trans);
+        }
+        .voter-avatar:hover {
+            transform: scale(1.18) translateY(-1px);
+            z-index: 2;
+            border-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
     </style>
 </head>
 <body>
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
-            Immo-Boussole
+        <a href="/" class="logo">
+            <img src="/static/favicon.ico" alt="Logo">
+            {{ t(request, 'app.title') }}
+        </a>
+
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
+                <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
+            </div>
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
         </div>
 
-        <div class="sidebar-section-title">Navigation</div>
+        <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link active"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
+
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -286,20 +587,27 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
 
     <main class="main">
         <header class="topbar">
-            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
                 <a href="/" class="nav-back"><i class="fa-solid fa-arrow-left"></i> {{ t(request, 'ideal_profile.back') }}</a>
-                <h1>{{ t(request, 'ideal_profile.title') }}</h1>
+                <span style="color: var(--border);">|</span>
+                <span style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                    <h1 style="font-size:1rem; font-weight:700;">⭐ {{ t(request, 'ideal_profile.title') }}</h1>
+                    <span style="font-size:0.75rem; color:var(--text-2); font-weight:400;">— {{ t(request, 'ideal_profile.subtitle') }}</span>
+                    {% if profile.based_on > 0 %}
+                    <span class="hero-based" style="font-size:0.72rem; padding:0.2rem 0.65rem;"><i class="fa-solid fa-chart-bar"></i> {{ t(request, 'ideal_profile.based_on') }} {{ profile.based_on }} {{ t(request, 'ideal_profile.positive_reviews') }}</span>
+                    {% endif %}
+                </span>
             </div>
         </header>
 
@@ -307,19 +615,9 @@
 
 
 
-<div class="hero">
-    <div class="hero-icon">⭐</div>
-    <h1>{{ t(request, 'ideal_profile.title') }}</h1>
-    <p>{{ t(request, 'ideal_profile.subtitle') }}</p>
-    {% if profile.based_on > 0 %}
-    <span class="hero-based"><i class="fa-solid fa-chart-bar"></i> {{ t(request, 'ideal_profile.based_on') }} {{ profile.based_on }} {{ t(request, 'ideal_profile.positive_reviews') }}</span>
-    {% endif %}
-</div>
-
-
 <div class="container">
 
-    {% if profile.based_on == 0 %}
+    {% if profile.based_on == 0 and not profile.top_listings %}
     <div class="no-data">
         <i class="fa-solid fa-star-half-stroke"></i>
         <h2>{{ t(request, 'ideal_profile.no_data') }}</h2>
@@ -371,8 +669,13 @@
             </div>
             <div class="feedback-list">
                 {% if profile.common_pros %}
-                {% for pro in profile.common_pros %}
-                <div class="feedback-item pro">{{ pro }}</div>
+                {% for item in profile.common_pros %}
+                <div class="feedback-item pro">
+                    <span>{{ item.text }}</span>
+                    {% if item.count > 1 %}
+                    <span class="feedback-count" title="{{ item.count }} occurrence{{ 's' if item.count > 1 else '' }}">{{ item.count }}</span>
+                    {% endif %}
+                </div>
                 {% endfor %}
                 {% else %}
                 <div class="empty-feedback">{{ t(request, 'ideal_profile.no_pros') }}</div>
@@ -388,8 +691,13 @@
             </div>
             <div class="feedback-list">
                 {% if profile.common_cons %}
-                {% for con in profile.common_cons %}
-                <div class="feedback-item con">{{ con }}</div>
+                {% for item in profile.common_cons %}
+                <div class="feedback-item con">
+                    <span>{{ item.text }}</span>
+                    {% if item.count > 1 %}
+                    <span class="feedback-count" title="{{ item.count }} occurrence{{ 's' if item.count > 1 else '' }}">{{ item.count }}</span>
+                    {% endif %}
+                </div>
                 {% endfor %}
                 {% else %}
                 <div class="empty-feedback">{{ t(request, 'ideal_profile.no_cons') }}</div>
@@ -421,27 +729,188 @@
         </div>
         {% endif %}
 
-        <!-- Top listings -->
-        {% if profile.top_listings %}
-        <div class="panel">
-            <div class="panel-title"><i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> {{ t(request, 'ideal_profile.top_listings') }}</div>
+    </div><!-- end .section-grid -->
 
-            {% for listing in profile.top_listings[:6] %}
-            <a href="/listings/{{ listing.id }}" class="top-listing">
-                <div class="tl-dpe dpe-{{ listing.dpe_rating or 'NC' }}" title="DPE {{ listing.dpe_rating or '?' }}">
-                    {{ listing.dpe_rating or '?' }}
+    <!-- Coup de Coeur Panel -->
+    <div class="table-panel" style="margin-top: 2rem;">
+        <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; width: 100%;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-heart" style="color: var(--red);"></i> 
+                <div>
+                    <span style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">{{ t(request, 'ideal_profile.coup_de_coeur_title') }}</span>
+                    <div style="font-size: 0.7rem; color: var(--text-2); font-weight: 500; text-transform: none; letter-spacing: normal; margin-top: 0.15rem;">{{ t(request, 'ideal_profile.coup_de_coeur_desc') }}</div>
                 </div>
-                <div class="tl-info">
-                    <div class="tl-title">{{ listing.title[:50] }}</div>
-                    <div class="tl-sub">{{ listing.location or 'N/C' }} {% if listing.area %}· {{ listing.area }}m²{% endif %}</div>
-                </div>
-                <div class="tl-price">
-                    {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
-                </div>
-            </a>
-            {% endfor %}
+            </div>
+            
+            <!-- Filters -->
+            {% if std_users %}
+            <div class="filter-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="filter-btn active" id="cdcBtnAll" onclick="filterCoupDeCoeur('all', this)">
+                    <i class="fa-solid fa-list"></i> {{ t(request, 'ideal_profile.filter_all') }}
+                </button>
+                <button class="filter-btn" id="cdcBtnGeneral" onclick="filterCoupDeCoeur('general', this)">
+                    <i class="fa-solid fa-users" style="color: var(--accent);"></i> {{ t(request, 'ideal_profile.filter_general') }}
+                </button>
+                {% if std_users %}
+                <select id="cdcUserSelect" class="filter-select" onchange="filterCoupDeCoeurBySelect(this)">
+                    <option value="">👤 {{ t(request, 'ideal_profile.filter_user').replace(' de {user}', '…') }}</option>
+                    {% for u in std_users %}
+                    <option value="user-{{ u.username.lower() }}">{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
+
+        {% if not coup_de_coeur_listings %}
+        <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-2); border: 1px dashed rgba(255,255,255,0.06); border-radius: 12px; margin-top: 1rem;">
+            <i class="fa-solid fa-heart-crack" style="font-size: 2.5rem; opacity: 0.25; margin-bottom: 0.75rem; display: block; color: var(--red);"></i>
+            <h3 style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem;">{{ t(request, 'ideal_profile.no_favorites_at_all') }}</h3>
+            <p style="font-size: 0.8rem; opacity: 0.8;">{{ t(request, 'ideal_profile.no_favorites_desc') }}</p>
+        </div>
+        {% else %}
+        
+        <div class="table-container">
+            <table id="coupDeCoeurTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortCoupDeCoeurTable(0)">{{ t(request, 'ready_searches.criteria') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(1)">{{ t(request, 'table.title') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(2)">{{ t(request, 'table.location') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(3)">{{ t(request, 'table.price') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(4)">{{ t(request, 'table.area') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(5)">{{ t(request, 'table.rooms') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(6)">{{ t(request, 'table.dpe') }}</th>
+                        <th>{{ t(request, 'ideal_profile.voted_by') }}</th>
+                        <th onclick="sortCoupDeCoeurTable(8)">{{ t(request, 'table.status') }}</th>
+                    </tr>
+                </thead>
+                <tbody id="coupDeCoeurTableBody">
+                    {% for item in coup_de_coeur_listings %}
+                    <tr class="cdc-row" data-voted-by='{{ item.votes|tojson }}' data-is-general="{{ 'true' if item.is_general else 'false' }}">
+                        <td class="col-criteria">{{ item.listing.source_criteria or '-' }}</td>
+                        <td class="col-title">
+                            <a href="/listings/{{ item.listing.id }}" target="_blank" title="{{ t(request, 'table.details') }}">
+                                {% if item.is_general %}
+                                <i class="fa-solid fa-crown" style="color: var(--yellow); margin-right: 4px;" title="{{ t(request, 'ideal_profile.filter_general') }}"></i>
+                                {% else %}
+                                <i class="fa-solid fa-heart" style="color: var(--red); margin-right: 4px;" title="Coup de coeur"></i>
+                                {% endif %}
+                                {{ item.listing.title|truncate(45) }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="/carte?city={{ item.listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                {{ item.listing.location or 'N/C' }}
+                            </a>
+                        </td>
+                        <td class="col-price" data-sort="{{ item.listing.price or 0 }}">
+                            {% if item.listing.price %}{{ "{:,.0f}".format(item.listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
+                        </td>
+                        <td data-sort="{{ item.listing.area or 0 }}">{% if item.listing.area %}{{ item.listing.area|int }}m²{% else %}-{% endif %}</td>
+                        <td data-sort="{{ item.listing.rooms or 0 }}">{{ item.listing.rooms|int if item.listing.rooms else '-' }}</td>
+                        <td>
+                            {% if item.listing.dpe_rating %}
+                            <span class="dpe-tag dpe-{{ item.listing.dpe_rating }}">{{ item.listing.dpe_rating }}</span>
+                            {% else %}
+                            <span class="dpe-tag dpe-NC">?</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                {% for voter in item.votes %}
+                                {% set color_hue = (voter|length * 37) % 360 %}
+                                <span class="voter-avatar" title="{{ voter|capitalize }}" style="background: hsl({{ color_hue }}, 60%, 45%);" data-username="{{ voter }}">
+                                    {{ voter[:2] }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td data-sort="{{ item.listing.status or 'active' }}">
+                            {% set status = item.listing.status or 'active' %}
+                            <span class="badge-status badge-{{ status }}">
+                                {{ t(request, 'misc.' + status) | default(status|upper) }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Empty State inside filtering -->
+        <div id="coupDeCoeurEmptyState" style="display: none; text-align: center; padding: 3rem 1.5rem; color: var(--text-2); border: 1px dashed rgba(255,255,255,0.06); border-radius: 12px; margin-top: 1rem;">
+            <i class="fa-solid fa-magnifying-glass" style="font-size: 2.5rem; opacity: 0.25; margin-bottom: 0.75rem; display: block; color: var(--accent);"></i>
+            <h3 style="font-size: 0.95rem; color: var(--text); margin-bottom: 0.25rem;">{{ t(request, 'ideal_profile.no_favorites_found') }}</h3>
+        </div>
+        
         {% endif %}
+    </div>
+
+    <!-- Top listings (Full Width Table) -->
+    {% if profile.top_listings %}
+    <div class="table-panel">
+        <div class="panel-title">
+            <i class="fa-solid fa-trophy" style="color: var(--yellow);"></i> {{ t(request, 'ideal_profile.top_listings') }}
+        </div>
+        
+        <div class="table-container">
+            <table id="topListingsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">{{ t(request, 'ready_searches.criteria') }}</th>
+                        <th onclick="sortTable(1)">{{ t(request, 'table.title') }}</th>
+                        <th onclick="sortTable(2)">{{ t(request, 'table.location') }}</th>
+                        <th onclick="sortTable(3)">{{ t(request, 'table.price') }}</th>
+                        <th onclick="sortTable(4)">{{ t(request, 'table.area') }}</th>
+                        <th onclick="sortTable(5)">{{ t(request, 'table.rooms') }}</th>
+                        <th onclick="sortTable(6)">{{ t(request, 'table.dpe') }}</th>
+                        <th onclick="sortTable(7)">{{ t(request, 'table.status') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for listing in profile.top_listings[:10] %}
+                    <tr>
+                        <td class="col-criteria">{{ listing.source_criteria or '-' }}</td>
+                        <td class="col-title">
+                            <a href="/listings/{{ listing.id }}" target="_blank" title="{{ t(request, 'table.details') }}">
+                                {% if listing.is_favorite %}
+                                <i class="fa-solid fa-heart" style="color: var(--red); margin-right: 4px;" title="Coup de coeur"></i>
+                                {% endif %}
+                                {{ listing.title|truncate(45) }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="/carte?city={{ listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                {{ listing.location or 'N/C' }}
+                            </a>
+                        </td>
+                        <td class="col-price">
+                            {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }}€{% else %}N/C{% endif %}
+                        </td>
+                        <td>{% if listing.area %}{{ listing.area|int }}m²{% else %}-{% endif %}</td>
+                        <td>{{ listing.rooms|int if listing.rooms else '-' }}</td>
+                        <td>
+                            {% if listing.dpe_rating %}
+                            <span class="dpe-tag dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</span>
+                            {% else %}
+                            <span class="dpe-tag dpe-NC">?</span>
+                            {% endif %}
+                        </td>
+                        <td data-sort="{{ listing.status or 'active' }}">
+                            {% set status = listing.status or 'active' %}
+                            <span class="badge-status badge-{{ status }}">
+                                {{ t(request, 'misc.' + status) | default(status|upper) }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     </div>
     {% endif %}
@@ -449,5 +918,156 @@
 
         </div>
     </main>
+    <script>
+        function sortTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("topListingsTable");
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    
+                    var xVal = x.getAttribute("data-sort") || x.innerText.toLowerCase();
+                    var yVal = y.getAttribute("data-sort") || y.innerText.toLowerCase();
+                    
+                    // Numeric sort if applicable
+                    var xNum = parseFloat(xVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    var yNum = parseFloat(yVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    
+                    if (!isNaN(xNum) && !isNaN(yNum)) {
+                        if (dir == "asc") {
+                            if (xNum > yNum) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xNum < yNum) { shouldSwitch = true; break; }
+                        }
+                    } else {
+                        if (dir == "asc") {
+                            if (xVal > yVal) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xVal < yVal) { shouldSwitch = true; break; }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        function _applyFilter(mode) {
+            const rows = document.querySelectorAll('.cdc-row');
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const isGeneral = row.getAttribute('data-is-general') === 'true';
+                const votedBy = JSON.parse(row.getAttribute('data-voted-by') || '[]');
+                let show = false;
+                if (mode === 'all') {
+                    show = true;
+                } else if (mode === 'general') {
+                    show = isGeneral;
+                } else if (mode.startsWith('user-')) {
+                    const targetUser = mode.replace('user-', '').toLowerCase();
+                    show = votedBy.includes(targetUser);
+                }
+                row.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+            const emptyState = document.getElementById('coupDeCoeurEmptyState');
+            if (emptyState) emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+        }
+
+        function filterCoupDeCoeur(mode, btnElement) {
+            // Deactivate all buttons, activate the clicked one
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            // Reset select to placeholder
+            const sel = document.getElementById('cdcUserSelect');
+            if (sel) { sel.value = ''; sel.classList.remove('active'); }
+            _applyFilter(mode);
+        }
+
+        function filterCoupDeCoeurBySelect(sel) {
+            const mode = sel.value;
+            if (!mode) {
+                // Placeholder selected → revert to "Tous"
+                filterCoupDeCoeur('all', document.getElementById('cdcBtnAll'));
+                return;
+            }
+            // Deactivate all buttons; highlight select
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            sel.classList.add('active');
+            _applyFilter(mode);
+        }
+
+        function sortCoupDeCoeurTable(n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("coupDeCoeurTable");
+            if (!table) return;
+            switching = true;
+            dir = "asc";
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    
+                    var xVal = x.getAttribute("data-sort") || x.innerText.toLowerCase();
+                    var yVal = y.getAttribute("data-sort") || y.innerText.toLowerCase();
+                    
+                    // Numeric sort if applicable
+                    var xNum = parseFloat(xVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    var yNum = parseFloat(yVal.replace(/\s/g, '').replace('€', '').replace('m²', ''));
+                    
+                    if (!isNaN(xNum) && !isNaN(yNum)) {
+                        if (dir == "asc") {
+                            if (xNum > yNum) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xNum < yNum) { shouldSwitch = true; break; }
+                        }
+                    } else {
+                        if (dir == "asc") {
+                            if (xVal > yVal) { shouldSwitch = true; break; }
+                        } else if (dir == "desc") {
+                            if (xVal < yVal) { shouldSwitch = true; break; }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 </html>
+

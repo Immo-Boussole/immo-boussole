@@ -39,11 +39,42 @@ services:
     volumes:
       # SQLite database persistence
       - db-data:/app/data
+      # Persistent storage for downloaded photos
+      - media-data:/app/static/media
       # Development mapping (hot-reloading of changes)
       - ./static:/app/static
       - ./templates:/app/templates
       - ./app:/app/app
       - ./locales:/app/locales
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── MCP Server (Model Context Protocol) ──────────────────────────────────────
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: immo-boussole-mcp:${APP_VERSION:-latest}
+    container_name: immo-boussole-mcp
+    restart: always
+    depends_on:
+      immo-boussole:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "sqlite:////app/data/immo_boussole.db"
+    volumes:
+      - db-data:/app/data
+      - ./app:/app/app
+    ports:
+      - "8001:8001"
+    # Run as SSE server to allow remote/containerized access
+    command: ["python", "-m", "app.mcp_server"]
+    networks:
+      - immo-boussole-net
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
@@ -68,7 +99,7 @@ services:
       - MAX_MEMORY_PERCENT=97
       - CONNECTION_TIMEOUT=120000          # WebSocket session timeout (ms); Python client retries 3× with 30s each
       - DEFAULT_BLOCK_ADS=false
-      - DEFAULT_STEALTH=false
+      - DEFAULT_STEALTH=true
       # Disabled: launch Chrome on-demand, not at startup (was killing host at 90%+ MEM)
       - PREBOOT_CHROME=false
       - TOKEN=${BROWSERLESS_TOKEN:-}

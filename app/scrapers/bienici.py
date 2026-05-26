@@ -24,14 +24,40 @@ class BieniciScraper(BaseScraper):
         if html_content:
             soup = BeautifulSoup(html_content, 'html.parser')
             # BienIci often includes JSON in a script tag or uses an API call.
-            # The external repo hits https://www.bienici.com/realEstateAds.json directly.
-            
-            # If we detect it's a search result page, we can try to find the ads in script tags
             match = re.search(r'window\.__INITIAL_STATE__\s*=\s*({.*?});', html_content, re.DOTALL)
             if match:
                 try:
                     data = json.loads(match.group(1))
-                    # ads = data.get('ads', [])
+                    # In some versions, search results are in data.search.results
+                    results = data.get('search', {}).get('results', [])
+                    for res in results:
+                        ad = res.get('ad', {})
+                        ext_id = ad.get('id')
+                        if not ext_id: continue
+                        
+                        photos = []
+                        medias = ad.get("photos", ad.get("media", []))
+                        if isinstance(medias, list):
+                            for m in medias:
+                                if isinstance(m, dict):
+                                    u = m.get("url")
+                                    if u: photos.append(u)
+                                elif isinstance(m, str):
+                                    photos.append(m)
+
+                        listings.append({
+                            "external_id": f"bienici_{ext_id}",
+                            "title": ad.get("title", "Annonce BienIci"),
+                            "url": f"https://www.bienici.com/annonce/{ext_id}",
+                            "price": float(ad.get("price") or 0),
+                            "location": ad.get("city", "France"),
+                            "city": self._normalize_city(ad.get("city", "")),
+                            "area": ad.get("surfaceArea"),
+                            "rooms": ad.get("roomsCount"),
+                            "photo_urls": photos,
+                        })
+                    if listings:
+                        return listings
                 except Exception as e:
                     print(f"[BienIci] Error parsing INITIAL_STATE: {e}")
 
@@ -55,6 +81,14 @@ class BieniciScraper(BaseScraper):
                     
                     ext_id = url.split('/')[-1].split('?')[0]
 
+                    # Try to find a thumbnail in the DOM
+                    thumb = item.find('img')
+                    photo_urls = []
+                    if thumb:
+                        src = thumb.get('src') or thumb.get('data-src')
+                        if src and src.startswith('http'):
+                            photo_urls = [src]
+
                     listings.append({
                         "external_id": f"bienici_{ext_id}",
                         "title": title,
@@ -64,7 +98,7 @@ class BieniciScraper(BaseScraper):
                         "city": None,
                         "area": None,
                         "rooms": None,
-                        "photo_urls": [],
+                        "photo_urls": photo_urls,
                     })
                 except Exception as e:
                     print(f"[BienIci] Error parsing item: {e}")
@@ -113,6 +147,7 @@ class BieniciScraper(BaseScraper):
                         details["price"] = ad.get("price")
                         details["area"] = ad.get("surfaceArea")
                         details["rooms"] = ad.get("roomsCount")
+                        details["bathroom_count"] = (ad.get("bathroomsCount") or 0) + (ad.get("showerRoomsCount") or 0)
                         
                         # Photos
                         photos = []

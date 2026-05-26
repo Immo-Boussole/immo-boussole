@@ -4,9 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'nav.listings_table') }} — {{ t(request, 'app.title') }}</title>
 
     <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
     <style>
@@ -26,6 +30,20 @@
             --shadow: 0 8px 32px rgba(0,0,0,0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .city-link {
+            color: inherit;
+            text-decoration: none;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        .city-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
         }
 
         /* Language Selector in Sidebar */
@@ -107,7 +125,9 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo i { -webkit-text-fill-color: var(--accent); font-size: 1.4rem; }
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
+
+        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
         .stat-grid {
             display: grid;
@@ -115,17 +135,51 @@
             gap: 0.75rem;
             margin-bottom: 2rem;
         }
+
         .stat-card {
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 1rem;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem;
             text-align: center;
             transition: var(--trans);
         }
-        .stat-card:hover { transform: translateY(-2px); border-color: var(--accent); }
-        .stat-card .val { font-size: 1.8rem; font-weight: 800; }
-        .stat-card .lbl { font-size: 0.7rem; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-card .val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .stat-card .lbl {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.new .val {
+            color: var(--green);
+        }
+
+        .stat-card.act .val {
+            color: var(--accent);
+        }
+
+        .stat-card.dis .val {
+            color: var(--red);
+        }
 
         .sidebar-section-title {
             font-size: 0.7rem;
@@ -400,37 +454,59 @@
     <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
     <aside class="sidebar">
-        <div class="logo">
-            <i class="fa-solid fa-compass-drafting"></i>
+        <a href="/" class="logo">
+            <img src="/static/favicon.ico" alt="Logo">
             {{ t(request, 'app.title') }}
-        </div>
+        </a>
 
+        {% set total = listings|length %}
+        {% set new_cnt = listings|selectattr("user_status", "equalto", "nouvelle")|list|length %}
+        {% set act_cnt = listings|selectattr("user_status", "equalto", "active")|list|length %}
+        {% set dis_cnt = listings|selectattr("user_status", "equalto", "disparue")|list|length %}
         <div class="stat-grid">
-            <div class="stat-card" style="grid-column: 1 / -1;">
-                <div class="val">{{ listings|length }}</div>
+            <div class="stat-card">
+                <div class="val">{{ total }}</div>
                 <div class="lbl">{{ t(request, 'nav.total_listings') }}</div>
             </div>
-
+            <div class="stat-card new">
+                <div class="val">{{ new_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.new') }}</div>
+            </div>
+            <div class="stat-card act">
+                <div class="val">{{ act_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.active') }}</div>
+            </div>
+            <div class="stat-card dis">
+                <div class="val">{{ dis_cnt }}</div>
+                <div class="lbl">{{ t(request, 'dashboard.stats.disappeared') }}</div>
+            </div>
         </div>
 
         <div class="sidebar-section-title">{{ t(request, 'nav.navigation') }}</div>
         <nav>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
+            <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link active"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
             <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
         </nav><br>
         <nav>
             <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
             <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
-            <a href="/profile" class="nav-link"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+            <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             {% if request.session.get('role') == 'admin' %}
             <a href="/admin/users" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
+            <a href="/admin/maintenance" class="nav-link" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             {% endif %}
         </nav>
 
 
         <div style="margin-top: auto; padding-top: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <a href="/profile" class="nav-link{% if request.url.path == '/profile' %} active{% endif %}"><i class="fa-solid fa-user-gear"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
             <a href="/logout" class="nav-link" style="color: var(--red);">
                 <i class="fa-solid fa-right-from-bracket"></i> {{ t(request, 'nav.logout') }}
             </a>
@@ -451,8 +527,8 @@
                 </a>
             </div>
 
-            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace;">
-                ver: {{ app_version }}
+            <div style="font-size: 0.6rem; color: var(--text-2); text-align: center; margin-top: 0.5rem; opacity: 0.4; letter-spacing: 0.05em; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="ver: {{ app_version }}">
+                ver: {{ app_version|truncate(20, True, '…') }}
             </div>
         </div>
     </aside>
@@ -491,7 +567,7 @@
                     <label for="filter-status">{{ t(request, 'table.status') }}</label>
                     <select id="filter-status" class="filter-select" onchange="applyFilters()">
                         <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
-                        {% set statuses = listings | map(attribute='status') | map(attribute='value') | unique | list | sort %}
+                        {% set statuses = listings | map(attribute='user_status') | unique | list | sort %}
                         {% for st in statuses %}
                         <option value="{{ st }}">{{ t(request, 'misc.' + st, st|upper) }}</option>
                         {% endfor %}
@@ -566,6 +642,7 @@
                     <tbody id="table-body">
                         {% for listing in listings %}
                         <tr
+                            data-id="{{ listing.id }}"
                             data-title="{{ listing.title | lower }}"
                             data-source="{{ listing.source.value | upper }}"
                             data-location="{{ (listing.location or listing.city or '') | lower }}"
@@ -573,7 +650,7 @@
                             data-area="{{ listing.area or 0 }}"
                             data-rooms="{{ listing.rooms or 0 }}"
                             data-dpe="{{ listing.dpe_rating or 'NC' }}"
-                            data-status="{{ listing.status.value }}"
+                            data-status="{{ listing.user_status }}"
                         >
                             <td>
                                 {% if request.session.get('role') == 'user' %}
@@ -584,7 +661,11 @@
                             </td>
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
-                            <td>{{ listing.location or listing.city or '-' }}</td>
+                             <td>
+                                 <a href="/carte?city={{ listing.location or listing.city or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                     {{ listing.location or listing.city or '-' }}
+                                 </a>
+                             </td>
                             <td class="col-price" data-raw="{{ listing.price or 0 }}">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
                             <td data-raw="{{ listing.area or 0 }}">{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
                             <td data-raw="{{ listing.rooms or 0 }}">{{ listing.rooms|int if listing.rooms else '-' }}</td>
@@ -596,12 +677,12 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge-status badge-{{ listing.status.value }}">
-                                    {{ t(request, 'misc.' + listing.status.value) | default(listing.status.value|upper) }}
+                                <span class="badge-status badge-{{ listing.user_status }}">
+                                    {{ t(request, 'misc.' + listing.user_status) | default(listing.user_status|upper) }}
                                 </span>
                             </td>
                             <td>
-                                <a href="/listings/{{ listing.id }}" class="row-link">{{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
+                                <a href="/listings/{{ listing.id }}" class="row-link" target="_blank">{{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -643,9 +724,11 @@
             let visible = 0;
 
             rows.forEach(row => {
+                const searchVal = search.replace('#', '');
                 const matchSearch = !search ||
                     row.dataset.title.includes(search) ||
-                    row.dataset.location.includes(search);
+                    row.dataset.location.includes(search) ||
+                    row.dataset.id === searchVal;
                 const matchSource = !source || row.dataset.source === source;
                 const matchStatus = !status || row.dataset.status === status;
                 const matchDpe    = !dpe    || row.dataset.dpe === dpe;
@@ -721,5 +804,15 @@
             rows.forEach(r => tbody.insertBefore(r, noResults));
         }
     </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 </html>
+

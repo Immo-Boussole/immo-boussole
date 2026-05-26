@@ -26,10 +26,10 @@ async def download_single_image(
     client: httpx.AsyncClient,
     url: str,
     dest_path: Path,
-) -> bool:
+) -> Optional[Path]:
     """
     Downloads a single image from a URL and saves it to dest_path.
-    Returns True on success, False on failure.
+    Returns the resolved Path on success, None on failure.
     """
     try:
         headers = {
@@ -50,20 +50,32 @@ async def download_single_image(
 
         # Add extension if not already present
         if not dest_path.suffix:
-            dest_path = dest_path.with_suffix(ext)
+            actual_path = dest_path.with_suffix(ext)
+        else:
+            actual_path = dest_path
 
-        dest_path.write_bytes(response.content)
-        return True
+        # Clean up existing files with different extensions under the same basename
+        for alternative_ext in [".jpg", ".jpeg", ".webp", ".png"]:
+            if alternative_ext != ext:
+                sibling_path = dest_path.with_suffix(alternative_ext)
+                try:
+                    if sibling_path.exists():
+                        sibling_path.unlink()
+                except Exception as cleanup_err:
+                    print(f"[Media] Échec suppression fichier obsolète {sibling_path}: {cleanup_err}")
+
+        actual_path.write_bytes(response.content)
+        return actual_path
 
     except Exception as e:
         print(f"[Media] Échec téléchargement {url}: {e}")
-        return False
+        return None
 
 
 async def download_listing_photos(
     listing_id: int,
     photo_urls: list[str],
-    max_photos: int = 10,
+    max_photos: int = 30,
 ) -> list[str]:
     """
     Downloads photos for a listing in parallel.
@@ -75,7 +87,7 @@ async def download_listing_photos(
 
     Returns:
         List of local relative paths for successfully downloaded photos
-        (e.g., ["static/media/42/photo_0.jpg", "static/media/42/photo_1.jpg"])
+        (e.g., ["static/media/42/photo_0.webp", "static/media/42/photo_1.webp"])
     """
     if not photo_urls:
         return []
@@ -88,23 +100,16 @@ async def download_listing_photos(
 
     async with httpx.AsyncClient() as client:
         tasks = []
-        dest_paths = []
         for i, url in enumerate(urls_to_download):
             dest_path = media_dir / f"photo_{i}"
-            dest_paths.append(dest_path)
             tasks.append(download_single_image(client, url, dest_path))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    for i, (success, dest_path) in enumerate(zip(results, dest_paths)):
-        if success is True:
-            # Find the actual file (with extension added)
-            for ext in [".jpg", ".webp", ".png"]:
-                actual = dest_path.with_suffix(ext)
-                if actual.exists():
-                    # Return web-accessible path
-                    local_paths.append(str(actual).replace("\\", "/"))
-                    break
+    for i, result in enumerate(results):
+        if isinstance(result, Path):
+            # Return web-accessible path
+            local_paths.append(str(result).replace("\\", "/"))
         else:
             print(f"[Media] Photo {i} échouée pour listing #{listing_id}")
 
@@ -173,3 +178,115 @@ async def save_uploaded_photos(listing_id: int, files: list[UploadFile]) -> list
             print(f"[Media] Failed to save uploaded photo {file.filename}: {e}")
 
     return local_paths
+
+
+def compute_image_dhash(image_path: str, hash_size: int = 8) -> Optional[str]:
+    """
+    Computes a difference hash (dHash) for an image.
+    dHash is very robust to scaling, aspect ratio changes, brightness/contrast changes.
+    """
+    try:
+        from PIL import Image
+        if not os.path.exists(image_path) or os.path.getsize(image_path) == 0:
+            return None
+        with Image.open(image_path) as img:
+            try:
+                resample_filter = Image.Resampling.BILINEAR
+            except AttributeError:
+                resample_filter = Image.BILINEAR
+                
+            img = img.convert("L").resize((hash_size + 1, hash_size), resample_filter)
+            
+            # Compare adjacent horizontal pixels
+            difference = []
+            for y in range(hash_size):
+                for x in range(hash_size):
+                    pixel_left = img.getpixel((x, y))
+                    pixel_right = img.getpixel((x + 1, y))
+                    difference.append(pixel_left > pixel_right)
+            
+            # Convert to hex string
+            decimal_value = 0
+            hex_string = []
+            for index, value in enumerate(difference):
+                if value:
+                    decimal_value += 2 ** (index % 8)
+                if (index % 8) == 7:
+                    hex_string.append(hex(decimal_value)[2:].zfill(2))
+                    decimal_value = 0
+            return "".join(hex_string)
+    except Exception as e:
+        print(f"[Media] Error computing dhash for {image_path}: {e}")
+        return None
+
+
+def compute_image_ahash(image_path: str, hash_size: int = 8) -> Optional[str]:
+    """
+    Computes an average hash (aHash) for an image.
+    """
+    try:
+        from PIL import Image
+        if not os.path.exists(image_path) or os.path.getsize(image_path) == 0:
+            return None
+        with Image.open(image_path) as img:
+            try:
+                resample_filter = Image.Resampling.BILINEAR
+            except AttributeError:
+                resample_filter = Image.BILINEAR
+                
+            img = img.convert("L").resize((hash_size, hash_size), resample_filter)
+            
+            # Calculate average
+            pixels = list(img.getdata())
+            avg = sum(pixels) / len(pixels)
+            
+            # Build bits
+            bits = [pixel > avg for pixel in pixels]
+            
+            # Convert to hex string
+            decimal_value = 0
+            hex_string = []
+            for index, value in enumerate(bits):
+                if value:
+                    decimal_value += 2 ** (index % 8)
+                if (index % 8) == 7:
+                    hex_string.append(hex(decimal_value)[2:].zfill(2))
+                    decimal_value = 0
+            return "".join(hex_string)
+    except Exception as e:
+        print(f"[Media] Error computing ahash for {image_path}: {e}")
+        return None
+
+
+def calculate_images_similarity(path1: str, path2: str) -> float:
+    """
+    Calculates similarity percentage between two images using dHash and aHash.
+    Returns a score between 0.0 and 100.0.
+    """
+    if not os.path.exists(path1) or not os.path.exists(path2):
+        return 0.0
+
+    # If exact same size, they are 100% identical
+    if os.path.getsize(path1) == os.path.getsize(path2):
+        return 100.0
+
+    d1 = compute_image_dhash(path1)
+    d2 = compute_image_dhash(path2)
+    a1 = compute_image_ahash(path1)
+    a2 = compute_image_ahash(path2)
+
+    if not d1 or not d2 or not a1 or not a2:
+        return 0.0
+
+    # Hamming distance for 64-bit hashes
+    def hamming_distance(h1, h2):
+        return sum(bin(int(c1, 16) ^ int(c2, 16)).count('1') for c1, c2 in zip(h1, h2))
+
+    dist_d = hamming_distance(d1, d2)
+    dist_a = hamming_distance(a1, a2)
+
+    sim_d = (64 - dist_d) / 64 * 100
+    sim_a = (64 - dist_a) / 64 * 100
+
+    return (sim_d + sim_a) / 2.0
+

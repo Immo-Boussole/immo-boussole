@@ -18,6 +18,11 @@ class LeboncoinScraper(BaseScraper):
 
         html_content = snapshot.get("html", "")
         text_content = snapshot.get("text", "")
+        
+        if "geo.captcha-delivery.com" in html_content or "<title>leboncoin.fr</title>" in html_content:
+            print("[LBC] Bloqué par DataDome captcha lors de la recherche !")
+            raise Exception("Leboncoin a bloqué la recherche via DataDome.")
+
         listings = []
 
         if html_content:
@@ -47,6 +52,15 @@ class LeboncoinScraper(BaseScraper):
                         area = self._extract_area_from_attrs(ad.get("attributes", []))
                         rooms = self._extract_rooms_from_attrs(ad.get("attributes", []))
 
+                        # Photos: get available images from search results
+                        images = ad.get("images", {})
+                        urls = images.get("urls_large") or images.get("urls")
+                        photo_urls = []
+                        if isinstance(urls, list):
+                            photo_urls = [u for u in urls if isinstance(u, str)]
+                        elif isinstance(urls, str):
+                            photo_urls = [urls]
+
                         listings.append({
                             "external_id": f"lbc_{ad.get('list_id')}",
                             "title": ad.get("subject", "Sans titre"),
@@ -56,7 +70,7 @@ class LeboncoinScraper(BaseScraper):
                             "city": self._normalize_city(city),
                             "area": area,
                             "rooms": rooms,
-                            "photo_urls": [],  # Will be fetched on detail page
+                            "photo_urls": photo_urls,
                         })
                     return listings
                 except Exception as e:
@@ -126,7 +140,12 @@ class LeboncoinScraper(BaseScraper):
         if not html_content:
             return {}
 
+        if "geo.captcha-delivery.com" in html_content or "<title>leboncoin.fr</title>" in html_content:
+            print("[LBC] Bloqué par DataDome captcha !")
+            raise Exception("Leboncoin a bloqué l'accès via DataDome.")
+
         details = {}
+        soup = BeautifulSoup(html_content, 'html.parser')
 
         # Primary: parse __NEXT_DATA__ JSON for detail page
         match = re.search(
@@ -180,44 +199,52 @@ class LeboncoinScraper(BaseScraper):
                         if fb_photos:
                             details["photo_urls"] = list(set(fb_photos + details["photo_urls"]))
 
-                    # Attributes: DPE, GES, rooms, floor, taxes, charges, area
+                    # Attributes from JSON
                     attrs = ad.get("attributes", [])
                     details.update(self._parse_attributes(attrs))
-
-                    # Calculate price per m²
-                    area = details.get("area")
-                    price = details.get("price", 0)
-                    if area and area > 0 and price > 0:
-                        details["price_per_sqm"] = round(price / area, 2)
-
-                    return details
 
             except Exception as e:
                 print(f"[LBC] Erreur parsing détail JSON: {e}")
 
-        # Fallback: BeautifulSoup for meta tags and LeBonCoin-specific selectors
-        soup = BeautifulSoup(html_content, 'html.parser')
-        title_tag = soup.find('title')
-        if title_tag:
-            details["title"] = title_tag.text.strip()
+        # ── HTML Characteristics Fallback/Complement ──
+        # Target the specific div class requested by the user
+        html_details = self._parse_html_characteristics(soup)
+        for k, v in html_details.items():
+            if v is not None and (details.get(k) is None or details.get(k) == ""):
+                details[k] = v
 
-        # LeBonCoin-specific: full description text
-        desc_container = soup.find('div', attrs={"data-qa-id": "adview_description_container"})
-        if desc_container:
-            details["description_text"] = desc_container.get_text(separator="\n", strip=True)
-        else:
-            # Fallback to og:description meta tag
-            og_desc = soup.find('meta', attrs={"property": "og:description"})
-            if og_desc:
-                details["description_text"] = og_desc.get("content", "")
+        # General fallbacks if JSON was missing or incomplete
+        if not details.get("title"):
+            title_tag = soup.find('title')
+            if title_tag:
+                details["title"] = title_tag.text.strip()
 
-        # LeBonCoin-specific: location block (city + zip code)
-        location_block = soup.find('div', class_="mb-lg")
-        if location_block:
-            location_text = location_block.get_text(separator=" ", strip=True)
-            if location_text:
-                details["location"] = location_text
-                details["city"] = self._normalize_city(location_text)
+        if not details.get("description_text"):
+            desc_container = soup.find('div', attrs={"data-qa-id": "adview_description_container"})
+            if desc_container:
+                details["description_text"] = desc_container.get_text(separator="\n", strip=True)
+            else:
+                og_desc = soup.find('meta', attrs={"property": "og:description"})
+                if og_desc:
+                    details["description_text"] = og_desc.get("content", "")
+
+        if not details.get("location"):
+            location_block = soup.find('div', class_="mb-lg")
+            if location_block:
+                location_text = location_block.get_text(separator=" ", strip=True)
+                if location_text:
+                    details["location"] = location_text
+                    details["city"] = self._normalize_city(location_text)
+
+        # Calculate price per m² if missing
+        area = details.get("area")
+        price = details.get("price", 0)
+        if area and area > 0 and price > 0 and not details.get("price_per_sqm"):
+            details["price_per_sqm"] = round(price / area, 2)
+
+        # Attempt to extract land tax from description if not found
+        if not details.get("land_tax") and details.get("description_text"):
+            details["land_tax"] = self._extract_land_tax_from_text(details["description_text"])
 
         return details
 
@@ -302,9 +329,11 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
 
-            elif key == "nb_bathrooms":
+            elif key in ("nb_bathrooms", "nb_shower_rooms") or "salle_de_bain" in key or "salle_d_eau" in key or "bathroom" in key or "shower" in key:
                 try:
-                    result["bathroom_count"] = int(val)
+                    # Accumulate if multiple are present
+                    current = result.get("bathroom_count", 0)
+                    result["bathroom_count"] = current + int(val)
                 except (ValueError, TypeError):
                     pass
 
@@ -403,10 +432,134 @@ class LeboncoinScraper(BaseScraper):
                 except (ValueError, TypeError):
                     pass
 
+            elif key == "land_tax":
+                try:
+                    result["land_tax"] = float(str(val).replace(",", ".").replace(" ", ""))
+                except (ValueError, TypeError):
+                    pass
+
+            elif key == "building_year":
+                try:
+                    result["building_year"] = int(val)
+                except (ValueError, TypeError):
+                    pass
+
             elif key == "fai_included":
                 result["honoraires_a_charge"] = str(label) if label else None
 
         return result
+
+    def _parse_html_characteristics(self, soup: BeautifulSoup) -> Dict:
+        """
+        Parses the specific div class mentioned by the user to extract
+        key-value pairs of property characteristics from the HTML.
+        """
+        result = {}
+        # The specific div class provided by the user
+        target_class = "mx-lg gap-lg py-xl relative grid empty:hidden border-b-sm border-outline lg:mx-md"
+        container = soup.find('div', class_=target_class)
+        
+        if not container:
+            # Fallback to a broader search for characteristic blocks if exact class fails
+            # LeBoncoin often uses grid layouts for these
+            container = soup.find('div', attrs={"data-qa-id": "adview_characteristics_container"})
+
+        if not container:
+            return result
+
+        # Map French labels to our standard internal keys
+        label_map = {
+            "type de bien": "property_type",
+            "pièces": "rooms",
+            "chambres": "bedrooms",
+            "surface": "area",
+            "classe énergie": "dpe_rating",
+            "ges": "ges_rating",
+            "étage": "floor",
+            "nombre d'étages": "total_floors",
+            "salles de bain": "bathroom_count",
+            "salle de bain": "bathroom_count",
+            "salles d'eau": "bathroom_count",
+            "salle d'eau": "bathroom_count",
+            "salles de douche": "bathroom_count",
+            "salle de douche": "bathroom_count",
+            "wc": "toilet_count",
+            "toilettes": "toilet_count",
+            "chauffage": "heating_type",
+            "mode de chauffage": "heating_mode",
+            "cuisine": "kitchen_type",
+            "orientation": "orientation",
+            "vue": "view",
+            "charges de copropriété": "charges",
+            "taxe foncière": "land_tax",
+            "lots de copropriété": "copropriete_lots",
+            "balcon": "balcony",
+            "terrasse": "terrace",
+            "jardin": "garden",
+            "ascenseur": "elevator",
+            "cave": "cellar",
+            "piscine": "pool",
+            "parking": "parking_count",
+            "état du bien": "condition",
+            "année de construction": "building_year",
+            "surface terrain": "land_area",
+            "honoraires à charge": "honoraires_a_charge",
+        }
+
+        # Each characteristic is typically in a div with a label and a value
+        # Pattern: <div class="flex flex-col gap-sm"> <p>Label</p> <p>Value</p> </div>
+        blocks = container.find_all('div', recursive=False)
+        for block in blocks:
+            paragraphs = block.find_all('p')
+            if len(paragraphs) >= 2:
+                label = paragraphs[0].get_text(strip=True).lower()
+                value = paragraphs[1].get_text(strip=True)
+                
+                # Check if label matches our map
+                # We use 'in' because sometimes labels have extra text like "Surface (m²)"
+                for search_label, key in label_map.items():
+                    if search_label in label:
+                        self._set_standard_value(result, key, value)
+                        break
+
+        return result
+
+    def _set_standard_value(self, result: Dict, key: str, value: str):
+        """Helper to cast and set values from HTML strings to appropriate types."""
+        if not value:
+            return
+
+        try:
+            if key in ("area", "land_area", "balcony_area", "terrace_area", "garden_area", "charges", "land_tax", "dpe_value", "ges_value"):
+                # Extract numbers (e.g. "120 m²" -> 120.0, "1 200 €" -> 1200.0)
+                clean_val = re.sub(r'[^\d\.,]', '', value).replace(",", ".")
+                if clean_val:
+                    result[key] = float(clean_val)
+            
+            elif key in ("rooms", "bedrooms", "bathroom_count", "toilet_count", "floor", "total_floors", "parking_count", "copropriete_lots", "building_year"):
+                clean_val = re.sub(r'[^\d]', '', value)
+                if clean_val:
+                    result[key] = int(clean_val)
+            
+            elif key in ("dpe_rating", "ges_rating"):
+                # Take first letter (e.g. "A (120)" -> "A")
+                result[key] = value.upper()[:1]
+            
+            elif key in ("balcony", "terrace", "garden", "elevator", "cellar", "pool", "procedure_syndic"):
+                # Check for "Oui" / "Non" or presence
+                val_lower = value.lower()
+                if "oui" in val_lower:
+                    result[key] = True
+                elif "non" in val_lower:
+                    result[key] = False
+                else:
+                    result[key] = True # Assume True if mentioned but not "Non"
+            
+            else:
+                # String fields
+                result[key] = value.strip()
+        except:
+            pass
 
     def _extract_land_tax_from_text(self, text: str) -> Optional[float]:
         """Attempts to find land tax from description text."""

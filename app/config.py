@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12
-    SCRAPING_SCHEDULE: str = "Toutes les heures, de 6h à 22h30"  # Human-readable label shown in the UI
+    SCRAPING_SCHEDULE: str = "Toutes les 30 min, de 6h à 22h30"  # Human-readable label shown in the UI
 
     # Browserless URL (headless Chrome via CDP)
     BROWSERLESS_URL: str = "ws://localhost:3000"
@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Supports any Apprise-compatible URL: tgram://, discord://, ntfy://, mailto://, etc.
     # Leave empty to disable global notifications.
     APPRISE_URL: str = ""
+
+    # LLM / Ollama
+    OLLAMA_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_MODEL: str = "llama3"
 
     class Config:
         env_file = ".env"
