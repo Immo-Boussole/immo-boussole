@@ -80,8 +80,8 @@ def find_nearby_stations(lat: float, lon: float, radius: int = 20000) -> list:
     query = f"""
     [out:json];
     (
-      node["railway"="station"](around:{radius},{lat},{lon});
-      way["railway"="station"](around:{radius},{lat},{lon});
+      node["railway"="station"]["station"!="subway"]["station"!="light_rail"]["subway"!="yes"]["light_rail"!="yes"](around:{radius},{lat},{lon});
+      way["railway"="station"]["station"!="subway"]["station"!="light_rail"]["subway"!="yes"]["light_rail"!="yes"](around:{radius},{lat},{lon});
     );
     out center;
     """
