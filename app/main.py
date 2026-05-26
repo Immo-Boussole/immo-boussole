@@ -329,6 +329,14 @@ class ZoneRuleRequest(BaseModel):
     name: str
     rule: str = "forbidden"  # "forbidden" or "allowed"
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
+        import re
+        if not re.match(r'^\d{5}$', v.strip()):
+            raise ValueError("Le nom doit être un code postal complet (5 chiffres)")
+        return v.strip()
+
     @field_validator("zone_type")
     @classmethod
     def validate_zone_type(cls, v):
@@ -1621,11 +1629,6 @@ def create_zone_rule(
 
     # Normalize name to avoid duplicates with different casing
     normalized_name = body.name.strip()
-    if body.zone_type == "city":
-        from app.geo import standardize_and_enrich_city
-        std_city, _, _ = standardize_and_enrich_city(normalized_name)
-        if std_city:
-            normalized_name = std_city
 
     # Check for duplicate
     existing = db.query(ZoneRule).filter(

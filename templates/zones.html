@@ -251,7 +251,7 @@
                     </div>
                     <div class="add-form">
                         <div style="flex:1; position:relative;">
-                            <input type="text" id="city-forbidden-input" placeholder="Ex: Lyon, Grenoble..." autocomplete="off" oninput="handleSearch(this, 'city')">
+                            <input type="text" id="city-forbidden-input" placeholder="Ex: 69003, 75015..." autocomplete="off">
                             <div class="search-results" id="city-forbidden-results"></div>
                         </div>
                         <button class="btn primary" onclick="addZone('city','forbidden')" id="city-forbidden-btn">
@@ -278,7 +278,7 @@
                     </div>
                     <div class="add-form">
                         <div style="flex:1; position:relative;">
-                            <input type="text" id="city-allowed-input" placeholder="Ex: Annecy, Chambéry..." autocomplete="off" oninput="handleSearch(this, 'city')">
+                            <input type="text" id="city-allowed-input" placeholder="Ex: 74000, 73000..." autocomplete="off">
                             <div class="search-results" id="city-allowed-results"></div>
                         </div>
                         <button class="btn green" onclick="addZone('city','allowed')" id="city-allowed-btn">
@@ -352,7 +352,7 @@
                     </div>
                     <div class="add-form">
                         <div style="flex:1; position:relative;">
-                            <input type="text" id="station-forbidden-input" placeholder="Ex: Gare de Lyon-Part-Dieu..." autocomplete="off" oninput="handleSearch(this, 'station')">
+                            <input type="text" id="station-forbidden-input" placeholder="Ex: 69003..." autocomplete="off">
                             <div class="search-results" id="station-forbidden-results"></div>
                         </div>
                         <button class="btn primary" onclick="addZone('station','forbidden')" id="station-forbidden-btn">
@@ -379,7 +379,7 @@
                     </div>
                     <div class="add-form">
                         <div style="flex:1; position:relative;">
-                            <input type="text" id="station-allowed-input" placeholder="Ex: Gare d'Annecy..." autocomplete="off" oninput="handleSearch(this, 'station')">
+                            <input type="text" id="station-allowed-input" placeholder="Ex: 74000..." autocomplete="off">
                             <div class="search-results" id="station-allowed-results"></div>
                         </div>
                         <button class="btn green" onclick="addZone('station','allowed')" id="station-allowed-btn">
@@ -584,6 +584,11 @@
             const btn   = document.getElementById(`${key}-btn`);
             const name  = input.value.trim();
             if (!name) { input.focus(); return; }
+
+            if (!/^\d{5}$/.test(name)) {
+                showToast('Le nom doit être un code postal complet (5 chiffres)', 'error');
+                return;
+            }
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
