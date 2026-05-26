@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     # App
     DEBUG: bool = True
     SECRET_KEY: str = "change-me-at-all-costs"  # MUST be overridden in .env for production
+    HTTPS_ONLY: bool = False  # Set to True in production to enforce secure cookies
 
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12

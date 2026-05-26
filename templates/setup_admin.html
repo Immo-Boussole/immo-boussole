@@ -249,6 +249,7 @@
 
 
         <form method="POST" id="setupForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="username">{{ t(request, 'setup.username') }}</label>
                 <div class="input-wrapper">
