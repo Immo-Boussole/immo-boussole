@@ -1095,7 +1095,6 @@ def listing_detail_page(
         
     # Lazy geocoding backfill
     if listing.city and listing.nearest_sncf_station is None:
-        from app.models import ZoneRule
         forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
             ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
         ).all()}
