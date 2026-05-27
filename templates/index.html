@@ -364,6 +364,33 @@
             .d-desktop { display: none; }
         }
 
+        @media (max-width: 600px) {
+            .hide-on-mobile { display: none !important; }
+            .filter-bar { 
+                padding: 0.5rem; 
+                flex-direction: row; 
+                align-items: center; 
+                gap: 0.35rem; 
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .filter-bar::-webkit-scrollbar { display: none; }
+            .filter-chips { flex-wrap: nowrap; flex-shrink: 0; gap: 0.35rem; }
+            .filter-label { flex-shrink: 0; margin-right: 0; }
+            .filter-chips .btn { 
+                padding: 0 !important; 
+                width: 38px !important; 
+                min-width: 38px !important;
+                height: 38px !important;
+                flex: 0 0 38px !important;
+                justify-content: center !important;
+                gap: 0 !important;
+                overflow: hidden;
+            }
+        }
+
         .content {
             flex: 1;
             overflow-y: auto;
@@ -463,6 +490,11 @@
         .badge.disparue {
             background: var(--red);
             color: #fff;
+        }
+
+        .badge.rejetee {
+            background: var(--orange);
+            color: #000;
         }
 
         .badge-dup {
@@ -1236,8 +1268,8 @@
                 <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
                 
                 {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
-                <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem; height: 32px; padding: 0 0.75rem;">
-                    <i class="fa-solid fa-plus d-desktop"></i>
+                <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem;">
+                    <i class="fa-solid fa-plus"></i>
                     <span class="d-desktop">{{ t(request, 'dashboard.add_listing') }}</span>
                     <span class="d-mobile">Ajouter annonce</span>
                 </button>
@@ -1250,31 +1282,31 @@
             <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
             <div class="filter-chips">
                 <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-                    <i class="fa-solid fa-sparkles"></i> {{ t(request, 'dashboard.filters.new') }}
+                    <i class="fa-solid fa-star"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.new') }}</span>
                 </button>
                 <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-                    <i class="fa-solid fa-eye"></i> {{ t(request, 'dashboard.filters.active') }}
+                    <i class="fa-solid fa-eye"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.active') }}</span>
                 </button>
                 <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-                    <i class="fa-solid fa-eye-slash"></i> {{ t(request, 'dashboard.filters.disappeared') }}
+                    <i class="fa-solid fa-eye-slash"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.disappeared') }}</span>
                 </button>
-                <div class="vertical-separator"></div>
+                <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-rejected" onclick="filter('rejetee', this)" style="color: var(--orange);">
-                    <i class="fa-solid fa-ban"></i> {{ t(request, 'dashboard.rejected', 'Rejetées') }}
+                    <i class="fa-solid fa-ban"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.rejected', 'Rejetées') }}</span>
                 </button>
-                <div class="vertical-separator"></div>
+                <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
-                    <i class="fa-solid fa-heart"></i> Coup de cœur
+                    <i class="fa-solid fa-heart"></i><span class="hide-on-mobile">Coup de cœur</span>
                 </button>
                 <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
-                    <i class="fa-solid fa-thumbs-up"></i> J'aime
+                    <i class="fa-solid fa-thumbs-up"></i><span class="hide-on-mobile">J'aime</span>
                 </button>
                 <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
-                    <i class="fa-solid fa-thumbs-down"></i> Je n'aime pas
+                    <i class="fa-solid fa-thumbs-down"></i><span class="hide-on-mobile">Je n'aime pas</span>
                 </button>
             </div>
 
-            <div class="filter-actions">
+            <div class="filter-actions hide-on-mobile">
                 <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
                     <i class="fa-solid fa-rotate"></i> 
                     <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>
