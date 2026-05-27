@@ -22,8 +22,16 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.exception_handlers import http_exception_handler as default_http_exception_handler
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator
+<<<<<<< HEAD
+import time
+from collections import defaultdict
+import secrets
+from sqlalchemy import text
+=======
 from sqlalchemy import text, func
+>>>>>>> 459cc65fe66315d0def6abe49e4cd205ee9ee9b1
 from sqlalchemy.orm import Session
 
 from app import models, database
@@ -71,8 +79,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Immo-Boussole", lifespan=lifespan)
 
+class SecureHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+app.add_middleware(SecureHeadersMiddleware)
+
 # Add session middleware for authentication
-app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=settings.SECRET_KEY, 
+    https_only=settings.HTTPS_ONLY, 
+    same_site="lax"
+)
 
 # Mount static files (local media storage)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -305,6 +329,14 @@ class ZoneRuleRequest(BaseModel):
     name: str
     rule: str = "forbidden"  # "forbidden" or "allowed"
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
+        import re
+        if not re.match(r'^\d{5}$', v.strip()):
+            raise ValueError("Le nom doit être un code postal complet (5 chiffres)")
+        return v.strip()
+
     @field_validator("zone_type")
     @classmethod
     def validate_zone_type(cls, v):
@@ -394,6 +426,29 @@ def _resolve_scraper(url: str):
 
 # ─── Auth Logic ───────────────────────────────────────────────────────────────
 
+failed_logins = defaultdict(list)
+
+def check_rate_limit(request: Request) -> bool:
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    failed_logins[client_ip] = [t for t in failed_logins[client_ip] if now - t < 900]
+    return len(failed_logins[client_ip]) < 5
+
+def record_failed_login(request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    failed_logins[client_ip].append(time.time())
+
+def verify_csrf(request: Request, csrf_token: str = Form(...)):
+    session_token = request.session.get("csrf_token")
+    if not session_token or not secrets.compare_digest(session_token, csrf_token):
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+
+def generate_csrf_token(request: Request) -> str:
+    if "csrf_token" not in request.session:
+        request.session["csrf_token"] = secrets.token_hex(32)
+    return request.session["csrf_token"]
+
+
 def is_authenticated(request: Request) -> bool:
     return request.session.get("authenticated") is True
 
@@ -451,10 +506,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 def setup_admin_page(request: Request, db: Session = Depends(get_db)):
     if db.query(models.User).count() > 0:
         return RedirectResponse(url="/login")
-    return templates.TemplateResponse(request=request, name="setup_admin.html")
+    csrf_token = generate_csrf_token(request)
+    return templates.TemplateResponse(request=request, name="setup_admin.html", context={"csrf_token": csrf_token})
 
 
-@app.post("/setup-admin")
+@app.post("/setup-admin", dependencies=[Depends(verify_csrf)])
 def setup_admin(
     request: Request, 
     username: str = Form(...), 
@@ -469,7 +525,7 @@ def setup_admin(
         return RedirectResponse(url="/login")
         
     salt = os.urandom(16)
-    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 600000)
     
     user = models.User(
         username=username, 
@@ -497,28 +553,39 @@ def login_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/setup-admin")
     if is_authenticated(request):
         return RedirectResponse(url="/")
-    return templates.TemplateResponse(request=request, name="login.html")
+    csrf_token = generate_csrf_token(request)
+    return templates.TemplateResponse(request=request, name="login.html", context={"csrf_token": csrf_token})
 
 
-@app.post("/login")
+@app.post("/login", dependencies=[Depends(verify_csrf)])
 def login(
     request: Request, 
     username: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    if not check_rate_limit(request):
+        return templates.TemplateResponse(request=request, name="login.html", context={
+            "error": "Trop de tentatives de connexion. Veuillez réessayer plus tard.",
+            "csrf_token": generate_csrf_token(request)
+        }, status_code=429)
+
     user = db.query(models.User).filter(models.User.username == username).first()
     if user:
-        pwd_hash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), user.salt, 100000)
-        if pwd_hash == user.password_hash:
+        pwd_hash_600k = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), user.salt, 600000)
+        pwd_hash_100k = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), user.salt, 100000)
+        
+        if user.password_hash in (pwd_hash_600k, pwd_hash_100k):
             request.session["authenticated"] = True
             request.session["username"] = username
             request.session["role"] = user.role
             return RedirectResponse(url="/", status_code=303)
             
+    record_failed_login(request)
     return templates.TemplateResponse(request=request, name="login.html", context={
-        "error": get_text(request, "api.invalid_credentials")
-    })
+        "error": get_text(request, "api.invalid_credentials"),
+        "csrf_token": generate_csrf_token(request)
+    }, status_code=401)
 
 
 @app.get("/logout")
@@ -1561,11 +1628,6 @@ def create_zone_rule(
 
     # Normalize name to avoid duplicates with different casing
     normalized_name = body.name.strip()
-    if body.zone_type == "city":
-        from app.geo import standardize_and_enrich_city
-        std_city, _, _ = standardize_and_enrich_city(normalized_name)
-        if std_city:
-            normalized_name = std_city
 
     # Check for duplicate
     existing = db.query(ZoneRule).filter(
