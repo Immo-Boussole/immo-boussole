@@ -24,14 +24,10 @@ from fastapi.exception_handlers import http_exception_handler as default_http_ex
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator
-<<<<<<< HEAD
 import time
 from collections import defaultdict
 import secrets
-from sqlalchemy import text
-=======
 from sqlalchemy import text, func
->>>>>>> 459cc65fe66315d0def6abe49e4cd205ee9ee9b1
 from sqlalchemy.orm import Session
 
 from app import models, database
