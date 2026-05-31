@@ -12,29 +12,29 @@
 
     /* Topbar adjustments */
     .topbar, .topnav {
-        padding: 1rem !important;
+        padding: 0.5rem 1rem !important;
         flex-direction: column !important;
         align-items: stretch !important;
-        gap: 0.75rem !important;
+        gap: 0.5rem !important;
     }
     .topbar-left {
         display: flex;
         align-items: center;
         justify-content: space-between;
         width: 100%;
-        gap: 0.75rem !important;
+        gap: 0.5rem !important;
     }
     .topbar h1, .topnav .nav-title {
-        font-size: 1.1rem !important;
+        font-size: 0.95rem !important;
         flex: 1;
         margin: 0;
     }
     .topbar-right {
         display: flex;
-        gap: 0.5rem !important;
+        gap: 0.4rem !important;
         width: 100%;
         overflow-x: auto;
-        padding-bottom: 5px;
+        padding-bottom: 2px;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
     }
@@ -43,10 +43,10 @@
     }
     .topbar-right .btn {
         padding: 0 !important;
-        width: 38px !important;
-        min-width: 38px !important;
-        height: 38px !important;
-        flex: 0 0 38px !important;
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        flex: 0 0 32px !important;
         justify-content: center !important;
         gap: 0 !important;
         overflow: hidden;
@@ -56,6 +56,11 @@
     }
     .topbar-right .btn i {
         margin: 0 !important;
+        font-size: 0.85rem !important;
+    }
+
+    .carousel-slide {
+        height: 250px !important;
     }
 
     /* Fixed Sidebar Navigation with sliding effect */
