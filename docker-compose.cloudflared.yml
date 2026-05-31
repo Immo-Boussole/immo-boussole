@@ -90,12 +90,12 @@ services:
 # ── Internal Network ─────────────────────────────────────────────────────────
 networks:
   immo-boussole-net:
-    name: immo-boussole-net
+    name: immo-boussole-${APP_ENV:-prod}-net
     driver: bridge
 
 # ── Persistent Volumes ───────────────────────────────────────────────────────
 volumes:
   db-data:
-    name: immo-boussole-db
+    name: immo-boussole-${APP_ENV:-prod}-db
   media-data:
-    name: immo-boussole-media
+    name: immo-boussole-${APP_ENV:-prod}-media
