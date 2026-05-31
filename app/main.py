@@ -1057,7 +1057,7 @@ def _enrich_listings(listings: list[Listing], viewed_ids: set[int]):
             else:
                 listing.user_status = "nouvelle"
         else:
-            listing.user_status = listing.status.value
+            listing.user_status = getattr(listing.status, 'value', listing.status)
 
 
 @app.get("/")

@@ -47,8 +47,8 @@ def setup_test_data():
     
     # 1. Create a test admin user and login session
     import hashlib
-    salt = os.urandom(16)
-    pwd_hash = hashlib.pbkdf2_hmac('sha256', b"Sangria123!!", salt, 100000)
+    salt = os.urandom(32)
+    pwd_hash = hashlib.pbkdf2_hmac('sha256', b"test_password", salt, 100000)
     admin = User(
         username="Jean-Marc",
         password_hash=pwd_hash,
@@ -148,8 +148,14 @@ def test_duplicate_queries():
 def test_ui_rendering():
     print("Testing template duplicate UI rendering...")
     
-    # Force login by posting to /login endpoint
-    response = client.post("/login", data={"username": "Jean-Marc", "password": "Sangria123!!"})
+    # First GET the login page to retrieve the CSRF token
+    login_page = client.get("/login")
+    import re
+    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_page.text)
+    csrf_token = match.group(1) if match else ""
+    
+    # Force login by posting to /login endpoint with the CSRF token
+    response = client.post("/login", data={"username": "Jean-Marc", "password": "test_password", "csrf_token": csrf_token})
     assert response.status_code in [200, 303], "Login should succeed"
         
     # 1. Render Listing 142 (Not a duplicate)
