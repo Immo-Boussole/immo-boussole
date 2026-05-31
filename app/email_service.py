@@ -23,6 +23,9 @@ def send_email(db: Session, to_email: str, html_content: str, subject: Optional[
 
     final_subject = subject or settings.resend_subject or "Notification Immo-Boussole"
     
+    if settings.APP_ENV == "development":
+        final_subject = f"[DEV] {final_subject}"
+    
     try:
         params = {
             "from": f"{sender_name} <{sender_email}>",

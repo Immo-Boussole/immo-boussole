@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./immo_boussole.db"
 
     # App
+    APP_ENV: str = "production"
     DEBUG: bool = True
     SECRET_KEY: str = "change-me-at-all-costs"  # MUST be overridden in .env for production
     HTTPS_ONLY: bool = False  # Set to True in production to enforce secure cookies
