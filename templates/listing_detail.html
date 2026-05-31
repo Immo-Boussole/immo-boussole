@@ -1030,19 +1030,19 @@
 
             {% set border_color = 'var(--border)' %}
             {% set text_color = 'var(--text)' %}
-            {% if listing.status.value == 'nouvelle' %}
+            {% if listing.user_status == 'nouvelle' %}
                 {% set border_color = 'rgba(16,217,164,0.3)' %}
                 {% set text_color = 'var(--green)' %}
-            {% elif listing.status.value == 'active' %}
+            {% elif listing.user_status == 'active' %}
                 {% set border_color = 'rgba(79,142,247,0.3)' %}
                 {% set text_color = 'var(--accent)' %}
-            {% elif listing.status.value == 'disparue' %}
+            {% elif listing.user_status == 'disparue' %}
                 {% set border_color = 'rgba(242,92,105,0.3)' %}
                 {% set text_color = 'var(--red)' %}
             {% endif %}
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: var(--surface-2); border: 1px solid {{ border_color }}; border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.9rem; font-weight: 800; color: {{ text_color }};">
-                    {{ t(request, 'misc.' + listing.status.value) }}
+                    {{ t(request, 'misc.' + listing.user_status) }}
                 </div>
                 {% if listing.scraped_at %}
                 <div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">
