@@ -34,10 +34,20 @@ Le système génère un fichier `.zip` contenant les éléments sélectionnés (
 - Confirmez l'avertissement.
 - **Recommandé** : Redémarrez l'application (ou le conteneur Docker) pour vous assurer que les changements de configuration `.env` sont parfaitement pris en compte.
 
+## 🔄 Migration de DEV vers PROD
+
+Pour répliquer les nouveautés, réglages ou annonces de votre environnement de développement (DEV) vers votre environnement de production (PROD), suivez ces meilleures pratiques :
+
+1. **Sauvegardez la DEV** : Dans votre instance DEV, allez dans "Administration" et générez une sauvegarde en incluant tous les éléments que vous souhaitez migrer.
+2. **Protégez la PROD** : Bien que vous puissiez cocher "Configuration système (.env)" lors de la restauration sur la PROD, le système est conçu pour être intelligent et granulaire. 
+   - **Il n'écrasera JAMAIS** vos variables de domaine, mots de passe, URL de base de données, secrets ou configuration de l'environnement de PROD (comme `APP_DOMAIN`, `APP_URL`, `DATABASE_URL`, `SECRET_KEY`, etc.).
+   - Il se contentera de fusionner les nouveaux réglages non-sensibles.
+3. **Sélection Granulaire** : Si vous souhaitez uniquement importer les annonces, décochez simplement "Configuration système", "Utilisateurs", et "Paramètres & Zones" lors de la restauration.
+
 ## ⚙️ Détails techniques (API)
 Les points de terminaison REST acceptent désormais des paramètres pour choisir les composants :
 
 | Point de terminaison | Méthode | Description |
 |----------------------|---------|-------------|
 | `/api/admin/backup` | `GET` | Génère le ZIP (paramètres : `include_env`, `include_settings`, `include_users`, `include_listings`, `include_media`). |
-| `/api/admin/restore` | `POST` | Accepte un envoi `multipart/form-data` (clé : `file` + booléens `restore_*`). |
+| `/api/admin/restore` | `POST` | Accepte un envoi `multipart/form-data` (clé : `file` + booléens `restore_*`). Protège les clés `INFRA` du `.env` lors de la restauration. |

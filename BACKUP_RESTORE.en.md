@@ -34,10 +34,20 @@ The system generates a `.zip` file containing the selected elements (with a data
 - Confirm the warning.
 - **Recommended**: Restart the application (or Docker container) to ensure `.env` configuration changes take effect perfectly.
 
+## 🔄 Migration from DEV to PROD
+
+To replicate new features, settings, or listings from your development (DEV) environment to your production (PROD) environment, follow these best practices:
+
+1. **Backup DEV**: In your DEV instance, go to "Administration" and generate a backup including all elements you wish to migrate.
+2. **Protect PROD**: Although you can check "System Configuration (.env)" when restoring on PROD, the system is designed to be smart and granular.
+   - **It will NEVER overwrite** your domain variables, passwords, database URLs, secrets, or PROD environment configuration (like `APP_DOMAIN`, `APP_URL`, `DATABASE_URL`, `SECRET_KEY`, etc.).
+   - It will only merge non-sensitive new settings.
+3. **Granular Selection**: If you only want to import listings, simply uncheck "System Configuration", "Users", and "Settings & Zones" during the restore.
+
 ## ⚙️ Technical Details (API)
 The REST endpoints now accept parameters to choose components:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/admin/backup` | `GET` | Generates the ZIP (parameters: `include_env`, `include_settings`, `include_users`, `include_listings`, `include_media`). |
-| `/api/admin/restore` | `POST` | Accepts a `multipart/form-data` upload (key: `file` + `restore_*` booleans). |
+| `/api/admin/restore` | `POST` | Accepts a `multipart/form-data` upload (key: `file` + `restore_*` booleans). Protects `INFRA` keys in `.env` during restoration. |
