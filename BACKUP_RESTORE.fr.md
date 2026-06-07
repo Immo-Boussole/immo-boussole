@@ -44,6 +44,32 @@ Pour répliquer les nouveautés, réglages ou annonces de votre environnement de
    - Il se contentera de fusionner les nouveaux réglages non-sensibles.
 3. **Sélection Granulaire** : Si vous souhaitez uniquement importer les annonces, décochez simplement "Configuration système", "Utilisateurs", et "Paramètres & Zones" lors de la restauration.
 
+### Fichiers Volumineux (Contourner la limite de 100 Mo de Cloudflare via SSH)
+
+Si votre fichier ZIP dépasse la limite de téléchargement de Cloudflare (souvent 100 Mo) ou que vous rencontrez des problèmes d'authentification réseau, vous pouvez utiliser la copie directe de fichiers via SSH.
+
+1. **Décompresser l'archive sur le serveur** :
+   ```bash
+   sudo apt-get install unzip -y
+   mkdir -p /tmp/backup_extracted
+   unzip /tmp/backup.zip -d /tmp/backup_extracted
+   ```
+2. **Arrêter le conteneur** (très important pour ne pas corrompre la base de données) :
+   ```bash
+   sudo docker stop immo-boussole-production-app
+   ```
+3. **Copier manuellement les fichiers avec `docker cp`** :
+   Le ZIP contient `immo_boussole.db` et le dossier `static/media/`. La copie directe garantit que vous n'écraserez pas votre fichier `.env` de PROD.
+   ```bash
+   sudo docker cp /tmp/backup_extracted/immo_boussole.db immo-boussole-production-app:/app/data/immo_boussole.db
+   sudo docker cp /tmp/backup_extracted/static/media/. immo-boussole-production-app:/app/static/media/
+   ```
+4. **Redémarrer le conteneur et nettoyer** :
+   ```bash
+   sudo docker start immo-boussole-production-app
+   sudo rm -rf /tmp/backup.zip /tmp/backup_extracted
+   ```
+
 ## ⚙️ Détails techniques (API)
 Les points de terminaison REST acceptent désormais des paramètres pour choisir les composants :
 

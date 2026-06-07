@@ -44,6 +44,32 @@ To replicate new features, settings, or listings from your development (DEV) env
    - It will only merge non-sensitive new settings.
 3. **Granular Selection**: If you only want to import listings, simply uncheck "System Configuration", "Users", and "Settings & Zones" during the restore.
 
+### Large Files (Bypassing Cloudflare's 100MB limit via SSH)
+
+If your ZIP file exceeds Cloudflare's upload limit (often 100MB) or if you experience network authentication issues, you can perform a direct file copy over SSH.
+
+1. **Extract the archive on the server**:
+   ```bash
+   sudo apt-get install unzip -y
+   mkdir -p /tmp/backup_extracted
+   unzip /tmp/backup.zip -d /tmp/backup_extracted
+   ```
+2. **Stop the container** (critical to avoid database corruption):
+   ```bash
+   sudo docker stop immo-boussole-production-app
+   ```
+3. **Copy files manually using `docker cp`**:
+   The ZIP contains `immo_boussole.db` and the `static/media/` folder. Direct copying ensures your PROD `.env` file is never overwritten.
+   ```bash
+   sudo docker cp /tmp/backup_extracted/immo_boussole.db immo-boussole-production-app:/app/data/immo_boussole.db
+   sudo docker cp /tmp/backup_extracted/static/media/. immo-boussole-production-app:/app/static/media/
+   ```
+4. **Restart the container and clean up**:
+   ```bash
+   sudo docker start immo-boussole-production-app
+   sudo rm -rf /tmp/backup.zip /tmp/backup_extracted
+   ```
+
 ## ⚙️ Technical Details (API)
 The REST endpoints now accept parameters to choose components:
 
