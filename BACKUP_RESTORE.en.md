@@ -64,16 +64,14 @@ If your ZIP file exceeds Cloudflare's upload limit (often 100MB) or if you exper
    sudo docker cp /tmp/backup_extracted/immo_boussole.db immo-boussole-production-app:/app/data/immo_boussole.db
    sudo docker cp /tmp/backup_extracted/static/media/. immo-boussole-production-app:/app/static/media/
    ```
-4. **Restart the container**:
+4. **Start the container and restore permissions (Critical)**:
+   Because the copy was done via `sudo`, the files now belong to the `root` system user. You must give it back ownership to the application user (`boussole`), **and then restart the container** so SQLite recognizes the new write permissions (otherwise you will get an "Internal Server Error" / readonly database):
    ```bash
    sudo docker start immo-boussole-production-app
-   ```
-5. **Restore permissions (Critical)**:
-   Because the copy was done via `sudo`, the files now belong to the `root` system user. Since the application runs with a restricted and secure user (`boussole`), you must give it back ownership of the files to prevent an "Internal Server Error" (readonly database):
-   ```bash
    sudo docker exec -u root immo-boussole-production-app chown -R boussole:boussole /app/data /app/static/media
+   sudo docker restart immo-boussole-production-app
    ```
-6. **Clean up temporary files**:
+5. **Clean up temporary files**:
    ```bash
    sudo rm -rf /tmp/backup.zip /tmp/backup_extracted
    ```
