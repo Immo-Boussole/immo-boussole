@@ -806,6 +806,22 @@ async def test_email_configuration(
 
 # ─── Administration: Backup & Restore ──────────────────────────────────────────
 
+@app.get("/api/admin/env-config")
+def get_env_config(_auth = Depends(admin_required)):
+    from app.config import settings
+    # Read environment specifically since some might not be in settings
+    import os
+    return {
+        "APP_DOMAIN": getattr(settings, "APP_DOMAIN", os.environ.get("APP_DOMAIN", "")),
+        "APP_URL": getattr(settings, "APP_URL", os.environ.get("APP_URL", "")),
+        "APP_ENV": getattr(settings, "APP_ENV", os.environ.get("APP_ENV", "")),
+        "APP_VERSION": getattr(settings, "APP_VERSION", os.environ.get("APP_VERSION", "")),
+        "COMPOSE_PROJECT_NAME": os.environ.get("COMPOSE_PROJECT_NAME", ""),
+        "SCRAPING_INTERVAL_HOURS": getattr(settings, "SCRAPING_INTERVAL_HOURS", ""),
+        "APPRISE_URL": getattr(settings, "APPRISE_URL", "")
+    }
+
+
 @app.get("/api/admin/backup")
 def download_backup(
     request: Request,
@@ -985,7 +1001,40 @@ async def restore_backup(
                 backup_env = os.path.join(tmp_dir, ".env")
                 target_env = os.path.join(BASE_DIR, ".env")
                 if os.path.exists(backup_env):
-                    shutil.copy2(backup_env, target_env)
+                    if not os.path.exists(target_env):
+                        shutil.copy2(backup_env, target_env)
+                    else:
+                        # Granular restore: merge but protect critical environment keys
+                        protected_keys = {
+                            "APP_DOMAIN", "APP_URL", "APP_ENV", "APP_VERSION",
+                            "COMPOSE_PROJECT_NAME", "DATABASE_URL", "BROWSERLESS_URL",
+                            "BROWSERLESS_TOKEN", "APP_PASSWORD", "SECRET_KEY",
+                            "DEBUG", "HTTPS_ONLY"
+                        }
+                        target_lines = []
+                        target_keys = {}
+                        with open(target_env, "r", encoding="utf-8") as f:
+                            for idx, line in enumerate(f):
+                                target_lines.append(line)
+                                stripped = line.strip()
+                                if stripped and not stripped.startswith("#") and "=" in stripped:
+                                    k, _ = stripped.split("=", 1)
+                                    target_keys[k.strip()] = idx
+                        
+                        with open(backup_env, "r", encoding="utf-8") as f:
+                            for line in f:
+                                stripped = line.strip()
+                                if stripped and not stripped.startswith("#") and "=" in stripped:
+                                    k, v = stripped.split("=", 1)
+                                    k = k.strip()
+                                    if k not in protected_keys:
+                                        if k in target_keys:
+                                            target_lines[target_keys[k]] = line
+                                        else:
+                                            target_lines.append(line)
+                        
+                        with open(target_env, "w", encoding="utf-8") as f:
+                            f.writelines(target_lines)
 
         return {"status": "success", "message": "System restored successfully. Please restart the application for all changes to take effect."}
 

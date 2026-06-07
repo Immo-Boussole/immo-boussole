@@ -146,6 +146,48 @@ Pour une mise en production sécurisée sur un serveur distant, vous pouvez util
 
 ---
 
+## 🔄 Mise à jour de l'application (Synchronisation avec GitHub)
+
+Lorsque de nouvelles fonctionnalités sont ajoutées au dépôt [GitHub Immo-Boussole](https://github.com/Immo-Boussole/immo-boussole), vous pouvez mettre à jour vos instances de **DEV** ou de **PROD** très facilement, tout en conservant vos bases de données et vos photos.
+
+### Mettre à jour votre instance (DEV ou PROD)
+
+1. Ouvrez un terminal dans le dossier de votre instance (ex: `cd /opt/immo-boussole/dev` ou `cd /opt/immo-boussole/prod`).
+2. Récupérez les dernières nouveautés du code source :
+   ```bash
+   git pull
+   ```
+3. Reconstruisez et relancez le conteneur Docker en arrière-plan. (Utilisez le fichier compose correspondant à votre installation) :
+   ```bash
+   # Si vous utilisez l'installation standard :
+   docker compose up -d --build immo-boussole
+
+   # Si vous utilisez Cloudflared (Tunnels) :
+   docker compose -f docker-compose.cloudflared.yml up -d --build
+   ```
+
+> [!CAUTION]
+> **Base de données** : La structure actuelle de l'application est conçue pour être robuste. Au redémarrage, le système vérifiera automatiquement les nouvelles migrations de base de données (ex: nouvelles colonnes ou tables) et mettra à jour votre fichier `immo_boussole.db` sans **jamais** supprimer vos données existantes.
+
+### 🤖 Automatiser les mises à jour (Linux / Cron)
+
+Pour que votre environnement de **DEV** se mette à jour tout seul à chaque nouveau code publié, vous pouvez utiliser le script fourni `scripts/auto_update.sh` avec une tâche planifiée (Cron) :
+
+1. Rendez le script exécutable :
+   ```bash
+   chmod +x /opt/immo-boussole/dev/scripts/auto_update.sh
+   ```
+2. Éditez vos tâches planifiées :
+   ```bash
+   crontab -e
+   ```
+3. Ajoutez la ligne suivante pour vérifier les mises à jour toutes les heures (à la minute 0) et journaliser le résultat :
+   ```bash
+   0 * * * * /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev docker-compose.cloudflared.yml >> /var/log/immo-boussole-update.log 2>&1
+   ```
+
+---
+
 ## ⚙️ Configuration de l'environnement
 
 Variables clés dans `.env` :

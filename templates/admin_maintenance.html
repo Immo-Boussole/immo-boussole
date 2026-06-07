@@ -423,6 +423,43 @@
                 <div id="alert" class="alert"></div>
 
                 <div class="card">
+                    <h2>Configuration Système (.env)</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
+                        <i class="fas fa-lock"></i> Ces paramètres sont définis dans votre fichier <code>.env</code> et ne peuvent être modifiés ici pour protéger votre environnement.
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>APP_ENV</label>
+                            <input type="text" id="env_app_env" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>APP_DOMAIN</label>
+                            <input type="text" id="env_app_domain" disabled>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>APP_URL</label>
+                            <input type="text" id="env_app_url" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>COMPOSE_PROJECT_NAME</label>
+                            <input type="text" id="env_compose_project" disabled>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>APPRISE_URL (Global)</label>
+                            <input type="text" id="env_apprise_url" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>SCRAPING_INTERVAL_HOURS</label>
+                            <input type="text" id="env_scraping_interval" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
                     <h2>{{ t(request, 'admin_maintenance.email_title') }}</h2>
                     <form id="emailSettingsForm">
                         <div class="form-row">
@@ -753,6 +790,23 @@
             setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
         }
 
+        async function loadEnvSettings() {
+            try {
+                const res = await fetch('/api/admin/env-config');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('env_app_env').value = data.APP_ENV || '';
+                    document.getElementById('env_app_domain').value = data.APP_DOMAIN || '';
+                    document.getElementById('env_app_url').value = data.APP_URL || '';
+                    document.getElementById('env_compose_project').value = data.COMPOSE_PROJECT_NAME || '';
+                    document.getElementById('env_apprise_url').value = data.APPRISE_URL || '';
+                    document.getElementById('env_scraping_interval').value = data.SCRAPING_INTERVAL_HOURS || '';
+                }
+            } catch (err) {
+                console.error("Failed to load env settings", err);
+            }
+        }
+
         async function loadEmailSettings() {
             try {
                 const res = await fetch('/api/admin/settings');
@@ -1081,6 +1135,7 @@
         }
 
         // Initialize
+        loadEnvSettings();
         loadEmailSettings();
     </script>
 </body>

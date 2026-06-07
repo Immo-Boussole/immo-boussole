@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     # App
     APP_ENV: str = "production"
+    APP_DOMAIN: str = "localhost"
+    APP_URL: str = "http://localhost:8000"
     DEBUG: bool = True
     SECRET_KEY: str = "change-me-at-all-costs"  # MUST be overridden in .env for production
     HTTPS_ONLY: bool = False  # Set to True in production to enforce secure cookies
