@@ -64,9 +64,17 @@ Si votre fichier ZIP dépasse la limite de téléchargement de Cloudflare (souve
    sudo docker cp /tmp/backup_extracted/immo_boussole.db immo-boussole-production-app:/app/data/immo_boussole.db
    sudo docker cp /tmp/backup_extracted/static/media/. immo-boussole-production-app:/app/static/media/
    ```
-4. **Redémarrer le conteneur et nettoyer** :
+4. **Redémarrer le conteneur** :
    ```bash
    sudo docker start immo-boussole-production-app
+   ```
+5. **Rétablir les permissions (Crucial)** :
+   Comme la copie a été faite via `sudo`, les fichiers appartiennent désormais à l'utilisateur système `root`. L'application fonctionnant avec un utilisateur restreint et sécurisé (`boussole`), il est impératif de lui redonner la propriété des fichiers pour éviter une erreur "Internal Server Error" (readonly database) :
+   ```bash
+   sudo docker exec -u root immo-boussole-production-app chown -R boussole:boussole /app/data /app/static/media
+   ```
+6. **Nettoyer les fichiers temporaires** :
+   ```bash
    sudo rm -rf /tmp/backup.zip /tmp/backup_extracted
    ```
 
