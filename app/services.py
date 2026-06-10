@@ -420,6 +420,15 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         city_to_check = loc_val or city_val
         
         if city_to_check:
+            from app.geo import standardize_and_enrich_city
+            std_city, _, _ = standardize_and_enrich_city(city_to_check)
+            if std_city:
+                city_val = std_city
+                loc_val = std_city
+                item["city"] = std_city
+                item["location"] = std_city
+                city_to_check = std_city
+
             from app.main import _is_city_in_allowed_departments
             if not _is_city_in_allowed_departments(city_to_check, db):
                 continue
@@ -453,14 +462,6 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             # Case: Brand new listing
             city_val = item.get("city")
             loc_val = item.get("location") or city_val
-            if city_val or loc_val:
-                from app.geo import standardize_and_enrich_city
-                std_city, _, _ = standardize_and_enrich_city(city_val or loc_val)
-                if std_city:
-                    city_val = std_city
-                    loc_val = std_city
-            else:
-                loc_val = item.get("location")
             
             new_listing = Listing(
                 external_id=ext_id,

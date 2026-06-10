@@ -1603,6 +1603,20 @@ def _is_city_in_allowed_departments(city: str, db: Session) -> bool:
     Checks if a city belongs to one of the allowed departments.
     Returns True if allowed or if no restrictions are set.
     """
+    if not city:
+        return False
+        
+    import re
+    match = re.search(r'\((\d{5})\)', city)
+    if not match:
+        return False
+        
+    zipcode = match.group(1)
+    if zipcode.startswith('97') and len(zipcode) >= 3:
+        dept = zipcode[:3]
+    else:
+        dept = zipcode[:2]
+
     settings = db.query(models.GlobalSettings).first()
     if not settings or not settings.allowed_departments:
         return True
@@ -1614,20 +1628,6 @@ def _is_city_in_allowed_departments(city: str, db: Session) -> bool:
             return True
     except:
         return True
-        
-    if not city:
-        return True
-        
-    import re
-    match = re.search(r'\((\d{5})\)', city)
-    if not match:
-        return True
-        
-    zipcode = match.group(1)
-    if zipcode.startswith('97') and len(zipcode) >= 3:
-        dept = zipcode[:3]
-    else:
-        dept = zipcode[:2]
         
     return dept in allowed
 
@@ -2986,6 +2986,14 @@ async def submit_listing_url(
         details = await fetch_basic_metadata(url)
         
         city_to_check = details.get("city") or details.get("location")
+        if city_to_check:
+            from app.geo import standardize_and_enrich_city
+            std_city, _, _ = standardize_and_enrich_city(city_to_check)
+            if std_city:
+                details["city"] = std_city
+                details["location"] = std_city
+                city_to_check = std_city
+
         if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
             return {
                 "status": "rejected_department",
@@ -3045,6 +3053,14 @@ async def submit_listing_url(
         scraping_success = False
 
     city_to_check = details.get("city") or details.get("location")
+    if city_to_check:
+        from app.geo import standardize_and_enrich_city
+        std_city, _, _ = standardize_and_enrich_city(city_to_check)
+        if std_city:
+            details["city"] = std_city
+            details["location"] = std_city
+            city_to_check = std_city
+
     if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
         return {
             "status": "rejected_department",
