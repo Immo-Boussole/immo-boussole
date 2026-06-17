@@ -2,7 +2,7 @@
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
-[![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A0e93623145249c6520c107557b97b8284a9414b5-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
+[![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A8174e1f6a2e6b9478660c5016228f11b3241ad3a-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 
 *Note: At its core, this project targets French platforms for property search. / Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens.*
 
@@ -142,6 +142,48 @@ The project is fully containerized, automatically including the **Browserless** 
 For secure production deployment on a remote server, you can use **Portainer** to manage your containers and **Cloudflared** (Cloudflare Zero Trust Tunnels) to securely expose the application to the Internet without opening ports.
 
 👉 **See the detailed guide: [Installation via Docker, Portainer, and Cloudflared](INSTALL_Docker+Portainer+Cloudflared.en.md)**
+
+---
+
+## 🔄 Updating the Application (Syncing with GitHub)
+
+When new features are added to the [Immo-Boussole GitHub repository](https://github.com/Immo-Boussole/immo-boussole), you can easily update your **DEV** or **PROD** instances while keeping your databases and photos intact.
+
+### Update your instance (DEV or PROD)
+
+1. Open a terminal in your instance folder (e.g., `cd /opt/immo-boussole/dev` or `cd /opt/immo-boussole/prod`).
+2. Pull the latest source code from GitHub:
+   ```bash
+   git pull
+   ```
+3. Rebuild and restart the Docker container in the background. (Use the compose file matching your setup):
+   ```bash
+   # If using standard installation:
+   docker compose up -d --build immo-boussole
+
+   # If using Cloudflared (Tunnels):
+   docker compose -f docker-compose.cloudflared.yml up -d --build
+   ```
+
+> [!CAUTION]
+> **Database Safety**: The current structure is designed to be robust. Upon restart, the system will automatically check for new database migrations (e.g., new columns or tables) and update your `immo_boussole.db` without **ever** deleting your existing data.
+
+### 🤖 Automating Updates (Linux / Cron)
+
+If you want your **DEV** environment to update itself automatically whenever new code is pushed, you can use the provided `scripts/auto_update.sh` script with a scheduled task (Cron):
+
+1. Make the script executable:
+   ```bash
+   chmod +x /opt/immo-boussole/dev/scripts/auto_update.sh
+   ```
+2. Edit your scheduled tasks:
+   ```bash
+   crontab -e
+   ```
+3. Add the following line to check for updates every hour (at minute 0) and log the output:
+   ```bash
+   0 * * * * /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev docker-compose.cloudflared.yml >> /var/log/immo-boussole-update.log 2>&1
+   ```
 
 ---
 

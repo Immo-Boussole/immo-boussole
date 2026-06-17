@@ -325,14 +325,6 @@ class ZoneRuleRequest(BaseModel):
     name: str
     rule: str = "forbidden"  # "forbidden" or "allowed"
 
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, v):
-        import re
-        if not re.match(r'^\d{5}$', v.strip()):
-            raise ValueError("Le nom doit être un code postal complet (5 chiffres)")
-        return v.strip()
-
     @field_validator("zone_type")
     @classmethod
     def validate_zone_type(cls, v):
@@ -814,6 +806,22 @@ async def test_email_configuration(
 
 # ─── Administration: Backup & Restore ──────────────────────────────────────────
 
+@app.get("/api/admin/env-config")
+def get_env_config(_auth = Depends(admin_required)):
+    from app.config import settings
+    # Read environment specifically since some might not be in settings
+    import os
+    return {
+        "APP_DOMAIN": getattr(settings, "APP_DOMAIN", os.environ.get("APP_DOMAIN", "")),
+        "APP_URL": getattr(settings, "APP_URL", os.environ.get("APP_URL", "")),
+        "APP_ENV": getattr(settings, "APP_ENV", os.environ.get("APP_ENV", "")),
+        "APP_VERSION": getattr(settings, "APP_VERSION", os.environ.get("APP_VERSION", "")),
+        "COMPOSE_PROJECT_NAME": os.environ.get("COMPOSE_PROJECT_NAME", ""),
+        "SCRAPING_INTERVAL_HOURS": getattr(settings, "SCRAPING_INTERVAL_HOURS", ""),
+        "APPRISE_URL": getattr(settings, "APPRISE_URL", "")
+    }
+
+
 @app.get("/api/admin/backup")
 def download_backup(
     request: Request,
@@ -993,7 +1001,40 @@ async def restore_backup(
                 backup_env = os.path.join(tmp_dir, ".env")
                 target_env = os.path.join(BASE_DIR, ".env")
                 if os.path.exists(backup_env):
-                    shutil.copy2(backup_env, target_env)
+                    if not os.path.exists(target_env):
+                        shutil.copy2(backup_env, target_env)
+                    else:
+                        # Granular restore: merge but protect critical environment keys
+                        protected_keys = {
+                            "APP_DOMAIN", "APP_URL", "APP_ENV", "APP_VERSION",
+                            "COMPOSE_PROJECT_NAME", "DATABASE_URL", "BROWSERLESS_URL",
+                            "BROWSERLESS_TOKEN", "APP_PASSWORD", "SECRET_KEY",
+                            "DEBUG", "HTTPS_ONLY"
+                        }
+                        target_lines = []
+                        target_keys = {}
+                        with open(target_env, "r", encoding="utf-8") as f:
+                            for idx, line in enumerate(f):
+                                target_lines.append(line)
+                                stripped = line.strip()
+                                if stripped and not stripped.startswith("#") and "=" in stripped:
+                                    k, _ = stripped.split("=", 1)
+                                    target_keys[k.strip()] = idx
+                        
+                        with open(backup_env, "r", encoding="utf-8") as f:
+                            for line in f:
+                                stripped = line.strip()
+                                if stripped and not stripped.startswith("#") and "=" in stripped:
+                                    k, v = stripped.split("=", 1)
+                                    k = k.strip()
+                                    if k not in protected_keys:
+                                        if k in target_keys:
+                                            target_lines[target_keys[k]] = line
+                                        else:
+                                            target_lines.append(line)
+                        
+                        with open(target_env, "w", encoding="utf-8") as f:
+                            f.writelines(target_lines)
 
         return {"status": "success", "message": "System restored successfully. Please restart the application for all changes to take effect."}
 
@@ -1057,7 +1098,7 @@ def _enrich_listings(listings: list[Listing], viewed_ids: set[int]):
             else:
                 listing.user_status = "nouvelle"
         else:
-            listing.user_status = listing.status.value
+            listing.user_status = getattr(listing.status, 'value', listing.status)
 
 
 @app.get("/")
@@ -1158,7 +1199,6 @@ def listing_detail_page(
         
     # Lazy geocoding backfill
     if listing.city and listing.nearest_sncf_station is None:
-        from app.models import ZoneRule
         forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
             ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
         ).all()}
@@ -1563,6 +1603,20 @@ def _is_city_in_allowed_departments(city: str, db: Session) -> bool:
     Checks if a city belongs to one of the allowed departments.
     Returns True if allowed or if no restrictions are set.
     """
+    if not city:
+        return False
+        
+    import re
+    match = re.search(r'\((\d{5})\)', city)
+    if not match:
+        return False
+        
+    zipcode = match.group(1)
+    if zipcode.startswith('97') and len(zipcode) >= 3:
+        dept = zipcode[:3]
+    else:
+        dept = zipcode[:2]
+
     settings = db.query(models.GlobalSettings).first()
     if not settings or not settings.allowed_departments:
         return True
@@ -1574,20 +1628,6 @@ def _is_city_in_allowed_departments(city: str, db: Session) -> bool:
             return True
     except:
         return True
-        
-    if not city:
-        return True
-        
-    import re
-    match = re.search(r'\((\d{5})\)', city)
-    if not match:
-        return True
-        
-    zipcode = match.group(1)
-    if zipcode.startswith('97') and len(zipcode) >= 3:
-        dept = zipcode[:3]
-    else:
-        dept = zipcode[:2]
         
     return dept in allowed
 
@@ -2947,6 +2987,14 @@ async def submit_listing_url(
         details = await fetch_basic_metadata(url)
         
         city_to_check = details.get("city") or details.get("location")
+        if city_to_check:
+            from app.geo import standardize_and_enrich_city
+            std_city, _, _ = standardize_and_enrich_city(city_to_check)
+            if std_city:
+                details["city"] = std_city
+                details["location"] = std_city
+                city_to_check = std_city
+
         if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
             return {
                 "status": "rejected_department",
@@ -3007,6 +3055,14 @@ async def submit_listing_url(
         scraping_success = False
 
     city_to_check = details.get("city") or details.get("location")
+    if city_to_check:
+        from app.geo import standardize_and_enrich_city
+        std_city, _, _ = standardize_and_enrich_city(city_to_check)
+        if std_city:
+            details["city"] = std_city
+            details["location"] = std_city
+            city_to_check = std_city
+
     if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
         return {
             "status": "rejected_department",

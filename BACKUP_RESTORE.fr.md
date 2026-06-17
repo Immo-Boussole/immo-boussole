@@ -34,10 +34,52 @@ Le système génère un fichier `.zip` contenant les éléments sélectionnés (
 - Confirmez l'avertissement.
 - **Recommandé** : Redémarrez l'application (ou le conteneur Docker) pour vous assurer que les changements de configuration `.env` sont parfaitement pris en compte.
 
+## 🔄 Migration de DEV vers PROD
+
+Pour répliquer les nouveautés, réglages ou annonces de votre environnement de développement (DEV) vers votre environnement de production (PROD), suivez ces meilleures pratiques :
+
+1. **Sauvegardez la DEV** : Dans votre instance DEV, allez dans "Administration" et générez une sauvegarde en incluant tous les éléments que vous souhaitez migrer.
+2. **Protégez la PROD** : Bien que vous puissiez cocher "Configuration système (.env)" lors de la restauration sur la PROD, le système est conçu pour être intelligent et granulaire. 
+   - **Il n'écrasera JAMAIS** vos variables de domaine, mots de passe, URL de base de données, secrets ou configuration de l'environnement de PROD (comme `APP_DOMAIN`, `APP_URL`, `DATABASE_URL`, `SECRET_KEY`, etc.).
+   - Il se contentera de fusionner les nouveaux réglages non-sensibles.
+3. **Sélection Granulaire** : Si vous souhaitez uniquement importer les annonces, décochez simplement "Configuration système", "Utilisateurs", et "Paramètres & Zones" lors de la restauration.
+
+### Fichiers Volumineux (Contourner la limite de 100 Mo de Cloudflare via SSH)
+
+Si votre fichier ZIP dépasse la limite de téléchargement de Cloudflare (souvent 100 Mo) ou que vous rencontrez des problèmes d'authentification réseau, vous pouvez utiliser la copie directe de fichiers via SSH.
+
+1. **Décompresser l'archive sur le serveur** :
+   ```bash
+   sudo apt-get install unzip -y
+   mkdir -p /tmp/backup_extracted
+   unzip /tmp/backup.zip -d /tmp/backup_extracted
+   ```
+2. **Arrêter le conteneur** (très important pour ne pas corrompre la base de données) :
+   ```bash
+   sudo docker stop immo-boussole-production-app
+   ```
+3. **Copier manuellement les fichiers avec `docker cp`** :
+   Le ZIP contient `immo_boussole.db` et le dossier `static/media/`. La copie directe garantit que vous n'écraserez pas votre fichier `.env` de PROD.
+   ```bash
+   sudo docker cp /tmp/backup_extracted/immo_boussole.db immo-boussole-production-app:/app/data/immo_boussole.db
+   sudo docker cp /tmp/backup_extracted/static/media/. immo-boussole-production-app:/app/static/media/
+   ```
+4. **Démarrer le conteneur et rétablir les permissions (Crucial)** :
+   Comme la copie a été faite via `sudo`, les fichiers appartiennent désormais à l'utilisateur système `root`. Il faut rendre la propriété à l'utilisateur de l'application (`boussole`), **puis redémarrer le conteneur** pour que SQLite prenne en compte les nouveaux droits (sinon vous aurez une erreur "Internal Server Error" / readonly database) :
+   ```bash
+   sudo docker start immo-boussole-production-app
+   sudo docker exec -u root immo-boussole-production-app chown -R boussole:boussole /app/data /app/static/media
+   sudo docker restart immo-boussole-production-app
+   ```
+5. **Nettoyer les fichiers temporaires** :
+   ```bash
+   sudo rm -rf /tmp/backup.zip /tmp/backup_extracted
+   ```
+
 ## ⚙️ Détails techniques (API)
 Les points de terminaison REST acceptent désormais des paramètres pour choisir les composants :
 
 | Point de terminaison | Méthode | Description |
 |----------------------|---------|-------------|
 | `/api/admin/backup` | `GET` | Génère le ZIP (paramètres : `include_env`, `include_settings`, `include_users`, `include_listings`, `include_media`). |
-| `/api/admin/restore` | `POST` | Accepte un envoi `multipart/form-data` (clé : `file` + booléens `restore_*`). |
+| `/api/admin/restore` | `POST` | Accepte un envoi `multipart/form-data` (clé : `file` + booléens `restore_*`). Protège les clés `INFRA` du `.env` lors de la restauration. |
