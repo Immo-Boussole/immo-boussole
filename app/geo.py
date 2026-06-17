@@ -625,3 +625,36 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
 
     standardized_display = f"{official_name} ({selected_zip})"
     return standardized_display, selected_zip, insee_code
+
+
+def is_city_in_forbidden_set(city_or_location: str, forbidden_cities: set) -> bool:
+    """
+    Checks if a city or location name matches any city in a set of forbidden cities.
+    Handles case, zip codes, hyphens, and spaces cleanly.
+    """
+    if not city_or_location or not forbidden_cities:
+        return False
+        
+    import re
+    def clean_name(n: str) -> str:
+        if not n:
+            return ""
+        n = n.lower().strip()
+        n = re.sub(r'\s*\(\d{5}\)$', '', n).strip()
+        n = re.sub(r'\s*\(\d{2,3}\)$', '', n).strip()
+        n = re.sub(r'\b\d{5}\b$', '', n).strip()
+        n = n.replace('-', ' ').replace("'", ' ').strip()
+        n = re.sub(r'\s+', ' ', n)
+        return n
+
+    c_clean = clean_name(city_or_location)
+    if not c_clean:
+        return False
+
+    for fc in forbidden_cities:
+        if not fc:
+            continue
+        if clean_name(fc) == c_clean:
+            return True
+            
+    return False

@@ -24,14 +24,10 @@ from fastapi.exception_handlers import http_exception_handler as default_http_ex
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator
-<<<<<<< HEAD
 import time
 from collections import defaultdict
 import secrets
-from sqlalchemy import text
-=======
 from sqlalchemy import text, func
->>>>>>> 459cc65fe66315d0def6abe49e4cd205ee9ee9b1
 from sqlalchemy.orm import Session
 
 from app import models, database
@@ -2899,12 +2895,13 @@ async def rescrape_listing(
     }
 
     # ── Forbidden Zone Warning ──
+    from app.geo import is_city_in_forbidden_set
     forbidden_cities_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
     
-    city_lower = (updated_listing.city or updated_listing.location or "").strip().lower()
-    in_forbidden_city = city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_rescrape if fc)
+    city_to_check = updated_listing.city or updated_listing.location
+    in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities_rescrape)
 
     if in_forbidden_city:
         updated_listing.status = ListingStatus.REJECTED
@@ -2964,12 +2961,13 @@ async def submit_listing_url(
         )
         
         # ── Fast path: Forbidden Zone Check ──
+        from app.geo import is_city_in_forbidden_set
         forbidden_cities_fast = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
             ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
         ).all()}
         
-        city_lower = (listing.city or listing.location or "").strip().lower()
-        in_forbidden_city = city_lower and any(fc in city_lower or city_lower in fc for fc in forbidden_cities_fast if fc)
+        city_to_check = listing.city or listing.location
+        in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities_fast)
             
         if in_forbidden_city:
             listing.status = ListingStatus.REJECTED
@@ -3041,12 +3039,13 @@ async def submit_listing_url(
         }
 
     # ── Forbidden Zone Warning ──
+    from app.geo import is_city_in_forbidden_set
     forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
     
-    listing_city_lower = (listing.city or listing.location or "").strip().lower()
-    in_forbidden_city = listing_city_lower and any(fc in listing_city_lower or listing_city_lower in fc for fc in forbidden_cities if fc)
+    city_to_check = listing.city or listing.location
+    in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities)
 
     if in_forbidden_city:
         listing.status = ListingStatus.REJECTED

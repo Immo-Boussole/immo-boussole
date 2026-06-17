@@ -120,6 +120,7 @@ def identify_problems(db: Session):
 
     # Forbidden Zones
     from app.models import ZoneRule
+    from app.geo import is_city_in_forbidden_set
     forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
@@ -127,16 +128,10 @@ def identify_problems(db: Session):
     forbidden_zone_listings = []
     for l in active_listings_all:
         city_match = False
-        c_clean = l.city.lower().strip() if l.city else ""
-        loc_clean = l.location.lower().strip() if l.location else ""
-        
-        if c_clean in forbidden_cities or loc_clean in forbidden_cities:
+        if l.city and is_city_in_forbidden_set(l.city, forbidden_cities):
             city_match = True
-        else:
-            c_no_zip = re.sub(r'\s*\(\d{5}\)$', '', c_clean).strip()
-            loc_no_zip = re.sub(r'\s*\(\d{5}\)$', '', loc_clean).strip()
-            if c_no_zip in forbidden_cities or loc_no_zip in forbidden_cities:
-                city_match = True
+        elif l.location and is_city_in_forbidden_set(l.location, forbidden_cities):
+            city_match = True
 
         if city_match:
             forbidden_zone_listings.append(l)

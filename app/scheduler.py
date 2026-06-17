@@ -102,16 +102,15 @@ def db_check_job():
 
 def db_repair_job():
     print("[Scheduler] Démarrage de la réparation auto de la DB...")
-    db = SessionLocal()
+    from app.db_maintenance import repair_all_sequential_task
     try:
         # Run repairs sequentially in the background
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(repair_listings_batch_task(db, EMPTY_DESCRIPTION))
-        loop.run_until_complete(repair_listings_batch_task(db, GENERIC_TITLE_FIGARO))
+        loop.run_until_complete(repair_all_sequential_task())
         loop.close()
-    finally:
-        db.close()
+    except Exception as e:
+        print(f"[Scheduler] Erreur durant la réparation auto : {e}")
 
 
 def _parse_interval(interval_str):
