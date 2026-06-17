@@ -409,6 +409,12 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
     #         disappeared_count += 1
 
     # 2. Process new listings
+    from app.models import ZoneRule
+    from app.geo import is_city_in_forbidden_set
+    forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+    ).all()}
+
     new_count = 0
     new_listing_objects: list[Listing] = []  # collected for notifications
     for item in scraped_listings:
@@ -433,7 +439,11 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
         if existing:
             # Case: Already exists (active, new, or disappeared)
             if existing.status == ListingStatus.DISAPPEARED:
-                existing.status = ListingStatus.NEW
+                city_to_check_existing = existing.city or existing.location
+                if city_to_check_existing and is_city_in_forbidden_set(city_to_check_existing, forbidden_cities):
+                    existing.status = ListingStatus.REJECTED
+                else:
+                    existing.status = ListingStatus.NEW
                 existing.date_updated = datetime.now(timezone.utc)
             
             # Update fields
@@ -462,6 +472,12 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             else:
                 loc_val = item.get("location")
             
+            # Check if listing is in a forbidden zone
+            in_forbidden_city = False
+            city_to_check_new = city_val or loc_val
+            if city_to_check_new and is_city_in_forbidden_set(city_to_check_new, forbidden_cities):
+                in_forbidden_city = True
+
             new_listing = Listing(
                 external_id=ext_id,
                 title=item.get("title", "Sans titre"),
@@ -473,7 +489,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 area=item.get("area"),
                 rooms=item.get("rooms"),
                 source=query.source,
-                status=ListingStatus.NEW,
+                status=ListingStatus.REJECTED if in_forbidden_city else ListingStatus.NEW,
                 scraped_at=datetime.now(timezone.utc),
                 is_duplicate=False,
                 duplicate_of_id=None,
@@ -508,7 +524,8 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 await update_listing_georisques(new_listing, db)
                 if new_listing.city:
                     ensure_city_map_pin(new_listing.city, db)
-                new_listing_objects.append(new_listing)
+                if new_listing.status != ListingStatus.REJECTED:
+                    new_listing_objects.append(new_listing)
                 new_count += 1
             except Exception as e:
                 db.rollback()
