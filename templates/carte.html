@@ -14,7 +14,7 @@
     <link href="/static/css/mobile.css" rel="stylesheet">
     
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/> <!-- pragma: allowlist secret -->
     
     <style>
         :root {
@@ -726,6 +726,7 @@
         @media (max-width: 768px) {
             .city-panel { width: 100%; right: -100%; }
             .city-panel.open { right: 0; }
+            .hide-mobile { display: none !important; }
         }
     </style>
 </head>
@@ -833,6 +834,11 @@
             <div class="topbar-right">
                 <div id="stats" style="font-size: 0.8rem; color: var(--text-2);">
                     Chargement des données...
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.3rem 0.6rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-circle-notch" style="color: var(--yellow);"></i>
+                    <label for="sncfCircleDiameter" style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); white-space: nowrap; margin: 0;" class="hide-mobile">Gares (km):</label>
+                    <input type="number" id="sncfCircleDiameter" value="3" min="0" step="0.5" style="width: 45px; background: none; border: none; color: var(--text); font-weight: 700; font-size: 0.85rem; outline: none; text-align: center; padding: 0;" oninput="updateStationCircles()">
                 </div>
                 <button class="btn" onclick="openNearbyCitiesModal()" id="btn-nearby-cities">
                     <i class="fa-solid fa-city"></i>
@@ -1048,7 +1054,7 @@
     </div>
 
     <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script> <!-- pragma: allowlist secret -->
 
     
     <script>
@@ -1091,6 +1097,8 @@
         // Store pin markers layer for easy refresh
         const pinMarkersLayer = L.layerGroup().addTo(map);
         const zoneRulesLayer = L.layerGroup().addTo(map);
+        const stationCirclesLayer = L.layerGroup().addTo(map);
+        let globalStationPins = [];
         let currentUser = '';
 
         async function loadMapData() {
@@ -1219,6 +1227,7 @@
         function renderPins(pins) {
             pinMarkersLayer.clearLayers();
             const usersSeen = new Set();
+            globalStationPins = [];
 
             pins.forEach(p => {
                 const color = getUserColor(p.created_by);
@@ -1227,6 +1236,9 @@
                 const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
                 
                 const isStation = p.pin_type === 'station';
+                if (isStation) {
+                    globalStationPins.push(p);
+                }
                 const pinBg = isStation ? 'var(--yellow)' : color;
                 const pinColor = isStation ? '#000' : '#fff';
                 const iconHtml = isStation
@@ -1309,6 +1321,28 @@
 
             // Update legend with user colors
             updatePinLegend(usersSeen);
+            updateStationCircles();
+        }
+
+        function updateStationCircles() {
+            stationCirclesLayer.clearLayers();
+            const inputEl = document.getElementById('sncfCircleDiameter');
+            if (!inputEl) return;
+            const diameterKm = parseFloat(inputEl.value) || 0;
+            if (diameterKm <= 0) return;
+            
+            const radiusMeters = (diameterKm / 2) * 1000;
+            
+            globalStationPins.forEach(p => {
+                L.circle([p.lat, p.lon], {
+                    radius: radiusMeters,
+                    color: 'var(--yellow)',
+                    fillColor: 'var(--yellow)',
+                    fillOpacity: 0.1,
+                    weight: 1,
+                    dashArray: '5, 5'
+                }).addTo(stationCirclesLayer);
+            });
         }
 
         function updatePinLegend(usersSeen) {

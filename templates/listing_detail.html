@@ -531,10 +531,10 @@
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 1.5rem 2rem; 
         }
         .gallery-thumb { 
-            width: 100%; aspect-ratio: 1; cursor: pointer; border-radius: 10px; overflow: hidden; 
+            position: relative; width: 100%; padding-bottom: 100%; height: 0; cursor: pointer; border-radius: 10px; overflow: hidden; 
             opacity: 0.4; transition: var(--trans); border: 2px solid transparent;
         }
-        .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-thumb img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
         .gallery-thumb:hover { opacity: 0.8; }
         .gallery-thumb.active { opacity: 1; border-color: var(--accent); transform: scale(0.98); }
 
@@ -552,16 +552,16 @@
             .gallery-content { flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
             
             .gallery-header-mobile { 
-                display: block; padding: 1.25rem 1rem; background: var(--surface); 
+                display: block; padding: 0.75rem 1rem; background: var(--surface); 
                 border-bottom: 1px solid var(--border); z-index: 2020; flex-shrink: 0;
             }
-            .gallery-mob-l1 { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.75rem; color: var(--text); line-height: 1.3; }
+            .gallery-mob-l1 { font-size: 0.95rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--text); line-height: 1.3; }
             .gallery-mob-l2 { display: flex; align-items: center; justify-content: space-between; }
             .gallery-mob-actions { display: flex; gap: 0.75rem; }
             .btn-gallery-action { 
-                width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+                width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
                 background: var(--surface-2); color: var(--text); display: flex; align-items: center; justify-content: center;
-                font-size: 1.1rem; cursor: pointer; transition: var(--trans);
+                font-size: 0.95rem; cursor: pointer; transition: var(--trans);
             }
             .btn-gallery-action.delete { color: var(--red); border-color: rgba(242,92,105,0.2); }
             .btn-gallery-action:active { transform: scale(0.9); }
@@ -573,7 +573,7 @@
             .gallery-next { right: 0.75rem; }
             .gallery-close-desk { display: none; }
 
-            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; flex-shrink: 0; max-height: 45%; }
+            .gallery-sidebar { width: 100%; border-left: none; border-top: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; flex-shrink: 0; max-height: 65%; }
             .gallery-header-desk { display: none; }
             
             .gallery-mobile-separator { 
@@ -582,7 +582,7 @@
             }
             .gallery-thumbs { 
                 grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 1.25rem 1.5rem 0.75rem;
-                overflow-y: auto; flex: 1;
+                overflow-y: auto; flex: 1; align-content: start;
             }
             .gallery-thumb { border-radius: 8px; }
         }
@@ -1030,19 +1030,19 @@
 
             {% set border_color = 'var(--border)' %}
             {% set text_color = 'var(--text)' %}
-            {% if listing.status.value == 'nouvelle' %}
+            {% if listing.user_status == 'nouvelle' %}
                 {% set border_color = 'rgba(16,217,164,0.3)' %}
                 {% set text_color = 'var(--green)' %}
-            {% elif listing.status.value == 'active' %}
+            {% elif listing.user_status == 'active' %}
                 {% set border_color = 'rgba(79,142,247,0.3)' %}
                 {% set text_color = 'var(--accent)' %}
-            {% elif listing.status.value == 'disparue' %}
+            {% elif listing.user_status == 'disparue' %}
                 {% set border_color = 'rgba(242,92,105,0.3)' %}
                 {% set text_color = 'var(--red)' %}
             {% endif %}
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem; background: var(--surface-2); border: 1px solid {{ border_color }}; border-radius: 12px; padding: 0.85rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.9rem; font-weight: 800; color: {{ text_color }};">
-                    {{ t(request, 'misc.' + listing.status.value) }}
+                    {{ t(request, 'misc.' + listing.user_status) }}
                 </div>
                 {% if listing.scraped_at %}
                 <div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">

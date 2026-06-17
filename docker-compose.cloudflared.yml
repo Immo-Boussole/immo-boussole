@@ -15,7 +15,7 @@ services:
       args:
         - APP_VERSION=${APP_VERSION:-latest}
     image: immo-boussole-app:${APP_VERSION:-latest}
-    container_name: immo-boussole-app
+    container_name: immo-boussole-${APP_ENV:-prod}-app
     restart: always
     depends_on:
       browserless:
@@ -46,7 +46,7 @@ services:
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
     image: browserless/chrome:1-chrome-stable
-    container_name: browserless
+    container_name: browserless-${APP_ENV:-prod}
     restart: always
     shm_size: 2gb
     networks:
@@ -78,7 +78,7 @@ services:
   # ── Cloudflare Tunnel Connector ──────────────────────────────────────────────
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared
+    container_name: cloudflared-${APP_ENV:-prod}
     restart: always
     command: tunnel run
     networks:
@@ -90,12 +90,12 @@ services:
 # ── Internal Network ─────────────────────────────────────────────────────────
 networks:
   immo-boussole-net:
-    name: immo-boussole-net
+    name: immo-boussole-${APP_ENV:-prod}-net
     driver: bridge
 
 # ── Persistent Volumes ───────────────────────────────────────────────────────
 volumes:
   db-data:
-    name: immo-boussole-db
+    name: immo-boussole-${APP_ENV:-prod}-db
   media-data:
-    name: immo-boussole-media
+    name: immo-boussole-${APP_ENV:-prod}-media
