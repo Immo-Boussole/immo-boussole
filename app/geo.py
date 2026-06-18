@@ -636,15 +636,27 @@ def is_city_in_forbidden_set(city_or_location: str, forbidden_cities: set) -> bo
         return False
         
     import re
+    import unicodedata
+    
     def clean_name(n: str) -> str:
         if not n:
             return ""
+        # Remove multiple parenthesized numbers like " (42) (42)"
+        n = re.sub(r'(?:\s*\(\d{2,5}\))+$', '', n)
+        
+        n, _, _ = parse_city_input(n)
+        n = clean_arrondissement(n)
+        
+        # Remove accents
+        n = ''.join(c for c in unicodedata.normalize('NFD', n) if unicodedata.category(c) != 'Mn')
+        
         n = n.lower().strip()
-        n = re.sub(r'\s*\(\d{5}\)$', '', n).strip()
-        n = re.sub(r'\s*\(\d{2,3}\)$', '', n).strip()
-        n = re.sub(r'\b\d{5}\b$', '', n).strip()
         n = n.replace('-', ' ').replace("'", ' ').strip()
         n = re.sub(r'\s+', ' ', n)
+        
+        # Normalize "st " to "saint "
+        n = re.sub(r'\bst\b', 'saint', n)
+        
         return n
 
     c_clean = clean_name(city_or_location)
