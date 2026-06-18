@@ -38,13 +38,16 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     # 1. Update the code
     git pull
     
-    # 2. Rebuild and restart the containers
+    # 2. Pull pre-built images (if applicable) and rebuild/restart the containers
     if [ -f "$COMPOSE_FILE" ]; then
+        docker compose -f "$COMPOSE_FILE" pull
         docker compose -f "$COMPOSE_FILE" up -d --build
     elif [ -f "docker-compose.cloudflared.yml" ]; then
         # Smart fallback
+        docker compose -f docker-compose.cloudflared.yml pull
         docker compose -f docker-compose.cloudflared.yml up -d --build
     else
+        docker compose pull
         docker compose up -d --build
     fi
     
