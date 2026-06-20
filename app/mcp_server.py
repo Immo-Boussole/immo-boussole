@@ -154,4 +154,14 @@ def get_stats() -> str:
     return tool_get_stats()
 
 if __name__ == "__main__":
-    mcp.run()
+    import uvicorn
+    import argparse
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8001)
+    args, _ = parser.parse_known_args()
+    
+    mcp.settings.port = args.port
+    mcp.settings.host = args.host
+    mcp.run(transport='sse')

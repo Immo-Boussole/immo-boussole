@@ -46,8 +46,8 @@
         .topbar { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 2rem; border-bottom:1px solid var(--border); background:var(--surface); gap:1rem; flex-shrink:0; }
         .topbar h1 { font-size:1.25rem; font-weight:700; }
         .content-wrapper { display:flex; flex:1; overflow:hidden; }
-        .content-left { flex:1; overflow-y:auto; padding:2rem; display:flex; flex-direction:column; gap:1.5rem; }
-        .content-right { flex:1; display:flex; flex-direction:column; padding:2rem 2rem 2rem 0; gap:1rem; }
+        .content-left { flex:1; overflow-y:auto; padding:2rem; display:flex; flex-direction:column; gap:1.5rem; position: relative; z-index: 2; min-width: 0; }
+        .content-right { flex:1; display:flex; flex-direction:column; padding:2rem 2rem 2rem 0; gap:1rem; position: relative; z-index: 1; min-width: 0; }
         @media(max-width:1024px) {
             .content-wrapper { flex-direction:column; overflow-y:auto; }
             .content-left, .content-right { padding:1rem; overflow-y:visible; }
@@ -144,7 +144,7 @@
         .search-result-item:hover { background: rgba(79, 142, 247, 0.1); color: var(--accent); }
         .search-result-item .meta { font-size: 0.7rem; color: var(--text-2); display: block; margin-top: 0.2rem; }
         
-        #map { flex:1; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg); z-index:1; }
+        #map { flex:1; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg); z-index:0; min-height:0; min-width:0; }
         .map-legend-horizontal { display:flex; flex-wrap:wrap; gap:1rem; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-size:0.8rem; align-items:center; }
         .legend-item { display:flex; align-items:center; gap:0.5rem; }
         .dot { width:10px; height:10px; border-radius:50%; }
@@ -160,6 +160,274 @@
         .map-popup-gmaps { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: var(--accent); text-decoration: none; margin-top: 8px; padding: 0.3rem 0.6rem; border: 1px solid rgba(79, 142, 247, 0.3); border-radius: 6px; transition: var(--trans); }
         .map-popup-gmaps:hover { background: rgba(79, 142, 247, 0.15); color: #fff; }
         .custom-icon { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    /* ── City Info Panel ── */
+        .city-info-btn {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            background: none; border: none; padding: 0;
+            color: var(--text); font-weight: 800; font-size: 0.95rem;
+            cursor: pointer; font-family: 'Inter', sans-serif;
+            transition: var(--trans); text-align: left;
+        }
+        .city-info-btn:hover { color: var(--accent); }
+        .city-info-btn .city-btn-icon {
+            font-size: 0.65rem; color: var(--accent); opacity: 0.7;
+            transition: var(--trans);
+        }
+        .city-info-btn:hover .city-btn-icon { opacity: 1; }
+
+        .city-panel {
+            position: fixed; top: 0; right: -420px; width: 400px;
+            height: 100vh; background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+            z-index: 9998; display: flex; flex-direction: column;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+        .city-panel.open { right: 0; }
+
+        .city-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .city-panel-header h2 {
+            font-size: 1.1rem; font-weight: 800;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-panel-close {
+            background: none; border: none; color: var(--text-2);
+            font-size: 1.1rem; cursor: pointer; padding: 0.3rem;
+            transition: var(--trans); border-radius: 6px;
+        }
+        .city-panel-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .city-panel-body {
+            flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem;
+            display: flex; flex-direction: column; gap: 1.25rem;
+        }
+
+        .city-stat-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem 1.25rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .city-stat-icon {
+            width: 42px; height: 42px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .city-stat-icon.area { background: rgba(79,142,247,0.15); color: var(--accent); }
+        .city-stat-label { font-size: 0.7rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; }
+        .city-stat-value { font-size: 1.8rem; font-weight: 800; color: var(--text); line-height: 1; margin-top: 2px; }
+        .city-stat-unit { font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-left: 2px; }
+
+        .city-section-title {
+            font-size: 0.7rem; font-weight: 700; color: var(--text-2);
+            text-transform: uppercase; letter-spacing: 0.08em;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .city-section-title::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        .station-card {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 0.85rem 1rem;
+            transition: var(--trans);
+        }
+        .station-card:hover { border-color: rgba(79,142,247,0.25); }
+        .station-name {
+            font-size: 0.9rem; font-weight: 700; color: var(--text);
+            margin-bottom: 0.6rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .station-name i { color: var(--accent); }
+        .station-dist {
+            font-size: 0.65rem; font-weight: 700; color: var(--orange);
+            margin-left: auto; white-space: nowrap;
+            background: rgba(248,168,75,0.12); padding: 0.15rem 0.5rem;
+            border-radius: 6px; font-family: monospace;
+        }
+        .station-times {
+            display: flex; gap: 0.5rem;
+        }
+        .station-time-chip {
+            flex: 1; background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; padding: 0.4rem 0.5rem;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+        }
+        .station-time-chip .chip-icon { font-size: 0.85rem; }
+        .station-time-chip .chip-icon.walk { color: var(--green); }
+        .station-time-chip .chip-icon.bike { color: var(--orange); }
+        .station-time-chip .chip-icon.car  { color: var(--accent); }
+        .station-time-chip .chip-val { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+        .station-time-chip .chip-label { font-size: 0.6rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .city-panel-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 1rem; padding: 3rem;
+            color: var(--text-2); font-size: 0.85rem;
+        }
+        .city-panel-loading i { font-size: 2rem; color: var(--accent); }
+        .city-panel-error {
+            background: rgba(242,92,105,0.1); border: 1px solid rgba(242,92,105,0.25);
+            border-radius: 10px; padding: 1rem; color: var(--red);
+            font-size: 0.82rem;
+        }
+
+        /* Enriched City Panel Styling */
+        .city-listings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .city-listing-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            transition: var(--trans);
+            text-decoration: none;
+            color: inherit;
+        }
+        .city-listing-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            background: var(--surface-2);
+        }
+        .city-listing-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.05);
+        }
+        .city-listing-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex: 1;
+            min-width: 0;
+        }
+        .city-listing-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .city-listing-price {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .city-listing-details {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .city-listing-status {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            width: fit-content;
+        }
+        .city-listing-status.nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .city-listing-status.active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .city-listing-status.disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        
+        .city-zone-controls {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .city-zone-rule-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .city-zone-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .city-zone-badge.forbidden { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+        .city-zone-badge.allowed { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+
+        @media (max-width: 768px) {
+            .city-panel { width: 100%; right: -100%; }
+            .city-panel.open { right: 0; }
+            .hide-mobile { display: none !important; }
+        }
+    
+/* Train Line Styles */
+        .train-line-search-group {
+            display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .train-input-wrapper {
+            position: relative;
+        }
+        .train-input-wrapper input {
+            width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 9px; padding: 0.65rem 1rem; color: var(--text);
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; transition: var(--trans);
+        }
+        .train-input-wrapper input:focus {
+            outline: none; border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+        }
+        .train-search-results {
+            position: absolute; top: 100%; left: 0; width: 100%;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 9px; box-shadow: var(--shadow); z-index: 10;
+            max-height: 200px; overflow-y: auto; display: none; margin-top: 4px;
+        }
+        .train-search-item {
+            padding: 0.6rem 1rem; cursor: pointer; transition: var(--trans);
+            font-size: 0.85rem; border-bottom: 1px solid var(--border);
+        }
+        .train-search-item:last-child { border-bottom: none; }
+        .train-search-item:hover { background: rgba(79, 142, 247, 0.12); color: var(--accent); }
+
+        .train-line-preview {
+            background: var(--surface-2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;
+            display: none;
+        }
+        .train-line-preview.active { display: block; }
+        .train-preview-title { font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .train-preview-info { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; }
+        .train-preview-info i { color: var(--accent); }
+
+        .color-picker { display: flex; gap: 0.5rem; margin-top: 1rem; }
+        .color-option {
+            width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: var(--trans);
+        }
+        .color-option:hover { transform: scale(1.2); }
+        .color-option.active { border-color: #fff; box-shadow: 0 0 8px currentColor; }
+
+        
     </style>
 </head>
 <body>
@@ -454,6 +722,87 @@
         </div>
     </main>
 
+    <!-- ── City Info Side Panel ── -->
+        <div class="city-panel" id="cityInfoPanel">
+            <div class="city-panel-header">
+                <h2>
+                    <i class="fa-solid fa-city" style="color: var(--orange);"></i>
+                    <span id="cityPanelName">—</span>
+                </h2>
+                <button class="city-panel-close" onclick="closeCityPanel()" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="city-panel-body" id="cityPanelBody">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+<!-- ── Train Line Modal ── -->
+    <div class="modal-backdrop" id="trainLineModal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-train" style="color: var(--accent);"></i> Ajouter une ligne de train</h2>
+                <button class="modal-close" onclick="closeTrainLineModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="train-line-search-group">
+                <div class="train-input-wrapper">
+                    <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.4rem;">Gare de départ</label>
+                    <div style="position: relative;">
+                        <input type="text" id="stationDepartureInput" placeholder="Rechercher une gare..." oninput="handleStationSearch(this, 'departure')" autocomplete="off">
+                        <div class="train-search-results" id="resultsDeparture"></div>
+                    </div>
+<!-- ── Nearby Cities Modal ── -->
+    <div class="modal-backdrop" id="nearbyCitiesModal">
+        <div class="modal modal-nearby">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-city" style="color: var(--orange);"></i> {{ t(request, 'map.nearby_title', 'Rechercher des villes aux alentours') }}</h2>
+                <button class="modal-close" onclick="closeNearbyCitiesModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="nearby-form-row">
+                <div class="nearby-form-group">
+                    <label for="nearbyCP"><i class="fa-solid fa-city" style="margin-right:3px"></i> {{ t(request, 'map.nearby_cp_label', 'Ville ou Code Postal') }}</label>
+                    <input type="text" id="nearbyCP" placeholder="{{ t(request, 'map.nearby_cp_placeholder', 'ex: Lyon ou 69000') }}">
+                </div>
+                <div class="nearby-form-group nearby-range-group">
+                    <div class="nearby-range-label">
+                        <span><i class="fa-solid fa-circle-notch" style="margin-right:3px"></i> {{ t(request, 'map.nearby_radius_label', 'Rayon') }}</span>
+                        <span class="nearby-range-val"><span id="nearbyRayonVal">5</span> km</span>
+                    </div>
+                    <input type="range" id="nearbyRayon" class="nearby-range" min="1" max="100" value="5"
+                           oninput="document.getElementById('nearbyRayonVal').textContent = this.value">
+                </div>
+                <button class="btn primary" onclick="searchNearbyCities()" id="btnSearchNearby">
+                    <i class="fa-solid fa-magnifying-glass"></i> {{ t(request, 'map.nearby_search_btn', 'Rechercher') }}
+                </button>
+            </div>
+
+            <div class="modal-result" id="nearbySearchResult"></div>
+
+            <div class="nearby-results-wrapper" id="nearbyResultsWrapper">
+                <div class="nearby-results-toolbar">
+                    <span id="nearbyCount" style="font-weight: 600; color: var(--text);"></span>
+                    <div class="nearby-check-controls">
+                        <button onclick="nearbyCheckAll(true)">{{ t(request, 'map.nearby_check_all', 'Tout cocher') }}</button>
+                        <button onclick="nearbyCheckAll(false)">{{ t(request, 'map.nearby_uncheck_all', 'Tout d\'cocher') }}</button>
+                    </div>
+                </div>
+<!-- ── Bulk Address Modal ── -->
+    <div class="modal-backdrop" id="bulkModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request, 'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
+                <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="modal-instructions">
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="instructions-content">
+                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
+                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                </div>
+            </div>
     <div id="toast" class="toast"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -461,21 +810,48 @@
         let zones = { 'city-forbidden': [], 'city-allowed': [], 'station-forbidden': [], 'station-allowed': [] };
         
         // ── Map Init ──
-        let map;
-        let pinMarkersLayer;
-        
-        function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([46.2276, 2.2137], 5);
-            L.control.zoom({ position: 'topright' }).addTo(map);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(map);
+// ── User Color Palette ──
+        // Curated palette of 8 visually distinct, vibrant colors that work on dark backgrounds
+        const USER_COLORS = [
+            '#e06cff',  // Purple-pink
+            '#ff6b6b',  // Coral red
+            '#4ecdc4',  // Teal
+            '#45b7d1',  // Sky blue
+            '#f7dc6f',  // Gold
+            '#ff8a5c',  // Warm orange
+            '#a29bfe',  // Soft indigo
+            '#fd79a8',  // Rose
+        ];
 
-            pinMarkersLayer = L.layerGroup().addTo(map);
-            loadMapData();
+        function getUserColor(username) {
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
         }
+
+        // ── Map Init ──
+        const map = L.map('map', {
+            zoomControl: false
+        }).setView([48.8566, 2.3522], 12); // Default to Paris
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Dark theme tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // Store pin markers layer for easy refresh
+        const pinMarkersLayer = L.layerGroup().addTo(map);
+        const zoneRulesLayer = L.layerGroup().addTo(map);
+        const stationCirclesLayer = L.layerGroup().addTo(map);
+        let globalStationPins = [];
+        let currentUser = '';
 
         async function loadMapData() {
             try {
@@ -484,63 +860,1018 @@
                 
                 const bounds = L.latLngBounds();
                 let markerCount = 0;
+                currentUser = data.current_user || '';
 
-                // Listings
+                // 1. Listings
                 data.listings.forEach(l => {
                     if (l.lat && l.lon) {
                         const color = l.status === 'nouvelle' ? 'var(--green)' : (l.status === 'disparue' ? 'var(--red)' : 'var(--accent)');
-                        const circle = L.circleMarker([l.lat, l.lon], { radius: 6, fillColor: color, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.8 }).addTo(map);
+                        const circle = L.circleMarker([l.lat, l.lon], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map);
+
+                        const priceStr = l.price ? l.price.toLocaleString('fr-FR') + ' €' : 'N/C';
+                        const specs = `${l.area || '?'}m² · ${l.rooms || '?'}p`;
+                        const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.location || l.city)}`;
                         
                         circle.bindPopup(`
                             <a href="/listings/${l.id}" class="map-popup-title">${l.title}</a>
-                            <div class="map-popup-price">${l.price ? l.price.toLocaleString('fr-FR') + ' €' : 'N/C'}</div>
-                            <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${l.location || l.city}</div>
+                            <div class="map-popup-price">${priceStr}</div>
+                            <div class="map-popup-specs">${specs}</div>
+                            <div class="map-popup-loc">
+                                <i class="fa-solid fa-location-dot"></i> 
+                                <span class="city-link" onclick="openCityPanel(event, '${(l.city || l.location || '').replace(/'/g, "\\'")}')">
+                                    ${l.location || l.city}
+                                </span>
+                            </div>
+                            <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                            </a>
                         `);
+                        
+                        circle.on('dblclick', () => window.open(gmapsUrl, '_blank'));
+                        
                         bounds.extend([l.lat, l.lon]);
                         markerCount++;
                     }
                 });
 
-                // Pins
-                if (data.pins) {
-                    data.pins.forEach(p => {
-                        const isStation = p.pin_type === 'station';
-                        const pinBg = isStation ? 'var(--yellow)' : '#a29bfe';
-                        const pinColor = isStation ? '#000' : '#fff';
-                        const iconHtml = isStation ? '<i class="fa-solid fa-train"></i>' : '<i class="fa-solid fa-house-chimney"></i>';
-                        
-                        const marker = L.marker([p.lat, p.lon], {
-                            icon: L.divIcon({
-                                className: 'custom-div-icon',
-                                html: `<div style="background: ${pinBg}; color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">${iconHtml}</div>`,
-                                iconSize: [26, 26], iconAnchor: [13, 13]
-                            })
-                        }).addTo(pinMarkersLayer);
-                        
-                        marker.bindPopup(`<strong>${p.title || 'Adresse'}</strong><br>${p.address}`);
-                        bounds.extend([p.lat, p.lon]);
-                    });
-                }
-                
-                // POIs & Work
-                if (data.user.work && data.user.work.lat) {
-                    L.marker([data.user.work.lat, data.user.work.lon], {
+                // 2. Work Location
+                if (data.user.work && data.user.work.lat && data.user.work.lon) {
+                    const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.user.work.address)}`;
+                    const workMarker = L.marker([data.user.work.lat, data.user.work.lon], {
                         icon: L.divIcon({
                             className: 'custom-div-icon',
-                            html: `<div style="background: var(--accent); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; box-shadow: var(--shadow);"><i class="fa-solid fa-briefcase"></i></div>`,
-                            iconSize: [32, 32], iconAnchor: [16, 16]
+                            html: `<div style="background: var(--accent); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #fff; box-shadow: var(--shadow);">
+                                    <i class="fa-solid fa-briefcase"></i>
+                                   </div>`,
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
                         })
                     }).addTo(map);
+                    workMarker.bindPopup(`
+                        <strong>Mon lieu de travail</strong><br>${data.user.work.address}
+                        <br>
+                        <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps" style="margin-top: 10px;">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                        </a>
+                    `);
+                    workMarker.on('dblclick', () => window.open(gmapsUrl, '_blank'));
                     bounds.extend([data.user.work.lat, data.user.work.lon]);
                 }
 
+                // 3. POIs
+                (data.user.pois || []).forEach(poi => {
+                    if (poi.lat && poi.lon) {
+                        const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(poi.address)}`;
+                        const poiMarker = L.marker([poi.lat, poi.lon], {
+                            icon: L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="background: var(--yellow); color: black; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow);">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                       </div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            })
+                        }).addTo(map);
+                        poiMarker.bindPopup(`
+                            <strong>${poi.name}</strong><br>${poi.address}
+                            <br>
+                            <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps" style="margin-top: 10px;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                            </a>
+                        `);
+                        poiMarker.on('dblclick', () => window.open(gmapsUrl, '_blank'));
+                        bounds.extend([poi.lat, poi.lon]);
+                    }
+                });
+
+                // 4. Shared Map Pins (from all users)
+                renderPins(data.pins || []);
+                (data.pins || []).forEach(p => {
+                    bounds.extend([p.lat, p.lon]);
+                });
+
                 if (markerCount > 0 || (data.pins && data.pins.length > 0)) {
-                    map.fitBounds(bounds, { padding: [30, 30] });
+                    map.fitBounds(bounds, { padding: [50, 50] });
                 }
+                
+                const pinCount = (data.pins || []).length;
+                document.getElementById('stats').textContent = `${markerCount} annonces · ${pinCount} adresses`;
+
+                // 5. Train Lines
+                loadTrainLines();
+
+                // 6. Zone Rules (Forbidden/Allowed)
+                loadZoneRules(data.zone_rules || [], data.to_qualify_cities || []);
+
             } catch (err) {
                 console.error("Error loading map data:", err);
+                document.getElementById('stats').textContent = "Erreur lors du chargement des données";
             }
         }
+
+        function renderPins(pins) {
+            pinMarkersLayer.clearLayers();
+            const usersSeen = new Set();
+            globalStationPins = [];
+
+            pins.forEach(p => {
+                const color = getUserColor(p.created_by);
+                usersSeen.add(p.created_by);
+
+                const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.address)}`;
+                
+                const isStation = p.pin_type === 'station';
+                if (isStation) {
+                    globalStationPins.push(p);
+                }
+                const pinBg = isStation ? 'var(--yellow)' : color;
+                const pinColor = isStation ? '#000' : '#fff';
+                const iconHtml = isStation
+                    ? `<i class="fa-solid fa-train"></i>`
+                    : `<i class="fa-solid fa-house-chimney"></i>`;
+                
+                const marker = L.marker([p.lat, p.lon], {
+                    icon: L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div style="background: ${pinBg}; color: ${pinColor}; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow); cursor: pointer; font-size: 11px;">
+                                ${iconHtml}
+                               </div>`,
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                });
+
+                const canDelete = (p.created_by === currentUser) || '{{ request.session.get("role") }}' === 'admin';
+                const deleteBtn = canDelete 
+                    ? `<button class="map-popup-delete" onclick="deletePin(${p.id})"><i class="fa-solid fa-trash-can"></i> {{ t(request, 'map.delete_pin', 'Supprimer') }}</button>`
+                    : '';
+
+                // Nearby city tag
+                const nearbyTagTpl = '{{ t(request, "map.nearby_distance_tag", "\u00c0 {distance} km de {city} ({cp})") }}';
+                const nearbyTag = (p.nearby_distance_km != null)
+                    ? `<div class="map-nearby-tag"><i class="fa-solid fa-location-crosshairs"></i> ${nearbyTagTpl.replace('{distance}', p.nearby_distance_km.toLocaleString('fr-FR')).replace('{city}', p.nearby_ref_commune).replace('{cp}', p.nearby_ref_cp)}</div>`
+                    : '';
+
+                // City name – clickable to open info panel for nearby city pins
+                const isNearbyPin = (p.nearby_distance_km != null);
+                // Extract plain city name (strip CP suffix like "Lyon (69000)")
+                const rawTitle = p.title || '';
+                const cityNameForPanel = rawTitle.replace(/\s*\(\d{5}\)$/, '').trim();
+                const titleHtml = isNearbyPin
+                    ? `<button class="city-info-btn" onclick="openCityPanel(event, '${cityNameForPanel.replace(/'/g, "\\'")}')">` +
+                      `<i class="fa-solid fa-up-right-from-square city-btn-icon"></i>${rawTitle}` +
+                      `</button>`
+                    : `<strong class="map-popup-title">${rawTitle}</strong>`;
+
+                let stationRulesHtml = '';
+                if (isStation) {
+                    stationRulesHtml = `
+                    <div style="display: flex; gap: 0.5rem; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <button class="map-popup-action-btn red" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                            <i class="fa-solid fa-ban"></i> Interdire
+                        </button>
+                        <button class="map-popup-action-btn green" onclick="addZoneRuleFromMap('${p.title.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                            <i class="fa-solid fa-check"></i> Autoriser
+                        </button>
+                    </div>`;
+                }
+
+
+                marker.bindPopup(`
+                    ${titleHtml}
+                    ${nearbyTag}
+                    <div class="map-popup-loc"><i class="fa-solid fa-location-dot"></i> ${p.address}</div>
+                    <a href="${gmapsUrl}" target="_blank" rel="noopener" class="map-popup-gmaps">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> {{ t(request, 'map.open_gmaps', 'Ouvrir dans Google Maps') }}
+                    </a>
+                    ${stationRulesHtml}
+                    <div class="map-popup-meta">
+                        <i class="fa-solid fa-user"></i>
+                        <span style="color: ${color}; font-weight: 600;">${p.created_by}</span>
+                        ${deleteBtn}
+                    </div>
+                `);
+
+                // Clicking the marker icon opens Google Maps directly
+                marker.on('click', function(e) {
+                    // Open popup (default), but also set up the Google Maps redirect
+                    // The popup has the link, but we can also handle double-click for direct navigation
+                });
+                marker.on('dblclick', function(e) {
+                    window.open(gmapsUrl, '_blank');
+                });
+
+                pinMarkersLayer.addLayer(marker);
+            });
+
+            // Update legend with user colors
+            updatePinLegend(usersSeen);
+            updateStationCircles();
+        }
+
+        function updateStationCircles() {
+            stationCirclesLayer.clearLayers();
+            const inputEl = document.getElementById('sncfCircleDiameter');
+            if (!inputEl) return;
+            const diameterKm = parseFloat(inputEl.value) || 0;
+            if (diameterKm <= 0) return;
+            
+            const radiusMeters = (diameterKm / 2) * 1000;
+            
+            globalStationPins.forEach(p => {
+                L.circle([p.lat, p.lon], {
+                    radius: radiusMeters,
+                    color: 'var(--yellow)',
+                    fillColor: 'var(--yellow)',
+                    fillOpacity: 0.1,
+                    weight: 1,
+                    dashArray: '5, 5'
+                }).addTo(stationCirclesLayer);
+            });
+        }
+
+        function updatePinLegend(usersSeen) {
+            const section = document.getElementById('legend-pins-section');
+            if (usersSeen.size === 0) {
+                section.innerHTML = '';
+                return;
+            }
+            let html = `<div class="legend-separator"></div>`;
+            html += `<div class="legend-section-title">{{ t(request, 'map.custom_pins', 'Adresses personnalisées') }}</div>`;
+            usersSeen.forEach(username => {
+                const color = getUserColor(username);
+                html += `<div class="legend-item"><div class="dot" style="background: ${color};"></div> ${username}</div>`;
+            });
+            section.innerHTML = html;
+        }
+
+        async function deletePin(pinId) {
+            if (!confirm('{{ t(request, "ready_searches.delete_confirm", "Supprimer ?") }}')) return;
+            try {
+                const res = await fetch(`/api/map-pins/${pinId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    // Reload map data
+                    loadMapData();
+                }
+            } catch (err) {
+                console.error('Error deleting pin:', err);
+            }
+        }
+
+        // ── Train Line Logic ──
+        let trainStations = { departure: null, arrival: null };
+        let currentTrainLinePath = null;
+        let selectedTrainColor = '#4f8ef7';
+        const trainLinesLayer = L.layerGroup().addTo(map);
+
+        function openTrainLineModal() {
+            document.getElementById('trainLineModal').classList.add('active');
+            resetTrainModal();
+        }
+
+        function closeTrainLineModal() {
+            document.getElementById('trainLineModal').classList.remove('active');
+            if (currentTrainLinePath) {
+                map.removeLayer(currentTrainLinePath);
+                currentTrainLinePath = null;
+            }
+        }
+
+        function resetTrainModal() {
+            trainStations = { departure: null, arrival: null };
+            document.getElementById('stationDepartureInput').value = '';
+            document.getElementById('stationArrivalInput').value = '';
+            document.getElementById('trainLinePreview').classList.remove('active');
+            document.getElementById('btnSubmitTrainLine').disabled = true;
+            document.getElementById('trainModalResult').className = 'modal-result';
+            document.getElementById('trainModalResult').textContent = '';
+            document.getElementById('resultsDeparture').style.display = 'none';
+            document.getElementById('resultsArrival').style.display = 'none';
+        }
+
+        let stationSearchTimeout = null;
+        function handleStationSearch(input, type) {
+            clearTimeout(stationSearchTimeout);
+            const query = input.value.trim();
+            const resultsDiv = document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            
+            if (query.length < 3) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            stationSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/stations/search?q=${encodeURIComponent(query)}`);
+                    const stations = await res.json();
+                    
+                    resultsDiv.innerHTML = '';
+                    if (stations.length === 0) {
+                        resultsDiv.innerHTML = '<div class="train-search-item">Aucune gare trouvée</div>';
+                    } else {
+                        stations.forEach(s => {
+                            const div = document.createElement('div');
+                            div.className = 'train-search-item';
+                            div.textContent = s.name;
+                            div.onclick = () => selectStation(s.name, s.lat, s.lon, type);
+                            resultsDiv.appendChild(div);
+                        });
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (err) {
+                    console.error("Station search error:", err);
+                }
+            }, 400);
+        }
+
+        function selectStation(name, lat, lon, type) {
+            trainStations[type] = { name, lat, lon };
+            document.getElementById(`station${type.charAt(0).toUpperCase() + type.slice(1)}Input`).value = name;
+            document.getElementById(`results${type.charAt(0).toUpperCase() + type.slice(1)}`).style.display = 'none';
+            updateTrainPreview();
+        }
+
+        async function updateTrainPreview() {
+            if (trainStations.departure && trainStations.arrival) {
+                const text = `${trainStations.departure.name} ➔ ${trainStations.arrival.name}`;
+                document.getElementById('previewStationsText').textContent = text;
+                document.getElementById('trainLinePreview').classList.add('active');
+                
+                // Show on map as preview
+                if (currentTrainLinePath) map.removeLayer(currentTrainLinePath);
+                
+                try {
+                    const res = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                    const path = await res.json();
+                    
+                    currentTrainLinePath = L.polyline(path, {
+                        color: selectedTrainColor,
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: '10, 10'
+                    }).addTo(map);
+                    
+                    map.fitBounds(currentTrainLinePath.getBounds(), { padding: [50, 50] });
+                    document.getElementById('btnSubmitTrainLine').disabled = false;
+                } catch (err) {
+                    console.error("Path error:", err);
+                }
+            }
+        }
+
+        function selectTrainColor(el) {
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+            selectedTrainColor = el.style.backgroundColor || el.style.background;
+            if (currentTrainLinePath) {
+                currentTrainLinePath.setStyle({ color: selectedTrainColor });
+            }
+        }
+
+        async function submitTrainLine() {
+            const btn = document.getElementById('btnSubmitTrainLine');
+            const resultEl = document.getElementById('trainModalResult');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traçage...';
+            
+            try {
+                // Get the path from the current preview or fetch again to be sure
+                const resPath = await fetch(`/api/geo/train-path?lat1=${trainStations.departure.lat}&lon1=${trainStations.departure.lon}&lat2=${trainStations.arrival.lat}&lon2=${trainStations.arrival.lon}`);
+                const path = await resPath.json();
+
+                const res = await fetch('/api/geo/train-lines', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        departure_station: trainStations.departure.name,
+                        arrival_station: trainStations.arrival.name,
+                        path: path,
+                        color: selectedTrainColor
+                    })
+                });
+
+                if (res.ok) {
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = 'Ligne ajoutée avec succès !';
+                    loadTrainLines(); // Refresh lines on map
+                    setTimeout(() => closeTrainLineModal(), 1500);
+                } else {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = 'Erreur lors de l\'enregistrement de la ligne.';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Erreur réseau : ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Tracer la ligne';
+            }
+        }
+
+        async function loadTrainLines() {
+            try {
+                const res = await fetch('/api/geo/train-lines');
+                const lines = await res.json();
+                
+                trainLinesLayer.clearLayers();
+                lines.forEach(line => {
+                    const path = JSON.parse(line.path_json);
+                    const polyline = L.polyline(path, {
+                        color: line.color,
+                        weight: 5,
+                        opacity: 0.7
+                    }).addTo(trainLinesLayer);
+                    
+                    polyline.bindPopup(`
+                        <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 5px;">
+                            <i class="fa-solid fa-train" style="color: ${line.color}"></i> Section de ligne
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-2);">
+                            <strong>De :</strong> ${line.departure_station}<br>
+                            <strong>À :</strong> ${line.arrival_station}
+                        </div>
+                        <div class="map-popup-meta" style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 5px;">
+                            <i class="fa-solid fa-user"></i> ${line.created_by}
+                            <button class="map-popup-delete" onclick="deleteTrainLine(${line.id})" style="margin-left: auto;">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    `);
+                });
+            } catch (err) {
+                console.error("Error loading train lines:", err);
+            }
+        }
+
+        async function deleteTrainLine(id) {
+            if (!confirm('Supprimer cette section de ligne ?')) return;
+            try {
+                const res = await fetch(`/api/geo/train-lines/${id}`, { method: 'DELETE' });
+                if (res.ok) loadTrainLines();
+            } catch (err) {
+                console.error("Error deleting train line:", err);
+            }
+        }
+
+        // ── Modal Logic ──
+        function openBulkModal() {
+            document.getElementById('bulkModal').classList.add('active');
+            document.getElementById('bulkTextarea').value = '';
+            document.getElementById('modalResult').className = 'modal-result';
+            document.getElementById('modalResult').textContent = '';
+            document.getElementById('btnSubmitBulk').disabled = false;
+        }
+
+        function closeBulkModal() {
+            document.getElementById('bulkModal').classList.remove('active');
+        }
+
+        async function submitBulk() {
+            const textarea = document.getElementById('bulkTextarea');
+            const resultEl = document.getElementById('modalResult');
+            const btn = document.getElementById('btnSubmitBulk');
+            const raw = textarea.value.trim();
+
+            if (!raw) return;
+
+            // Parse lines: "Title ; Address"
+            const lines = raw.split('\n').filter(l => l.trim());
+            const pins = [];
+
+            for (const line of lines) {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    const title = parts[0].trim();
+                    const address = parts.slice(1).join(';').trim(); // In case address contains ;
+                    if (title && address) {
+                        pins.push({ title, address });
+                    }
+                }
+            }
+
+            if (pins.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.no_valid_entries", "No valid entries found.") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout en cours...") }}';
+            resultEl.className = 'modal-result';
+            resultEl.textContent = '';
+
+            try {
+                const res = await fetch('/api/map-pins', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pins })
+                });
+
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                        msg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            msg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        msg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.innerHTML = msg;
+
+                    // Reload map data
+                    loadMapData();
+
+                    // Close modal after a short delay if no errors
+                    if (!data.errors || data.errors.length === 0) {
+                        setTimeout(() => closeBulkModal(), 2000);
+                    }
+                } else {
+                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
+                    if (data.errors && data.errors.length > 0) {
+                        errMsg += `<ul class="modal-error-list">`;
+                        data.errors.forEach(e => {
+                            errMsg += `<li>${e.title} — ${e.address}</li>`;
+                        });
+                        errMsg += `</ul>`;
+                    }
+                    resultEl.className = 'modal-result error';
+                    resultEl.innerHTML = errMsg;
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = 'Network error: ' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> {{ t(request, "map.submit", "Ajouter les adresses") }}';
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('bulkModal').addEventListener('click', function(e) {
+            if (e.target === this) closeBulkModal();
+        });
+        document.getElementById('nearbyCitiesModal').addEventListener('click', function(e) {
+            if (e.target === this) closeNearbyCitiesModal();
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { closeBulkModal(); closeNearbyCitiesModal(); closeCityPanel(); }
+        });
+
+        // ── Nearby Cities Modal Logic ──
+        let nearbyRefCommune = '';
+        let nearbyRefCp = '';
+
+        function openNearbyCitiesModal() {
+            document.getElementById('nearbyCitiesModal').classList.add('active');
+            document.getElementById('nearbyCP').value = '';
+            document.getElementById('nearbyRayon').value = 5;
+            document.getElementById('nearbyRayonVal').textContent = '5';
+            document.getElementById('nearbySearchResult').className = 'modal-result';
+            document.getElementById('nearbySearchResult').textContent = '';
+            document.getElementById('nearbyResultsWrapper').classList.remove('visible');
+            document.getElementById('nearbyCitiesTableBody').innerHTML = '';
+            nearbyRefCommune = '';
+            nearbyRefCp = '';
+            setTimeout(() => document.getElementById('nearbyCP').focus(), 100);
+        }
+
+        function closeNearbyCitiesModal() {
+            document.getElementById('nearbyCitiesModal').classList.remove('active');
+        }
+
+        async function searchNearbyCities() {
+            const query = document.getElementById('nearbyCP').value.trim();
+            const rayon = document.getElementById('nearbyRayon').value;
+            const resultEl = document.getElementById('nearbySearchResult');
+            const btn = document.getElementById('btnSearchNearby');
+
+            if (!query) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_invalid_query", "Veuillez saisir une ville ou un code postal.") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.nearby_searching", "Recherche...") }}';
+            resultEl.className = 'modal-result';
+            resultEl.textContent = '';
+            document.getElementById('nearbyResultsWrapper').classList.remove('visible');
+
+            try {
+                const res = await fetch(`/api/nearby-cities?query=${encodeURIComponent(query)}&rayon=${rayon}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                const cities = data.cities;
+                const reference = data.reference;
+
+                if (!cities || cities.length === 0) {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_results", "Aucune ville trouvée pour cette recherche.") }}';
+                    return;
+                }
+
+                // Use reference info from API
+                nearbyRefCommune = reference.name;
+                nearbyRefCp = reference.cp;
+
+                // Populate table
+                const tbody = document.getElementById('nearbyCitiesTableBody');
+                tbody.innerHTML = '';
+                cities.forEach((city, idx) => {
+                    const distKm = typeof city.distance === 'number' ? city.distance.toFixed(1) : city.distance;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="td-check"><input type="checkbox" class="nearby-cb" id="nearby-cb-${idx}" checked></td>
+                        <td>${city.nom_commune || ''}</td>
+                        <td class="td-cp">${city.code_postal || ''}</td>
+                        <td class="td-dist">${distKm} km</td>
+                    `;
+                    // Store city data on the row
+                    tr.dataset.commune = city.nom_commune || '';
+                    tr.dataset.cp = city.code_postal || '';
+                    tr.dataset.distance = city.distance || 0;
+                    // Click row to toggle checkbox
+                    tr.addEventListener('click', function(e) {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = this.querySelector('.nearby-cb');
+                            cb.checked = !cb.checked;
+                        }
+                        tr.classList.toggle('selected', tr.querySelector('.nearby-cb').checked);
+                    });
+                    tr.querySelector('.nearby-cb').addEventListener('change', function() {
+                        tr.classList.toggle('selected', this.checked);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('nearbyCount').textContent = `${cities.length} {{ t(request, "map.nearby_found", "ville(s) trouv\u00e9e(s)") }}`;
+                document.getElementById('nearbyResultsWrapper').classList.add('visible');
+
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_error_prefix", "Erreur : ") }}' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> {{ t(request, "map.nearby_search_btn", "Rechercher") }}';
+            }
+        }
+
+        function nearbyCheckAll(checked) {
+            document.querySelectorAll('.nearby-cb').forEach(cb => {
+                cb.checked = checked;
+                cb.closest('tr').classList.toggle('selected', checked);
+            });
+        }
+
+        async function addNearbyCitiesToMap() {
+            const btn = document.getElementById('btnAddNearby');
+            const resultEl = document.getElementById('nearbySearchResult');
+
+            // Collect selected rows
+            const rows = document.querySelectorAll('#nearbyCitiesTableBody tr');
+            const selected = [];
+            rows.forEach(row => {
+                const cb = row.querySelector('.nearby-cb');
+                if (cb && cb.checked) {
+                    selected.push({
+                        nom_commune: row.dataset.commune,
+                        code_postal: row.dataset.cp,
+                        distance: parseFloat(row.dataset.distance),
+                        ref_commune: nearbyRefCommune,
+                        ref_cp: nearbyRefCp
+                    });
+                }
+            });
+
+            if (selected.length === 0) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_none_selected", "Veuillez cocher au moins une ville.") }}';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.nearby_adding", "Ajout en cours...") }}';
+
+            try {
+                const res = await fetch('/api/map-pins/nearby', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        cities: selected,
+                        include_stations: document.getElementById('addStationsNearCities').checked
+                    })
+                });
+                const data = await res.json();
+
+                if (data.created > 0) {
+                    let msg = `${data.created} {{ t(request, "map.nearby_success", "ville(s) ajout\u00e9e(s) \u00e0 la carte !") }}`;
+                    if (data.errors && data.errors.length > 0) {
+                        msg += `\n\u26a0\ufe0f ${data.errors.length} {{ t(request, "map.nearby_geocode_errors", "erreur(s) de g\u00e9olocalisation.") }}`;
+                    }
+                    resultEl.className = 'modal-result success';
+                    resultEl.textContent = msg;
+                    resultEl.style.whiteSpace = 'pre-line';
+                    loadMapData();
+                    setTimeout(() => closeNearbyCitiesModal(), 2500);
+                } else {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = '{{ t(request, "map.nearby_no_geocode", "Aucune ville n\'a pu \u00eatre g\u00e9olocalis\u00e9e.") }}';
+                }
+            } catch (err) {
+                resultEl.className = 'modal-result error';
+                resultEl.textContent = '{{ t(request, "map.nearby_network_error", "Erreur r\u00e9seau : ") }}' + err.message;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> {{ t(request, "map.nearby_add_btn", "Ajouter \u00e0 la carte") }}';
+            }
+        }
+
+        // Allow Enter key in postal code field to trigger search
+        document.getElementById('nearbyCP').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') searchNearbyCities();
+        });
+
+        // ── City Info Panel ──
+        function openCityPanel(event, cityName) {
+            if (event) event.stopPropagation();
+            const panel = document.getElementById('cityInfoPanel');
+            const nameEl = document.getElementById('cityPanelName');
+            const body = document.getElementById('cityPanelBody');
+
+            nameEl.textContent = cityName;
+            body.innerHTML = `
+                <div class="city-panel-loading">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    Chargement des données…
+                </div>`;
+            panel.classList.add('open');
+
+            fetchCityInfo(cityName);
+            highlightCityContour(cityName, true);
+        }
+
+        function closeCityPanel() {
+            document.getElementById('cityInfoPanel').classList.remove('open');
+        }
+
+        const _cityInfoCache = {};
+
+        async function fetchCityInfo(cityName) {
+            const body = document.getElementById('cityPanelBody');
+
+            if (_cityInfoCache[cityName]) {
+                renderCityInfo(_cityInfoCache[cityName]);
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/city-info?city=${encodeURIComponent(cityName)}`);
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                _cityInfoCache[cityName] = data;
+                renderCityInfo(data);
+            } catch (err) {
+                body.innerHTML = `<div class="city-panel-error"><i class="fa-solid fa-triangle-exclamation"></i> ${err.message}</div>`;
+            }
+        }
+
+        function fmtMin(min) {
+            if (min == null) return '—';
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`;
+        }
+
+        function renderCityInfo(data) {
+            const body = document.getElementById('cityPanelBody');
+            const cityName = data.city;
+            const safeCityName = cityName.replace(/'/g, "\\'");
+
+            // 1. Zone Management Card
+            let zoneHtml = `
+            <div class="city-section-title"><i class="fa-solid fa-ban"></i> Gestion de la zone</div>
+            <div class="city-zone-controls">`;
+
+            if (data.zone_rule) {
+                const isForbidden = data.zone_rule.rule === 'forbidden';
+                const badgeClass = isForbidden ? 'forbidden' : 'allowed';
+                const badgeLabel = isForbidden ? 'Zone Interdite' : 'Zone Autorisée';
+                const badgeIcon = isForbidden ? 'fa-ban' : 'fa-check';
+
+                zoneHtml += `
+                <div class="city-zone-rule-status">
+                    <span class="city-zone-badge ${badgeClass}">
+                        <i class="fa-solid ${badgeIcon}"></i> ${badgeLabel}
+                    </span>
+                    <button class="map-popup-delete" style="margin: 0; padding: 0.4rem 0.8rem;" onclick="deleteZoneFromPanel(${data.zone_rule.id}, '${safeCityName}')">
+                        <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                    </button>
+                </div>`;
+            } else {
+                zoneHtml += `
+                <div style="font-size: 0.8rem; color: var(--text-2); line-height: 1.4;">
+                    Cette ville n'est pas configurée dans vos règles de zones géographiques.
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 4px;">
+                    <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'allowed')">
+                        <i class="fa-solid fa-check"></i> Autoriser
+                    </button>
+                    <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneFromPanel('${safeCityName}', 'forbidden')">
+                        <i class="fa-solid fa-ban"></i> Interdire
+                    </button>
+                </div>`;
+            }
+            zoneHtml += `</div>`;
+
+            // 2. Surface total Card
+            let areaHtml = '';
+            if (data.area_km2 != null) {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div>
+                            <span class="city-stat-value">${data.area_km2.toLocaleString('fr-FR')}</span>
+                            <span class="city-stat-unit">km²</span>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                areaHtml = `
+                <div class="city-stat-card">
+                    <div class="city-stat-icon area"><i class="fa-solid fa-draw-polygon"></i></div>
+                    <div>
+                        <div class="city-stat-label">Surface totale</div>
+                        <div style="color: var(--text-2); font-size: 0.82rem; margin-top: 4px;">Donnée non disponible</div>
+                    </div>
+                </div>`;
+            }
+
+            // 3. Listings Section
+            let listingsHtml = '';
+            if (data.listings && data.listings.length > 0) {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières (${data.listings.length})</div>
+                <div class="city-listings-list">`;
+                
+                data.listings.forEach(l => {
+                    const priceStr = typeof l.price === 'number' ? l.price.toLocaleString('fr-FR') + ' €' : (l.price || 'N/C');
+                    const specs = `${l.area ? l.area + ' m²' : ''} ${l.area && l.rooms ? '•' : ''} ${l.rooms ? l.rooms + ' p.' : ''}`.trim() || 'N/C';
+                    
+                    // Photo handling
+                    let imgHtml = `<div class="city-listing-img" style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);"><i class="fa-solid fa-image fa-lg"></i></div>`;
+                    if (l.photos && l.photos.length > 0) {
+                        imgHtml = `<img src="${l.photos[0]}" class="city-listing-img" alt="${l.title || ''}" onerror="this.outerHTML='<div class=&quot;city-listing-img&quot; style=&quot;display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); color: var(--text-2);&quot;><i class=&quot;fa-solid fa-image fa-lg&quot;></i></div>'">`;
+                    }
+
+                    // Status handling
+                    let statusLabel = '';
+                    let statusClass = '';
+                    const statusLower = (l.status || '').toLowerCase();
+                    if (statusLower === 'new' || statusLower === 'nouvelle') {
+                        statusLabel = 'Nouvelle';
+                        statusClass = 'nouvelle';
+                    } else if (statusLower === 'active') {
+                        statusLabel = 'Active';
+                        statusClass = 'active';
+                    } else if (statusLower === 'disappeared' || statusLower === 'disparue') {
+                        statusLabel = 'Disparue';
+                        statusClass = 'disparue';
+                    }
+
+                    const statusHtml = statusLabel ? `<span class="city-listing-status ${statusClass}">${statusLabel}</span>` : '';
+
+                    listingsHtml += `
+                    <a href="${l.url}" class="city-listing-card" target="_blank">
+                        ${imgHtml}
+                        <div class="city-listing-info">
+                            <div class="city-listing-title" title="${l.title || ''}">${l.title || ''}</div>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span class="city-listing-price">${priceStr}</span>
+                                ${statusHtml}
+                            </div>
+                            <div class="city-listing-details">${specs}</div>
+                        </div>
+                    </a>`;
+                });
+                listingsHtml += `</div>`;
+            } else {
+                listingsHtml += `
+                <div class="city-section-title"><i class="fa-solid fa-house-chimney"></i> Annonces immobilières</div>
+                <div style="color: var(--text-2); font-size: 0.82rem; padding: 0.5rem 0;">Aucune annonce active dans cette ville.</div>`;
+            }
+
+            // 4. Stations section
+            let stationsHtml = '';
+            if (data.stations && data.stations.length > 0) {
+                stationsHtml = `<div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF à proximité</div>`;
+                data.stations.forEach(s => {
+                    const distLabel = s.distance_km != null ? ` <span class="station-dist">${s.distance_km} km</span>` : '';
+                    stationsHtml += `
+                    <div class="station-card">
+                        <div class="station-name">
+                            <i class="fa-solid fa-train-subway"></i>
+                            ${s.name}${distLabel}
+                        </div>
+                        <div class="station-times">
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-person-walking chip-icon walk"></i>
+                                <span class="chip-val">${fmtMin(s.walk)}</span>
+                                <span class="chip-label">À pied</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-bicycle chip-icon bike"></i>
+                                <span class="chip-val">${fmtMin(s.bike)}</span>
+                                <span class="chip-label">Vélo</span>
+                            </div>
+                            <div class="station-time-chip">
+                                <i class="fa-solid fa-car chip-icon car"></i>
+                                <span class="chip-val">${fmtMin(s.car)}</span>
+                                <span class="chip-label">Voiture</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button class="map-popup-action-btn red" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'forbidden')">
+                                <i class="fa-solid fa-ban"></i> Interdire
+                            </button>
+                            <button class="map-popup-action-btn green" style="flex: 1; justify-content: center;" onclick="addZoneRuleFromMap('${s.name.replace(/'/g, "\\'")}', 'station', 'allowed')">
+                                <i class="fa-solid fa-check"></i> Autoriser
+                            </button>
+                        </div>
+                    </div>`;
+                });
+            } else {
+                stationsHtml = `
+                <div class="city-section-title"><i class="fa-solid fa-train"></i> Gares SNCF</div>
+                <div style="color: var(--text-2); font-size: 0.82rem;">Aucune gare trouvée dans un rayon de 20 km.</div>`;
+            }
+
+            body.innerHTML = zoneHtml + areaHtml + listingsHtml + stationsHtml;
+        }
+
+        async function addZoneFromPanel(name, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name, rule })
+                });
+                if (res.ok) {
+                    delete _cityInfoCache[name];
+                    loadMapData();
+                    fetchCityInfo(name);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
+        async function deleteZoneFromPanel(ruleId, cityName) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    delete _cityInfoCache[cityName];
+                    loadMapData();
+                    fetchCityInfo(cityName);
+                } else {
+                    alert("Erreur: Action impossible");
+                }
+            } catch (err) {
+                console.error("Error deleting zone rule:", err);
+            }
+        }
+        // Alias for carte.html compatibility
+        function addZoneRuleFromMap(name, type, rule) {
+            quickAdd(name, type, rule);
+        }
+
+
 
         async function centerMapOnZone(zoneName) {
             try {
@@ -914,11 +2245,405 @@
         }
         
         // Init logic
+        // ── Zone Rules (Forbidden/Allowed) Logic ──
+        async function loadZoneRules(rules, toQualifyCities = []) {
+            zoneRulesLayer.clearLayers();
+            for (const rule of rules) {
+                if (rule.zone_type === 'city') {
+                    renderCityZone(rule);
+                } else if (rule.zone_type === 'station') {
+                    renderStationZone(rule);
+                }
+            }
+            for (const cityName of toQualifyCities) {
+                renderToQualifyCityZone(cityName);
+            }
+        }
+
+        // Helper to fetch commune contour from geo.api.gouv.fr supporting "City Name (Zip)" format
+        async function fetchCommuneData(cityNameOrRuleName) {
+            if (!cityNameOrRuleName) return null;
+            let cityNameOnly = cityNameOrRuleName.trim();
+            let zipCode = null;
+
+            // Extract zip code from parentheses if present, e.g. "Colombier (07430)"
+            const parenMatch = cityNameOrRuleName.match(/\(([^)]+)\)/);
+            if (parenMatch) {
+                cityNameOnly = cityNameOrRuleName.replace(parenMatch[0], '').trim();
+                const content = parenMatch[1].trim();
+                if (content.match(/^\d{5}$/)) {
+                    zipCode = content;
+                }
+            }
+
+            // Also clean trailing zip codes not in parentheses if any
+            const endMatch = cityNameOnly.match(/\b\d{5}\b$/);
+            if (endMatch) {
+                zipCode = endMatch[0];
+                cityNameOnly = cityNameOnly.substring(0, endMatch.index).trim();
+            }
+
+            let url = '';
+            // Strategy 1: query by codePostal if we extracted a 5-digit zip code
+            if (zipCode) {
+                url = `https://geo.api.gouv.fr/communes?codePostal=${zipCode}&fields=nom,code,contour&format=json&geometry=contour`;
+            } else {
+                url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data && data.length > 0) {
+                    // Try to find exact match by name ignoring case
+                    const lowerName = cityNameOnly.toLowerCase();
+                    let match = data.find(c => c.nom.toLowerCase() === lowerName);
+                    
+                    // Fallback: search ignoring accents or hyphens
+                    if (!match) {
+                        const normStr = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+                        const normCityName = normStr(cityNameOnly);
+                        match = data.find(c => normStr(c.nom) === normCityName);
+                    }
+
+                    // Fallback: first result
+                    if (!match) {
+                        match = data[0];
+                    }
+                    return match;
+                }
+                
+                // If Strategy 1 by zipCode returned nothing, fallback to Strategy 2 by name only
+                if (zipCode) {
+                    const fallbackUrl = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+                    const fallbackRes = await fetch(fallbackUrl);
+                    const fallbackData = await fallbackRes.json();
+                    if (fallbackData && fallbackData.length > 0) {
+                        const lowerName = cityNameOnly.toLowerCase();
+                        let match = fallbackData.find(c => c.nom.toLowerCase() === lowerName) || fallbackData[0];
+                        return match;
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching commune data from geo.api.gouv.fr:", e);
+            }
+            return null;
+        }
+
+        async function renderCityZone(rule) {
+            try {
+                const city = await fetchCommuneData(rule.name);
+                if (city && city.contour) {
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
+
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, rule.name);
+                    });
+
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${rule.name}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-2);">Zone ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${rule.name.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <button class="map-popup-delete" style="justify-content: center; margin: 0;" onclick="deleteZoneRule(${rule.id})">
+                                    <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering city zone:", e); }
+        }
+
+        async function renderToQualifyCityZone(cityName) {
+            try {
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    const color = 'var(--yellow)';
+                    const geoJsonLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: color,
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2,
+                            fillColor: color
+                        }
+                    }).addTo(zoneRulesLayer);
+
+                    // Click opens the city panel
+                    geoJsonLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
+
+                    // Premium layout for Leaflet Popup
+                    geoJsonLayer.bindPopup(`
+                        <div style="text-align: center; min-width: 180px;">
+                            <strong style="font-size: 1.05rem; color: var(--text);">${cityName}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Zone à Qualifier</span>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 10px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; width: 100%;" onclick="openCityPanel(event, '${cityName.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-house-chimney"></i> Voir les annonces
+                                </button>
+                                <div style="display: flex; gap: 4px;">
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--green); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'allowed')">
+                                        Autoriser
+                                    </button>
+                                    <button class="btn" style="flex: 1; font-size: 0.75rem; padding: 0.4rem; background: var(--red); color: white;" onclick="addZoneRuleFromMap('${cityName.replace(/'/g, "\\'")}', 'city', 'forbidden')">
+                                        Interdire
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering to_qualify city zone:", e); }
+        }
+
+        async function renderStationZone(rule) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(rule.name)}&format=json&limit=1`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
+                    const color = rule.rule === 'forbidden' ? 'var(--red)' : 'var(--green)';
+                    const iconHtml = `<div style="background: ${color}; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow);">
+                                        <i class="fa-solid fa-train"></i>
+                                      </div>`;
+                    
+                    const marker = L.marker([lat, lon], {
+                        icon: L.divIcon({
+                            className: 'custom-div-icon',
+                            html: iconHtml,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(zoneRulesLayer);
+                    
+                    marker.bindPopup(`
+                        <strong>${rule.name}</strong><br>
+                        Gare ${rule.rule === 'forbidden' ? 'interdite' : 'autorisée'}
+                        <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                            <button class="map-popup-delete" onclick="deleteZoneRule(${rule.id})">
+                                <i class="fa-solid fa-trash-can"></i> Supprimer la règle
+                            </button>
+                        </div>
+                    `);
+                }
+            } catch (e) { console.error("Error rendering station zone:", e); }
+        }
+
+                async function deleteZoneRule(ruleId) {
+            if (!confirm('Supprimer cette règle ?')) return;
+            try {
+                const res = await fetch(`/api/zones/${ruleId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadMapData();
+                }
+            } catch (err) { console.error("Error deleting zone rule:", err); }
+        }
+
+        async function addZoneRuleFromMap(name, type, rule) {
+            try {
+                const res = await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: type, name, rule })
+                });
+                if (res.ok) {
+                    map.closePopup();
+                    if (currentCityContourLayer) {
+                        map.removeLayer(currentCityContourLayer);
+                        currentCityContourLayer = null;
+                    }
+                    loadMapData();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Action impossible"));
+                }
+            } catch (e) {
+                alert("Erreur réseau");
+            }
+        }
+
+        // Function to highlight a city contour on the map
+        async function highlightCityContour(cityName, fitBounds = true) {
+            if (!cityName || cityName === '-' || cityName.toLowerCase() === 'n/c') return;
+            
+            console.log("Highlighting city contour for:", cityName);
+            
+            try {
+                // Clear existing city layer if any
+                if (window.currentCityLayer) {
+                    map.removeLayer(window.currentCityLayer);
+                    window.currentCityLayer = null;
+                }
+
+                const city = await fetchCommuneData(cityName);
+                if (city && city.contour) {
+                    window.currentCityLayer = L.geoJSON(city.contour, {
+                        style: {
+                            color: 'var(--accent)',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.15,
+                            fillColor: 'var(--accent)'
+                        }
+                    }).addTo(map);
+
+                    // Click opens the city panel
+                    window.currentCityLayer.on('click', function(e) {
+                        openCityPanel(e.originalEvent, cityName);
+                    });
+
+                    if (fitBounds) {
+                        map.fitBounds(window.currentCityLayer.getBounds(), { padding: [50, 50] });
+                    }
+                }
+            } catch (error) {
+                console.error("Error highlighting city contour:", error);
+            }
+        }
+
+        function displaySearchedCity(city) {
+            if (currentCityContourLayer) {
+                map.removeLayer(currentCityContourLayer);
+            }
+            if (city.contour) {
+                currentCityContourLayer = L.geoJSON(city.contour, {
+                    style: {
+                        color: 'var(--accent)',
+                        weight: 3,
+                        opacity: 0.9,
+                        fillColor: 'var(--accent)',
+                        fillOpacity: 0.15
+                    }
+                }).addTo(map);
+                
+                // Click opens the city panel
+                currentCityContourLayer.on('click', function(e) {
+                    openCityPanel(e.originalEvent, city.nom);
+                });
+
+                map.fitBounds(currentCityContourLayer.getBounds(), { padding: [50, 50] });
+
+                const center = currentCityContourLayer.getBounds().getCenter();
+                const cp = city.codesPostaux ? city.codesPostaux[0] : '';
+                const safeName = city.nom.replace(/'/g, "\\'");
+                
+                L.popup()
+                    .setLatLng(center)
+                    .setContent(`
+                        <div style="text-align: center; padding: 0.5rem 0; min-width: 180px;">
+                            <strong style="font-size: 1.1rem; color: var(--text);">${city.nom}</strong><br>
+                            <span style="font-size: 0.85rem; color: var(--text-2);">${cp}</span><br>
+                            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+                                <button class="btn primary" style="font-size: 0.8rem; padding: 0.5rem 0.9rem;" onclick="addSearchedCityToMap('${safeName}', '${cp}', 'allowed')">
+                                    <i class="fa-solid fa-plus"></i> Ajouter à la carte
+                                </button>
+                                <button class="btn" style="font-size: 0.8rem; padding: 0.5rem 0.9rem; border-color: var(--red); color: var(--red); background: rgba(242,92,105,0.05);" onclick="addZoneRuleFromMap('${safeName}', 'city', 'forbidden')">
+                                    <i class="fa-solid fa-ban"></i> Interdire
+                                </button>
+                            </div>
+                        </div>
+                    `)
+                    .openOn(map);
+            }
+        }
+
+        async function addSearchedCityToMap(nom, cp, rule = 'allowed') {
+            const btn = document.querySelector('.leaflet-popup-content button');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ajout en cours...';
+            }
+
+            const selected = [{
+                nom_commune: nom,
+                code_postal: cp,
+                distance: 0,
+                ref_commune: nom,
+                ref_cp: cp
+            }];
+
+            try {
+                // 1. Add as map pins
+                const res = await fetch('/api/map-pins/nearby', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        cities: selected,
+                        include_stations: true 
+                    })
+                });
+                const data = await res.json();
+                
+                // 2. Also add as an "allowed" zone rule
+                await fetch('/api/zones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zone_type: 'city', name: nom, rule: rule })
+                });
+
+                if (data.created >= 0) { // >= 0 because it might already exist as a pin
+                    if (currentCityContourLayer) {
+                        map.removeLayer(currentCityContourLayer);
+                        currentCityContourLayer = null;
+                    }
+                    map.closePopup();
+                    mainCitySearchInput.value = '';
+                    loadMapData();
+                } else {
+                    alert("Erreur: Impossible de géolocaliser cette ville.");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter à la carte';
+                    }
+                }
+            } catch (err) {
+                alert("Erreur réseau: " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-plus"></i> Ajouter à la carte';
+                }
+            }
+        }
+
+        loadMapData();
+
+        // Check for city parameter in URL on load
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cityParam = urlParams.get('city');
+            if (cityParam) {
+                // Delay slightly to ensure map is ready and centered
+                setTimeout(() => {
+                    highlightCityContour(cityParam, true);
+                }, 800);
+            }
+        });
+    
         loadZones();
         loadDepartments();
         
         // Ensure map renders properly by slightly delaying initialization
-        setTimeout(initMap, 100);
+        // map initialized globally
 
         // Fix leaflet map sizing when container resizes
         window.addEventListener('resize', () => {
