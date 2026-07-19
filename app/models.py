@@ -17,6 +17,11 @@ class User(Base):
     salt = Column(LargeBinary, nullable=False)
     role = Column(String(20), nullable=False, default="user") # "admin" or "user"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # API
+    api_key_hash = Column(String, nullable=True)
+    can_create_api_key = Column(Boolean, nullable=False, default=False)
+    api_key_last_used = Column(DateTime(timezone=True), nullable=True)
 
     # Contact & Identifiers
     email = Column(String, nullable=True)
