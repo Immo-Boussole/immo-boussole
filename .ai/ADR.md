@@ -79,3 +79,12 @@ This document tracks significant design and architectural choices for Immo-Bouss
 - A denormalized `source_criteria` column is kept as a copy for persistence — if a ReadySearch is deleted, the listing retains its original criteria label.
 - Migration is handled automatically by the existing `run_migrations()` function on startup (v8 migration).
 - Fallback: listings without a `source_ready_search_id` (e.g., created before this feature) display the `source` enum value and a dash, ensuring backward compatibility.
+
+## 009: API-Driven Architecture & MCP Integration
+**Status**: Accepted  
+**Decision**: Transition to a hybrid architecture by adding a strict JSON API layer (`/api/v1/`) alongside the existing Jinja2 templates, with per-user API key authentication.  
+**Context**: The application needs to be accessible to AI agents (MCP) and automated test suites, requiring structured data (JSON) and programmatic actions (scraping) without parsing HTML.  
+**Justification**: 
+- **Progressive Migration**: Keeps the current UI fully functional while exposing core features (Listings, Actions) to automation.
+- **Security**: Per-user API keys (hashed in DB) allow granular access control and revocation, separate from UI session cookies.
+- **Documentation**: Strict Pydantic Response models (`ListingResponse`, etc.) automatically generate an OpenAPI specification for AI agents to easily consume.

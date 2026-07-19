@@ -119,6 +119,8 @@ if ":" in _raw_version:
     _raw_version = _raw_version.split(":")[-1][:8]
 templates.env.globals["app_version"] = _raw_version
 
+from app.api.v1.router import api_router
+app.include_router(api_router, prefix="/api/v1")
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
 

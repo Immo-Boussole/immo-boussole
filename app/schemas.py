@@ -165,3 +165,50 @@ class NearbyCityBulkRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: List[dict] = []
+
+class ApiKeyResponse(BaseModel):
+    api_key: str
+    message: str
+
+class UserApiMgmtResponse(BaseModel):
+    id: int
+    username: str
+    role: str
+    can_create_api_key: bool
+    has_api_key: bool
+    api_key_last_used: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class ActionResponse(BaseModel):
+    status: str
+    message: str
+    data: Optional[dict] = None
+
+class ListingResponse(BaseModel):
+    id: int
+    external_id: Optional[str] = None
+    title: Optional[str] = None
+    url: str
+    price: Optional[float] = None
+    price_per_sqm: Optional[float] = None
+    location: Optional[str] = None
+    city: Optional[str] = None
+    area: Optional[float] = None
+    land_area: Optional[float] = None
+    rooms: Optional[int] = None
+    bedrooms: Optional[int] = None
+    property_type: Optional[str] = None
+    condition: Optional[str] = None
+    dpe_rating: Optional[str] = None
+    ges_rating: Optional[str] = None
+    source: str
+    status: str
+    is_favorite: bool
+    is_duplicate: bool
+    date_added: Optional[datetime] = None
+    date_updated: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
