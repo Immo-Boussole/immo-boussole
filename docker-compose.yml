@@ -22,8 +22,6 @@ services:
     depends_on:
       browserless:
         condition: service_healthy
-    ports:
-      - "8000:8000"
     networks:
       - immo-boussole-net
     command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
@@ -75,6 +73,8 @@ services:
     command: ["python", "-m", "app.mcp_server"]
     networks:
       - immo-boussole-net
+    healthcheck:
+      disable: true
 
   # ── Scraping Engine (Headless Chrome via Browserless) ────────────────────────
   browserless:
