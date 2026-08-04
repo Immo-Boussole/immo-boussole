@@ -625,6 +625,11 @@
                                         onclick="quickAddBtn(this, 'forbidden')" title="Interdire">
                                     <i class="fa-solid fa-ban"></i>
                                 </button>
+                                <button class="btn-delete" style="color: var(--text-2); border-color: rgba(255, 255, 255, 0.15);" 
+                                        data-name="{{ item.name }}" data-type="{{ item.type }}"
+                                        onclick="purgeZoneListingsBtn(this)" title="Supprimer les annonces de cette zone">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
                         </div>
                         {% else %}
@@ -1968,6 +1973,65 @@
                 document.querySelectorAll('.search-results').forEach(div => div.classList.remove('show'));
             }
         });
+
+        function purgeZoneListingsBtn(btn) {
+            const name = btn.getAttribute('data-name');
+            const type = btn.getAttribute('data-type');
+            purgeZoneListings(name, type);
+        }
+
+        async function purgeZoneListings(name, type) {
+            const labelType = type === 'city' ? 'la ville' : 'la gare';
+            if (!confirm(`Voulez-vous vraiment supprimer définitivement toutes les annonces rattachées à ${labelType} "${name}" ?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/zones/purge-listings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, name })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Remove from "To Qualify" list in DOM
+                    const items = document.querySelectorAll('#to-qualify-list .zone-item');
+                    items.forEach(item => {
+                        if (item.querySelector('.zone-item-name').textContent.trim() === name.trim()) {
+                            item.style.opacity = '0';
+                            setTimeout(() => {
+                                item.remove();
+                                // Update count badge
+                                const countEl = document.getElementById('to-qualify-count');
+                                if (countEl) {
+                                    const currentCount = parseInt(countEl.textContent) || 0;
+                                    if (currentCount > 0) {
+                                        countEl.textContent = `${currentCount - 1} à classer`;
+                                    }
+                                }
+                                if (document.querySelectorAll('#to-qualify-list .zone-item').length === 0) {
+                                    document.getElementById('to-qualify-list').innerHTML = `
+                                        <div class="empty-state" style="grid-column: 1 / -1;">
+                                            <i class="fa-solid fa-thumbs-up" style="color: var(--green);"></i>
+                                            <p>Toutes les zones sont qualifiées !</p>
+                                        </div>
+                                    `;
+                                }
+                            }, 300);
+                        }
+                    });
+
+                    showToast(`🗑 ${data.deleted_count} annonce(s) de "${name}" supprimée(s)`, 'success');
+                } else {
+                    const err = await res.json();
+                    showToast('⚠ ' + (err.detail || 'Erreur lors de la suppression'), 'error');
+                }
+            } catch(e) {
+                showToast('Erreur réseau', 'error');
+            }
+        }
 
         function quickAddBtn(btn, rule) {
             const name = btn.getAttribute('data-name');
