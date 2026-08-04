@@ -206,9 +206,43 @@ class ListingResponse(BaseModel):
     source: str
     status: str
     is_favorite: bool
+    to_visit: bool = False
     is_duplicate: bool
     date_added: Optional[datetime] = None
     date_updated: Optional[datetime] = None
     
     class Config:
         from_attributes = True
+
+
+class VisitCreateRequest(BaseModel):
+    listing_id: int
+    visit_type: str = "visite"  # "visite" or "contre_visite"
+    scheduled_at: datetime
+    status: str = "programme"   # "programme", "effectuee", "annulee"
+    visitor: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VisitUpdateRequest(BaseModel):
+    visit_type: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
+    status: Optional[str] = None
+    visitor: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VisitResponse(BaseModel):
+    id: int
+    listing_id: int
+    visit_type: str
+    scheduled_at: datetime
+    status: str
+    visitor: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+

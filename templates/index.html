@@ -1212,6 +1212,7 @@
         <nav>
             <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
             <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/visites" class="nav-link{% if request.url.path == '/visites' %} active{% endif %}"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
             <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
@@ -1324,6 +1325,7 @@
                     data-favorite="{{ 'true' if listing.is_favorite else 'false' }}"
                     data-liked="{{ 'true' if listing.is_liked else 'false' }}"
                     data-disliked="{{ 'true' if listing.is_disliked else 'false' }}"
+                    data-to-visit="{{ 'true' if listing.to_visit else 'false' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">
@@ -1408,6 +1410,11 @@
                             <span class="source-badge">{{ listing.source.value|upper }}</span>
                             
                             <div class="interaction-btns">
+                                <button class="interaction-btn visit {% if listing.to_visit %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleToVisit({{ listing.id }}, this)"
+                                        title="Ajouter / Retirer des biens à visiter" style="color: {% if listing.to_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i class="fa-{% if listing.to_visit %}solid{% else %}regular{% endif %} fa-bookmark"></i>
+                                </button>
                                 <button class="interaction-btn heart {% if listing.is_favorite %}active{% endif %}" 
                                         onclick="event.stopPropagation(); toggleFavorite({{ listing.id }}, this)"
                                         title="{{ t(request, 'listing.favorite') }}">
@@ -1779,6 +1786,24 @@
         });
 
         // ── Interaction Logic ────────────────────────────────────────────────
+        async function toggleToVisit(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/to-visit`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    if (data.to_visit) {
+                        btn.classList.add('active');
+                        btn.style.color = 'var(--accent)';
+                        btn.querySelector('i').className = 'fa-solid fa-bookmark';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.color = 'var(--text-2)';
+                        btn.querySelector('i').className = 'fa-regular fa-bookmark';
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
         async function toggleFavorite(listingId, btn) {
             try {
                 const res = await fetch(`/api/listings/${listingId}/favorite`, { method: 'PATCH' });

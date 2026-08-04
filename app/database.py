@@ -166,6 +166,9 @@ _MIGRATIONS = [
 
     # global_settings - allowed departments v17
     ("global_settings", "allowed_departments", "TEXT"),
+
+    # listings — to_visit flag v18
+    ("listings", "to_visit",               "BOOLEAN DEFAULT 0"),
 ]
 
 
@@ -190,3 +193,18 @@ def run_migrations():
                 except Exception as e:
                     print(f"[Migration] Warning: could not add '{column}' to '{table}': {e}")
             # else: column already exists, skip silently
+
+        # Backfill price_per_sqm for listings where it's missing or 0
+        try:
+            conn.execute(
+                text(
+                    "UPDATE listings SET price_per_sqm = ROUND(1.0 * price / area, 2) "
+                    "WHERE price IS NOT NULL AND price > 0 "
+                    "AND area IS NOT NULL AND area > 0 "
+                    "AND (price_per_sqm IS NULL OR price_per_sqm = 0)"
+                )
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"[Migration] Warning: could not backfill price_per_sqm: {e}")
+
