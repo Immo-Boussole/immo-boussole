@@ -30,9 +30,9 @@ import secrets
 from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
-from app import models, database
+from app import models, database, schemas
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -1161,6 +1161,45 @@ def a_voir_page(request: Request, db: Session = Depends(get_db), _auth = Depends
         "title": "À voir — Immo-Boussole",
         "is_a_voir": True
     })
+
+
+@app.get("/visites")
+def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    queries = db.query(SearchQuery).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(all_listings, viewed_ids)
+
+    # Targeted listings: to_visit == True or listings having visits
+    target_listings = db.query(Listing).filter(Listing.to_visit == True).order_by(Listing.date_added.desc()).all()
+    _enrich_listings(target_listings, viewed_ids)
+
+    # All visits ordered by date
+    visits = db.query(Visit).order_by(Visit.scheduled_at.asc()).all()
+
+    visits_with_listings = []
+    for v in visits:
+        l = db.query(Listing).filter(Listing.id == v.listing_id).first()
+        if l:
+            if hasattr(l, 'photos_local') and l.photos_local:
+                l._photos = json_to_photos(l.photos_local)
+            visits_with_listings.append({
+                "visit": v,
+                "listing": l
+            })
+
+    local_hash = get_local_commit_hash()
+
+    return templates.TemplateResponse(request=request, name="visites.html", context={
+        "listings": all_listings,
+        "target_listings": target_listings,
+        "visits_with_listings": visits_with_listings,
+        "queries": queries,
+        "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
+        "title": "Gestionnaire de visites — Immo-Boussole",
+    })
+
 
 
 @app.get("/listings/table")
@@ -3286,6 +3325,8 @@ def update_listing(
     for key, value in update_data.items():
         setattr(listing, key, value)
     
+    listing.update_price_per_sqm()
+    
     if re_geocode:
         loc = listing.location or listing.city
         if loc:
@@ -3380,6 +3421,123 @@ def toggle_dislike(request: Request, listing_id: int, db: Session = Depends(get_
     db.commit()
     sync_listing_cluster(db, listing_id)
     return {"status": "updated", "is_favorite": listing.is_favorite, "is_liked": listing.is_liked, "is_disliked": listing.is_disliked}
+
+
+@app.patch("/api/listings/{listing_id}/to-visit")
+def toggle_to_visit(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.to_visit = not listing.to_visit
+    db.commit()
+    return {"status": "updated", "to_visit": listing.to_visit, "listing_id": listing.id}
+
+
+@app.post("/api/visites", response_model=schemas.VisitResponse)
+def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == body.listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.to_visit = True
+    visitor_name = body.visitor or request.session.get("username") or "Utilisateur"
+
+    visit = Visit(
+        listing_id=body.listing_id,
+        visit_type=body.visit_type or "visite",
+        scheduled_at=body.scheduled_at,
+        status=body.status or "programme",
+        visitor=visitor_name,
+        notes=body.notes
+    )
+    db.add(visit)
+    db.commit()
+    db.refresh(visit)
+    return visit
+
+
+@app.get("/api/visites")
+def list_visites(
+    request: Request,
+    status: Optional[str] = None,
+    visit_type: Optional[str] = None,
+    listing_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    query = db.query(Visit)
+    if status:
+        query = query.filter(Visit.status == status)
+    if visit_type:
+        query = query.filter(Visit.visit_type == visit_type)
+    if listing_id:
+        query = query.filter(Visit.listing_id == listing_id)
+    
+    visits = query.order_by(Visit.scheduled_at.asc()).all()
+    results = []
+    for v in visits:
+        l = db.query(Listing).filter(Listing.id == v.listing_id).first()
+        results.append({
+            "id": v.id,
+            "listing_id": v.listing_id,
+            "listing_title": l.title if l else "Non disponible",
+            "listing_price": l.price if l else None,
+            "listing_city": l.city or l.location if l else None,
+            "listing_url": l.url if l else None,
+            "visit_type": v.visit_type,
+            "scheduled_at": v.scheduled_at.isoformat() if v.scheduled_at else None,
+            "status": v.status,
+            "visitor": v.visitor,
+            "notes": v.notes,
+            "created_at": v.created_at.isoformat() if v.created_at else None,
+        })
+    return results
+
+
+@app.put("/api/visites/{visit_id}", response_model=schemas.VisitResponse)
+def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateRequest, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+    
+    if body.visit_type is not None:
+        visit.visit_type = body.visit_type
+    if body.scheduled_at is not None:
+        visit.scheduled_at = body.scheduled_at
+    if body.status is not None:
+        visit.status = body.status
+    if body.visitor is not None:
+        visit.visitor = body.visitor
+    if body.notes is not None:
+        visit.notes = body.notes
+
+    db.commit()
+    db.refresh(visit)
+    return visit
+
+
+@app.delete("/api/visites/{visit_id}")
+def delete_visit(request: Request, visit_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+    
+    db.delete(visit)
+    db.commit()
+    return {"status": "deleted", "visit_id": visit_id}
+
+
+@app.patch("/api/visites/{visit_id}/status")
+def change_visit_status(request: Request, visit_id: int, status: str = Form(...), db: Session = Depends(get_db), _auth = Depends(user_required)):
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+    
+    visit.status = status
+    db.commit()
+    return {"status": "updated", "visit_id": visit.id, "new_status": visit.status}
+
 
 
 @app.post("/api/listings/{listing_id}/photos")

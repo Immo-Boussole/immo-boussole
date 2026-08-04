@@ -142,6 +142,7 @@ class Listing(Base):
     is_favorite = Column(Boolean, default=False)
     is_liked = Column(Boolean, default=False)
     is_disliked = Column(Boolean, default=False)
+    to_visit = Column(Boolean, default=False)
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
     date_added = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())
@@ -175,6 +176,27 @@ class Listing(Base):
 
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
+    visits = relationship("Visit", back_populates="listing", cascade="all, delete-orphan", order_by="Visit.scheduled_at")
+
+    def update_price_per_sqm(self):
+        """
+        Calculates and updates price_per_sqm based on price and area.
+        Returns the updated price_per_sqm value.
+        """
+        if self.price is not None and self.area is not None:
+            try:
+                p = float(self.price)
+                a = float(self.area)
+                if p > 0 and a > 0:
+                    self.price_per_sqm = round(p / a, 2)
+                else:
+                    self.price_per_sqm = None
+            except (ValueError, TypeError):
+                self.price_per_sqm = None
+        else:
+            self.price_per_sqm = None
+        return self.price_per_sqm
+
 
 
 class Review(Base):
@@ -193,6 +215,24 @@ class Review(Base):
 
     # Relationships
     listing = relationship("Listing", back_populates="reviews")
+
+
+class Visit(Base):
+    __tablename__ = "visits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
+    visit_type = Column(String(20), nullable=False, default="visite")  # "visite" or "contre_visite"
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String(20), nullable=False, default="programme")   # "programme", "effectuee", "annulee"
+    visitor = Column(String(100), nullable=True)                        # Visitor name/username
+    notes = Column(Text, nullable=True)                                 # Free notes/comments/contact
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    listing = relationship("Listing", back_populates="visits")
+
 
 
 class UserListingView(Base):

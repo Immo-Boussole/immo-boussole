@@ -22,7 +22,8 @@
         "map": "Map",
         "profile": "My Profile",
         "administration": "Administration",
-        "duplicate_hunt": "Duplicate Hunt"
+        "duplicate_hunt": "Duplicate Hunt",
+        "visites": "Visits Manager"
     },
     "profile": {
         "title": "My Profile",

@@ -22,7 +22,8 @@
         "map": "Carte",
         "profile": "Mon Profil",
         "administration": "Administration",
-        "duplicate_hunt": "Chasse aux duplicats"
+        "duplicate_hunt": "Chasse aux duplicats",
+        "visites": "Gestionnaire de visites"
     },
     "profile": {
         "title": "Mon Profil",

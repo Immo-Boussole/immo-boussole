@@ -249,6 +249,9 @@ async def create_listing_from_details(
     listing.source = source
     listing.scraped_at = datetime.now(timezone.utc)
     
+    # Calculate price per sqm
+    listing.update_price_per_sqm()
+    
     # Set status only for new listings or if explicitly provided
     if status:
         listing.status = status
@@ -500,6 +503,9 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                 original_photo_urls=json.dumps(photo_urls) if photo_urls else None,
             )
 
+            # Calculate price per sqm
+            new_listing.update_price_per_sqm()
+
             # Geocoding for new listing
             loc = new_listing.location or new_listing.city
             if loc:
@@ -624,6 +630,7 @@ async def refresh_listing_status(listing: Listing, db: Session, force_update: bo
             
             db.commit()
     
+    listing.update_price_per_sqm()
     listing.scraped_at = datetime.now(timezone.utc)
     db.commit()
 
