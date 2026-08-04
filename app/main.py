@@ -1749,6 +1749,48 @@ def delete_zone_rule(
     return {"status": "deleted", "id": zone_id}
 
 
+@app.post("/api/zones/purge-listings")
+def purge_zone_listings(
+    payload: dict,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Deletes all listings associated with a given city or station."""
+    zone_type = payload.get("type")
+    name = (payload.get("name") or "").strip()
+    if not name or zone_type not in ("city", "station"):
+        raise HTTPException(status_code=400, detail="Nom et type de zone valides requis")
+
+    import os, shutil
+    
+    if zone_type == "city":
+        target_listings = db.query(Listing).filter(Listing.city.ilike(name)).all()
+    else:
+        target_listings = db.query(Listing).filter(
+            (Listing.nearest_sncf_station.ilike(name)) | (Listing.second_sncf_station.ilike(name))
+        ).all()
+
+    count = len(target_listings)
+    for listing in target_listings:
+        listing_id = listing.id
+        db.query(Listing).filter(Listing.duplicate_of_id == listing_id).update(
+            {"duplicate_of_id": None, "is_duplicate": False}
+        )
+        db.query(UserListingView).filter(UserListingView.listing_id == listing_id).delete()
+        db.delete(listing)
+        
+        media_dir = os.path.join("static", "media", str(listing_id))
+        if os.path.exists(media_dir):
+            try:
+                shutil.rmtree(media_dir)
+            except Exception as e:
+                print(f"[PurgeZone] Could not remove media dir {media_dir}: {e}")
+
+    db.commit()
+    return {"status": "deleted", "deleted_count": count, "name": name}
+
+
+
 @app.get("/carte")
 def map_page(
     request: Request, 
