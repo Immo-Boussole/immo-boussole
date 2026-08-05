@@ -25,6 +25,9 @@ if ! cd "$PROJECT_DIR"; then
     exit 1
 fi
 
+# Ensure git trusts this directory to avoid dubious ownership errors
+git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+
 # Fetch information from the remote server without modifying local files
 git fetch
 
@@ -35,7 +38,8 @@ REMOTE=$(git rev-parse @{u})
 if [ "$LOCAL" != "$REMOTE" ]; then
     echo "$(date) - New code detected in $PROJECT_DIR. Updating..."
     
-    # 1. Update the code
+    # 1. Update the code (reset local uncommitted server changes to avoid merge conflicts)
+    git reset --hard HEAD
     git pull
     
     # 2. Extract pinned APP_VERSION tag from DOCKER_IMAGE.txt if present
