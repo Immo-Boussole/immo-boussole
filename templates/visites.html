@@ -417,6 +417,7 @@
         }
         .badge-type.visite { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
         .badge-type.contre_visite { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+        .badge-type.reponse_negative { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
         .badge-status {
             display: inline-flex;
@@ -747,6 +748,8 @@
                                             <i class="fa-solid fa-phone-volume"></i> Relance agence
                                         {% elif v.visit_type == 'contact_proprio' %}
                                             <i class="fa-solid fa-user-tie"></i> 1er contact proprio
+                                        {% elif v.visit_type == 'reponse_negative' %}
+                                            <i class="fa-solid fa-ban"></i> Réponse négative
                                         {% else %}
                                             <i class="fa-solid fa-eye"></i> 1ère Visite
                                         {% endif %}
@@ -834,6 +837,7 @@
                             <option value="contact_agence">1er contact avec agence</option>
                             <option value="relance_agence">Relance agence</option>
                             <option value="contact_proprio">1er contact avec propriétaire</option>
+                            <option value="reponse_negative">Réponse négative (Agence / Proprio)</option>
                         </select>
                     </div>
 
@@ -923,6 +927,7 @@
                 case 'contact_agence': return '1er contact (Ag)';
                 case 'relance_agence': return 'Relance (Ag)';
                 case 'contact_proprio': return '1er contact (Pr)';
+                case 'reponse_negative': return 'Réfusé';
                 default: return 'Visite';
             }
         }
