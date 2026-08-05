@@ -72,12 +72,39 @@ Pour éviter les suppressions accidentelles, l'interface utilise une interaction
 
 *Démonstration de la fonctionnalité sécurisée de glissement pour supprimer.*
 
-### 🔔 7. Alerte de Nouvelle Version
+### 🔔 7. Alerte de Nouvelle Version & Mise à Jour Automatique
 Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une nouvelle version du code source est disponible sur GitHub.
 
 ![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
 
 *Aperçu de la bannière indiquant une mise à jour disponible.*
+
+#### 🔄 Déploiement et Mise à Jour (Dev & Prod)
+Un script Shell d'automatisation [`scripts/auto_update.sh`](scripts/auto_update.sh) permet d'actualiser les conteneurs Docker (Dev ou Prod) dès qu'un nouveau commit est disponible sur la branche courante.
+
+- **Fonctionnement du script** :
+  1. Effectue un `git fetch` et compare les commits locaux (`HEAD`) aux commits distants (`@{u}`).
+  2. S'il y a du nouveau code, exécute un `git reset --hard` et `git pull`.
+  3. Détecte le tag de version verrouillée (`DOCKER_IMAGE.txt` / `APP_VERSION`) le cas échéant.
+  4. Récupère les images récentes (`docker compose pull`) et reconstruit/redémarre les conteneurs (`docker compose up -d --build`).
+  5. Nettoie les images Docker orphelines (`docker image prune -f`).
+
+- **Configuration préalable de `sudo` sans mot de passe (sur le serveur)** :
+  Pour autoriser l'exécution de la mise à jour sans demande de mot de passe interactif (via SSH ou Cron), ajoutez cette règle avec `sudo visudo` sur le serveur (remplacez `<votre_utilisateur>` par votre nom d'utilisateur, ex: `ubuntu`, `debian`, etc.) :
+  ```bash
+  <votre_utilisateur> ALL=(ALL) NOPASSWD: /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh *
+  ```
+
+- **Exécution manuelle (depuis votre machine via SSH)** :
+  ```bash
+  ssh immo-dev "sudo bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml"
+  ```
+
+- **Automatisation via Cron (sur le serveur)** :
+  Vous pouvez ajouter une tâche Cron sur votre serveur pour vérifier et appliquer les mises à jour automatiquement (ex: toutes les heures) :
+  ```bash
+  0 * * * * root /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml >> /var/log/immo-autoupdate.log 2>&1
+  ```
 
 ### 🤖 8. Assistant IA & Service MCP
 L'application intègre désormais un assistant conversationnel capable d'analyser vos annonces, de répondre à vos questions et de fournir des statistiques. Vous pouvez également exposer vos données à des outils externes comme Claude Desktop via le protocole **MCP (Model Context Protocol)**.
