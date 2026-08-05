@@ -169,6 +169,11 @@ _MIGRATIONS = [
 
     # listings — to_visit flag v18
     ("listings", "to_visit",               "BOOLEAN DEFAULT 0"),
+
+    # users — API key columns v19
+    ("users", "api_key_hash",              "TEXT"),
+    ("users", "can_create_api_key",        "BOOLEAN DEFAULT 0"),
+    ("users", "api_key_last_used",         "DATETIME"),
 ]
 
 
