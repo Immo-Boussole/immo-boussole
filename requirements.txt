@@ -21,5 +21,3 @@ undetected-chromedriver
 Pillow>=10.0.0
 setuptools>=78.1.1
 msgpack>=1.2.1
-
-
