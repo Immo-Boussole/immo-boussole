@@ -71,12 +71,39 @@ To prevent accidental deletions, the interface uses a premium slide-to-confirm i
 
 *Demonstration of the secure slide-to-delete feature.*
 
-### 🔔 7. New Version Alert
+### 🔔 7. New Version Alert & Automatic Updates
 A banner automatically appears at the bottom of the home screen when a new version of the source code is available on GitHub.
 
 ![Version Alert Demo](static/media/demo/demo_alert_banner.png)
 
 *Preview of the banner indicating an available update.*
+
+#### 🔄 Deployment and Updating (Dev & Prod)
+An automated Shell script [`scripts/auto_update.sh`](scripts/auto_update.sh) updates Docker containers (Dev or Prod) whenever a new commit is detected on the remote branch.
+
+- **How it works**:
+  1. Executes `git fetch` and compares local (`HEAD`) with remote (`@{u}`).
+  2. If new code is found, runs `git reset --hard` and `git pull`.
+  3. Detects pinned tag versions (`DOCKER_IMAGE.txt` / `APP_VERSION`) if configured.
+  4. Pulls latest images (`docker compose pull`) and rebuilds/restarts containers (`docker compose up -d --build`).
+  5. Cleans up dangling Docker images (`docker image prune -f`).
+
+- **Prerequisite: Passwordless `sudo` configuration (on the server)**:
+  To allow execution without an interactive password prompt (via SSH or Cron), add this rule using `sudo visudo` on your server (replace `<your_username>` with your SSH user, e.g., `ubuntu`, `debian`, etc.):
+  ```bash
+  <your_username> ALL=(ALL) NOPASSWD: /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh *
+  ```
+
+- **Manual execution (from local machine via SSH)**:
+  ```bash
+  ssh immo-dev "sudo bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml"
+  ```
+
+- **Automation via Cron (on the server)**:
+  You can set up a Cron job on the server to automatically check and apply updates (e.g. hourly):
+  ```bash
+  0 * * * * root /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml >> /var/log/immo-autoupdate.log 2>&1
+  ```
 
 ### 🤖 8. AI Assistant & MCP Service
 The application now features a conversational assistant capable of analyzing your listings, answering your questions, and providing statistics. You can also expose your data to external tools like Claude Desktop via the **MCP (Model Context Protocol)**.
