@@ -504,6 +504,187 @@
         .modal-actions {
             display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;
         }
+
+        /* ── Timeline Styling ── */
+        .timeline-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .timeline-scroll-container {
+            position: relative;
+            width: 100%;
+            overflow-x: auto;
+            padding: 1rem 0;
+            scrollbar-width: thin;
+        }
+
+        .timeline-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .timeline-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 27px; /* vertical center of the 32px marker (1rem padding-top + 16px center) */
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+
+        .timeline-nodes {
+            display: flex;
+            position: relative;
+            z-index: 2;
+            gap: 2.5rem;
+            min-width: max-content;
+            padding: 0 10px;
+        }
+
+        .timeline-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--trans);
+        }
+
+        .timeline-node:hover {
+            transform: translateY(-2px);
+        }
+
+        .node-time {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-2);
+            margin-bottom: 0.5rem;
+        }
+
+        .node-marker {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: var(--text-2);
+            transition: var(--trans);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Marker coloring based on status or type */
+        .timeline-node.effectuee .node-marker {
+            border-color: var(--green);
+            color: var(--green);
+            background: rgba(16, 217, 164, 0.1);
+        }
+        .timeline-node.programme .node-marker {
+            border-color: var(--orange);
+            color: var(--orange);
+            background: rgba(248, 168, 75, 0.1);
+        }
+        .timeline-node.annulee .node-marker {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(242, 92, 105, 0.1);
+        }
+        .timeline-node.reponse_negative .node-marker {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(242, 92, 105, 0.1);
+        }
+
+        .timeline-node:hover .node-marker {
+            box-shadow: 0 0 12px var(--accent);
+            transform: scale(1.1);
+        }
+
+        .node-label {
+            margin-top: 0.5rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .node-type {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .node-prop {
+            font-size: 0.65rem;
+            color: var(--text-2);
+            margin-top: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        /* Tooltip style */
+        .timeline-node .timeline-tooltip {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-align: left;
+            border-radius: 8px;
+            padding: 0.75rem;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: var(--shadow);
+            pointer-events: none;
+        }
+
+        .timeline-node:hover .timeline-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .timeline-tooltip .tooltip-title {
+            font-weight: 800;
+            font-size: 0.78rem;
+            margin-bottom: 0.25rem;
+            color: var(--text);
+        }
+
+        .timeline-tooltip .tooltip-date {
+            font-size: 0.7rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .timeline-tooltip .tooltip-notes {
+            font-size: 0.68rem;
+            color: var(--text-2);
+            line-height: 1.3;
+        }
     </style>
 </head>
 
@@ -746,6 +927,60 @@
             <!-- ── TAB 3: History ── -->
             <div id="tabHistory" class="tab-content" style="display: none;">
                 {% if visits_with_listings %}
+                    <!-- ── Timeline (Frise Chronologique) ── -->
+                    <div class="timeline-wrapper">
+                        <h3 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                            <i class="fa-solid fa-timeline" style="color: var(--accent);"></i> Frise Chronologique des Activités
+                        </h3>
+                        <div class="timeline-scroll-container">
+                            <div class="timeline-line"></div>
+                            <div class="timeline-nodes">
+                                {% for item in visits_with_listings %}
+                                {% set v = item.visit %}
+                                {% set l = item.listing %}
+                                <div class="timeline-node {{ v.visit_type }} {{ v.status }}" onclick="scrollToPropertyBlock('prop-block-{{ l.id if l else 0 }}')">
+                                    <div class="timeline-tooltip">
+                                        <div class="tooltip-title">{{ l.title if l else 'Bien non disponible' }}</div>
+                                        <div class="tooltip-date">{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</div>
+                                        {% if v.notes %}
+                                        <div class="tooltip-notes">{{ v.notes[:80] }}{% if v.notes|length > 80 %}...{% endif %}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="node-time">
+                                        {{ v.scheduled_at.strftime('%d/%m') if v.scheduled_at else 'N/C' }}
+                                    </div>
+                                    <div class="node-marker">
+                                        {% if v.visit_type == 'contre_visite' %}
+                                            <i class="fa-solid fa-repeat"></i>
+                                        {% elif v.visit_type == 'contact_agence' %}
+                                            <i class="fa-solid fa-building"></i>
+                                        {% elif v.visit_type == 'relance_agence' %}
+                                            <i class="fa-solid fa-phone-volume"></i>
+                                        {% elif v.visit_type == 'contact_proprio' %}
+                                            <i class="fa-solid fa-user-tie"></i>
+                                        {% elif v.visit_type == 'reponse_negative' %}
+                                            <i class="fa-solid fa-ban"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-eye"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="node-label">
+                                        <div class="node-type">
+                                            {% if v.visit_type == 'contre_visite' %}Contre-visite
+                                            {% elif v.visit_type == 'contact_agence' %}Contact Agence
+                                            {% elif v.visit_type == 'relance_agence' %}Relance Agence
+                                            {% elif v.visit_type == 'contact_proprio' %}Contact Proprio
+                                            {% elif v.visit_type == 'reponse_negative' %}Réponse Négative
+                                            {% else %}1ère Visite{% endif %}
+                                        </div>
+                                        <div class="node-prop" title="{{ l.title if l else 'N/C' }}">{{ l.title[:18] if l else 'N/C' }}{% if l and l.title|length > 18 %}...{% endif %}</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
                     {% set grouped_visits = {} %}
                     {% for item in visits_with_listings %}
                         {% set l_id = item.listing.id if item.listing else 0 %}
@@ -758,7 +993,7 @@
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                         {% for l_id, group in grouped_visits.items() %}
                         {% set l = group.listing %}
-                        <div class="prop-card" style="padding: 0;">
+                        <div class="prop-card" id="prop-block-{{ l_id }}" style="padding: 0;">
                             <div class="prop-header" style="background: var(--surface-2); border-bottom: 1px solid var(--border);">
                                 {% if l and l._photos %}
                                 <img src="{{ l._photos[0] }}" class="prop-thumb" alt="{{ l.title }}">
@@ -1141,6 +1376,18 @@
 
         function closeVisitModal() {
             document.getElementById('visitModal').classList.remove('open');
+        }
+        function scrollToPropertyBlock(blockId) {
+            const element = document.getElementById(blockId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Briefly flash/highlight the card
+                const originalBg = element.style.background || '';
+                element.style.background = 'rgba(79, 142, 247, 0.15)';
+                setTimeout(() => {
+                    element.style.background = originalBg;
+                }, 1000);
+            }
         }
 
         function editVisit(id, listingId, visitType, scheduledAt, status, visitor, notes) {
