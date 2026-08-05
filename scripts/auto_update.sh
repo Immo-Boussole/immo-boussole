@@ -38,7 +38,19 @@ if [ "$LOCAL" != "$REMOTE" ]; then
     # 1. Update the code
     git pull
     
-    # 2. Pull pre-built images (if applicable) and rebuild/restart the containers
+    # 2. Extract pinned APP_VERSION tag from DOCKER_IMAGE.txt if present
+    if [ -f "DOCKER_IMAGE.txt" ]; then
+        IMAGE_REF=$(grep -v '^#' DOCKER_IMAGE.txt | grep -v '^[[:space:]]*$' | head -n 1)
+        if [ -n "$IMAGE_REF" ]; then
+            PINNED_TAG="${IMAGE_REF##*:}"
+            if [ -n "$PINNED_TAG" ]; then
+                export APP_VERSION="$PINNED_TAG"
+                echo "$(date) - Image pinning active: APP_VERSION=$APP_VERSION"
+            fi
+        fi
+    fi
+
+    # 3. Pull pre-built images (if applicable) and rebuild/restart the containers
     if [ -f "$COMPOSE_FILE" ]; then
         docker compose -f "$COMPOSE_FILE" pull
         docker compose -f "$COMPOSE_FILE" up -d --build
@@ -51,6 +63,10 @@ if [ "$LOCAL" != "$REMOTE" ]; then
         docker compose up -d --build
     fi
     
+    # 4. Cleanup old dangling images
+    echo "$(date) - Pruning old Docker images..."
+    docker image prune -f
+
     echo "$(date) - Update successfully completed."
 else
     # Uncomment the following line to display a message even when there is nothing to do
