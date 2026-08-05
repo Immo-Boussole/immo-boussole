@@ -739,8 +739,17 @@
                                 <td><strong>{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</strong></td>
                                 <td>
                                     <span class="badge-type {{ v.visit_type }}">
-                                        <i class="fa-solid fa-{{ 'repeat' if v.visit_type == 'contre_visite' else 'eye' }}"></i>
-                                        {{ 'Contre-visite' if v.visit_type == 'contre_visite' else 'Visite' }}
+                                        {% if v.visit_type == 'contre_visite' %}
+                                            <i class="fa-solid fa-repeat"></i> Contre-visite
+                                        {% elif v.visit_type == 'contact_agence' %}
+                                            <i class="fa-solid fa-building"></i> 1er contact agence
+                                        {% elif v.visit_type == 'relance_agence' %}
+                                            <i class="fa-solid fa-phone-volume"></i> Relance agence
+                                        {% elif v.visit_type == 'contact_proprio' %}
+                                            <i class="fa-solid fa-user-tie"></i> 1er contact proprio
+                                        {% else %}
+                                            <i class="fa-solid fa-eye"></i> 1ère Visite
+                                        {% endif %}
                                     </span>
                                 </td>
                                 <td>
@@ -809,7 +818,9 @@
                     <select id="visitListingId" required>
                         <option value="">-- Sélectionner un bien --</option>
                         {% for l in listings %}
-                        <option value="{{ l.id }}">{{ l.title }} ({{ l.location or "N/C" }} - {{ "{:,.0f}".format(l.price).replace(",", " ") if l.price else "NC" }} €)</option>
+                        {% if l.status != 'rejetee' and l.status.value != 'rejetee' %}
+                        <option value="{{ l.id }}">[{{ l.id }}] - {{ l.title }} ({{ l.location or "N/C" }} - {{ "{:,.0f}".format(l.price).replace(",", " ") if l.price else "NC" }} €){% if l.is_favorite or l.is_liked %} ❤️{% endif %}</option>
+                        {% endif %}
                         {% endfor %}
                     </select>
                 </div>
@@ -820,6 +831,9 @@
                         <select id="visitType" required>
                             <option value="visite">1ère Visite</option>
                             <option value="contre_visite">Contre-visite</option>
+                            <option value="contact_agence">1er contact avec agence</option>
+                            <option value="relance_agence">Relance agence</option>
+                            <option value="contact_proprio">1er contact avec propriétaire</option>
                         </select>
                     </div>
 
@@ -833,15 +847,23 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label for="visitDateTime">Date & Heure *</label>
                         <input type="datetime-local" id="visitDateTime" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="visitVisitor">Nom du visiteur</label>
-                        <input type="text" id="visitVisitor" placeholder="Ex: Jean & Marie" value="{{ request.session.get('username', '') }}">
+                        <label>Nom du visiteur</label>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem;">
+                            {% for u in users %}
+                            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
+                                <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
+                                <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <input type="text" id="visitVisitorCustom" placeholder="Autre(s) visiteur(s) sans compte (ex: Marie, Pierre)..." style="font-size: 0.82rem;">
                     </div>
                 </div>
 
@@ -895,6 +917,50 @@
             document.getElementById('tabBtnHistory').classList.toggle('active', tab === 'history');
         }
 
+        function getVisitTypeShortLabel(type) {
+            switch (type) {
+                case 'contre_visite': return 'C-Visite';
+                case 'contact_agence': return '1er contact (Ag)';
+                case 'relance_agence': return 'Relance (Ag)';
+                case 'contact_proprio': return '1er contact (Pr)';
+                default: return 'Visite';
+            }
+        }
+
+        function setVisitorUI(visitorStr) {
+            const checkboxes = document.querySelectorAll('.visitor-user-checkbox');
+            const knownUsers = Array.from(checkboxes).map(c => c.value);
+            const parts = (visitorStr || '').split(',').map(s => s.trim()).filter(Boolean);
+
+            const customParts = [];
+            checkboxes.forEach(cb => {
+                cb.checked = parts.includes(cb.value);
+            });
+
+            parts.forEach(p => {
+                if (!knownUsers.includes(p)) {
+                    customParts.push(p);
+                }
+            });
+
+            document.getElementById('visitVisitorCustom').value = customParts.join(', ');
+        }
+
+        function getVisitorStringFromUI() {
+            const selectedUsers = Array.from(document.querySelectorAll('.visitor-user-checkbox:checked')).map(c => c.value);
+            const customText = document.getElementById('visitVisitorCustom').value.trim();
+            const allVisitors = [...selectedUsers];
+            if (customText) {
+                customText.split(',').forEach(s => {
+                    const trimmed = s.trim();
+                    if (trimmed && !allVisitors.includes(trimmed)) {
+                        allVisitors.push(trimmed);
+                    }
+                });
+            }
+            return allVisitors.join(', ');
+        }
+
         // ── Calendar Rendering ────────────────────────────────────────────────
         function renderCalendar(year, month) {
             const body = document.getElementById('calendarBody');
@@ -945,7 +1011,7 @@
 
                 dayVisits.forEach(v => {
                     const timeStr = v.scheduled_at ? v.scheduled_at.split('T')[1].substring(0, 5) : '';
-                    const typeLabel = v.visit_type === 'contre_visite' ? 'C-Visite' : 'Visite';
+                    const typeLabel = getVisitTypeShortLabel(v.visit_type);
                     cellHtml += `
                         <div class="visit-chip ${v.status} ${v.visit_type}" onclick="event.stopPropagation(); editVisit(${v.id}, ${v.listing_id}, '${v.visit_type}', '${v.scheduled_at}', '${v.status}', '${(v.visitor||'').replace(/'/g, "\\'")}', '${(v.notes||'').replace(/'/g, "\\'")}')" title="${v.listing_title} (${v.status})">
                             <span><strong>${timeStr}</strong> ${typeLabel}</span>
@@ -1004,6 +1070,8 @@
                 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
                 document.getElementById('visitDateTime').value = localIso;
             }
+            const currentUser = {{ request.session.get('username', '')|tojson }};
+            setVisitorUI(currentUser);
             document.getElementById('visitModal').classList.add('open');
         }
 
@@ -1020,7 +1088,7 @@
             if (scheduledAt && scheduledAt !== 'null') {
                 document.getElementById('visitDateTime').value = scheduledAt.slice(0, 16);
             }
-            document.getElementById('visitVisitor').value = visitor || '';
+            setVisitorUI(visitor || '');
             document.getElementById('visitNotes').value = notes || '';
             document.getElementById('visitModal').classList.add('open');
         }
@@ -1032,7 +1100,7 @@
             const visit_type = document.getElementById('visitType').value;
             const status = document.getElementById('visitStatus').value;
             const scheduled_at = document.getElementById('visitDateTime').value;
-            const visitor = document.getElementById('visitVisitor').value;
+            const visitor = getVisitorStringFromUI();
             const notes = document.getElementById('visitNotes').value;
 
             if (!listing_id || !scheduled_at) return;

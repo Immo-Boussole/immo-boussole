@@ -1165,13 +1165,14 @@ def a_voir_page(request: Request, db: Session = Depends(get_db), _auth = Depends
 
 @app.get("/visites")
 def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
-    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    all_listings = db.query(Listing).filter(Listing.status != ListingStatus.REJECTED).order_by(Listing.date_added.desc()).all()
     queries = db.query(SearchQuery).all()
+    users = db.query(models.User).order_by(models.User.username.asc()).all()
     viewed_ids = _get_viewed_listing_ids(request, db)
     _enrich_listings(all_listings, viewed_ids)
 
     # Targeted listings: to_visit == True or listings having visits
-    target_listings = db.query(Listing).filter(Listing.to_visit == True).order_by(Listing.date_added.desc()).all()
+    target_listings = db.query(Listing).filter(Listing.to_visit == True, Listing.status != ListingStatus.REJECTED).order_by(Listing.date_added.desc()).all()
     _enrich_listings(target_listings, viewed_ids)
 
     # All visits ordered by date
@@ -1195,6 +1196,7 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
         "target_listings": target_listings,
         "visits_with_listings": visits_with_listings,
         "queries": queries,
+        "users": users,
         "local_hash": local_hash,
         "app_version": settings.APP_VERSION,
         "title": "Gestionnaire de visites — Immo-Boussole",
