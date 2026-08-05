@@ -619,6 +619,11 @@
                 display: inline !important;
             }
         }
+        .btn-schedule-visit:hover {
+            background: var(--orange) !important;
+            border-color: var(--orange) !important;
+            color: #fff !important;
+        }
     </style>
 </head>
 <body>
@@ -732,7 +737,7 @@
 
                 <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
 
-                <button class="btn btn-schedule-visit" onclick="openScheduleVisitModal()" title="Planifier une visite" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
+                <button class="btn btn-schedule-visit" onclick="openScheduleVisitModal()" title="Planifier une visite" style="color: var(--orange); border-color: rgba(248, 168, 75, 0.2); background: rgba(248, 168, 75, 0.05);">
                     <i class="fa-solid fa-calendar-days"></i>
                     <span class="btn-text-desktop">Planifier une visite</span>
                     <span class="btn-text-tablet-mobile">Visite</span>
