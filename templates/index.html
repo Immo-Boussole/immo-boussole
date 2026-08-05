@@ -1348,7 +1348,7 @@
                             %}{{ t(request, 'misc.price_nc') }}{% endif %}
                         </div>
                         {% if listing.price_per_sqm %}
-                        <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>
+                        <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm).replace(",", " ") }} €/m²</div>
                         {% endif %}
 
                         <div class="card-meta">

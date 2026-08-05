@@ -138,6 +138,93 @@ class TestPricePerSqm(unittest.TestCase):
 
         db.close()
 
+    def test_db_maintenance_incorrect_price_per_sqm(self):
+        """Test detection and repair of incorrect/missing price_per_sqm via db_maintenance."""
+        from app.db_maintenance import identify_problems, repair_listings_batch_task, INCORRECT_PRICE_PER_SQM
+        
+        engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        db = Session()
+
+        # Listing 1: Correct price_per_sqm (4000.0)
+        listing1 = Listing(
+            external_id="maint-1",
+            url="https://example.com/maint-1",
+            title="Correct Listing",
+            price=200000.0,
+            area=50.0,
+            price_per_sqm=4000.0,
+            status=ListingStatus.ACTIVE,
+        )
+        # Listing 2: Missing price_per_sqm (None)
+        listing2 = Listing(
+            external_id="maint-2",
+            url="https://example.com/maint-2",
+            title="Missing ppsqm",
+            price=150000.0,
+            area=50.0,
+            price_per_sqm=None,
+            status=ListingStatus.ACTIVE,
+        )
+        # Listing 3: Incorrect price_per_sqm (0.0)
+        listing3 = Listing(
+            external_id="maint-3",
+            url="https://example.com/maint-3",
+            title="Zero ppsqm",
+            price=300000.0,
+            area=100.0,
+            price_per_sqm=0.0,
+            status=ListingStatus.ACTIVE,
+        )
+        # Listing 4: Mathematically wrong price_per_sqm (e.g. 500.0 instead of 3000.0)
+        listing4 = Listing(
+            external_id="maint-4",
+            url="https://example.com/maint-4",
+            title="Wrong ppsqm",
+            price=300000.0,
+            area=100.0,
+            price_per_sqm=500.0,
+            status=ListingStatus.ACTIVE,
+        )
+        db.add_all([listing1, listing2, listing3, listing4])
+        db.commit()
+
+        # Identify problems
+        problems = identify_problems(db)
+        self.assertIn(INCORRECT_PRICE_PER_SQM, problems)
+        self.assertEqual(problems[INCORRECT_PRICE_PER_SQM]["count"], 3)
+        self.assertCountEqual(problems[INCORRECT_PRICE_PER_SQM]["ids"], [listing2.id, listing3.id, listing4.id])
+
+        # Patch/mock SessionLocal in db_maintenance to use our in-memory engine
+        from unittest.mock import patch
+        original_close = db.close
+        db.close = lambda: None
+        try:
+            with patch("app.db_maintenance.SessionLocal", return_value=db):
+                # Run repair task
+                asyncio.run(repair_listings_batch_task(INCORRECT_PRICE_PER_SQM))
+        finally:
+            db.close = original_close
+
+        # Refresh objects
+        db.refresh(listing1)
+        db.refresh(listing2)
+        db.refresh(listing3)
+        db.refresh(listing4)
+
+        # Assert correct values
+        self.assertEqual(listing1.price_per_sqm, 4000.0)
+        self.assertEqual(listing2.price_per_sqm, 3000.0)
+        self.assertEqual(listing3.price_per_sqm, 3000.0)
+        self.assertEqual(listing4.price_per_sqm, 3000.0)
+
+        # Verify problems are gone
+        problems_after = identify_problems(db)
+        self.assertEqual(problems_after[INCORRECT_PRICE_PER_SQM]["count"], 0)
+
+        db.close()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -647,7 +647,7 @@
         {% endif %}
         {% if profile.avg_price_per_sqm %}
         <div class="stat-item">
-            <div class="val">{{ "{:,.0f}".format(profile.avg_price_per_sqm) }} €</div>
+            <div class="val">{{ "{:,.0f}".format(profile.avg_price_per_sqm).replace(",", " ") }} €/m²</div>
             <div class="lbl">{{ t(request, 'ideal_profile.avg_price_sqm') }}</div>
         </div>
         {% endif %}
