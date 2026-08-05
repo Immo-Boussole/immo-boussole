@@ -730,9 +730,9 @@
                     {% for item in visits_with_listings %}
                         {% set l_id = item.listing.id if item.listing else 0 %}
                         {% if l_id not in grouped_visits %}
-                            {% set _ = grouped_visits.update({l_id: {'listing': item.listing, 'items': []}}) %}
+                            {% set _ = grouped_visits.update({l_id: {'listing': item.listing, 'visits': []}}) %}
                         {% endif %}
-                        {% set _ = grouped_visits[l_id]['items'].append(item.visit) %}
+                        {% set _ = grouped_visits[l_id]['visits'].append(item.visit) %}
                     {% endfor %}
 
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
@@ -782,7 +782,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for v in group.items %}
+                                        {% for v in group.visits %}
                                         <tr>
                                             <td><strong>{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</strong></td>
                                             <td>
