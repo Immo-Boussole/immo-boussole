@@ -203,7 +203,11 @@ def tool_schedule_visit(listing_id: int, scheduled_at: str, visit_type: str = "v
         except ValueError:
             return "Format de date invalide. Utilisez le format ISO (ex: 2026-08-15T14:30:00)."
 
-        l.to_visit = True
+        if visit_type == "reponse_negative":
+            l.to_visit = False
+        else:
+            l.to_visit = True
+
         v = Visit(
             listing_id=listing_id,
             visit_type=visit_type,
@@ -243,6 +247,12 @@ def tool_update_visit(visit_id: int, scheduled_at: Optional[str] = None, status:
             v.visitor = visitor
         if visit_type:
             v.visit_type = visit_type
+            l = db.query(Listing).filter(Listing.id == v.listing_id).first()
+            if l:
+                if visit_type == "reponse_negative":
+                    l.to_visit = False
+                else:
+                    l.to_visit = True
         
         db.commit()
         return f"Visite #{v.id} mise à jour avec succès (Statut: {v.status})."
