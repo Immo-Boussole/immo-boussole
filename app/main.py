@@ -3484,7 +3484,10 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     
-    listing.to_visit = True
+    if (body.visit_type or "visite") == "reponse_negative":
+        listing.to_visit = False
+    else:
+        listing.to_visit = True
     visitor_name = body.visitor or request.session.get("username") or "Utilisateur"
 
     visit = Visit(
@@ -3547,6 +3550,12 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
     
     if body.visit_type is not None:
         visit.visit_type = body.visit_type
+        listing = db.query(Listing).filter(Listing.id == visit.listing_id).first()
+        if listing:
+            if body.visit_type == "reponse_negative":
+                listing.to_visit = False
+            else:
+                listing.to_visit = True
     if body.scheduled_at is not None:
         visit.scheduled_at = body.scheduled_at
     if body.status is not None:
