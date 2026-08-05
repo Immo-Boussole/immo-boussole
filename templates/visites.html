@@ -579,7 +579,13 @@
             <!-- ── Stats Summary ── -->
             {% set total_targets = target_listings|length %}
             {% set planned_cnt = visits_with_listings|selectattr("visit.status", "equalto", "programme")|list|length %}
-            {% set done_cnt = visits_with_listings|selectattr("visit.status", "equalto", "effectuee")|list|length %}
+            {% set done_listing_ids = [] %}
+            {% for item in visits_with_listings %}
+                {% if item.visit.status == "effectuee" and item.visit.listing_id not in done_listing_ids %}
+                    {% set _ = done_listing_ids.append(item.visit.listing_id) %}
+                {% endif %}
+            {% endfor %}
+            {% set done_cnt = done_listing_ids|length %}
             {% set contre_cnt = visits_with_listings|selectattr("visit.visit_type", "equalto", "contre_visite")|list|length %}
 
             <div class="stats-grid">
@@ -719,89 +725,121 @@
 
             <!-- ── TAB 3: History ── -->
             <div id="tabHistory" class="tab-content" style="display: none;">
-                <div class="history-table-wrapper">
-                    <table class="history-table">
-                        <thead>
-                            <tr>
-                                <th>Date & Heure</th>
-                                <th>Type</th>
-                                <th>Bien Immobilier</th>
-                                <th>Visiteur</th>
-                                <th>Statut</th>
-                                <th>Notes / Compte-rendu</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if visits_with_listings %}
-                            {% for item in visits_with_listings %}
-                            {% set v = item.visit %}
-                            {% set l = item.listing %}
-                            <tr>
-                                <td><strong>{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</strong></td>
-                                <td>
-                                    <span class="badge-type {{ v.visit_type }}">
-                                        {% if v.visit_type == 'contre_visite' %}
-                                            <i class="fa-solid fa-repeat"></i> Contre-visite
-                                        {% elif v.visit_type == 'contact_agence' %}
-                                            <i class="fa-solid fa-building"></i> 1er contact agence
-                                        {% elif v.visit_type == 'relance_agence' %}
-                                            <i class="fa-solid fa-phone-volume"></i> Relance agence
-                                        {% elif v.visit_type == 'contact_proprio' %}
-                                            <i class="fa-solid fa-user-tie"></i> 1er contact proprio
-                                        {% elif v.visit_type == 'reponse_negative' %}
-                                            <i class="fa-solid fa-ban"></i> Réponse négative
-                                        {% else %}
-                                            <i class="fa-solid fa-eye"></i> 1ère Visite
-                                        {% endif %}
-                                    </span>
-                                </td>
-                                <td>
+                {% if visits_with_listings %}
+                    {% set grouped_visits = {} %}
+                    {% for item in visits_with_listings %}
+                        {% set l_id = item.listing.id if item.listing else 0 %}
+                        {% if l_id not in grouped_visits %}
+                            {% set _ = grouped_visits.update({l_id: {'listing': item.listing, 'items': []}}) %}
+                        {% endif %}
+                        {% set _ = grouped_visits[l_id]['items'].append(item.visit) %}
+                    {% endfor %}
+
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        {% for l_id, group in grouped_visits.items() %}
+                        {% set l = group.listing %}
+                        <div class="prop-card" style="padding: 0;">
+                            <div class="prop-header" style="background: var(--surface-2); border-bottom: 1px solid var(--border);">
+                                {% if l and l._photos %}
+                                <img src="{{ l._photos[0] }}" class="prop-thumb" alt="{{ l.title }}">
+                                {% else %}
+                                <div class="prop-thumb" style="display: flex; align-items: center; justify-content: center; color: var(--text-2); font-size: 1.5rem;">
+                                    <i class="fa-solid fa-building"></i>
+                                </div>
+                                {% endif %}
+                                <div class="prop-info">
                                     {% if l %}
-                                    <a href="/listings/{{ l.id }}" target="_blank" style="color: var(--text); font-weight: 600; text-decoration: none;">
-                                        {{ l.title }}
+                                    <a href="/listings/{{ l.id }}" target="_blank" class="prop-title" style="color: var(--text); text-decoration: none; display: inline-block;">
+                                        {{ l.title }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.75rem; color: var(--text-2);"></i>
                                     </a>
-                                    <div style="font-size: 0.72rem; color: var(--text-2);">{{ l.location or '' }} — {{ "{:,.0f}".format(l.price).replace(",", " ") if l.price else '' }} €</div>
-                                    {% else %}
-                                    Non disponible
-                                    {% endif %}
-                                </td>
-                                <td>{{ v.visitor or '—' }}</td>
-                                <td>
-                                    <span class="badge-status {{ v.status }}">
-                                        {{ 'Programmée' if v.status == 'programme' else ('Effectuée' if v.status == 'effectuee' else 'Annulée') }}
-                                    </span>
-                                </td>
-                                <td style="max-width: 250px; font-size: 0.78rem; color: var(--text-2);">
-                                    {{ v.notes or 'Aucune note' }}
-                                </td>
-                                <td>
-                                    <div style="display: flex; gap: 0.4rem;">
-                                        {% if v.status != 'effectuee' %}
-                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--green);" title="Marquer comme effectuée" onclick="markDone({{ v.id }})">
-                                            <i class="fa-solid fa-check"></i>
-                                        </button>
-                                        {% endif %}
-                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem;" title="Modifier" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ v.visit_type|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--red);" title="Supprimer" onclick="deleteVisit({{ v.id }})">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
+                                    <div class="prop-price">
+                                        {% if l.price %}{{ "{:,.0f}".format(l.price).replace(",", " ") }} €{% else %}Prix N/C{% endif %}
                                     </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                            {% else %}
-                            <tr>
-                                <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-2);">
-                                    Aucune visite programmée ou enregistrée.
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
+                                    <div class="prop-loc"><i class="fa-solid fa-location-dot"></i> {{ l.location or "N/C" }}</div>
+                                    {% else %}
+                                    <div class="prop-title">Bien non disponible</div>
+                                    {% endif %}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    {% if l %}
+                                    <button class="btn primary" style="font-size: 0.75rem;" onclick="openVisitModal({{ l.id }})">
+                                        <i class="fa-solid fa-plus"></i> Ajouter une activité
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="history-table-wrapper" style="border: none; border-radius: 0;">
+                                <table class="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Heure</th>
+                                            <th>Type</th>
+                                            <th>Visiteur</th>
+                                            <th>Statut</th>
+                                            <th>Notes / Compte-rendu</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for v in group.items %}
+                                        <tr>
+                                            <td><strong>{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</strong></td>
+                                            <td>
+                                                <span class="badge-type {{ v.visit_type }}">
+                                                    {% if v.visit_type == 'contre_visite' %}
+                                                        <i class="fa-solid fa-repeat"></i> Contre-visite
+                                                    {% elif v.visit_type == 'contact_agence' %}
+                                                        <i class="fa-solid fa-building"></i> 1er contact agence
+                                                    {% elif v.visit_type == 'relance_agence' %}
+                                                        <i class="fa-solid fa-phone-volume"></i> Relance agence
+                                                    {% elif v.visit_type == 'contact_proprio' %}
+                                                        <i class="fa-solid fa-user-tie"></i> 1er contact proprio
+                                                    {% elif v.visit_type == 'reponse_negative' %}
+                                                        <i class="fa-solid fa-ban"></i> Réponse négative
+                                                    {% else %}
+                                                        <i class="fa-solid fa-eye"></i> 1ère Visite
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td>{{ v.visitor or '—' }}</td>
+                                            <td>
+                                                <span class="badge-status {{ v.status }}">
+                                                    {{ 'Programmée' if v.status == 'programme' else ('Effectuée' if v.status == 'effectuee' else 'Annulée') }}
+                                                </span>
+                                            </td>
+                                            <td style="max-width: 300px; font-size: 0.78rem; color: var(--text-2);">
+                                                {{ v.notes or 'Aucune note' }}
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; gap: 0.4rem;">
+                                                    {% if v.status != 'effectuee' %}
+                                                    <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--green);" title="Marquer comme effectuée" onclick="markDone({{ v.id }})">
+                                                        <i class="fa-solid fa-check"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem;" title="Modifier" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ v.visit_type|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                    <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--red);" title="Supprimer" onclick="deleteVisit({{ v.id }})">
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 4rem 2rem; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);">
+                        <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h2>Aucune visite programmée ou enregistrée</h2>
+                    </div>
+                {% endif %}
             </div>
 
         </div>
