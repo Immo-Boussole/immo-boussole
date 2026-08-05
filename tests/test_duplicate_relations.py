@@ -194,9 +194,15 @@ if __name__ == "__main__":
         test_ui_rendering()
         print("All tests passed successfully!")
     finally:
-        # Clean up database file
-        if os.path.exists("test_duplicate_relations.db"):
-            try:
-                os.remove("test_duplicate_relations.db")
-            except Exception:
-                pass
+        # Dispose of engine to release connection pool locks
+        try:
+            engine.dispose()
+        except Exception:
+            pass
+        # Clean up database files
+        for filename in ["test_duplicate_relations.db", "test_duplicate_relations.db-shm", "test_duplicate_relations.db-wal"]:
+            if os.path.exists(filename):
+                try:
+                    os.remove(filename)
+                except Exception:
+                    pass
