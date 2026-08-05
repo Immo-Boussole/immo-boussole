@@ -207,6 +207,7 @@
         .stat-icon.green { background: rgba(16, 217, 164, 0.15); color: var(--green); }
         .stat-icon.purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
         .stat-icon.orange { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+        .stat-icon.red { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
         .stat-info .val { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
         .stat-info .lbl { font-size: 0.78rem; color: var(--text-2); font-weight: 500; }
@@ -581,12 +582,20 @@
             {% set planned_cnt = visits_with_listings|selectattr("visit.status", "equalto", "programme")|list|length %}
             {% set done_listing_ids = [] %}
             {% for item in visits_with_listings %}
-                {% if item.visit.status == "effectuee" and item.visit.listing_id not in done_listing_ids %}
+                {% if item.visit.status == "effectuee" and item.visit.visit_type in ["visite", "contre_visite"] and item.visit.listing_id not in done_listing_ids %}
                     {% set _ = done_listing_ids.append(item.visit.listing_id) %}
                 {% endif %}
             {% endfor %}
             {% set done_cnt = done_listing_ids|length %}
             {% set contre_cnt = visits_with_listings|selectattr("visit.visit_type", "equalto", "contre_visite")|list|length %}
+
+            {% set refusal_listing_ids = [] %}
+            {% for item in visits_with_listings %}
+                {% if item.visit.visit_type == "reponse_negative" and item.visit.listing_id not in refusal_listing_ids %}
+                    {% set _ = refusal_listing_ids.append(item.visit.listing_id) %}
+                {% endif %}
+            {% endfor %}
+            {% set refusal_cnt = refusal_listing_ids|length %}
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -615,6 +624,13 @@
                     <div class="stat-info">
                         <div class="val">{{ contre_cnt }}</div>
                         <div class="lbl">Contre-visites</div>
+                    </div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-icon red"><i class="fa-solid fa-ban"></i></div>
+                    <div class="stat-info">
+                        <div class="val">{{ refusal_cnt }}</div>
+                        <div class="lbl">Biens refusés</div>
                     </div>
                 </div>
             </div>
