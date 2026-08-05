@@ -594,6 +594,31 @@
 
         .btn.loading i { animation: spin 1s linear infinite; pointer-events: none; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Specific overrides for the schedule visit button to show text on mobile/tablet */
+        .btn-schedule-visit .btn-text-tablet-mobile {
+            display: none;
+        }
+        @media (max-width: 1024px) {
+            .btn-schedule-visit .btn-text-desktop {
+                display: none;
+            }
+            .btn-schedule-visit .btn-text-tablet-mobile {
+                display: inline;
+            }
+        }
+        @media (max-width: 768px) {
+            .topbar-right .btn.btn-schedule-visit {
+                width: auto !important;
+                min-width: 0 !important;
+                flex: 0 0 auto !important;
+                padding: 0 0.75rem !important;
+                gap: 0.3rem !important;
+            }
+            .topbar-right .btn.btn-schedule-visit span.btn-text-tablet-mobile {
+                display: inline !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -703,6 +728,14 @@
 
                 <button class="btn btn-dislike-nav" onclick="toggleDislike({{ listing.id }}, this)" title="{{ t(request, 'listing.dislike') }}" style="{% if listing.is_disliked %}color: var(--red); border-color: rgba(242, 92, 105, 0.2); background: rgba(242, 92, 105, 0.1);{% else %}color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.05);{% endif %}">
                     <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i> <span class="btn-text">{{ t(request, 'listing.dislike') }}</span>
+                </button>
+
+                <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
+
+                <button class="btn btn-schedule-visit" onclick="openScheduleVisitModal()" title="Planifier une visite" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span class="btn-text-desktop">Planifier une visite</span>
+                    <span class="btn-text-tablet-mobile">Visite</span>
                 </button>
 
                 <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
@@ -1326,6 +1359,78 @@
             <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> {{ t(request, 'listing.import_btn') }}</button>
         </div>
 
+    </div>
+</div>
+
+<!-- ── Modal: Schedule Visit ── -->
+<div class="modal-backdrop" id="visitModal" onclick="if(event.target===this)closeVisitModal()">
+    <div class="modal" style="max-width: 550px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;" id="modalTitle"><i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Planifier une visite</h2>
+            <button class="btn sm" onclick="closeVisitModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="visitForm" onsubmit="saveVisit(event)">
+            <input type="hidden" id="visitId" value="">
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Bien immobilier</label>
+                <input type="text" value="{{ listing.title }}" readonly style="background: var(--surface-2); color: var(--text-2); cursor: not-allowed; font-size: 0.85rem; padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); width: 100%;">
+                <input type="hidden" id="visitListingId" value="{{ listing.id }}">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="form-group">
+                    <label for="visitType" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Type de visite *</label>
+                    <select id="visitType" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <option value="visite">1ère Visite</option>
+                        <option value="contre_visite">Contre-visite</option>
+                        <option value="contact_agence">1er contact avec agence</option>
+                        <option value="relance_agence">Relance agence</option>
+                        <option value="contact_proprio">1er contact avec propriétaire</option>
+                        <option value="reponse_negative">Réponse négative (Agence / Proprio)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="visitStatus" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Statut *</label>
+                    <select id="visitStatus" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <option value="programme">Programmée</option>
+                        <option value="effectuee">Effectuée</option>
+                        <option value="annulee">Annulée</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="form-group">
+                    <label for="visitDateTime" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Date & Heure *</label>
+                    <input type="datetime-local" id="visitDateTime" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                </div>
+
+                <div class="form-group">
+                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Nom du visiteur</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem; box-sizing: border-box;">
+                        {% for u in users %}
+                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
+                            <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
+                            <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="text" id="visitVisitorCustom" placeholder="Autre(s) visiteur(s) sans compte (ex: Marie, Pierre)..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.82rem; outline: none; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="visitNotes" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Notes & Commentaires (code, contact agence, impressions)</label>
+                <textarea id="visitNotes" rows="3" placeholder="Numéro de l'agent, digicode, parking..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+            </div>
+
+            <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeVisitModal()">Annuler</button>
+                <button type="submit" class="btn primary" id="btnSaveVisit"><i class="fa-solid fa-check"></i> Enregistrer</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -2511,6 +2616,103 @@
                 btn.innerHTML = oldHtml;
             }
         }
+
+        function openScheduleVisitModal() {
+            document.getElementById('visitId').value = '';
+            document.getElementById('visitType').value = 'visite';
+            document.getElementById('visitStatus').value = 'programme';
+            
+            // Set current date/time by default
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('visitDateTime').value = now.toISOString().slice(0, 16);
+            
+            // Reset visitor checkboxes
+            document.querySelectorAll('.visitor-user-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('visitVisitorCustom').value = '';
+            document.getElementById('visitNotes').value = '';
+
+            document.getElementById('visitModal').classList.add('open');
+        }
+
+        function closeVisitModal() {
+            document.getElementById('visitModal').classList.remove('open');
+        }
+
+        function setVisitorUI(visitorStr) {
+            const checkboxes = document.querySelectorAll('.visitor-user-checkbox');
+            const knownUsers = Array.from(checkboxes).map(c => c.value);
+            const parts = (visitorStr || '').split(',').map(s => s.trim()).filter(Boolean);
+
+            const customParts = [];
+            checkboxes.forEach(cb => {
+                cb.checked = parts.includes(cb.value);
+            });
+
+            parts.forEach(p => {
+                if (!knownUsers.includes(p)) {
+                    customParts.push(p);
+                }
+            });
+
+            document.getElementById('visitVisitorCustom').value = customParts.join(', ');
+        }
+
+        function getVisitorStringFromUI() {
+            const selectedUsers = Array.from(document.querySelectorAll('.visitor-user-checkbox:checked')).map(c => c.value);
+            const customText = document.getElementById('visitVisitorCustom').value.trim();
+            const allVisitors = [...selectedUsers];
+            if (customText) {
+                customText.split(',').forEach(s => {
+                    const trimmed = s.trim();
+                    if (trimmed && !allVisitors.includes(trimmed)) {
+                        allVisitors.push(trimmed);
+                    }
+                });
+            }
+            return allVisitors.join(', ');
+        }
+
+        async function saveVisit(e) {
+            e.preventDefault();
+            const id = document.getElementById('visitId').value;
+            const listing_id = parseInt(document.getElementById('visitListingId').value);
+            const visit_type = document.getElementById('visitType').value;
+            const status = document.getElementById('visitStatus').value;
+            const scheduled_at = document.getElementById('visitDateTime').value;
+            const visitor = getVisitorStringFromUI();
+            const notes = document.getElementById('visitNotes').value;
+
+            if (!listing_id || !scheduled_at) return;
+
+            const payload = { listing_id, visit_type, status, scheduled_at, visitor, notes };
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetch(`/api/visites/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch('/api/visites', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert("Erreur lors de l'enregistrement de la visite.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur réseau: " + err.message);
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll('.local-time').forEach(el => {
                 const ts = el.getAttribute('data-timestamp');
