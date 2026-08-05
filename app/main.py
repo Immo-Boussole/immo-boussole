@@ -1171,8 +1171,12 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
     viewed_ids = _get_viewed_listing_ids(request, db)
     _enrich_listings(all_listings, viewed_ids)
 
-    # Targeted listings: to_visit == True or listings having visits
-    target_listings = db.query(Listing).filter(Listing.to_visit == True, Listing.status != ListingStatus.REJECTED).order_by(Listing.date_added.desc()).all()
+    # Targeted listings: to_visit == True or listings having visits, excluding those with any "reponse_negative"
+    refused_ids = [r[0] for r in db.query(Visit.listing_id).filter(Visit.visit_type == "reponse_negative").all()]
+    target_listings_query = db.query(Listing).filter(Listing.to_visit == True, Listing.status != ListingStatus.REJECTED)
+    if refused_ids:
+        target_listings_query = target_listings_query.filter(~Listing.id.in_(refused_ids))
+    target_listings = target_listings_query.order_by(Listing.date_added.desc()).all()
     _enrich_listings(target_listings, viewed_ids)
 
     # All visits ordered by date

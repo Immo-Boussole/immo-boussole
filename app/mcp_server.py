@@ -123,7 +123,11 @@ def tool_get_stats() -> str:
         total = db.query(Listing).count()
         active = db.query(Listing).filter(Listing.status == ListingStatus.ACTIVE).count()
         new = db.query(Listing).filter(Listing.status == ListingStatus.NEW).count()
-        to_visit_count = db.query(Listing).filter(Listing.to_visit == True).count()
+        refused_ids = [r[0] for r in db.query(Visit.listing_id).filter(Visit.visit_type == "reponse_negative").all()]
+        to_visit_query = db.query(Listing).filter(Listing.to_visit == True)
+        if refused_ids:
+            to_visit_query = to_visit_query.filter(~Listing.id.in_(refused_ids))
+        to_visit_count = to_visit_query.count()
         total_visits = db.query(Visit).count()
         
         avg_prices = db.query(
