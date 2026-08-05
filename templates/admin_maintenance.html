@@ -583,6 +583,25 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Problem: Incorrect Price per Sqm -->
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.1rem; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <div style="font-weight: 700;">Prix au m² incorrects / manquants</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-2);"><span id="count_incorrect_price_per_sqm">0</span> annonces concernées</div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end; font-size: 0.72rem; color: var(--text-2); margin-right: 0.5rem; line-height: 1.2;">
+                                        <span style="font-style: italic;">Vérifié : <span id="check_time_incorrect_price_per_sqm">-</span></span>
+                                        <span style="font-style: italic;">Réparé : <span id="repair_time_incorrect_price_per_sqm">-</span></span>
+                                    </div>
+                                    <button class="btn secondary" onclick="startRepair('incorrect_price_per_sqm')" id="btn_repair_incorrect_price_per_sqm">
+                                        <i class="fas fa-wrench"></i> Réparer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Problem: Orphaned Duplicates (Linked Ads None) -->
                         <div style="background: var(--surface-2); border: 1px solid var(--border); padding: 1rem; border-radius: 8px;">
@@ -900,6 +919,7 @@
             document.getElementById('count_unstandardized_city').textContent = problems.unstandardized_city || 0;
             document.getElementById('count_forbidden_department').textContent = problems.forbidden_department || 0;
             document.getElementById('count_forbidden_zone').textContent = problems.forbidden_zone || 0;
+            document.getElementById('count_incorrect_price_per_sqm').textContent = problems.incorrect_price_per_sqm || 0;
 
             // Global check time
             document.getElementById('last_global_check_time').textContent = data.last_global_check ? 'Dernière relance : ' + formatDateTime(data.last_global_check) : 'Dernière relance : -';
@@ -908,7 +928,7 @@
             const lastChecks = data.last_checks || {};
             const lastRepairs = data.last_repairs || {};
 
-            const types = ['empty_description', 'generic_title_figaro', 'duplicate_city_zip', 'anomalous_price', 'linked_ads_none', 'missing_city_pins', 'unstandardized_city', 'forbidden_department', 'forbidden_zone'];
+            const types = ['empty_description', 'generic_title_figaro', 'duplicate_city_zip', 'anomalous_price', 'linked_ads_none', 'missing_city_pins', 'unstandardized_city', 'forbidden_department', 'forbidden_zone', 'incorrect_price_per_sqm'];
             types.forEach(t => {
                 const checkSpan = document.getElementById('check_time_' + t);
                 const repairSpan = document.getElementById('repair_time_' + t);
@@ -1014,6 +1034,7 @@
                             else if (status.problem_type === 'unstandardized_city') labelText = 'Réparation: Villes non standardisées...';
                             else if (status.problem_type === 'forbidden_department') labelText = 'Réparation: Départements interdits...';
                             else if (status.problem_type === 'forbidden_zone') labelText = 'Réparation: Zones interdites...';
+                            else if (status.problem_type === 'incorrect_price_per_sqm') labelText = 'Réparation: Prix au m²...';
                             
                             label.textContent = labelText;
 

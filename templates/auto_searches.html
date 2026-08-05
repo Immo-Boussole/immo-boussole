@@ -541,7 +541,7 @@
                                         </div>
                                         <div style="text-align: right; font-weight: 800; font-size: 1.1rem; color: var(--text);">
                                             {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}
-                                            {% if listing.price_per_sqm %}<div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">{{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</div>{% endif %}
+                                            {% if listing.price_per_sqm %}<div style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">{{ "{:,.0f}".format(listing.price_per_sqm).replace(",", " ") }} €/m²</div>{% endif %}
                                         </div>
                                     </div>
                                 </div>

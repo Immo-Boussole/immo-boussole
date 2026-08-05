@@ -16,6 +16,7 @@ MISSING_CITY_PINS = "missing_city_pins"
 UNSTANDARDIZED_CITY = "unstandardized_city"
 FORBIDDEN_DEPARTMENT = "forbidden_department"
 FORBIDDEN_ZONE = "forbidden_zone"
+INCORRECT_PRICE_PER_SQM = "incorrect_price_per_sqm"
 
 
 
@@ -136,6 +137,14 @@ def identify_problems(db: Session):
         if city_match:
             forbidden_zone_listings.append(l)
 
+    # Incorrect price per sqm
+    incorrect_price_sqm_listings = []
+    for l in active_listings_all:
+        if l.price and l.area and l.price > 0 and l.area > 0:
+            expected = round(l.price / l.area, 2)
+            if l.price_per_sqm is None or l.price_per_sqm <= 0 or abs(l.price_per_sqm - expected) > 0.02:
+                incorrect_price_sqm_listings.append(l)
+
     return {
         EMPTY_DESCRIPTION: {
             "count": len(empty_desc_listings),
@@ -172,6 +181,10 @@ def identify_problems(db: Session):
         FORBIDDEN_ZONE: {
             "count": len(forbidden_zone_listings),
             "ids": [l.id for l in forbidden_zone_listings]
+        },
+        INCORRECT_PRICE_PER_SQM: {
+            "count": len(incorrect_price_sqm_listings),
+            "ids": [l.id for l in incorrect_price_sqm_listings]
         }
     }
 
@@ -288,6 +301,9 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                 db.commit()
                             elif problem_type == FORBIDDEN_ZONE:
                                 listing.status = ListingStatus.REJECTED
+                                db.commit()
+                            elif problem_type == INCORRECT_PRICE_PER_SQM:
+                                listing.update_price_per_sqm()
                                 db.commit()
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)

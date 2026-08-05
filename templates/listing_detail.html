@@ -793,7 +793,7 @@
 
                     </span>
                     {% if listing.price_per_sqm %}
-                    <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm)|int }} €/m²</span>
+                    <span class="price-ppsqm">— {{ "{:,.0f}".format(listing.price_per_sqm).replace(",", " ") }} €/m²</span>
                     {% endif %}
                     {% if listing.virtual_tour_url %}
                     <a href="{{ listing.virtual_tour_url }}" target="_blank" class="btn sm primary" style="margin-left: auto;">
