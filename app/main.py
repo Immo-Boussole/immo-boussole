@@ -1331,6 +1331,8 @@ def listing_detail_page(
     station1_rule = station_rules.get((listing.nearest_sncf_station or "").strip().lower())
     station2_rule = station_rules.get((listing.second_sncf_station or "").strip().lower())
 
+    users = db.query(models.User).order_by(models.User.username.asc()).all()
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -1340,6 +1342,7 @@ def listing_detail_page(
         "duplicate_children": duplicate_children,
         "queries": queries,
         "listings": all_listings,
+        "users": users,
         "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
         "title": f"{listing.title} — Immo-Boussole",
         "city_rule": city_rule,
