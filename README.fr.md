@@ -2,7 +2,7 @@
 
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
-[![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A86b0a5af223e7ee429b3af49f39afec152efb7e9-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
+[![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A370491ffc19cc1e3f5c754c1708e82cbfcd30687-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 
 *Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
 
