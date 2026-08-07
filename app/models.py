@@ -143,6 +143,7 @@ class Listing(Base):
     is_liked = Column(Boolean, default=False)
     is_disliked = Column(Boolean, default=False)
     to_visit = Column(Boolean, default=False)
+    contact_made = Column(Boolean, default=False)
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
     date_added = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())

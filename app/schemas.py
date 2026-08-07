@@ -31,6 +31,7 @@ class ListingUpdateRequest(BaseModel):
     condition: Optional[str] = None
     parking_count: Optional[int] = None
     is_favorite: Optional[bool] = None
+    contact_made: Optional[bool] = None
 
 
 class PhotoImportRequest(BaseModel):
@@ -207,6 +208,7 @@ class ListingResponse(BaseModel):
     status: str
     is_favorite: bool
     to_visit: bool = False
+    contact_made: bool = False
     is_duplicate: bool
     date_added: Optional[datetime] = None
     date_updated: Optional[datetime] = None

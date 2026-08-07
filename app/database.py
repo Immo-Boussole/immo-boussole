@@ -174,6 +174,9 @@ _MIGRATIONS = [
     ("users", "api_key_hash",              "TEXT"),
     ("users", "can_create_api_key",        "BOOLEAN DEFAULT 0"),
     ("users", "api_key_last_used",         "DATETIME"),
+    
+    # listings — contact_made flag v20
+    ("listings", "contact_made",           "BOOLEAN DEFAULT 0"),
 ]
 
 
