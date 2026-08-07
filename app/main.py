@@ -1102,6 +1102,13 @@ def _enrich_listings(listings: list[Listing], viewed_ids: set[int]):
         else:
             listing.user_status = getattr(listing.status, 'value', listing.status)
 
+        # Compute dynamic contact status
+        has_contact = (listing.contact_made == True)
+        if hasattr(listing, "visits") and listing.visits:
+            if any(v.visit_type in ["contact_agence", "relance_agence"] for v in listing.visits):
+                has_contact = True
+        listing.has_contact_or_visit = has_contact
+
 
 @app.get("/")
 def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
@@ -3483,6 +3490,17 @@ def toggle_to_visit(request: Request, listing_id: int, db: Session = Depends(get
     listing.to_visit = not listing.to_visit
     db.commit()
     return {"status": "updated", "to_visit": listing.to_visit, "listing_id": listing.id}
+
+
+@app.patch("/api/listings/{listing_id}/contact-made")
+def toggle_contact_made(request: Request, listing_id: int, db: Session = Depends(get_db), _auth = Depends(user_required)):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    listing.contact_made = not listing.contact_made
+    db.commit()
+    return {"status": "updated", "contact_made": listing.contact_made, "listing_id": listing.id}
 
 
 @app.post("/api/visites", response_model=schemas.VisitResponse)

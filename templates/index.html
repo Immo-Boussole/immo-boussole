@@ -1312,6 +1312,10 @@
                 <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
                     <i class="fa-solid fa-thumbs-down"></i><span class="hide-on-mobile">Je n'aime pas</span>
                 </button>
+                <div class="vertical-separator hide-on-mobile"></div>
+                <button class="btn" id="f-contacted" onclick="filter('contacted', this)" style="color: var(--accent);">
+                    <i class="fa-solid fa-envelope"></i><span class="hide-on-mobile">Contacté</span>
+                </button>
             </div>
 
             <div class="filter-actions hide-on-mobile">
@@ -1333,6 +1337,7 @@
                     data-liked="{{ 'true' if listing.is_liked else 'false' }}"
                     data-disliked="{{ 'true' if listing.is_disliked else 'false' }}"
                     data-to-visit="{{ 'true' if listing.to_visit else 'false' }}"
+                    data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">
@@ -1436,6 +1441,11 @@
                                         onclick="event.stopPropagation(); toggleDislike({{ listing.id }}, this)"
                                         title="{{ t(request, 'listing.dislike') }}">
                                     <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i>
+                                </button>
+                                <button class="interaction-btn contact {% if listing.has_contact_or_visit %}active{% endif %}" 
+                                        onclick="event.stopPropagation(); toggleContactMade({{ listing.id }}, this)"
+                                        title="Demande de contact agence effectuée" style="color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
                                 </button>
                             </div>
 
@@ -1781,6 +1791,7 @@
                 else if (currentStatus === 'favorite') show = card.dataset.favorite === 'true';
                 else if (currentStatus === 'liked') show = card.dataset.liked === 'true';
                 else if (currentStatus === 'disliked') show = card.dataset.disliked === 'true';
+                else if (currentStatus === 'contacted') show = card.dataset.contacted === 'true';
                 else show = card.dataset.status === currentStatus;
                 card.style.display = show ? '' : 'none';
             });
@@ -1793,6 +1804,27 @@
         });
 
         // ── Interaction Logic ────────────────────────────────────────────────
+        async function toggleContactMade(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/contact-made`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    const card = btn.closest('.card');
+                    if (data.contact_made) {
+                        btn.classList.add('active');
+                        btn.style.color = 'var(--accent)';
+                        btn.querySelector('i').className = 'fa-solid fa-envelope';
+                        if (card) card.dataset.contacted = 'true';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.color = 'var(--text-2)';
+                        btn.querySelector('i').className = 'fa-regular fa-envelope';
+                        if (card) card.dataset.contacted = 'false';
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
         async function toggleToVisit(listingId, btn) {
             try {
                 const res = await fetch(`/api/listings/${listingId}/to-visit`, { method: 'PATCH' });

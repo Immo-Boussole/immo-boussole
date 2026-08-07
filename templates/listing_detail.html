@@ -624,6 +624,55 @@
             border-color: var(--orange) !important;
             color: #fff !important;
         }
+
+        /* Toggle switch styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--surface-2);
+            transition: .4s;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-2);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(18px);
+            background-color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -1098,6 +1147,15 @@
                     <i class="fa-solid fa-clock-rotate-left"></i> MAJ le {{ listing.scraped_at.strftime('%d/%m/%Y à %H:%M') }}
                 </div>
                 {% endif %}
+            </div>
+
+            <!-- Contact agence status toggle -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.75rem;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">Demande de contact agence</span>
+                <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px; flex-shrink: 0; margin-bottom: 0;">
+                    <input type="checkbox" id="detail-contact-made-toggle" onchange="toggleContactMade({{ listing.id }}, this)" {% if listing.has_contact_or_visit %}checked{% endif %} style="opacity: 0; width: 0; height: 0;">
+                    <span class="slider"></span>
+                </label>
             </div>
 
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
@@ -2725,6 +2783,22 @@
             } catch (err) {
                 console.error(err);
                 alert("Erreur réseau: " + err.message);
+            }
+        }
+
+        async function toggleContactMade(listingId, checkbox) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/contact-made`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    checkbox.checked = data.contact_made;
+                } else {
+                    checkbox.checked = !checkbox.checked;
+                    alert("Erreur lors de la mise à jour du statut de contact.");
+                }
+            } catch (e) {
+                checkbox.checked = !checkbox.checked;
+                console.error(e);
             }
         }
 

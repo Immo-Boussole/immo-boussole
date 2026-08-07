@@ -597,6 +597,15 @@
                     </select>
                 </div>
 
+                <div class="filter-group">
+                    <label for="filter-contacted">Contacté</label>
+                    <select id="filter-contacted" class="filter-select" onchange="applyFilters()">
+                        <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
+                        <option value="true">Oui</option>
+                        <option value="false">Non</option>
+                    </select>
+                </div>
+
                 <button class="btn-reset-filter" onclick="resetFilters()">
                     <i class="fa-solid fa-xmark"></i> {{ t(request, 'filter.reset', 'Réinitialiser') }}
                 </button>
@@ -636,10 +645,14 @@
                                 <i class="fa-solid fa-sort sort-icon"></i>
                             </th>
                             <th class="sortable" data-col="7" data-type="text" onclick="sortTable(this)">
-                                {{ t(request, 'table.dpe') }}
+                                Contacté
                                 <i class="fa-solid fa-sort sort-icon"></i>
                             </th>
                             <th class="sortable" data-col="8" data-type="text" onclick="sortTable(this)">
+                                {{ t(request, 'table.dpe') }}
+                                <i class="fa-solid fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-col="9" data-type="text" onclick="sortTable(this)">
                                 {{ t(request, 'table.status') }}
                                 <i class="fa-solid fa-sort sort-icon"></i>
                             </th>
@@ -659,6 +672,7 @@
                             data-rooms="{{ listing.rooms or 0 }}"
                             data-dpe="{{ listing.dpe_rating or 'NC' }}"
                             data-status="{{ listing.user_status }}"
+                            data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
                         >
                             <td>
                                 {% if request.session.get('role') == 'user' %}
@@ -677,6 +691,14 @@
                             <td class="col-price" data-raw="{{ listing.price or 0 }}">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
                             <td data-raw="{{ listing.area or 0 }}">{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
                             <td data-raw="{{ listing.rooms or 0 }}">{{ listing.rooms|int if listing.rooms else '-' }}</td>
+                            <td>
+                                <button class="btn-contact-table {% if listing.has_contact_or_visit %}active{% endif %}"
+                                        onclick="toggleContactMade({{ listing.id }}, this)"
+                                        title="Demande de contact agence effectuée"
+                                        style="border: none; background: transparent; cursor: pointer; font-size: 0.95rem; color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
+                                </button>
+                            </td>
                             <td>
                                 {% if listing.dpe_rating %}
                                 <span class="dpe-tag dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</span>
@@ -719,6 +741,27 @@
             } finally { btn.classList.remove('loading'); }
         }
 
+        async function toggleContactMade(listingId, btn) {
+            try {
+                const res = await fetch(`/api/listings/${listingId}/contact-made`, { method: 'PATCH' });
+                const data = await res.json();
+                if (res.ok) {
+                    const row = btn.closest('tr');
+                    if (data.contact_made) {
+                        btn.classList.add('active');
+                        btn.style.color = 'var(--accent)';
+                        btn.querySelector('i').className = 'fa-solid fa-envelope';
+                        if (row) row.dataset.contacted = 'true';
+                    } else {
+                        btn.classList.remove('active');
+                        btn.style.color = 'var(--text-2)';
+                        btn.querySelector('i').className = 'fa-regular fa-envelope';
+                        if (row) row.dataset.contacted = 'false';
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
         /* ── Filter ── */
         const TOTAL = document.querySelectorAll('#table-body tr:not(#no-results-row)').length;
 
@@ -727,6 +770,7 @@
             const source  = document.getElementById('filter-source').value;
             const status  = document.getElementById('filter-status').value;
             const dpe     = document.getElementById('filter-dpe').value;
+            const contacted = document.getElementById('filter-contacted').value;
 
             const rows = document.querySelectorAll('#table-body tr:not(#no-results-row)');
             let visible = 0;
@@ -740,8 +784,9 @@
                 const matchSource = !source || row.dataset.source === source;
                 const matchStatus = !status || row.dataset.status === status;
                 const matchDpe    = !dpe    || row.dataset.dpe === dpe;
+                const matchContacted = !contacted || row.dataset.contacted === contacted;
 
-                const show = matchSearch && matchSource && matchStatus && matchDpe;
+                const show = matchSearch && matchSource && matchStatus && matchDpe && matchContacted;
                 row.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
@@ -755,6 +800,7 @@
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-status').value = '';
             document.getElementById('filter-dpe').value = '';
+            document.getElementById('filter-contacted').value = '';
             applyFilters();
         }
 
