@@ -177,6 +177,10 @@ _MIGRATIONS = [
     
     # listings — contact_made flag v20
     ("listings", "contact_made",           "BOOLEAN DEFAULT 0"),
+
+    # visits — step_family and step columns v21
+    ("visits", "step_family",              "TEXT"),
+    ("visits", "step",                     "TEXT"),
 ]
 
 
@@ -215,4 +219,16 @@ def run_migrations():
             conn.commit()
         except Exception as e:
             print(f"[Migration] Warning: could not backfill price_per_sqm: {e}")
+
+        # Backfill step_family and step for existing visits
+        try:
+            conn.execute(text("UPDATE visits SET step_family = 'visite', step = '1ere_visite' WHERE (step_family IS NULL OR step_family = '') AND visit_type = 'visite'"))
+            conn.execute(text("UPDATE visits SET step_family = 'visite', step = 'contre_visite' WHERE (step_family IS NULL OR step_family = '') AND visit_type = 'contre_visite'"))
+            conn.execute(text("UPDATE visits SET step_family = 'contact', step = 'appel_direct' WHERE (step_family IS NULL OR step_family = '') AND visit_type IN ('contact_agence', 'contact_proprio')"))
+            conn.execute(text("UPDATE visits SET step_family = 'contact', step = 'relance_sans_reponse' WHERE (step_family IS NULL OR step_family = '') AND visit_type = 'relance_agence'"))
+            conn.execute(text("UPDATE visits SET step_family = 'cloture', step = 'offre_refusee' WHERE (step_family IS NULL OR step_family = '') AND visit_type = 'reponse_negative'"))
+            conn.execute(text("UPDATE visits SET step_family = 'visite', step = '1ere_visite' WHERE step_family IS NULL OR step_family = ''"))
+            conn.commit()
+        except Exception as e:
+            print(f"[Migration] Warning: could not backfill visit step_family: {e}")
 

@@ -3548,15 +3548,33 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
     if not listing:
         raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
     
-    if (body.visit_type or "visite") == "reponse_negative":
+    step_family = body.step_family or "visite"
+    step = body.step or "1ere_visite"
+    
+    # Infer legacy visit_type if not explicitly set
+    visit_type = body.visit_type or "visite"
+    if step_family == "cloture" or step in ("offre_refusee", "bien_vendu", "abandon"):
+        visit_type = "reponse_negative"
         listing.to_visit = False
+    elif step_family == "contact":
+        if step == "relance_sans_reponse":
+            visit_type = "relance_agence"
+        else:
+            visit_type = "contact_agence"
+        listing.to_visit = True
+    elif step == "contre_visite":
+        visit_type = "contre_visite"
+        listing.to_visit = True
     else:
         listing.to_visit = True
+
     visitor_name = body.visitor or request.session.get("username") or "Utilisateur"
 
     visit = Visit(
         listing_id=body.listing_id,
-        visit_type=body.visit_type or "visite",
+        visit_type=visit_type,
+        step_family=step_family,
+        step=step,
         scheduled_at=body.scheduled_at,
         status=body.status or "programme",
         visitor=visitor_name,
@@ -3573,6 +3591,8 @@ def list_visites(
     request: Request,
     status: Optional[str] = None,
     visit_type: Optional[str] = None,
+    step_family: Optional[str] = None,
+    step: Optional[str] = None,
     listing_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _auth = Depends(user_required)
@@ -3582,6 +3602,10 @@ def list_visites(
         query = query.filter(Visit.status == status)
     if visit_type:
         query = query.filter(Visit.visit_type == visit_type)
+    if step_family:
+        query = query.filter(Visit.step_family == step_family)
+    if step:
+        query = query.filter(Visit.step == step)
     if listing_id:
         query = query.filter(Visit.listing_id == listing_id)
     
@@ -3597,6 +3621,8 @@ def list_visites(
             "listing_city": l.city or l.location if l else None,
             "listing_url": l.url if l else None,
             "visit_type": v.visit_type,
+            "step_family": v.step_family or "visite",
+            "step": v.step or "1ere_visite",
             "scheduled_at": v.scheduled_at.isoformat() if v.scheduled_at else None,
             "status": v.status,
             "visitor": v.visitor,
@@ -3612,14 +3638,21 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
     
+    if body.step_family is not None:
+        visit.step_family = body.step_family
+    if body.step is not None:
+        visit.step = body.step
+
     if body.visit_type is not None:
         visit.visit_type = body.visit_type
-        listing = db.query(Listing).filter(Listing.id == visit.listing_id).first()
-        if listing:
-            if body.visit_type == "reponse_negative":
-                listing.to_visit = False
-            else:
-                listing.to_visit = True
+
+    listing = db.query(Listing).filter(Listing.id == visit.listing_id).first()
+    if listing:
+        if (visit.step_family == "cloture") or (visit.step in ("offre_refusee", "bien_vendu", "abandon")) or (visit.visit_type == "reponse_negative"):
+            listing.to_visit = False
+        else:
+            listing.to_visit = True
+
     if body.scheduled_at is not None:
         visit.scheduled_at = body.scheduled_at
     if body.status is not None:

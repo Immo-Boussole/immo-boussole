@@ -223,7 +223,9 @@ class Visit(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
-    visit_type = Column(String(20), nullable=False, default="visite")  # "visite" or "contre_visite"
+    visit_type = Column(String(50), nullable=False, default="visite")  # Legacy type
+    step_family = Column(String(50), nullable=True)                     # Step family (e.g. "contact", "visite", "offre", "cloture")
+    step = Column(String(50), nullable=True)                            # Detailed step name
     scheduled_at = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), nullable=False, default="programme")   # "programme", "effectuee", "annulee"
     visitor = Column(String(100), nullable=True)                        # Visitor name/username
