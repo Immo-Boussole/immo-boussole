@@ -212,6 +212,10 @@ __marimo__/
 
 # Scratch and temporary scripts
 scratch/
+uc_debug.html
+tests/uc_debug.html
+test_uc.py
+tests/test_uc.py
 
 # Media
 static/media/*
