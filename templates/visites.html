@@ -771,25 +771,21 @@
         </header>
 
         <div class="content">
-            <!-- ── Stats Summary ── -->
+            <!-- ── Stats Summary (Compteurs par Famille & par Étape) ── -->
             {% set total_targets = target_listings|length %}
-            {% set planned_cnt = visits_with_listings|selectattr("visit.status", "equalto", "programme")|list|length %}
-            {% set done_listing_ids = [] %}
-            {% for item in visits_with_listings %}
-                {% if item.visit.status == "effectuee" and item.visit.visit_type in ["visite", "contre_visite"] and item.visit.listing_id not in done_listing_ids %}
-                    {% set _ = done_listing_ids.append(item.visit.listing_id) %}
-                {% endif %}
-            {% endfor %}
-            {% set done_cnt = done_listing_ids|length %}
-            {% set contre_cnt = visits_with_listings|selectattr("visit.visit_type", "equalto", "contre_visite")|list|length %}
+            {% set contact_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "contact")|list|length %}
+            {% set visite_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "visite")|list|length %}
+            {% set offre_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "offre")|list|length %}
+            {% set cloture_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "cloture")|list|length %}
 
-            {% set refusal_listing_ids = [] %}
-            {% for item in visits_with_listings %}
-                {% if item.visit.visit_type == "reponse_negative" and item.visit.listing_id not in refusal_listing_ids %}
-                    {% set _ = refusal_listing_ids.append(item.visit.listing_id) %}
-                {% endif %}
-            {% endfor %}
-            {% set refusal_cnt = refusal_listing_ids|length %}
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2);">
+                    <i class="fa-solid fa-chart-pie" style="color: var(--accent); margin-right: 0.4rem;"></i> Vue d'ensemble du Pipeline
+                </h2>
+                <button class="btn" style="font-size: 0.78rem;" onclick="toggleDetailedStepsStats()">
+                    <i class="fa-solid fa-layer-group"></i> <span id="toggleStepsBtnText">Afficher le détail par Étape (15)</span>
+                </button>
+            </div>
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -799,33 +795,43 @@
                         <div class="lbl">Biens à visiter</div>
                     </div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fa-regular fa-paper-plane"></i></div>
+                    <div class="stat-info">
+                        <div class="val" id="statFamilyContactCnt">{{ contact_cnt }}</div>
+                        <div class="lbl">Prise de contact</div>
+                    </div>
+                </div>
                 <div class="stat-card orange">
                     <div class="stat-icon orange"><i class="fa-solid fa-calendar-day"></i></div>
                     <div class="stat-info">
-                        <div class="val">{{ planned_cnt }}</div>
-                        <div class="lbl">Visites à venir</div>
-                    </div>
-                </div>
-                <div class="stat-card green">
-                    <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
-                    <div class="stat-info">
-                        <div class="val">{{ done_cnt }}</div>
-                        <div class="lbl">Visites effectuées</div>
+                        <div class="val" id="statFamilyVisiteCnt">{{ visite_cnt }}</div>
+                        <div class="lbl">Rendez-vous & Visites</div>
                     </div>
                 </div>
                 <div class="stat-card purple">
-                    <div class="stat-icon purple"><i class="fa-solid fa-repeat"></i></div>
+                    <div class="stat-icon purple"><i class="fa-solid fa-handshake"></i></div>
                     <div class="stat-info">
-                        <div class="val">{{ contre_cnt }}</div>
-                        <div class="lbl">Contre-visites</div>
+                        <div class="val" id="statFamilyOffreCnt">{{ offre_cnt }}</div>
+                        <div class="lbl">Offre & Négociation</div>
                     </div>
                 </div>
-                <div class="stat-card red">
-                    <div class="stat-icon red"><i class="fa-solid fa-ban"></i></div>
+                <div class="stat-card green">
+                    <div class="stat-icon green"><i class="fa-solid fa-flag-checkered"></i></div>
                     <div class="stat-info">
-                        <div class="val">{{ refusal_cnt }}</div>
-                        <div class="lbl">Biens refusés</div>
+                        <div class="val" id="statFamilyClotureCnt">{{ cloture_cnt }}</div>
+                        <div class="lbl">Issue & Clôture</div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ── Detailed Steps Grid (Hidden by default) ── -->
+            <div id="detailedStepsGrid" style="display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; animation: slideUp 0.25s ease;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                    Compteurs détaillés par Étape du Pipeline (15 étapes)
+                </div>
+                <div id="stepsCountersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
+                    <!-- Populated dynamically via JS -->
                 </div>
             </div>
 
@@ -933,8 +939,47 @@
                 {% endif %}
             </div>
 
-            <!-- ── TAB 3: History ── -->
+            <!-- ── TAB 3: History & Pipeline ── -->
             <div id="tabHistory" class="tab-content" style="display: none;">
+                <!-- ── History Filter Bar (Famille, Étape, Relance) ── -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem 1.25rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: center; flex: 1;">
+                        <!-- Famille Filter -->
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <label for="historyFilterFamily" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">Famille d'étape</label>
+                            <select id="historyFilterFamily" onchange="onHistoryFamilyFilterChange()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.82rem; font-weight: 600;">
+                                <option value="">Toutes les familles</option>
+                                <option value="contact">📩 Prise de contact</option>
+                                <option value="visite">🏡 Rendez-vous & Visites</option>
+                                <option value="offre">🤝 Offre & Négociation</option>
+                                <option value="cloture">🏁 Issue & Clôture</option>
+                            </select>
+                        </div>
+
+                        <!-- Étape Filter -->
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <label for="historyFilterStep" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">Étape précise</label>
+                            <select id="historyFilterStep" onchange="applyHistoryFilters()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.82rem; font-weight: 600;">
+                                <option value="">Toutes les étapes</option>
+                            </select>
+                        </div>
+
+                        <!-- Relance Filter (Follow-up) -->
+                        <div style="display: flex; align-items: center; gap: 0.6rem; background: rgba(248, 168, 75, 0.1); border: 1px solid rgba(248, 168, 75, 0.25); padding: 0.45rem 0.85rem; border-radius: 9px; margin-top: 1rem;">
+                            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; font-weight: 600; color: var(--orange); cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="historyFilterRelance" onchange="applyHistoryFilters()" style="accent-color: var(--orange); cursor: pointer; width: 16px; height: 16px;">
+                                <span><i class="fa-solid fa-bell"></i> À relancer (sans nouvelles depuis &gt;)</span>
+                            </label>
+                            <input type="number" id="historyRelanceDays" value="7" min="1" max="365" style="width: 60px; padding: 0.25rem 0.4rem; text-align: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.85rem; font-weight: 700;" onchange="applyHistoryFilters()" oninput="applyHistoryFilters()">
+                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--orange);">jours</span>
+                        </div>
+                    </div>
+
+                    <button class="btn" style="font-size: 0.75rem;" onclick="resetHistoryFilters()">
+                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                    </button>
+                </div>
+
                 {% if visits_with_listings %}
                     <!-- ── Timeline (Frise Chronologique) ── -->
                     <div class="timeline-wrapper">
@@ -947,7 +992,9 @@
                                 {% for item in visits_with_listings %}
                                 {% set v = item.visit %}
                                 {% set l = item.listing %}
-                                <div class="timeline-node {{ v.visit_type }} {{ v.status }}" onclick="scrollToPropertyBlock('prop-block-{{ l.id if l else 0 }}')">
+                                {% set sf = v.step_family or 'visite' %}
+                                {% set st = v.step or '1ere_visite' %}
+                                <div class="timeline-node {{ sf }} {{ v.status }}" onclick="scrollToPropertyBlock('prop-block-{{ l.id if l else 0 }}')">
                                     <div class="timeline-tooltip">
                                         <div class="tooltip-title">{{ l.title if l else 'Bien non disponible' }}</div>
                                         <div class="tooltip-date">{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</div>
@@ -959,28 +1006,19 @@
                                         {{ v.scheduled_at.strftime('%d/%m') if v.scheduled_at else 'N/C' }}
                                     </div>
                                     <div class="node-marker">
-                                        {% if v.visit_type == 'contre_visite' %}
-                                            <i class="fa-solid fa-repeat"></i>
-                                        {% elif v.visit_type == 'contact_agence' %}
-                                            <i class="fa-solid fa-building"></i>
-                                        {% elif v.visit_type == 'relance_agence' %}
-                                            <i class="fa-solid fa-phone-volume"></i>
-                                        {% elif v.visit_type == 'contact_proprio' %}
-                                            <i class="fa-solid fa-user-tie"></i>
-                                        {% elif v.visit_type == 'reponse_negative' %}
-                                            <i class="fa-solid fa-ban"></i>
+                                        {% if sf == 'contact' %}
+                                            <i class="fa-regular fa-paper-plane"></i>
+                                        {% elif sf == 'offre' %}
+                                            <i class="fa-solid fa-handshake"></i>
+                                        {% elif sf == 'cloture' %}
+                                            <i class="fa-solid fa-flag-checkered"></i>
                                         {% else %}
-                                            <i class="fa-solid fa-eye"></i>
+                                            <i class="fa-solid fa-house-circle-check"></i>
                                         {% endif %}
                                     </div>
                                     <div class="node-label">
-                                        <div class="node-type">
-                                            {% if v.visit_type == 'contre_visite' %}Contre-visite
-                                            {% elif v.visit_type == 'contact_agence' %}Contact Agence
-                                            {% elif v.visit_type == 'relance_agence' %}Relance Agence
-                                            {% elif v.visit_type == 'contact_proprio' %}Contact Proprio
-                                            {% elif v.visit_type == 'reponse_negative' %}Réponse Négative
-                                            {% else %}1ère Visite{% endif %}
+                                        <div class="node-type" id="tl-node-type-{{ v.id }}">
+                                            {{ v.step or v.visit_type }}
                                         </div>
                                         <div class="node-prop" title="{{ l.title if l else 'N/C' }}">{{ l.title[:18] if l else 'N/C' }}{% if l and l.title|length > 18 %}...{% endif %}</div>
                                     </div>
@@ -999,10 +1037,10 @@
                         {% set _ = grouped_visits[l_id]['visits'].append(item.visit) %}
                     {% endfor %}
 
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="historyPropertyCardsContainer">
                         {% for l_id, group in grouped_visits.items() %}
                         {% set l = group.listing %}
-                        <div class="prop-card" id="prop-block-{{ l_id }}" style="padding: 0;">
+                        <div class="prop-card history-prop-card" id="prop-block-{{ l_id }}" data-listing-id="{{ l_id }}" style="padding: 0;">
                             <div class="prop-header" style="background: var(--surface-2); border-bottom: 1px solid var(--border);">
                                 {% if l and l._photos %}
                                 <img src="{{ l._photos[0] }}" class="prop-thumb" alt="{{ l.title }}">
@@ -1025,6 +1063,9 @@
                                     {% endif %}
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span class="relance-badge" id="relance-badge-{{ l_id }}" style="display: none; background: rgba(248, 168, 75, 0.2); color: var(--orange); border: 1px solid rgba(248, 168, 75, 0.4); padding: 0.35rem 0.65rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">
+                                        <i class="fa-solid fa-bell"></i> Relance requise
+                                    </span>
                                     {% if l %}
                                     <button class="btn primary" style="font-size: 0.75rem;" onclick="openVisitModal({{ l.id }})">
                                         <i class="fa-solid fa-plus"></i> Ajouter une activité
@@ -1038,7 +1079,7 @@
                                     <thead>
                                         <tr>
                                             <th>Date & Heure</th>
-                                            <th>Type</th>
+                                            <th>Famille & Étape</th>
                                             <th>Visiteur</th>
                                             <th>Statut</th>
                                             <th>Notes / Compte-rendu</th>
@@ -1047,23 +1088,11 @@
                                     </thead>
                                     <tbody>
                                         {% for v in group.visits %}
-                                        <tr>
+                                        <tr class="visit-row" data-visit-id="{{ v.id }}" data-family="{{ v.step_family or 'visite' }}" data-step="{{ v.step or '1ere_visite' }}" data-scheduled="{{ v.scheduled_at.isoformat() if v.scheduled_at else '' }}">
                                             <td><strong>{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</strong></td>
                                             <td>
-                                                <span class="badge-type {{ v.visit_type }}">
-                                                    {% if v.visit_type == 'contre_visite' %}
-                                                        <i class="fa-solid fa-repeat"></i> Contre-visite
-                                                    {% elif v.visit_type == 'contact_agence' %}
-                                                        <i class="fa-solid fa-building"></i> 1er contact agence
-                                                    {% elif v.visit_type == 'relance_agence' %}
-                                                        <i class="fa-solid fa-phone-volume"></i> Relance agence
-                                                    {% elif v.visit_type == 'contact_proprio' %}
-                                                        <i class="fa-solid fa-user-tie"></i> 1er contact proprio
-                                                    {% elif v.visit_type == 'reponse_negative' %}
-                                                        <i class="fa-solid fa-ban"></i> Réponse négative
-                                                    {% else %}
-                                                        <i class="fa-solid fa-eye"></i> 1ère Visite
-                                                    {% endif %}
+                                                <span class="badge-type {{ v.step_family or 'visite' }}" id="visit-step-badge-{{ v.id }}">
+                                                    {{ v.step or v.visit_type }}
                                                 </span>
                                             </td>
                                             <td>{{ v.visitor or '—' }}</td>
@@ -1082,7 +1111,7 @@
                                                         <i class="fa-solid fa-check"></i>
                                                     </button>
                                                     {% endif %}
-                                                    <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem;" title="Modifier" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ v.visit_type|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
+                                                    <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem;" title="Modifier" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ (v.step_family or "visite")|tojson }}, {{ (v.step or "1ere_visite")|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
                                                         <i class="fa-solid fa-pen-to-square"></i>
                                                     </button>
                                                     <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--red);" title="Supprimer" onclick="deleteVisit({{ v.id }})">
@@ -1101,7 +1130,7 @@
                 {% else %}
                     <div style="text-align: center; padding: 4rem 2rem; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);">
                         <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                        <h2>Aucune visite programmée ou enregistrée</h2>
+                        <h2>Aucune activité ou visite enregistrée</h2>
                     </div>
                 {% endif %}
             </div>
@@ -1113,7 +1142,7 @@
     <div class="modal-backdrop" id="visitModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 id="modalTitle"><i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Planifier une visite</h2>
+                <h2 id="modalTitle"><i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Enregistrer une activité / visite</h2>
                 <button class="modal-close" onclick="closeVisitModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="visitForm" onsubmit="saveVisit(event)">
@@ -1133,50 +1162,55 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
-                        <label for="visitType">Type de visite *</label>
-                        <select id="visitType" required>
-                            <option value="visite">1ère Visite</option>
-                            <option value="contre_visite">Contre-visite</option>
-                            <option value="contact_agence">1er contact avec agence</option>
-                            <option value="relance_agence">Relance agence</option>
-                            <option value="contact_proprio">1er contact avec propriétaire</option>
-                            <option value="reponse_negative">Réponse négative (Agence / Proprio)</option>
+                        <label for="visitStepFamily">Famille d'étape *</label>
+                        <select id="visitStepFamily" required onchange="onModalFamilyChange()">
+                            <option value="contact">📩 Prise de contact</option>
+                            <option value="visite" selected>🏡 Rendez-vous & Visites</option>
+                            <option value="offre">🤝 Offre & Négociation</option>
+                            <option value="cloture">🏁 Issue & Clôture</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="visitStatus">Statut *</label>
-                        <select id="visitStatus" required>
-                            <option value="programme">Programmée</option>
-                            <option value="effectuee">Effectuée</option>
-                            <option value="annulee">Annulée</option>
+                        <label for="visitStep">Étape précise *</label>
+                        <select id="visitStep" required>
+                            <!-- Dynamically populated -->
                         </select>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="visitStatus">Statut de l'activité *</label>
+                        <select id="visitStatus" required>
+                            <option value="programme">Programmée / En cours</option>
+                            <option value="effectuee">Effectuée / Validée</option>
+                            <option value="annulee">Annulée / Abandonnée</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label for="visitDateTime">Date & Heure *</label>
                         <input type="datetime-local" id="visitDateTime" required>
                     </div>
-
-                    <div class="form-group">
-                        <label>Nom du visiteur</label>
-                        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem;">
-                            {% for u in users %}
-                            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
-                                <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
-                                <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
-                            </label>
-                            {% endfor %}
-                        </div>
-                        <input type="text" id="visitVisitorCustom" placeholder="Autre(s) visiteur(s) sans compte (ex: Marie, Pierre)..." style="font-size: 0.82rem;">
-                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="visitNotes">Notes & Commentaires (code, contact agence, impressions)</label>
-                    <textarea id="visitNotes" rows="3" placeholder="Numéro de l'agent, digicode, parking..."></textarea>
+                    <label>Nom des participants / visiteurs</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem;">
+                        {% for u in users %}
+                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
+                            <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
+                            <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="text" id="visitVisitorCustom" placeholder="Autre(s) interlocuteur(s) (ex: Marie, Agent Immobilier, Vendeur)..." style="font-size: 0.82rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="visitNotes">Notes & Compte-rendu (coordonnées agence, impressions, offre, etc.)</label>
+                    <textarea id="visitNotes" rows="3" placeholder="Notes sur le bien, digicode, prix proposé, réponse agence..."></textarea>
                 </div>
 
                 <div class="modal-actions">
@@ -1187,8 +1221,55 @@
         </div>
     </div>
 
-    <!-- ── Data inject for JS ── -->
+    <!-- ── Data inject & Pipeline JavaScript ── -->
     <script>
+        const STEP_FAMILIES = {
+            contact: {
+                label: "Prise de contact",
+                icon: "fa-regular fa-paper-plane",
+                color: "blue",
+                steps: {
+                    formulaire_envoye: { label: "Formulaire web envoyé", icon: "fa-solid fa-file-pen" },
+                    email_envoye: { label: "E-mail envoyé", icon: "fa-solid fa-envelope" },
+                    appel_direct: { label: "Appel direct effectué", icon: "fa-solid fa-phone" },
+                    message_vocal: { label: "Message vocal laissé", icon: "fa-solid fa-voicemail" },
+                    relance_sans_reponse: { label: "Relance initiale sans réponse", icon: "fa-solid fa-phone-volume" }
+                }
+            },
+            visite: {
+                label: "Rendez-vous & Visites",
+                icon: "fa-solid fa-house-circle-check",
+                color: "orange",
+                steps: {
+                    rdv_planifie: { label: "RDV Visite planifié", icon: "fa-regular fa-calendar-check" },
+                    "1ere_visite": { label: "1ère Visite effectuée", icon: "fa-solid fa-eye" },
+                    contre_visite: { label: "Contre-visite planifiée / effectuée", icon: "fa-solid fa-repeat" },
+                    visite_annulee: { label: "Visite annulée", icon: "fa-solid fa-calendar-xmark" }
+                }
+            },
+            offre: {
+                label: "Offre & Négociation",
+                icon: "fa-solid fa-handshake",
+                color: "purple",
+                steps: {
+                    dossier_demande: { label: "Documents / Dossier demandé", icon: "fa-solid fa-folder-open" },
+                    offre_transmise: { label: "Offre d'achat transmise", icon: "fa-solid fa-file-signature" },
+                    contre_proposition: { label: "Contre-proposition vendeur", icon: "fa-solid fa-scale-balanced" }
+                }
+            },
+            cloture: {
+                label: "Issue & Clôture",
+                icon: "fa-solid fa-flag-checkered",
+                color: "green",
+                steps: {
+                    offre_acceptee: { label: "Offre acceptée 🎉", icon: "fa-solid fa-circle-check" },
+                    offre_refusee: { label: "Offre refusée", icon: "fa-solid fa-ban" },
+                    bien_vendu: { label: "Bien plus sur le marché / Vendu", icon: "fa-solid fa-house-circle-xmark" },
+                    abandon: { label: "Abandon / Classé sans suite", icon: "fa-solid fa-xmark" }
+                }
+            }
+        };
+
         const RAW_VISITS = [
             {% for item in visits_with_listings %}
             {% set v = item.visit %}
@@ -1199,6 +1280,8 @@
                 listing_title: {{ (l.title if l else "Bien")|tojson }},
                 listing_city: {{ (l.city or l.location if l else "")|tojson }},
                 visit_type: {{ v.visit_type|tojson }},
+                step_family: {{ (v.step_family or "visite")|tojson }},
+                step: {{ (v.step or "1ere_visite")|tojson }},
                 status: {{ v.status|tojson }},
                 scheduled_at: {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }},
                 visitor: {{ (v.visitor or "")|tojson }},
@@ -1212,7 +1295,195 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             renderCalendar(currentYear, currentMonth);
+            renderStepsCountersGrid();
+            populateTimelineLabels();
+            populateTableBadges();
+            onModalFamilyChange();
         });
+
+        function getStepLabel(family, stepKey) {
+            if (STEP_FAMILIES[family] && STEP_FAMILIES[family].steps[stepKey]) {
+                return STEP_FAMILIES[family].steps[stepKey].label;
+            }
+            // Fallback for legacy step keys
+            switch (stepKey) {
+                case '1ere_visite': return '1ère Visite';
+                case 'contre_visite': return 'Contre-visite';
+                case 'contact_agence': return '1er contact agence';
+                case 'relance_agence': return 'Relance agence';
+                case 'contact_proprio': return '1er contact proprio';
+                case 'reponse_negative': return 'Offre/Contact refusé';
+                default: return stepKey || 'Activité';
+            }
+        }
+
+        function populateTimelineLabels() {
+            RAW_VISITS.forEach(v => {
+                const el = document.getElementById(`tl-node-type-${v.id}`);
+                if (el) {
+                    el.textContent = getStepLabel(v.step_family, v.step);
+                }
+            });
+        }
+
+        function populateTableBadges() {
+            RAW_VISITS.forEach(v => {
+                const el = document.getElementById(`visit-step-badge-${v.id}`);
+                if (el) {
+                    const fam = STEP_FAMILIES[v.step_family];
+                    const icon = fam && fam.steps[v.step] ? `<i class="${fam.steps[v.step].icon}"></i> ` : '';
+                    el.innerHTML = `${icon}${getStepLabel(v.step_family, v.step)}`;
+                }
+            });
+        }
+
+        // ── 15-Step Detailed Grid ─────────────────────────────────────────────
+        function toggleDetailedStepsStats() {
+            const grid = document.getElementById('detailedStepsGrid');
+            const btnText = document.getElementById('toggleStepsBtnText');
+            if (grid.style.display === 'none') {
+                grid.style.display = 'block';
+                btnText.textContent = 'Masquer le détail par Étape (15)';
+            } else {
+                grid.style.display = 'none';
+                btnText.textContent = 'Afficher le détail par Étape (15)';
+            }
+        }
+
+        function renderStepsCountersGrid() {
+            const container = document.getElementById('stepsCountersContainer');
+            if (!container) return;
+
+            // Compute counts for each step
+            const counts = {};
+            RAW_VISITS.forEach(v => {
+                const key = `${v.step_family}:${v.step}`;
+                counts[key] = (counts[key] || 0) + 1;
+            });
+
+            let html = '';
+            Object.keys(STEP_FAMILIES).forEach(famKey => {
+                const fam = STEP_FAMILIES[famKey];
+                Object.keys(fam.steps).forEach(stepKey => {
+                    const step = fam.steps[stepKey];
+                    const cnt = counts[`${famKey}:${stepKey}`] || 0;
+                    html += `
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.65rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.55rem; font-size: 0.78rem; font-weight: 600; color: var(--text);">
+                                <i class="${step.icon}" style="color: var(--accent); font-size: 0.9rem;"></i>
+                                <span style="line-height: 1.2;">${step.label}</span>
+                            </div>
+                            <span style="background: rgba(79, 142, 247, 0.15); color: var(--accent); font-weight: 800; font-size: 0.85rem; padding: 0.15rem 0.55rem; border-radius: 6px;">
+                                ${cnt}
+                            </span>
+                        </div>
+                    `;
+                });
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ── History Filter & Relance (Follow-up) Logic ────────────────────────
+        function onHistoryFamilyFilterChange() {
+            const familySelect = document.getElementById('historyFilterFamily');
+            const stepSelect = document.getElementById('historyFilterStep');
+            const selectedFam = familySelect.value;
+
+            stepSelect.innerHTML = '<option value="">Toutes les étapes</option>';
+
+            if (selectedFam && STEP_FAMILIES[selectedFam]) {
+                const steps = STEP_FAMILIES[selectedFam].steps;
+                Object.keys(steps).forEach(sKey => {
+                    const opt = document.createElement('option');
+                    opt.value = sKey;
+                    opt.textContent = steps[sKey].label;
+                    stepSelect.appendChild(opt);
+                });
+            }
+
+            applyHistoryFilters();
+        }
+
+        function resetHistoryFilters() {
+            document.getElementById('historyFilterFamily').value = '';
+            document.getElementById('historyFilterStep').innerHTML = '<option value="">Toutes les étapes</option>';
+            document.getElementById('historyFilterRelance').checked = false;
+            document.getElementById('historyRelanceDays').value = 7;
+            applyHistoryFilters();
+        }
+
+        function applyHistoryFilters() {
+            const famFilter = document.getElementById('historyFilterFamily').value;
+            const stepFilter = document.getElementById('historyFilterStep').value;
+            const relanceFilter = document.getElementById('historyFilterRelance').checked;
+            const relanceDays = parseInt(document.getElementById('historyRelanceDays').value) || 7;
+
+            const now = new Date();
+            const cards = document.querySelectorAll('.history-prop-card');
+
+            cards.forEach(card => {
+                const listingId = card.getAttribute('data-listing-id');
+                const rows = card.querySelectorAll('.visit-row');
+                let matchingRowsCount = 0;
+                let latestDate = null;
+                let isClosedProperty = false;
+
+                rows.forEach(row => {
+                    const rowFam = row.getAttribute('data-family');
+                    const rowStep = row.getAttribute('data-step');
+                    const schedIso = row.getAttribute('data-scheduled');
+
+                    if (rowFam === 'cloture' || ['offre_refusee', 'bien_vendu', 'abandon'].includes(rowStep)) {
+                        isClosedProperty = true;
+                    }
+
+                    if (schedIso) {
+                        const rowDate = new Date(schedIso);
+                        if (!latestDate || rowDate > latestDate) {
+                            latestDate = rowDate;
+                        }
+                    }
+
+                    let matchFamily = !famFilter || rowFam === famFilter;
+                    let matchStep = !stepFilter || rowStep === stepFilter;
+
+                    if (matchFamily && matchStep) {
+                        row.style.display = '';
+                        matchingRowsCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Compute relance condition
+                let needsRelance = false;
+                if (latestDate && !isClosedProperty) {
+                    const diffDays = Math.floor((now - latestDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays >= relanceDays) {
+                        needsRelance = true;
+                    }
+                }
+
+                const badgeEl = document.getElementById(`relance-badge-${listingId}`);
+                if (badgeEl) {
+                    if (needsRelance) {
+                        const diffDays = Math.floor((now - (latestDate || now)) / (1000 * 60 * 60 * 24));
+                        badgeEl.innerHTML = `<i class="fa-solid fa-bell"></i> Relance requise (${diffDays} j sans nouvelles)`;
+                        badgeEl.style.display = 'inline-flex';
+                    } else {
+                        badgeEl.style.display = 'none';
+                    }
+                }
+
+                let cardVisible = matchingRowsCount > 0;
+                if (relanceFilter && (!needsRelance || isClosedProperty)) {
+                    cardVisible = false;
+                }
+
+                card.style.display = cardVisible ? '' : 'none';
+            });
+        }
 
         function switchTab(tab) {
             document.getElementById('tabCalendar').style.display = tab === 'calendar' ? 'block' : 'none';
@@ -1222,17 +1493,6 @@
             document.getElementById('tabBtnCal').classList.toggle('active', tab === 'calendar');
             document.getElementById('tabBtnProps').classList.toggle('active', tab === 'properties');
             document.getElementById('tabBtnHistory').classList.toggle('active', tab === 'history');
-        }
-
-        function getVisitTypeShortLabel(type) {
-            switch (type) {
-                case 'contre_visite': return 'C-Visite';
-                case 'contact_agence': return '1er contact (Ag)';
-                case 'relance_agence': return 'Relance (Ag)';
-                case 'contact_proprio': return '1er contact (Pr)';
-                case 'reponse_negative': return 'Refusé';
-                default: return 'Visite';
-            }
         }
 
         function setVisitorUI(visitorStr) {
@@ -1269,6 +1529,27 @@
             return allVisitors.join(', ');
         }
 
+        // ── Modal Cascading Select ─────────────────────────────────────────────
+        function onModalFamilyChange(selectedStepKey = null) {
+            const famSelect = document.getElementById('visitStepFamily');
+            const stepSelect = document.getElementById('visitStep');
+            const famKey = famSelect.value;
+
+            stepSelect.innerHTML = '';
+            if (STEP_FAMILIES[famKey]) {
+                const steps = STEP_FAMILIES[famKey].steps;
+                Object.keys(steps).forEach(sKey => {
+                    const opt = document.createElement('option');
+                    opt.value = sKey;
+                    opt.textContent = steps[sKey].label;
+                    if (selectedStepKey && selectedStepKey === sKey) {
+                        opt.selected = true;
+                    }
+                    stepSelect.appendChild(opt);
+                });
+            }
+        }
+
         // ── Calendar Rendering ────────────────────────────────────────────────
         function renderCalendar(year, month) {
             const body = document.getElementById('calendarBody');
@@ -1278,16 +1559,13 @@
             const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
             document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
 
-            // First day index (Monday = 0, Sunday = 6)
             let firstDay = date.getDay() - 1;
             if (firstDay < 0) firstDay = 6;
 
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const daysInPrevMonth = new Date(year, month, 0).getDate();
-
             const today = new Date();
 
-            // Previous month cells
             for (let i = firstDay - 1; i >= 0; i--) {
                 const dayNum = daysInPrevMonth - i;
                 const cell = document.createElement('div');
@@ -1296,7 +1574,6 @@
                 body.appendChild(cell);
             }
 
-            // Current month cells
             for (let d = 1; d <= daysInMonth; d++) {
                 const cell = document.createElement('div');
                 const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
@@ -1310,7 +1587,6 @@
 
                 let cellHtml = `<div class="cell-date"><span>${d}</span>${isToday ? '<span style="font-size: 0.6rem; text-transform: uppercase;">Auj.</span>' : ''}</div>`;
 
-                // Find visits for this day
                 const dayVisits = RAW_VISITS.filter(v => {
                     if (!v.scheduled_at) return false;
                     const vDate = v.scheduled_at.split('T')[0];
@@ -1319,10 +1595,10 @@
 
                 dayVisits.forEach(v => {
                     const timeStr = v.scheduled_at ? v.scheduled_at.split('T')[1].substring(0, 5) : '';
-                    const typeLabel = getVisitTypeShortLabel(v.visit_type);
+                    const stepText = getStepLabel(v.step_family, v.step);
                     cellHtml += `
-                        <div class="visit-chip ${v.status} ${v.visit_type}" onclick="event.stopPropagation(); editVisit(${v.id}, ${v.listing_id}, '${v.visit_type}', '${v.scheduled_at}', '${v.status}', '${(v.visitor||'').replace(/'/g, "\\'")}', '${(v.notes||'').replace(/'/g, "\\'")}')" title="${v.listing_title} (${v.status})">
-                            <span><strong>${timeStr}</strong> ${typeLabel}</span>
+                        <div class="visit-chip ${v.status} ${v.step_family}" onclick="event.stopPropagation(); editVisit(${v.id}, ${v.listing_id}, '${v.step_family}', '${v.step}', '${v.scheduled_at}', '${v.status}', '${(v.visitor||'').replace(/'/g, "\\'")}', '${(v.notes||'').replace(/'/g, "\\'")}')" title="${v.listing_title} - ${stepText} (${v.status})">
+                            <span><strong>${timeStr}</strong> ${stepText}</span>
                             <span style="max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${v.listing_city || ''}</span>
                         </div>
                     `;
@@ -1332,7 +1608,6 @@
                 body.appendChild(cell);
             }
 
-            // Next month trailing cells
             const totalCellsSoFar = firstDay + daysInMonth;
             const remaining = (7 - (totalCellsSoFar % 7)) % 7;
             for (let i = 1; i <= remaining; i++) {
@@ -1364,7 +1639,7 @@
         // ── Modal Actions ──────────────────────────────────────────────────────
         function openVisitModal(listingId = null, dateTimeStr = '') {
             document.getElementById('visitId').value = '';
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Planifier une visite';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Enregistrer une activité / visite';
             document.getElementById('visitForm').reset();
 
             if (listingId) {
@@ -1378,6 +1653,9 @@
                 const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
                 document.getElementById('visitDateTime').value = localIso;
             }
+            document.getElementById('visitStepFamily').value = 'visite';
+            onModalFamilyChange('1ere_visite');
+
             const currentUser = {{ request.session.get('username', '')|tojson }};
             setVisitorUI(currentUser);
             document.getElementById('visitModal').classList.add('open');
@@ -1386,11 +1664,11 @@
         function closeVisitModal() {
             document.getElementById('visitModal').classList.remove('open');
         }
+
         function scrollToPropertyBlock(blockId) {
             const element = document.getElementById(blockId);
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Briefly flash/highlight the card
                 const originalBg = element.style.background || '';
                 element.style.background = 'rgba(79, 142, 247, 0.15)';
                 setTimeout(() => {
@@ -1399,11 +1677,15 @@
             }
         }
 
-        function editVisit(id, listingId, visitType, scheduledAt, status, visitor, notes) {
+        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes) {
             document.getElementById('visitId').value = id;
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Modifier la visite';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Modifier l\'activité / visite';
             document.getElementById('visitListingId').value = listingId;
-            document.getElementById('visitType').value = visitType || 'visite';
+            
+            const fam = stepFamily || 'visite';
+            document.getElementById('visitStepFamily').value = fam;
+            onModalFamilyChange(step || '1ere_visite');
+            
             document.getElementById('visitStatus').value = status || 'programme';
             if (scheduledAt && scheduledAt !== 'null') {
                 document.getElementById('visitDateTime').value = scheduledAt.slice(0, 16);
@@ -1417,7 +1699,8 @@
             e.preventDefault();
             const id = document.getElementById('visitId').value;
             const listing_id = parseInt(document.getElementById('visitListingId').value);
-            const visit_type = document.getElementById('visitType').value;
+            const step_family = document.getElementById('visitStepFamily').value;
+            const step = document.getElementById('visitStep').value;
             const status = document.getElementById('visitStatus').value;
             const scheduled_at = document.getElementById('visitDateTime').value;
             const visitor = getVisitorStringFromUI();
@@ -1425,7 +1708,7 @@
 
             if (!listing_id || !scheduled_at) return;
 
-            const payload = { listing_id, visit_type, status, scheduled_at, visitor, notes };
+            const payload = { listing_id, step_family, step, status, scheduled_at, visitor, notes };
 
             try {
                 let res;
@@ -1445,7 +1728,7 @@
                 if (res.ok) {
                     location.reload();
                 } else {
-                    alert("Erreur lors de l'enregistrement de la visite.");
+                    alert("Erreur lors de l'enregistrement de l'activité.");
                 }
             } catch (err) {
                 console.error(err);
@@ -1466,7 +1749,7 @@
         }
 
         async function deleteVisit(visitId) {
-            if (!confirm("Voulez-vous vraiment supprimer cette visite ?")) return;
+            if (!confirm("Voulez-vous vraiment supprimer cette activité ?")) return;
             try {
                 const res = await fetch(`/api/visites/${visitId}`, { method: 'DELETE' });
                 if (res.ok) location.reload();

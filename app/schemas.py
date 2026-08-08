@@ -220,6 +220,8 @@ class ListingResponse(BaseModel):
 class VisitCreateRequest(BaseModel):
     listing_id: int
     visit_type: str = "visite"  # "visite" or "contre_visite"
+    step_family: Optional[str] = None
+    step: Optional[str] = None
     scheduled_at: datetime
     status: str = "programme"   # "programme", "effectuee", "annulee"
     visitor: Optional[str] = None
@@ -228,6 +230,8 @@ class VisitCreateRequest(BaseModel):
 
 class VisitUpdateRequest(BaseModel):
     visit_type: Optional[str] = None
+    step_family: Optional[str] = None
+    step: Optional[str] = None
     scheduled_at: Optional[datetime] = None
     status: Optional[str] = None
     visitor: Optional[str] = None
@@ -238,6 +242,8 @@ class VisitResponse(BaseModel):
     id: int
     listing_id: int
     visit_type: str
+    step_family: Optional[str] = None
+    step: Optional[str] = None
     scheduled_at: datetime
     status: str
     visitor: Optional[str] = None

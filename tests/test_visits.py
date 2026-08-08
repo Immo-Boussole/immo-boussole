@@ -76,15 +76,22 @@ def test_visits_flow():
         db.refresh(v_db)
         assert v_db.status == "effectuee"
 
-        # 6. Test MCP tool: schedule counter-visit
-        sch_res2 = tool_schedule_visit(
+        # 6. Test DB creation & updates with step_family and step
+        visit_contact = Visit(
             listing_id=listing_id,
-            scheduled_at="2026-08-25T16:00:00",
-            visit_type="contre_visite",
-            visitor="Jean & Marie",
-            notes="Contre-visite avec l'artisan"
+            scheduled_at=datetime.datetime.now(datetime.timezone.utc),
+            step_family="contact",
+            step="appel_direct",
+            visit_type="contact_agence",
+            status="effectuee",
+            visitor="Jean Dupont",
+            notes="Appel direct passé"
         )
-        print("Schedule counter-visit res:", sch_res2)
+        db.add(visit_contact)
+        db.commit()
+        db.refresh(visit_contact)
+        assert visit_contact.step_family == "contact"
+        assert visit_contact.step == "appel_direct"
 
         # 7. Check stats tool includes visits
         stats_json = tool_get_stats()
