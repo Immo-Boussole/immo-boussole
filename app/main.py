@@ -1170,6 +1170,45 @@ def a_voir_page(request: Request, db: Session = Depends(get_db), _auth = Depends
     })
 
 
+@app.get("/a-visiter")
+def a_visiter_page(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    queries = db.query(SearchQuery).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+
+    refused_ids = [r[0] for r in db.query(Visit.listing_id).filter(Visit.visit_type == "reponse_negative").all()]
+
+    candidates = db.query(Listing).filter(
+        Listing.status != ListingStatus.REJECTED
+    ).all()
+    
+    _enrich_listings(candidates, viewed_ids)
+    
+    display_listings = []
+    for l in candidates:
+        if l.id in refused_ids:
+            continue
+        if l.contact_made or l.has_contact_or_visit:
+            display_listings.append(l)
+
+    display_listings.sort(key=lambda x: x.date_added or datetime.min, reverse=True)
+
+    _enrich_listings(all_listings, viewed_ids)
+    local_hash = get_local_commit_hash()
+
+    return templates.TemplateResponse(request=request, name="index.html", context={
+        "imported_listings": [], 
+        "rejected_listings": [], 
+        "listings": all_listings, 
+        "display_listings": display_listings,
+        "queries": queries,
+        "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
+        "title": "À visiter — Immo-Boussole",
+        "is_a_visiter": True
+    })
+
+
 @app.get("/visites")
 def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
     all_listings = db.query(Listing).filter(Listing.status != ListingStatus.REJECTED).order_by(Listing.date_added.desc()).all()

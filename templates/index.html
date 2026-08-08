@@ -1213,6 +1213,7 @@
             <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard') }}</a>
             <a href="/listings/table" class="nav-link{% if request.url.path == '/listings/table' %} active{% endif %}"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table') }}</a>
             <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/a-visiter" class="nav-link{% if request.url.path == '/a-visiter' %} active{% endif %}"><i class="fa-solid fa-house-circle-check"></i> À visiter</a>
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             
@@ -1274,7 +1275,7 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
+                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% elif is_a_visiter %}À visiter{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
                 
                 {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
                 <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem;">
