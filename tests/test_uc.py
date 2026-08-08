@@ -15,10 +15,11 @@ async def extract_with_uc(url: str):
         await asyncio.sleep(8)
         content = driver.page_source
         
-        with open("uc_debug.html", "w", encoding="utf-8") as f:
+        output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uc_debug.html")
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
             
-        print(f"Code source enregistré ({len(content)} char)")
+        print(f"Code source enregistré dans {output_path} ({len(content)} char)")
     finally:
         driver.quit()
 
