@@ -273,6 +273,7 @@
             <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             
             {% if request.session.get('role') == 'admin' %}
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             <a href="/admin/users" class="nav-link{% if request.url.path == '/admin/users' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
             <a href="/admin/maintenance" class="nav-link{% if request.url.path == '/admin/maintenance' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
