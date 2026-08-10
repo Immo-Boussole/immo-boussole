@@ -261,9 +261,28 @@ def google_auth_status(db: Session = Depends(get_db)):
     has_credentials = bool(settings and settings.google_oauth_credentials_json)
     return {
         "connected": connected,
-        "pilot_email": google_service.PILOT_EMAIL,
+        "pilot_email": google_service.get_pilot_email(db),
         "has_credentials": has_credentials
     }
+
+
+@router.post("/auth/google/pilot-email")
+def save_google_pilot_email(
+    payload: Dict[str, str],
+    db: Session = Depends(get_db)
+):
+    email = payload.get("email", "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="L'adresse e-mail est obligatoire.")
+    
+    settings = db.query(GlobalSettings).first()
+    if not settings:
+        settings = GlobalSettings()
+        db.add(settings)
+    
+    settings.google_pilot_email = email
+    db.commit()
+    return {"status": "success", "message": "Adresse e-mail Google enregistrée avec succès."}
 
 
 @router.post("/auth/google/credentials")

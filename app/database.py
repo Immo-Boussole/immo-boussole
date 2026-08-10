@@ -192,7 +192,9 @@ _MIGRATIONS = [
     # global_settings — google oauth fields v24
     ("global_settings", "google_oauth_credentials_json", "TEXT"),
     ("global_settings", "google_oauth_tokens_json",      "TEXT"),
+    ("global_settings", "google_pilot_email",            "TEXT DEFAULT 'GOOGLE_ACCOUNT_EMAIL@gmail.com'"),
 ]
+
 
 
 def run_migrations():

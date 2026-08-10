@@ -408,8 +408,10 @@ class GlobalSettings(Base):
     # Google Sync Settings
     google_oauth_credentials_json = Column(Text, nullable=True) # Client ID & Secret JSON
     google_oauth_tokens_json = Column(Text, nullable=True)      # OAuth Tokens (Access/Refresh Token)
+    google_pilot_email = Column(String, nullable=True, default="GOOGLE_ACCOUNT_EMAIL@gmail.com")
 
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
 
 
 

@@ -423,62 +423,85 @@
                     </div>
 
                     <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.25rem; line-height: 1.5;">
-                        Connectez Immo-Boussole à votre compte Google <strong>GOOGLE_ACCOUNT_EMAIL@gmail.com</strong> pour la synchronisation automatique en temps réel des visites (Google Calendar) et des fiches contacts/agences (Google Contacts).
+                        Connectez Immo-Boussole à votre compte Google pour la synchronisation automatique en temps réel des visites (Google Calendar) et des fiches contacts/agences (Google Contacts).
                     </p>
 
-                    <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;">
-                            <span><strong>Compte pilote associé :</strong></span>
-                            <span style="color: var(--accent); font-weight: 600;">GOOGLE_ACCOUNT_EMAIL@gmail.com</span>
+                    <!-- Google Pilot Email Form -->
+                    <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                        <h3 style="font-size: 0.9rem; font-weight: 700; margin-top: 0; margin-bottom: 0.75rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-envelope" style="color: var(--accent);"></i> Compte Google à synchroniser
+                        </h3>
+                        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <input type="email" id="google_pilot_email_input" placeholder="exemple@gmail.com" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.6rem 0.75rem; font-size: 0.9rem;">
+                            </div>
+                            <button type="button" class="btn" onclick="saveGooglePilotEmail()" style="padding: 0.6rem 1.2rem;"><i class="fas fa-save"></i> Enregistrer l'e-mail</button>
                         </div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;">
-                            <span><strong>Fichier d'identifiants OAuth :</strong></span>
-                            <span id="google_credentials_status" style="font-weight: 600; color: var(--text-2);">Vérification...</span>
-                        </div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;">
-                            <span><strong>Statut de la connexion Google :</strong></span>
+                    </div>
+
+                    <!-- Connection Status and Action Buttons -->
+                    <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                        <h3 style="font-size: 0.9rem; font-weight: 700; margin-top: 0; margin-bottom: 0.25rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-link" style="color: var(--accent);"></i> Statut de la connexion Google
+                        </h3>
+                        
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem;">
+                            <span><strong>Détail :</strong></span>
                             <span id="google_connection_detail" style="font-weight: 600; color: var(--text-2);">Session non ouverte</span>
                         </div>
-                    </div>
-
-                    <div style="border-top: 1px solid var(--border); padding-top: 1.25rem; margin-top: 1rem;">
-                        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--text);">1. Clés OAuth2 (Client ID & Client Secret)</h3>
                         
-                        <form id="googleCredentialsForm" onsubmit="saveGoogleCredentials(event)">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Google Client ID</label>
-                                    <input type="text" id="google_client_id" placeholder="123456789-xxxxxx.apps.googleusercontent.com">
-                                </div>
-                                <div class="form-group">
-                                    <label>Google Client Secret</label>
-                                    <input type="password" id="google_client_secret" placeholder="GOCSPX-xxxxxxxxxxxx">
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-top: 0.5rem;">
-                                <label>OU coller directement le contenu du fichier Client Secret (credentials.json)</label>
-                                <textarea id="google_credentials_json" rows="3" placeholder='{"web":{"client_id":"...","client_secret":"..."}}' style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.75rem; font-family: monospace; font-size: 0.8rem; resize: vertical;"></textarea>
-                            </div>
-
-                            <div style="margin-top: 1.25rem;">
-                                <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text);">2. Authentification et Actions</h3>
-                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-                                    <button type="submit" class="btn"><i class="fas fa-save"></i> Enregistrer les identifiants</button>
-                                    <button type="button" class="btn secondary" onclick="loginGoogleAuth()" id="btn_google_login">
-                                        <i class="fab fa-google"></i> Se connecter avec Google (GOOGLE_ACCOUNT_EMAIL@gmail.com)
-                                    </button>
-                                    <button type="button" class="btn secondary" onclick="testGoogleAuth()" id="btn_google_test">
-                                        <i class="fas fa-plug"></i> Tester la connexion API
-                                    </button>
-                                    <button type="button" class="btn secondary" onclick="disconnectGoogleAuth()" id="btn_google_disconnect" style="color: var(--red); display: none;">
-                                        <i class="fas fa-unlink"></i> Déconnecter
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            <button type="button" class="btn" onclick="loginGoogleAuth()" id="btn_google_login" style="background: linear-gradient(135deg, var(--accent), var(--accent-2));">
+                                <i class="fab fa-google"></i> Lancer la connexion Google
+                            </button>
+                            <button type="button" class="btn secondary" onclick="testGoogleAuth()" id="btn_google_test">
+                                <i class="fas fa-plug"></i> Tester la connexion API
+                            </button>
+                            <button type="button" class="btn secondary" onclick="disconnectGoogleAuth()" id="btn_google_disconnect" style="color: var(--red); display: none;">
+                                <i class="fas fa-unlink"></i> Déconnecter
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Advanced Collapsible Section for API keys -->
+                    <details style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+                        <summary style="font-size: 0.85rem; font-weight: 600; color: var(--text-2); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-cog"></i> Configuration de l'API Google (Client ID / Secret)
+                        </summary>
+                        
+                        <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                            <p style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1rem; line-height: 1.4;">
+                                Pour connecter l'application, configurez les identifiants OAuth2 créés sur la Google Cloud Console de votre projet.
+                            </p>
+                            
+                            <form id="googleCredentialsForm" onsubmit="saveGoogleCredentials(event)">
+                                <div class="form-row">
+                                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0.75rem;">
+                                        <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">Google Client ID</label>
+                                        <input type="text" id="google_client_id" placeholder="123456789-xxxxxx.apps.googleusercontent.com" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-size: 0.85rem;">
+                                    </div>
+                                    <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0.75rem;">
+                                        <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">Google Client Secret</label>
+                                        <input type="password" id="google_client_secret" placeholder="GOCSPX-xxxxxxxxxxxx" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-size: 0.85rem;">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                                    <label style="font-size: 0.8rem; display: block; margin-bottom: 0.3rem;">OU coller directement le contenu du fichier credentials.json</label>
+                                    <textarea id="google_credentials_json" rows="3" placeholder='{"web":{"client_id":"...","client_secret":"..."}}' style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.75rem; font-family: monospace; font-size: 0.8rem; resize: vertical;"></textarea>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                                    <div style="font-size: 0.8rem; color: var(--text-2);">
+                                        <strong>Fichier d'identifiants :</strong> <span id="google_credentials_status">Vérification...</span>
+                                    </div>
+                                    <button type="submit" class="btn" style="padding: 0.5rem 1.25rem;"><i class="fas fa-save"></i> Enregistrer les clés</button>
+                                </div>
+                            </form>
+                        </div>
+                    </details>
                 </div>
+
 
                 <div class="card">
 
@@ -1180,9 +1203,14 @@
                 const connDetail = document.getElementById('google_connection_detail');
                 const disconnectBtn = document.getElementById('btn_google_disconnect');
                 const loginBtn = document.getElementById('btn_google_login');
+                const emailInput = document.getElementById('google_pilot_email_input');
+
+                if (emailInput && !emailInput.value) {
+                    emailInput.value = data.pilot_email || '';
+                }
 
                 if (data.has_credentials) {
-                    credStatus.innerHTML = '<span style="color: var(--green);"><i class="fas fa-check-circle"></i> Identifiants présent (Configurés)</span>';
+                    credStatus.innerHTML = '<span style="color: var(--green);"><i class="fas fa-check-circle"></i> Identifiants présents (Configurés)</span>';
                 } else {
                     credStatus.innerHTML = '<span style="color: var(--red);"><i class="fas fa-exclamation-triangle"></i> Aucun identifiant configuré</span>';
                 }
@@ -1200,10 +1228,34 @@
                     badge.innerHTML = '<i class="fas fa-times-circle"></i> Non connecté';
                     connDetail.innerHTML = '<span style="color: var(--red);"><i class="fas fa-user-slash"></i> Session non ouverte ou jeton absent</span>';
                     disconnectBtn.style.display = 'none';
-                    loginBtn.innerHTML = '<i class="fab fa-google"></i> Se connecter avec Google (' + (data.pilot_email || 'GOOGLE_ACCOUNT_EMAIL@gmail.com') + ')';
+                    loginBtn.innerHTML = '<i class="fab fa-google"></i> Lancer la connexion Google';
                 }
             } catch (err) {
                 console.error("Error loading Google Auth status:", err);
+            }
+        }
+
+        async function saveGooglePilotEmail() {
+            const email = document.getElementById('google_pilot_email_input').value.trim();
+            if (!email) {
+                showAlert('Veuillez spécifier une adresse e-mail.', 'error');
+                return;
+            }
+            try {
+                const res = await fetch('/api/auth/google/pilot-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showAlert(data.message || 'Adresse e-mail enregistrée avec succès.', 'success');
+                    loadGoogleAuthStatus();
+                } else {
+                    showAlert('Erreur: ' + (data.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur lors de l\'enregistrement de l\'e-mail.', 'error');
             }
         }
 
@@ -1253,7 +1305,7 @@
                 if (res.ok && data.authorization_url) {
                     window.location.href = data.authorization_url;
                 } else {
-                    showAlert('Erreur: ' + (data.detail || 'Impossible d\'initier la connexion Google. Vérifiez les identifiants Client ID & Secret.'), 'error');
+                    showAlert('Erreur: ' + (data.detail || 'Impossible d\'initier la connexion Google. Vérifiez les identifiants Client ID & Secret dans la section avancée.'), 'error');
                 }
             } catch (err) {
                 showAlert('Erreur lors de l\'ouverture de la session Google', 'error');
@@ -1292,10 +1344,11 @@
         // Check URL parameters for OAuth feedback
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('google') === 'connected') {
-            showAlert('Compte Google GOOGLE_ACCOUNT_EMAIL@gmail.com connecté et synchronisé avec succès !', 'success');
+            showAlert('Compte Google connecté et synchronisé avec succès !', 'success');
         } else if (urlParams.get('google') === 'error') {
             showAlert('Erreur d\'autorisation lors de la connexion au compte Google.', 'error');
         }
+
 
         // Initialize
         loadEnvSettings();

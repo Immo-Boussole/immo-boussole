@@ -15,6 +15,13 @@ SCOPES = [
 
 PILOT_EMAIL = "GOOGLE_ACCOUNT_EMAIL@gmail.com"
 
+def get_pilot_email(db: Session) -> str:
+    """Retrieves the configured Google Pilot Email from settings, falling back to PILOT_EMAIL."""
+    settings = db.query(GlobalSettings).first()
+    if settings and settings.google_pilot_email:
+        return settings.google_pilot_email
+    return PILOT_EMAIL
+
 
 def get_google_credentials(db: Session):
     """
