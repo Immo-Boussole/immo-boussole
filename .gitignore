@@ -222,3 +222,6 @@ static/media/*
 !static/media/app/
 !static/media/demo/
 !static/media/.gitkeep
+
+# Local pre-commit banned strings (never commit)
+.banned-strings
