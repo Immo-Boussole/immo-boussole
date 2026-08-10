@@ -319,12 +319,28 @@
             <div class="nav-title">{{ t(request, 'nav.navigation', 'Navigation') }}</div>
             <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard', 'Tableau de bord') }}</a>
             <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table', 'Tableau des annonces') }}</a>
-            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
-            <a href="/visites" class="nav-link"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
+            <a href="/a-voir" class="nav-link"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
+            <a href="/a-visiter" class="nav-link"><i class="fa-solid fa-house-circle-check"></i> À visiter</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+            
             <a href="/contacts" class="nav-link active"><i class="fa-solid fa-address-book"></i> {{ t(request, 'nav.contacts', 'Gestionnaire de contacts') }}</a>
-            <a href="/duplicate-hunt" class="nav-link"><i class="fa-solid fa-clone"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
-            <a href="/ideal-profile" class="nav-link"><i class="fa-solid fa-sliders"></i> {{ t(request, 'nav.ideal_profile', 'Fiche Bien Idéal') }}</a>
+            <a href="/visites" class="nav-link"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
+            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+            
+            <a href="/profile/ideal" class="nav-link"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
+            <a href="/chat" class="nav-link"><i class="fa-solid fa-robot"></i> Assistant IA</a>
+            <a href="/searches/ready" class="nav-link"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
+            <a href="/searches/auto" class="nav-link"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
+            
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+            
+            <a href="/duplicates/hunt" class="nav-link"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
+            <a href="/zones" class="nav-link"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
             <a href="/profile" class="nav-link"><i class="fa-solid fa-user"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+
         </div>
 
         <div class="sidebar-lang-selector">

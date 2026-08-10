@@ -624,8 +624,10 @@
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             
+            <a href="/contacts" class="nav-link{% if request.url.path == '/contacts' %} active{% endif %}"><i class="fa-solid fa-address-book"></i> {{ t(request, 'nav.contacts', 'Gestionnaire de contacts') }}</a>
             <a href="/visites" class="nav-link{% if request.url.path == '/visites' %} active{% endif %}"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
             <a href="/carte" class="nav-link{% if request.url.path == '/carte' %} active{% endif %}"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
+
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             
