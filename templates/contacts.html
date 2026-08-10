@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
+    <title>Gestionnaire de Contacts — {{ t(request, 'app.title') }}</title>
+
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --surface: #131929;
+            --surface-2: #1a2236;
+            --border: rgba(255, 255, 255, 0.07);
+            --text: #eef2ff;
+            --text-2: #8b9cc8;
+            --accent: #4f8ef7;
+            --accent-2: #6366f1;
+            --green: #10d9a4;
+            --red: #f25c69;
+            --orange: #f8a84b;
+            --purple: #a855f7;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --radius: 14px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar-lang-selector {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+        .sidebar-lang-selector .lang-item.active { background: var(--accent); color: #fff; }
+
+        .sidebar {
+            width: 260px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 1.25rem;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .logo img { width: 32px; height: 32px; border-radius: 8px; }
+
+        .nav-section { margin-bottom: 1.25rem; }
+        .nav-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.05em; margin-bottom: 0.5rem; padding-left: 0.5rem; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem 0.85rem;
+            color: var(--text-2);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: var(--trans);
+            margin-bottom: 0.2rem;
+        }
+
+        .nav-link:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
+        .nav-link.active { color: #fff; background: var(--accent); font-weight: 600; }
+        .nav-link i { font-size: 1rem; width: 20px; text-align: center; }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .header {
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface);
+            gap: 1rem;
+        }
+
+        .header-title { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--trans);
+            text-decoration: none;
+        }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #3b7ce8; }
+        .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); }
+        .btn-danger { background: rgba(242, 92, 105, 0.15); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.3); }
+        .btn-danger:hover { background: var(--red); color: #fff; }
+
+        .tabs-header {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 2rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-2);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover { color: var(--text); }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .content-body {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+        }
+
+        .search-bar-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .search-input:focus { border-color: var(--accent); }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+            transition: var(--trans);
+        }
+
+        .card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-2px); box-shadow: var(--shadow); }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-title { font-size: 1.1rem; font-weight: 700; }
+        .card-subtitle { font-size: 0.8rem; color: var(--text-2); margin-top: 0.2rem; }
+
+        .card-info { font-size: 0.85rem; color: var(--text-2); display: flex; flex-direction: column; gap: 0.35rem; }
+        .card-info-item { display: flex; align-items: center; gap: 0.5rem; }
+        .card-info-item i { width: 16px; color: var(--accent); text-align: center; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-accent { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .badge-green { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+
+        .card-actions {
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--trans);
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1.75rem;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+        .modal-title { font-size: 1.2rem; font-weight: 700; }
+        .modal-close { background: none; border: none; color: var(--text-2); font-size: 1.2rem; cursor: pointer; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-bottom: 0.4rem; }
+        .form-input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            color: var(--text);
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .form-input:focus { border-color: var(--accent); }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <img src="/static/media/app/icon-192.png" alt="Logo">
+            Immo-Boussole
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-title">{{ t(request, 'nav.navigation', 'Navigation') }}</div>
+            <a href="/" class="nav-link"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard', 'Tableau de bord') }}</a>
+            <a href="/listings/table" class="nav-link"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table', 'Tableau des annonces') }}</a>
+            <a href="/carte" class="nav-link"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
+            <a href="/visites" class="nav-link"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
+            <a href="/contacts" class="nav-link active"><i class="fa-solid fa-address-book"></i> {{ t(request, 'nav.contacts', 'Gestionnaire de contacts') }}</a>
+            <a href="/duplicate-hunt" class="nav-link"><i class="fa-solid fa-clone"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
+            <a href="/ideal-profile" class="nav-link"><i class="fa-solid fa-sliders"></i> {{ t(request, 'nav.ideal_profile', 'Fiche Bien Idéal') }}</a>
+            <a href="/profile" class="nav-link"><i class="fa-solid fa-user"></i> {{ t(request, 'nav.profile', 'Mon Profil') }}</a>
+        </div>
+
+        <div class="sidebar-lang-selector">
+            <a href="/set-language?lang=fr" class="lang-item {% if request.session.get('lang', 'fr') == 'fr' %}active{% endif %}">FR</a>
+            <a href="/set-language?lang=en" class="lang-item {% if request.session.get('lang', 'fr') == 'en' %}active{% endif %}">EN</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title">
+                <i class="fa-solid fa-address-book" style="color: var(--accent);"></i>
+                Gestionnaire de Contacts
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <span id="googleSyncBadge" class="badge badge-accent">
+                    <i class="fa-brands fa-google"></i> Google Contacts Sync: Prêt
+                </span>
+                <button class="btn btn-secondary" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> Nouvelle Agence</button>
+                <button class="btn btn-primary" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> Nouvel Agent</button>
+            </div>
+        </div>
+
+        <div class="tabs-header">
+            <div class="tab-btn active" id="tabAgentsBtn" onclick="switchTab('agents')"><i class="fa-solid fa-user-tie"></i> Agents Immobiliers</div>
+            <div class="tab-btn" id="tabAgenciesBtn" onclick="switchTab('agencies')"><i class="fa-solid fa-building-user"></i> Agences Immobilières</div>
+        </div>
+
+        <div class="content-body">
+            <div class="search-bar-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, ville, email, raison sociale..." oninput="filterContacts()">
+            </div>
+
+            <!-- Tab Agents -->
+            <div id="tabAgentsContent">
+                <div class="cards-grid" id="agentsGrid">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Tab Agencies -->
+            <div id="tabAgenciesContent" style="display: none;">
+                <div class="cards-grid" id="agenciesGrid">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Agent -->
+    <div class="modal-overlay" id="agentModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="agentModalTitle">Nouvel Agent</div>
+                <button class="modal-close" onclick="closeAgentModal()">&times;</button>
+            </div>
+            <form id="agentForm" onsubmit="saveAgent(event)">
+                <input type="hidden" id="agentId">
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Prénom *</label>
+                        <input type="text" id="agentFirstName" class="form-input" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Nom *</label>
+                        <input type="text" id="agentLastName" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fonction / Rôle</label>
+                    <input type="text" id="agentTitle" class="form-input" placeholder="ex: Négociateur Immobilier, Agent Commercial">
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Téléphone portable</label>
+                        <input type="tel" id="agentPhoneMobile" class="form-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Téléphone fixe</label>
+                        <input type="tel" id="agentPhoneLandline" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Adresse email</label>
+                    <input type="email" id="agentEmail" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Agence rattachée</label>
+                    <select id="agentAgencyId" class="form-input">
+                        <option value="">-- Indépendant / Sans agence --</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Préférences communication</label>
+                        <input type="text" id="agentCommPrefs" class="form-input" placeholder="ex: SMS, Email">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Taux commission (%)</label>
+                        <input type="number" step="0.1" id="agentCommission" class="form-input" placeholder="ex: 5.0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes internes</label>
+                    <textarea id="agentNotes" class="form-input" rows="3"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAgentModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Agency -->
+    <div class="modal-overlay" id="agencyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="agencyModalTitle">Nouvelle Agence</div>
+                <button class="modal-close" onclick="closeAgencyModal()">&times;</button>
+            </div>
+            <form id="agencyForm" onsubmit="saveAgency(event)">
+                <input type="hidden" id="agencyId">
+                <div class="form-group">
+                    <label class="form-label">Raison sociale *</label>
+                    <input type="text" id="agencyLegalName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nom commercial</label>
+                    <input type="text" id="agencyCommercialName" class="form-input">
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" id="agencyPhone" class="form-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="agencyEmail" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Site Web</label>
+                    <input type="url" id="agencyWebsite" class="form-input" placeholder="https://...">
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Ville</label>
+                        <input type="text" id="agencyCity" class="form-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">SIRET</label>
+                        <input type="text" id="agencySiret" class="form-input">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Carte Pro (Carte T)</label>
+                        <input type="text" id="agencyCarteT" class="form-input">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Garant financier</label>
+                        <input type="text" id="agencyGuarantor" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes & Réputation</label>
+                    <textarea id="agencyNotes" class="form-input" rows="3"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeAgencyModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let agentsData = [];
+        let agenciesData = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadContacts();
+        });
+
+        async function loadContacts() {
+            try {
+                const [agentsRes, agenciesRes] = await Promise.all([
+                    fetch('/api/agents'),
+                    fetch('/api/agencies')
+                ]);
+                agentsData = await agentsRes.json();
+                agenciesData = await agenciesRes.json();
+
+                updateAgencyDropdown();
+                renderAgents(agentsData);
+                renderAgencies(agenciesData);
+            } catch (err) {
+                console.error("Erreur de chargement des contacts:", err);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (tab === 'agents') {
+                document.getElementById('tabAgentsBtn').classList.add('active');
+                document.getElementById('tabAgentsContent').style.display = 'block';
+                document.getElementById('tabAgenciesContent').style.display = 'none';
+            } else {
+                document.getElementById('tabAgenciesBtn').classList.add('active');
+                document.getElementById('tabAgentsContent').style.display = 'none';
+                document.getElementById('tabAgenciesContent').style.display = 'block';
+            }
+        }
+
+        function updateAgencyDropdown() {
+            const select = document.getElementById('agentAgencyId');
+            select.innerHTML = '<option value="">-- Indépendant / Sans agence --</option>';
+            agenciesData.forEach(ag => {
+                const opt = document.createElement('option');
+                opt.value = ag.id;
+                opt.textContent = ag.commercial_name || ag.legal_name;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderAgents(list) {
+            const grid = document.getElementById('agentsGrid');
+            if (!list.length) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2rem;">Aucun agent trouvé.</div>';
+                return;
+            }
+            grid.innerHTML = list.map(ag => `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">${ag.first_name} ${ag.last_name}</div>
+                            <div class="card-subtitle">${ag.title || 'Agent Immobilier'}</div>
+                        </div>
+                        ${ag.agency_name ? `<span class="badge badge-accent"><i class="fa-solid fa-building"></i> ${ag.agency_name}</span>` : '<span class="badge badge-green">Indépendant</span>'}
+                    </div>
+                    <div class="card-info">
+                        ${ag.phone_mobile ? `<div class="card-info-item"><i class="fa-solid fa-mobile-screen"></i> ${ag.phone_mobile}</div>` : ''}
+                        ${ag.phone_landline ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${ag.phone_landline}</div>` : ''}
+                        ${ag.email ? `<div class="card-info-item"><i class="fa-solid fa-envelope"></i> <a href="mailto:${ag.email}" style="color: var(--text);">${ag.email}</a></div>` : ''}
+                        ${ag.commission_rate ? `<div class="card-info-item"><i class="fa-solid fa-percent"></i> Commission: ${ag.commission_rate}%</div>` : ''}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-secondary" onclick="editAgent(${ag.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
+                        <button class="btn btn-danger" onclick="deleteAgent(${ag.id})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAgencies(list) {
+            const grid = document.getElementById('agenciesGrid');
+            if (!list.length) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2rem;">Aucune agence trouvée.</div>';
+                return;
+            }
+            grid.innerHTML = list.map(ag => `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">${ag.commercial_name || ag.legal_name}</div>
+                            <div class="card-subtitle">${ag.legal_name}</div>
+                        </div>
+                        ${ag.city ? `<span class="badge badge-accent"><i class="fa-solid fa-location-dot"></i> ${ag.city}</span>` : ''}
+                    </div>
+                    <div class="card-info">
+                        ${ag.phone ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${ag.phone}</div>` : ''}
+                        ${ag.email ? `<div class="card-info-item"><i class="fa-solid fa-envelope"></i> ${ag.email}</div>` : ''}
+                        ${ag.siret ? `<div class="card-info-item"><i class="fa-solid fa-id-card"></i> SIRET: ${ag.siret}</div>` : ''}
+                        ${ag.carte_t_number ? `<div class="card-info-item"><i class="fa-solid fa-certificate"></i> Carte T: ${ag.carte_t_number}</div>` : ''}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-secondary" onclick="editAgency(${ag.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
+                        <button class="btn btn-danger" onclick="deleteAgency(${ag.id})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterContacts() {
+            const q = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filteredAgents = agentsData.filter(a =>
+                (a.first_name + ' ' + a.last_name).toLowerCase().includes(q) ||
+                (a.email || '').toLowerCase().includes(q) ||
+                (a.agency_name || '').toLowerCase().includes(q)
+            );
+            const filteredAgencies = agenciesData.filter(a =>
+                (a.legal_name || '').toLowerCase().includes(q) ||
+                (a.commercial_name || '').toLowerCase().includes(q) ||
+                (a.city || '').toLowerCase().includes(q)
+            );
+            renderAgents(filteredAgents);
+            renderAgencies(filteredAgencies);
+        }
+
+        function openAgentModal() {
+            document.getElementById('agentForm').reset();
+            document.getElementById('agentId').value = '';
+            document.getElementById('agentModalTitle').textContent = 'Nouvel Agent';
+            document.getElementById('agentModal').classList.add('active');
+        }
+
+        function closeAgentModal() {
+            document.getElementById('agentModal').classList.remove('active');
+        }
+
+        function openAgencyModal() {
+            document.getElementById('agencyForm').reset();
+            document.getElementById('agencyId').value = '';
+            document.getElementById('agencyModalTitle').textContent = 'Nouvelle Agence';
+            document.getElementById('agencyModal').classList.add('active');
+        }
+
+        function closeAgencyModal() {
+            document.getElementById('agencyModal').classList.remove('active');
+        }
+
+        async function saveAgent(e) {
+            e.preventDefault();
+            const id = document.getElementById('agentId').value;
+            const payload = {
+                first_name: document.getElementById('agentFirstName').value,
+                last_name: document.getElementById('agentLastName').value,
+                title: document.getElementById('agentTitle').value || null,
+                phone_mobile: document.getElementById('agentPhoneMobile').value || null,
+                phone_landline: document.getElementById('agentPhoneLandline').value || null,
+                email: document.getElementById('agentEmail').value || null,
+                agency_id: document.getElementById('agentAgencyId').value ? parseInt(document.getElementById('agentAgencyId').value) : null,
+                communication_prefs: document.getElementById('agentCommPrefs').value || null,
+                commission_rate: document.getElementById('agentCommission').value ? parseFloat(document.getElementById('agentCommission').value) : null,
+                internal_notes: document.getElementById('agentNotes').value || null,
+            };
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/agents/${id}` : '/api/agents';
+
+            await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            closeAgentModal();
+            loadContacts();
+        }
+
+        async function editAgent(id) {
+            const agent = agentsData.find(a => a.id === id);
+            if (!agent) return;
+            document.getElementById('agentId').value = agent.id;
+            document.getElementById('agentFirstName').value = agent.first_name || '';
+            document.getElementById('agentLastName').value = agent.last_name || '';
+            document.getElementById('agentTitle').value = agent.title || '';
+            document.getElementById('agentPhoneMobile').value = agent.phone_mobile || '';
+            document.getElementById('agentPhoneLandline').value = agent.phone_landline || '';
+            document.getElementById('agentEmail').value = agent.email || '';
+            document.getElementById('agentAgencyId').value = agent.agency_id || '';
+            document.getElementById('agentCommPrefs').value = agent.communication_prefs || '';
+            document.getElementById('agentCommission').value = agent.commission_rate || '';
+            document.getElementById('agentNotes').value = agent.internal_notes || '';
+
+            document.getElementById('agentModalTitle').textContent = 'Modifier Agent';
+            document.getElementById('agentModal').classList.add('active');
+        }
+
+        async function deleteAgent(id) {
+            if (!confirm('Voulez-vous vraiment supprimer cet agent ?')) return;
+            await fetch(`/api/agents/${id}`, { method: 'DELETE' });
+            loadContacts();
+        }
+
+        async function saveAgency(e) {
+            e.preventDefault();
+            const id = document.getElementById('agencyId').value;
+            const payload = {
+                legal_name: document.getElementById('agencyLegalName').value,
+                commercial_name: document.getElementById('agencyCommercialName').value || null,
+                phone: document.getElementById('agencyPhone').value || null,
+                email: document.getElementById('agencyEmail').value || null,
+                website: document.getElementById('agencyWebsite').value || null,
+                city: document.getElementById('agencyCity').value || null,
+                siret: document.getElementById('agencySiret').value || null,
+                carte_t_number: document.getElementById('agencyCarteT').value || null,
+                guarantor: document.getElementById('agencyGuarantor').value || null,
+                reputation_notes: document.getElementById('agencyNotes').value || null,
+            };
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/agencies/${id}` : '/api/agencies';
+
+            await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            closeAgencyModal();
+            loadContacts();
+        }
+
+        async function editAgency(id) {
+            const agency = agenciesData.find(a => a.id === id);
+            if (!agency) return;
+            document.getElementById('agencyId').value = agency.id;
+            document.getElementById('agencyLegalName').value = agency.legal_name || '';
+            document.getElementById('agencyCommercialName').value = agency.commercial_name || '';
+            document.getElementById('agencyPhone').value = agency.phone || '';
+            document.getElementById('agencyEmail').value = agency.email || '';
+            document.getElementById('agencyWebsite').value = agency.website || '';
+            document.getElementById('agencyCity').value = agency.city || '';
+            document.getElementById('agencySiret').value = agency.siret || '';
+            document.getElementById('agencyCarteT').value = agency.carte_t_number || '';
+            document.getElementById('agencyGuarantor').value = agency.guarantor || '';
+            document.getElementById('agencyNotes').value = agency.reputation_notes || '';
+
+            document.getElementById('agencyModalTitle').textContent = 'Modifier Agence';
+            document.getElementById('agencyModal').classList.add('active');
+        }
+
+        async function deleteAgency(id) {
+            if (!confirm('Voulez-vous vraiment supprimer cette agence ?')) return;
+            await fetch(`/api/agencies/${id}`, { method: 'DELETE' });
+            loadContacts();
+        }
+    </script>
+</body>
+</html>

@@ -23,7 +23,8 @@
         "profile": "My Profile",
         "administration": "Administration",
         "duplicate_hunt": "Duplicate Hunt",
-        "visites": "Visits Manager"
+        "visites": "Visits Manager",
+        "contacts": "Contacts Manager"
     },
     "profile": {
         "title": "My Profile",

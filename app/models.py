@@ -178,6 +178,10 @@ class Listing(Base):
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
     visits = relationship("Visit", back_populates="listing", cascade="all, delete-orphan", order_by="Visit.scheduled_at")
+    main_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
+    main_agent = relationship("Agent", foreign_keys=[main_agent_id])
+    agency = relationship("Agency", foreign_keys=[agency_id])
 
     def update_price_per_sqm(self):
         """
@@ -198,6 +202,55 @@ class Listing(Base):
             self.price_per_sqm = None
         return self.price_per_sqm
 
+
+class Agency(Base):
+    __tablename__ = "agencies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    legal_name = Column(String, nullable=False)        # Raison sociale
+    commercial_name = Column(String, nullable=True)     # Nom commercial
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    postal_code = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    siret = Column(String, nullable=True)
+    legal_status = Column(String, nullable=True)       # SARL, SAS, etc.
+    carte_t_number = Column(String, nullable=True)     # Numéro carte pro T
+    guarantor = Column(String, nullable=True)          # Garant financier
+    geographic_zone = Column(String, nullable=True)    # Zone géographique couverte
+    reputation_notes = Column(Text, nullable=True)     # Notes internes (réputation, etc.)
+    google_contact_resource_name = Column(String, nullable=True)  # ID Google Contact sync
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    agents = relationship("Agent", back_populates="agency", cascade="all, delete-orphan")
+
+
+class Agent(Base):
+    __tablename__ = "agents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    title = Column(String, nullable=True)               # Fonction / rôle
+    phone_mobile = Column(String, nullable=True)
+    phone_landline = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
+    communication_prefs = Column(String, nullable=True) # SMS, Email, Téléphone
+    commission_rate = Column(Float, nullable=True)      # Taux de commission (%)
+    internal_notes = Column(Text, nullable=True)
+    google_contact_resource_name = Column(String, nullable=True)  # ID Google Contact sync
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    agency = relationship("Agency", back_populates="agents")
 
 
 class Review(Base):
@@ -223,18 +276,35 @@ class Visit(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False)
-    visit_type = Column(String(50), nullable=False, default="visite")  # Legacy type
-    step_family = Column(String(50), nullable=True)                     # Step family (e.g. "contact", "visite", "offre", "cloture")
+    visit_type = Column(String(50), nullable=False, default="visite")  # visite, contre_visite, proposition_offre, contre_proposition_offre
+    step_family = Column(String(50), nullable=True)                     # Step family
     step = Column(String(50), nullable=True)                            # Detailed step name
     scheduled_at = Column(DateTime(timezone=True), nullable=False)
     status = Column(String(20), nullable=False, default="programme")   # "programme", "effectuee", "annulee"
     visitor = Column(String(100), nullable=True)                        # Visitor name/username
     notes = Column(Text, nullable=True)                                 # Free notes/comments/contact
+    google_event_id = Column(String, nullable=True)                    # ID Google Calendar sync
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     listing = relationship("Listing", back_populates="visits")
+    visit_contacts = relationship("VisitContact", back_populates="visit", cascade="all, delete-orphan")
+
+
+class VisitContact(Base):
+    __tablename__ = "visit_contacts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    visit_id = Column(Integer, ForeignKey("visits.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(Integer, ForeignKey("agents.id", ondelete="CASCADE"), nullable=True)
+    agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="CASCADE"), nullable=True)
+
+    # Relationships
+    visit = relationship("Visit", back_populates="visit_contacts")
+    agent = relationship("Agent")
+    agency = relationship("Agency")
+
 
 
 
@@ -335,7 +405,12 @@ class GlobalSettings(Base):
 
     allowed_departments = Column(Text, nullable=True) # JSON list of ["38", "73"]
 
+    # Google Sync Settings
+    google_oauth_credentials_json = Column(Text, nullable=True) # Client ID & Secret JSON
+    google_oauth_tokens_json = Column(Text, nullable=True)      # OAuth Tokens (Access/Refresh Token)
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
 
 
 class ZoneRule(Base):

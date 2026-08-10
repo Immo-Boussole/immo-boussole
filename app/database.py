@@ -181,15 +181,28 @@ _MIGRATIONS = [
     # visits — step_family and step columns v21
     ("visits", "step_family",              "TEXT"),
     ("visits", "step",                     "TEXT"),
+
+    # listings — agent & agency link v22
+    ("listings", "main_agent_id",          "INTEGER"),
+    ("listings", "agency_id",             "INTEGER"),
+
+    # visits — google_event_id v23
+    ("visits", "google_event_id",          "TEXT"),
+
+    # global_settings — google oauth fields v24
+    ("global_settings", "google_oauth_credentials_json", "TEXT"),
+    ("global_settings", "google_oauth_tokens_json",      "TEXT"),
 ]
 
 
 def run_migrations():
     """
-    Applies ADD COLUMN migrations to existing SQLite tables.
+    Applies Base.metadata.create_all and ADD COLUMN migrations to existing SQLite tables.
     Safe to run on every startup — skips columns that already exist.
     """
+    Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
+
         for table, column, col_def in _MIGRATIONS:
             # Check existing columns
             result = conn.execute(text(f"PRAGMA table_info({table})"))

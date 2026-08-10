@@ -708,7 +708,9 @@
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             
             <a href="/visites" class="nav-link{% if request.url.path == '/visites' %} active{% endif %}"><i class="fa-solid fa-calendar-days"></i> {{ t(request, 'nav.visites', 'Gestionnaire de visites') }}</a>
+            <a href="/contacts" class="nav-link{% if request.url.path == '/contacts' %} active{% endif %}"><i class="fa-solid fa-address-book"></i> {{ t(request, 'nav.contacts', 'Gestionnaire de contacts') }}</a>
             <a href="/carte" class="nav-link{% if request.url.path == '/carte' %} active{% endif %}"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
+
             
             <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
             
@@ -1599,10 +1601,14 @@
                     cellHtml += `
                         <div class="visit-chip ${v.status} ${v.step_family}" onclick="event.stopPropagation(); editVisit(${v.id}, ${v.listing_id}, '${v.step_family}', '${v.step}', '${v.scheduled_at}', '${v.status}', '${(v.visitor||'').replace(/'/g, "\\'")}', '${(v.notes||'').replace(/'/g, "\\'")}')" title="${v.listing_title} - ${stepText} (${v.status})">
                             <span><strong>${timeStr}</strong> ${stepText}</span>
-                            <span style="max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${v.listing_city || ''}</span>
+                            <span style="display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <span style="max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${v.listing_city || ''}</span>
+                                <i class="fa-solid fa-trash" style="color: var(--red); opacity: 0.8;" onclick="event.stopPropagation(); deleteVisitDirect(${v.id});" title="Supprimer la visite"></i>
+                            </span>
                         </div>
                     `;
                 });
+
 
                 cell.innerHTML = cellHtml;
                 body.appendChild(cell);

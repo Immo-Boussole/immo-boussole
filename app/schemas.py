@@ -217,16 +217,116 @@ class ListingResponse(BaseModel):
         from_attributes = True
 
 
+class AgencyCreate(BaseModel):
+    legal_name: str
+    commercial_name: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    siret: Optional[str] = None
+    legal_status: Optional[str] = None
+    carte_t_number: Optional[str] = None
+    guarantor: Optional[str] = None
+    geographic_zone: Optional[str] = None
+    reputation_notes: Optional[str] = None
+
+class AgencyUpdateRequest(BaseModel):
+    legal_name: Optional[str] = None
+    commercial_name: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    siret: Optional[str] = None
+    legal_status: Optional[str] = None
+    carte_t_number: Optional[str] = None
+    guarantor: Optional[str] = None
+    geographic_zone: Optional[str] = None
+    reputation_notes: Optional[str] = None
+
+class AgencyResponse(BaseModel):
+    id: int
+    legal_name: str
+    commercial_name: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    siret: Optional[str] = None
+    legal_status: Optional[str] = None
+    carte_t_number: Optional[str] = None
+    guarantor: Optional[str] = None
+    geographic_zone: Optional[str] = None
+    reputation_notes: Optional[str] = None
+    google_contact_resource_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class AgentCreate(BaseModel):
+    first_name: str
+    last_name: str
+    title: Optional[str] = None
+    phone_mobile: Optional[str] = None
+    phone_landline: Optional[str] = None
+    email: Optional[str] = None
+    agency_id: Optional[int] = None
+    communication_prefs: Optional[str] = None
+    commission_rate: Optional[float] = None
+    internal_notes: Optional[str] = None
+
+class AgentUpdateRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    title: Optional[str] = None
+    phone_mobile: Optional[str] = None
+    phone_landline: Optional[str] = None
+    email: Optional[str] = None
+    agency_id: Optional[int] = None
+    communication_prefs: Optional[str] = None
+    commission_rate: Optional[float] = None
+    internal_notes: Optional[str] = None
+
+class AgentResponse(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    title: Optional[str] = None
+    phone_mobile: Optional[str] = None
+    phone_landline: Optional[str] = None
+    email: Optional[str] = None
+    agency_id: Optional[int] = None
+    agency_name: Optional[str] = None
+    communication_prefs: Optional[str] = None
+    commission_rate: Optional[float] = None
+    internal_notes: Optional[str] = None
+    google_contact_resource_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 class VisitCreateRequest(BaseModel):
     listing_id: int
-    visit_type: str = "visite"  # "visite" or "contre_visite"
+    visit_type: str = "visite"  # "visite", "contre_visite", "proposition_offre", "contre_proposition_offre"
     step_family: Optional[str] = None
     step: Optional[str] = None
     scheduled_at: datetime
     status: str = "programme"   # "programme", "effectuee", "annulee"
     visitor: Optional[str] = None
     notes: Optional[str] = None
-
+    agent_ids: List[int] = []
+    agency_ids: List[int] = []
 
 class VisitUpdateRequest(BaseModel):
     visit_type: Optional[str] = None
@@ -236,7 +336,14 @@ class VisitUpdateRequest(BaseModel):
     status: Optional[str] = None
     visitor: Optional[str] = None
     notes: Optional[str] = None
+    agent_ids: Optional[List[int]] = None
+    agency_ids: Optional[List[int]] = None
 
+class VisitContactSchema(BaseModel):
+    agent_id: Optional[int] = None
+    agent_name: Optional[str] = None
+    agency_id: Optional[int] = None
+    agency_name: Optional[str] = None
 
 class VisitResponse(BaseModel):
     id: int
@@ -248,9 +355,12 @@ class VisitResponse(BaseModel):
     status: str
     visitor: Optional[str] = None
     notes: Optional[str] = None
+    google_event_id: Optional[str] = None
+    contacts: List[VisitContactSchema] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
 

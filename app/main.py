@@ -30,9 +30,10 @@ import secrets
 from sqlalchemy import text, func
 from sqlalchemy.orm import Session
 
-from app import models, database, schemas
+from app import models, database, schemas, google_service
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency
+
 from app.services import (
     scrape_and_diff,
     create_listing_from_details,
@@ -1251,6 +1252,28 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
         "app_version": settings.APP_VERSION,
         "title": "Gestionnaire de visites — Immo-Boussole",
     })
+
+
+@app.get("/contacts")
+def contacts_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    queries = db.query(SearchQuery).all()
+    users = db.query(models.User).all()
+    local_hash = get_local_commit_hash()
+
+    return templates.TemplateResponse(request=request, name="contacts.html", context={
+        "listings": all_listings,
+        "queries": queries,
+        "users": users,
+        "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
+        "title": "Gestionnaire de Contacts — Immo-Boussole",
+    })
+
 
 
 
@@ -3550,9 +3573,8 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
     
     step_family = body.step_family or "visite"
     step = body.step or "1ere_visite"
-    
-    # Infer legacy visit_type if not explicitly set
     visit_type = body.visit_type or "visite"
+    
     if step_family == "cloture" or step in ("offre_refusee", "bien_vendu", "abandon"):
         visit_type = "reponse_negative"
         listing.to_visit = False
@@ -3583,6 +3605,20 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
     db.add(visit)
     db.commit()
     db.refresh(visit)
+
+    # Attach contacts if specified
+    if body.agent_ids:
+        for aid in body.agent_ids:
+            db.add(VisitContact(visit_id=visit.id, agent_id=aid))
+    if body.agency_ids:
+        for agid in body.agency_ids:
+            db.add(VisitContact(visit_id=visit.id, agency_id=agid))
+    if body.agent_ids or body.agency_ids:
+        db.commit()
+        db.refresh(visit)
+
+    # Sync to Google Calendar
+    google_service.sync_visit_to_google_calendar(db, visit)
     return visit
 
 
@@ -3613,6 +3649,16 @@ def list_visites(
     results = []
     for v in visits:
         l = db.query(Listing).filter(Listing.id == v.listing_id).first()
+        contacts_list = []
+        if v.visit_contacts:
+            for vc in v.visit_contacts:
+                c_item = {"agent_id": vc.agent_id, "agency_id": vc.agency_id}
+                if vc.agent:
+                    c_item["agent_name"] = f"{vc.agent.first_name} {vc.agent.last_name}"
+                if vc.agency:
+                    c_item["agency_name"] = vc.agency.commercial_name or vc.agency.legal_name
+                contacts_list.append(c_item)
+
         results.append({
             "id": v.id,
             "listing_id": v.listing_id,
@@ -3627,6 +3673,8 @@ def list_visites(
             "status": v.status,
             "visitor": v.visitor,
             "notes": v.notes,
+            "google_event_id": v.google_event_id,
+            "contacts": contacts_list,
             "created_at": v.created_at.isoformat() if v.created_at else None,
         })
     return results
@@ -3642,7 +3690,6 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
         visit.step_family = body.step_family
     if body.step is not None:
         visit.step = body.step
-
     if body.visit_type is not None:
         visit.visit_type = body.visit_type
 
@@ -3662,8 +3709,21 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
     if body.notes is not None:
         visit.notes = body.notes
 
+    if body.agent_ids is not None or body.agency_ids is not None:
+        # Clear existing contacts
+        db.query(VisitContact).filter(VisitContact.visit_id == visit.id).delete()
+        if body.agent_ids:
+            for aid in body.agent_ids:
+                db.add(VisitContact(visit_id=visit.id, agent_id=aid))
+        if body.agency_ids:
+            for agid in body.agency_ids:
+                db.add(VisitContact(visit_id=visit.id, agency_id=agid))
+
     db.commit()
     db.refresh(visit)
+
+    # Sync update to Google Calendar
+    google_service.sync_visit_to_google_calendar(db, visit)
     return visit
 
 
@@ -3673,6 +3733,9 @@ def delete_visit(request: Request, visit_id: int, db: Session = Depends(get_db),
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
     
+    if visit.google_event_id:
+        google_service.delete_google_calendar_event(db, visit.google_event_id)
+
     db.delete(visit)
     db.commit()
     return {"status": "deleted", "visit_id": visit_id}
@@ -3686,7 +3749,11 @@ def change_visit_status(request: Request, visit_id: int, status: str = Form(...)
     
     visit.status = status
     db.commit()
+
+    # Sync status change to Google Calendar
+    google_service.sync_visit_to_google_calendar(db, visit)
     return {"status": "updated", "visit_id": visit.id, "new_status": visit.status}
+
 
 
 
