@@ -1,0 +1,9 @@
+# .banned-strings.example
+# Copy this file to .banned-strings and fill in the strings to block.
+# One banned string per line. Lines starting with # are comments.
+# This file (.banned-strings) is gitignored and must be created manually
+# on each developer machine.
+#
+# Example:
+# myname@gmail.com
+# myapp--dev.mydomain.com

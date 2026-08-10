@@ -4,3 +4,11 @@ repos:
     hooks:
       - id: detect-secrets
         exclude: .pre-commit-config.yaml
+
+  - repo: local
+    hooks:
+      - id: no-sensitive-strings
+        name: Block sensitive personal data in commits
+        language: python
+        entry: python scripts/check_no_sensitive_data.py
+        types: [text]
