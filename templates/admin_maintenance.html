@@ -470,9 +470,22 @@
                         </summary>
                         
                         <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                            <p style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1rem; line-height: 1.4;">
-                                Pour connecter l'application, configurez les identifiants OAuth2 créés sur la Google Cloud Console de votre projet.
-                            </p>
+                            <div style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.25rem; line-height: 1.5; background: rgba(var(--accent-rgb), 0.05); border-left: 3px solid var(--accent); padding: 0.75rem 1rem; border-radius: 4px;">
+                                <strong style="color: var(--text);">Guide Rapide d'obtention des clés :</strong>
+                                <ol style="margin: 0.5rem 0 0.5rem 1.2rem; padding: 0;">
+                                    <li>Allez sur la <a href="https://console.cloud.google.com/" target="_blank" style="color: var(--accent); text-decoration: underline;">Google Cloud Console</a>.</li>
+                                    <li>Activez les API <strong>Google Calendar API</strong> et <strong>Google People API</strong>.</li>
+                                    <li>Configurez l'écran de consentement OAuth (ajoutez votre adresse pilote en utilisateur de test).</li>
+                                    <li>Créez des identifiants de type <strong>ID de client OAuth (Application Web)</strong>.</li>
+                                    <li>Définissez l'URI de redirection suivant dans les paramètres Google :
+                                        <div style="margin-top: 0.4rem; background: var(--surface); border: 1px solid var(--border); padding: 0.3rem 0.6rem; border-radius: 6px; font-family: monospace; font-size: 0.75rem; color: var(--text); user-select: all; width: fit-content;">
+                                            https://YOUR_APP_DOMAIN.com/api/auth/google/callback
+                                        </div>
+                                    </li>
+                                    <li>Récupérez le fichier JSON d'identifiants ou copiez le Client ID / Client Secret ci-dessous.</li>
+                                </ol>
+                                Pour plus de détails, consultez le fichier <a href="/static/GOOGLE_OAUTH_SETUP.md" target="_blank" style="color: var(--accent); text-decoration: underline;">GOOGLE_OAUTH_SETUP.md</a> à la racine du projet.
+                            </div>
                             
                             <form id="googleCredentialsForm" onsubmit="saveGoogleCredentials(event)">
                                 <div class="form-row">
