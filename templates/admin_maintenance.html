@@ -479,7 +479,7 @@
                                     <li>Créez des identifiants de type <strong>ID de client OAuth (Application Web)</strong>.</li>
                                     <li>Définissez l'URI de redirection suivant dans les paramètres Google :
                                         <div style="margin-top: 0.4rem; background: var(--surface); border: 1px solid var(--border); padding: 0.3rem 0.6rem; border-radius: 6px; font-family: monospace; font-size: 0.75rem; color: var(--text); user-select: all; width: fit-content;">
-                                            https://YOUR_APP_DOMAIN.com/api/auth/google/callback
+                                            <span id="google_redirect_uri_display">https://your-domain.com/api/auth/google/callback</span>
                                         </div>
                                     </li>
                                     <li>Récupérez le fichier JSON d'identifiants ou copiez le Client ID / Client Secret ci-dessous.</li>
@@ -1217,6 +1217,11 @@
                 const disconnectBtn = document.getElementById('btn_google_disconnect');
                 const loginBtn = document.getElementById('btn_google_login');
                 const emailInput = document.getElementById('google_pilot_email_input');
+                const redirectDisplay = document.getElementById('google_redirect_uri_display');
+
+                if (redirectDisplay) {
+                    redirectDisplay.textContent = window.location.origin + '/api/auth/google/callback';
+                }
 
                 if (emailInput && !emailInput.value) {
                     emailInput.value = data.pilot_email || '';

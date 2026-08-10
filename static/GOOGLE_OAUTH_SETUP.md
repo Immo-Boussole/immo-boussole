@@ -1,77 +1,77 @@
-# Guide de configuration des Clés Google OAuth2 (Client ID & Client Secret)
+# Google OAuth2 Credentials Setup Guide (Client ID & Client Secret)
 
-Ce guide décrit étape par étape comment configurer l'intégration de **Google Calendar** et **Google Contacts** dans l'application Immo-Boussole.
-
----
-
-## Étape 1 : Créer un projet sur Google Cloud Console
-
-1. Connectez-vous sur la [Google Cloud Console](https://console.cloud.google.com/).
-2. En haut à gauche, cliquez sur le menu déroulant des projets et sélectionnez **Nouveau Projet**.
-3. Saisissez un nom pour votre projet (par exemple, `Immo-Boussole`) et cliquez sur **Créer**.
+This guide walks you through setting up the **Google Calendar** and **Google Contacts** integrations in the application.
 
 ---
 
-## Étape 2 : Activer les API Google Calendar & Google People (Contacts)
+## Step 1: Create a Project on Google Cloud Console
 
-1. Dans le menu de gauche, accédez à **API et services** > **Bibliothèque**.
-2. Recherchez **Google Calendar API**, cliquez dessus, puis cliquez sur **Activer**.
-3. Revenez à la Bibliothèque, recherchez **Google People API**, cliquez dessus, puis cliquez sur **Activer**.
-
----
-
-## Étape 3 : Configurer l'écran de consentement OAuth
-
-Avant de générer des clés, vous devez configurer les informations présentées à l'utilisateur lors de la connexion.
-
-1. Allez dans **API et services** > **Écran de consentement OAuth**.
-2. Choisissez le type d'utilisateur :
-   - **Interne** (si vous utilisez Google Workspace au sein d'une organisation).
-   - **Externe** (si vous utilisez un compte Gmail classique `@gmail.com`). Sélectionnez **Externe** et cliquez sur **Créer**.
-3. Remplissez les informations obligatoires :
-   - **Nom de l'application** : `Immo-Boussole`
-   - **Adresse e-mail d'assistance utilisateur** : Votre e-mail.
-   - **Coordonnées de développeur** : Votre e-mail.
-4. Cliquez sur **Enregistrer et continuer** pour passer les sections « Champs d'application » (Scopes) et « Utilisateurs de test ».
-5. **Important (si Externe) :** Dans l'onglet **Utilisateurs de test**, ajoutez l'adresse e-mail du compte Google avec lequel vous souhaitez vous synchroniser (ex. `GOOGLE_ACCOUNT_EMAIL@gmail.com` ou l'adresse e-mail pilote configurée dans l'application).
+1. Log in to the [Google Cloud Console](https://console.cloud.google.com/).
+2. In the top-left corner, click the project selection dropdown and select **New Project**.
+3. Enter a name for your project (e.g., `Immo-Boussole`) and click **Create**.
 
 ---
 
-## Étape 4 : Créer les Identifiants OAuth 2.0
+## Step 2: Enable the Google Calendar & Google People (Contacts) APIs
 
-1. Allez dans **API et services** > **Identifiants**.
-2. Cliquez sur **Créer des identifiants** en haut de l'écran, puis sélectionnez **ID de client OAuth**.
-3. Dans la liste déroulante **Type d'application**, sélectionnez **Application Web**.
-4. Remplissez le formulaire :
-   - **Nom** : `Immo-Boussole Web Client`
-   - **Origines JavaScript autorisées** :
-     Ajoutez les URL de base de votre application :
-     - `https://YOUR_APP_DOMAIN.com` (pour votre serveur de dev)
-     - `http://localhost:8000` (pour un développement en local)
-   - **URI de redirection autorisés** :
-     Ajoutez les URL de callback complètes de l'application :
-     - `https://YOUR_APP_DOMAIN.com/api/auth/google/callback`
-     - `https://YOUR_APP_DOMAIN.com/api/v1/auth/google/callback`
+1. In the left navigation menu, go to **APIs & Services** > **Library**.
+2. Search for **Google Calendar API**, click on it, and click **Enable**.
+3. Go back to the Library, search for **Google People API**, click on it, and click **Enable**.
+
+---
+
+## Step 3: Configure the OAuth Consent Screen
+
+Before generating credentials, you must configure the screen shown to users during authentication.
+
+1. Go to **APIs & Services** > **OAuth Consent Screen**.
+2. Select the User Type:
+   - **Internal**: If you are using Google Workspace within an organization.
+   - **External**: If you are using a standard `@gmail.com` personal account. Select **External** and click **Create**.
+3. Fill in the required fields:
+   - **App name**: `Immo-Boussole`
+   - **User support email**: Select your email address.
+   - **Developer contact information**: Enter your email address.
+4. Click **Save and Continue** to skip the "Scopes" section.
+5. **Important (if External):** In the **Test users** tab, add the email address of the Google account you wish to synchronize (e.g., the pilot email address configured in the application). Click **Save and Continue**.
+
+---
+
+## Step 4: Create OAuth 2.0 Credentials
+
+1. Go to **APIs & Services** > **Credentials**.
+2. Click **Create Credentials** at the top, then select **OAuth Client ID**.
+3. Under the **Application type** dropdown, select **Web Application**.
+4. Fill out the form:
+   - **Name**: `Immo-Boussole Web Client`
+   - **Authorized JavaScript origins**:
+     Add the base URL(s) of your application instance:
+     - `https://your-domain.com` (replace with your actual server domain name)
+     - `http://localhost:8000` (for local development)
+   - **Authorized redirect URIs**:
+     Add the complete callback URL(s) of your application instance:
+     - `https://your-domain.com/api/auth/google/callback` (replace with your actual server domain name)
+     - `https://your-domain.com/api/v1/auth/google/callback`
      - `http://localhost:8000/api/auth/google/callback`
      - `http://localhost:8000/api/v1/auth/google/callback`
-5. Cliquez sur **Créer**.
+5. Click **Create**.
 
 ---
 
-## Étape 5 : Télécharger et configurer les clés dans Immo-Boussole
+## Step 5: Save Credentials in the Application
 
-Une fois le client OAuth créé, une fenêtre contextuelle s'ouvre avec votre **ID client** et votre **Code secret du client**.
+Once the OAuth client is created, a modal will display your **Client ID** and **Client Secret**.
 
-Vous avez deux façons de renseigner ces clés dans l'interface de maintenance d'Immo-Boussole (`/admin/maintenance`) :
+You can save these credentials in the application's maintenance page (`/admin/maintenance`) in one of two ways:
 
-### Option A : Renseigner les champs individuels (Simple)
-- Copiez la valeur de **ID client** et collez-la dans le champ **Google Client ID** de l'application.
-- Copiez la valeur de **Code secret du client** et collez-la dans le champ **Google Client Secret** de l'application.
-- Cliquez sur **Enregistrer les clés**.
+### Option A: Enter the Keys Manually
+- Copy the **Client ID** value and paste it into the **Google Client ID** field.
+- Copy the **Client Secret** value and paste it into the **Google Client Secret** field.
+- Click **Enregistrer les clés** (Save Keys).
 
-### Option B : Coller le fichier JSON (Recommandé)
-1. Dans l'écran des identifiants Google Cloud Console, en face de votre client OAuth Web nouvellement créé, cliquez sur l'icône de téléchargement **Télécharger le fichier JSON**.
-2. Ouvrez le fichier téléchargé (généralement nommé `client_secret_xxxxxx.json`) avec un éditeur de texte.
-3. Copiez l'intégralité de son contenu.
-4. Collez-le dans la zone de texte **OU coller directement le contenu du fichier credentials.json** de l'application.
-5. Cliquez sur **Enregistrer les clés**.
+### Option B: Paste the credentials.json File Content (Recommended)
+1. In the Google Cloud Console credentials page, click the download icon **Download JSON** for your Web client.
+2. Open the downloaded JSON file (usually named `client_secret_xxxxxx.json`) in a text editor.
+3. Copy the entire file content.
+4. Paste it into the text area labeled **OU coller directement le contenu du fichier credentials.json** in the application.
+5. Click **Enregistrer les clés** (Save Keys).
