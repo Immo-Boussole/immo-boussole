@@ -268,16 +268,53 @@ def google_auth_status(db: Session = Depends(get_db)):
 
 @router.post("/auth/google/credentials")
 def save_google_credentials(
-    credentials_json: Dict[str, Any],
+    credentials_input: Dict[str, Any],
     db: Session = Depends(get_db)
 ):
     settings = db.query(GlobalSettings).first()
     if not settings:
         settings = GlobalSettings()
         db.add(settings)
+
+    # Check if user provided client_id and client_secret directly
+    if "client_id" in credentials_input and "client_secret" in credentials_input:
+        credentials_json = {
+            "web": {
+                "client_id": credentials_input["client_id"].strip(),
+                "client_secret": credentials_input["client_secret"].strip(),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        }
+    elif "web" in credentials_input or "installed" in credentials_input:
+        credentials_json = credentials_input
+    elif "credentials_json" in credentials_input:
+        raw = credentials_input["credentials_json"]
+        if isinstance(raw, str):
+            credentials_json = json.loads(raw)
+        else:
+            credentials_json = raw
+    else:
+        credentials_json = credentials_input
+
     settings.google_oauth_credentials_json = json.dumps(credentials_json)
     db.commit()
-    return {"status": "success", "message": "Identifiants Google OAuth configurés."}
+    return {"status": "success", "message": "Identifiants Google OAuth configurés avec succès."}
+
+
+@router.post("/auth/google/disconnect")
+def google_auth_disconnect(db: Session = Depends(get_db)):
+    settings = db.query(GlobalSettings).first()
+    if settings:
+        settings.google_oauth_tokens_json = None
+        db.commit()
+    return {"status": "success", "message": "Compte Google déconnecté."}
+
+
+@router.post("/auth/google/test")
+def google_auth_test(db: Session = Depends(get_db)):
+    res = google_service.test_google_connection(db)
+    return res
 
 
 @router.get("/auth/google/login")
@@ -328,7 +365,8 @@ def google_auth_callback(code: str, request: Request, db: Session = Depends(get_
         credentials = flow.credentials
         settings.google_oauth_tokens_json = credentials.to_json()
         db.commit()
-        return RedirectResponse(url="/profile?google=connected")
+        return RedirectResponse(url="/admin/maintenance?google=connected")
     except Exception as e:
         logger.error(f"Error handling Google OAuth callback: {e}")
-        return RedirectResponse(url="/profile?google=error")
+        return RedirectResponse(url="/admin/maintenance?google=error")
+

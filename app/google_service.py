@@ -351,3 +351,49 @@ def delete_google_calendar_event(db: Session, google_event_id: str) -> bool:
     except Exception as e:
         logger.error(f"Error deleting Google Calendar event {google_event_id}: {e}")
         return False
+
+
+def test_google_connection(db: Session) -> Dict[str, Any]:
+    """
+    Tests live connection to Google Calendar & Contacts APIs using current credentials & tokens.
+    Returns status details.
+    """
+    creds = get_google_credentials(db)
+    if not creds:
+        return {
+            "success": False,
+            "message": "Aucun jeton OAuth valide disponible. Veuillez autoriser l'accès avec Google."
+        }
+
+    calendar_ok = False
+    contacts_ok = False
+    details = []
+
+    # Test Calendar
+    try:
+        service_cal = get_google_calendar_service(db)
+        if service_cal:
+            service_cal.calendarList().get(calendarId="primary").execute()
+            calendar_ok = True
+            details.append("Google Calendar API : OK")
+    except Exception as e:
+        details.append(f"Google Calendar API : Erreur ({str(e)})")
+
+    # Test Contacts (People API)
+    try:
+        service_ppl = get_google_people_service(db)
+        if service_ppl:
+            service_ppl.people().get(resourceName="people/me", personFields="names,emailAddresses").execute()
+            contacts_ok = True
+            details.append("Google Contacts API (People API) : OK")
+    except Exception as e:
+        details.append(f"Google Contacts API : Erreur ({str(e)})")
+
+    success = calendar_ok and contacts_ok
+    return {
+        "success": success,
+        "calendar_ok": calendar_ok,
+        "contacts_ok": contacts_ok,
+        "message": " — ".join(details) if details else ("Connexion OK" if success else "Échec de connexion")
+    }
+
