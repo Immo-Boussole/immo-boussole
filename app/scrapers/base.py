@@ -99,14 +99,15 @@ class BaseScraper(abc.ABC):
                 await apply_stealth(page)
 
                 print(f"[Scraper] Navigation vers : {url}...")
-                await page.goto(url, wait_until="networkidle", timeout=60000)
+                response = await page.goto(url, wait_until="networkidle", timeout=60000)
                 
                 # Handle cookie banners if needed
                 await self._handle_cookie_banner(page)
                 
                 html = await page.content()
-                print(f"[Scraper] Succès Playwright pour {url} ({len(html)} chars)")
-                return {"html": html}
+                status_code = response.status if response else 200
+                print(f"[Scraper] Succès Playwright pour {url} ({len(html)} chars, status {status_code})")
+                return {"html": html, "status_code": status_code}
             except Exception as e:
                 print(f"[Scraper] Erreur durant l'extraction Playwright : {e}")
                 return {}

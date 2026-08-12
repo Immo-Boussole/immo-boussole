@@ -249,15 +249,41 @@ class LeFigaroScraper(BaseScraper):
         if not html_content:
             return {}
 
-        # Check early if the page text indicates it is gone
-        gone_keywords = ["n'est plus disponible", "annonce supprimée", "déjà vendu", "déjà loué", "ne sont plus disponibles", "cette annonce a expiré", "annonce a expiré", "expiré"]
-        page_text_lower = html_content.lower()
-        if any(k in page_text_lower for k in gone_keywords):
-            print(f"[LeFigaro] Listing marked as GONE in DOM (early check): {url}", flush=True)
+        # Check HTTP status code
+        status_code = snapshot.get("status_code", 200)
+        if status_code in (404, 410):
+            print(f"[LeFigaro] Listing marked as GONE due to HTTP status {status_code}: {url}", flush=True)
+            return {"is_disappeared": True}
+
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Check early if the page headers/title indicate it is gone (tombstone page)
+        title_tag = soup.find('title')
+        page_title = title_tag.text.strip().lower() if title_tag else ""
+        h1_tags = [h.text.strip().lower() for h in soup.find_all('h1')]
+        
+        tombstone_keywords = [
+            "n'est plus disponible", 
+            "annonce supprimée", 
+            "ne sont plus disponibles", 
+            "cette annonce a expiré", 
+            "annonce a expiré",
+            "page demandée n'existe pas",
+            "annonce inactive",
+            "annonce non disponible"
+        ]
+        
+        is_tombstone = False
+        for kw in tombstone_keywords:
+            if kw in page_title or any(kw in h for h in h1_tags):
+                is_tombstone = True
+                break
+                
+        if is_tombstone:
+            print(f"[LeFigaro] Listing marked as GONE in DOM (tombstone check): {url}", flush=True)
             return {"is_disappeared": True}
 
         details: Dict = {"url": url}
-        soup = BeautifulSoup(html_content, 'html.parser')
 
         # ── Strategy 1: __NUXT__ ──────────────────────────────────────────
         # Extract title from DOM as secondary fallback
@@ -277,13 +303,6 @@ class LeFigaroScraper(BaseScraper):
                     # but only if reconstruction failed
                     nuxt_details["title"] = dom_title
                 
-                # Check for "vendu" or "indisponible" in description or options
-                unavail_keywords = ["vendu", "compromis", "plus disponible", "retiré"]
-                desc_lower = nuxt_details.get("description_text", "").lower()
-                if any(k in desc_lower for k in unavail_keywords):
-                    print(f"[LeFigaro] Listing found but marked as unavailable in description: {url}", flush=True)
-                    return {} # Mark as disappeared
-
                 details = {**details, **nuxt_details}
                 return details
             else:
