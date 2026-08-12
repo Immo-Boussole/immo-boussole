@@ -3062,12 +3062,27 @@ async def rescrape_listing(
     # ── Determine source ──
     source, scraper = _resolve_scraper(url)
 
+    from app.services import is_search_page_title, is_valid_listing_url, fetch_basic_metadata
+
     # ── Scrape ──
     details = {}
     scraping_success = True
     if scraper:
         try:
             details = await scraper.get_listing_details(url)
+            if details and is_search_page_title(details.get("title", "")):
+                listing.status = ListingStatus.REJECTED
+                listing.scraped_at = datetime.now(timezone.utc)
+                db.commit()
+                return {
+                    "status": "updated",
+                    "listing_id": listing.id,
+                    "title": listing.title,
+                    "scraping_success": True,
+                    "forbidden_zone_warning": {
+                        "message": "Cette annonce a été rejetée car elle a été identifiée comme une page de recherche."
+                    }
+                }
         except Exception as e:
             print(f"[API] Re-scrape error for {url}: {e}")
             scraping_success = False
@@ -3085,6 +3100,19 @@ async def rescrape_listing(
 
     if not details or not details.get("title"):
         details = await fetch_basic_metadata(url)
+        if details.get("is_invalid_search_page"):
+            listing.status = ListingStatus.REJECTED
+            listing.scraped_at = datetime.now(timezone.utc)
+            db.commit()
+            return {
+                "status": "updated",
+                "listing_id": listing.id,
+                "title": listing.title,
+                "scraping_success": False,
+                "forbidden_zone_warning": {
+                    "message": "Cette annonce a été rejetée car elle a été identifiée comme une page de recherche."
+                }
+            }
         scraping_success = False
 
     # ── Update via service ──
@@ -3132,6 +3160,18 @@ async def submit_listing_url(
     """
     url = body.url
 
+    from app.services import is_valid_listing_url, is_search_page_title, fetch_basic_metadata
+
+    # ── URL Structure Validation ──
+    is_valid, err_msg = is_valid_listing_url(url)
+    if not is_valid:
+        return {
+            "status": "invalid_url",
+            "message": f"⛔ {err_msg}",
+            "listing_id": None,
+            "title": None
+        }
+
     # Check if URL is already in DB
     existing = db.query(Listing).filter(Listing.url == url).first()
     if existing:
@@ -3148,6 +3188,13 @@ async def submit_listing_url(
     if body.skip_scraping:
         # ── Fast path: fetch only basic metadata ───────────────────────────
         details = await fetch_basic_metadata(url)
+        if details.get("is_invalid_search_page"):
+            return {
+                "status": "invalid_url",
+                "message": "⛔ L'URL ou le titre de l'annonce indique une page de recherche plutôt qu'une annonce unique.",
+                "listing_id": None,
+                "title": None
+            }
         
         city_to_check = details.get("city") or details.get("location")
         if city_to_check:
@@ -3198,6 +3245,13 @@ async def submit_listing_url(
     if scraper:
         try:
             details = await scraper.get_listing_details(url)
+            if details and is_search_page_title(details.get("title", "")):
+                return {
+                    "status": "invalid_url",
+                    "message": "⛔ L'URL ou le titre de l'annonce indique une page de recherche plutôt qu'une annonce unique.",
+                    "listing_id": None,
+                    "title": None
+                }
         except Exception as e:
             print(f"[API] Erreur scraping plein pour {url}: {e}")
             scraping_success = False
@@ -3214,6 +3268,13 @@ async def submit_listing_url(
     # ── Fallback: basic metadata if full scrape failed ───────────────────
     if not details or not details.get("title"):
         fb_details = await fetch_basic_metadata(url)
+        if fb_details.get("is_invalid_search_page"):
+            return {
+                "status": "invalid_url",
+                "message": "⛔ L'URL ou le titre de l'annonce indique une page de recherche plutôt qu'une annonce unique.",
+                "listing_id": None,
+                "title": None
+            }
         details.update(fb_details)
         scraping_success = False
 

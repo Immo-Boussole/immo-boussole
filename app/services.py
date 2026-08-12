@@ -24,6 +24,101 @@ from bs4 import BeautifulSoup
 
 
 
+import re
+from typing import Tuple
+
+def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
+    """
+    Validates if a URL is a single listing page URL, and NOT a search results or landing page.
+    Returns (is_valid, error_message).
+    """
+    url_lower = url.lower()
+    
+    # 1. Broad checks for common search keywords
+    search_keywords = ["/recherche", "/resultats", "/search", "projects=", "category=", "/carte"]
+    for kw in search_keywords:
+        if kw in url_lower:
+            return False, f"L'URL semble correspondre à une page de recherche ou de résultats ({kw})."
+            
+    # 2. Domain-specific structure checks
+    if "orpi.com" in url_lower:
+        if "/annonce-" not in url_lower:
+            return False, "Les URLs Orpi d'annonces valides doivent contenir '/annonce-'."
+            
+    elif "leboncoin.fr" in url_lower:
+        is_lbc_ad = "/ad/" in url_lower or any(cat in url_lower for cat in ["/ventes_immobilieres/", "/locations/", "/colocations/", "/bureaux_commerces/"])
+        if not is_lbc_ad:
+            return False, "Les URLs LeBonCoin d'annonces valides doivent contenir '/ad/' ou une catégorie d'annonce."
+
+    elif "seloger.com" in url_lower:
+        if "/annonces/" not in url_lower:
+            return False, "Les URLs SeLoger d'annonces valides doivent contenir '/annonces/'."
+
+    elif "lefigaro.fr" in url_lower:
+        if "/annonces/" not in url_lower or "/annonce-" not in url_lower:
+            return False, "Les URLs Le Figaro d'annonces valides doivent contenir '/annonces/' et '/annonce-'."
+
+    elif "logic-immo.com" in url_lower:
+        if "/detail-" not in url_lower:
+            return False, "Les URLs Logic-Immo d'annonces valides doivent contenir '/detail-'."
+
+    elif "bienici.com" in url_lower:
+        if "/annonce/" not in url_lower:
+            return False, "Les URLs Bien'Ici d'annonces valides doivent contenir '/annonce/'."
+
+    elif "iadfrance.fr" in url_lower:
+        if "/annonce/" not in url_lower:
+            return False, "Les URLs IAD France d'annonces valides doivent contenir '/annonce/'."
+
+    elif "immobilier.notaires.fr" in url_lower:
+        if "/annonce/" not in url_lower:
+            return False, "Les URLs Notaires d'annonces valides doivent contenir '/annonce/'."
+
+    elif "vinci-immobilier.com" in url_lower:
+        if "/achat-immobilier-neuf/" not in url_lower:
+            return False, "Les URLs Vinci d'annonces valides doivent contenir '/achat-immobilier-neuf/'."
+
+    elif "immobilier-france.fr" in url_lower:
+        if "/annonce/" not in url_lower and "/detail/" not in url_lower:
+            return False, "Les URLs Immobilier France d'annonces valides doivent contenir '/annonce/' ou '/detail/'."
+
+    return True, None
+
+
+def is_search_page_title(title: str) -> bool:
+    """
+    Checks if a page title indicates it is a search results/landing page instead of a single listing.
+    """
+    if not title:
+        return False
+    t = title.lower()
+    
+    # Common search page title patterns
+    indicators = [
+        "🏡 : maisons en vente",
+        "🏡 : maison en vente",
+        "🏡 : appartements en vente",
+        "🏡 : appartement en vente",
+        "résultats de recherche",
+        "annonces immobilières",
+        "moteur de recherche",
+        "toutes les annonces",
+        "liste des annonces",
+        "dernières annonces",
+        "alertes immo",
+        "recherche immobilière",
+    ]
+    for ind in indicators:
+        if ind in t:
+            return True
+            
+    # Plural nouns followed by "à vendre" or "à louer"
+    if re.search(r'\b(maisons|appartements|terrains|locaux)\s+à\s+(vendre|louer)\b', t):
+        return True
+        
+    return False
+
+
 # ─── Basic Metadata Extraction ────────────────────────────────────────────────
 
 async def fetch_basic_metadata(url: str) -> dict:
@@ -145,6 +240,10 @@ async def fetch_basic_metadata(url: str) -> dict:
         print(f"[Services] Error fetching basic metadata for {url}: {e}")
         details["title"] = f"Annonce ({url[:40]}…)"
     
+    if is_search_page_title(details.get("title", "")):
+        print(f"[Services] fetch_basic_metadata detected search page title: {details['title']}")
+        return {"is_invalid_search_page": True, "title": details["title"]}
+        
     return details
 
 
@@ -421,8 +520,17 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
     new_count = 0
     new_listing_objects: list[Listing] = []  # collected for notifications
     for item in scraped_listings:
-        ext_id = str(item["external_id"])
         item_url = item.get("url", "")
+        is_valid, _ = is_valid_listing_url(item_url)
+        if not is_valid:
+            print(f"[Services] Skipping scraped listing with invalid URL: {item_url}")
+            continue
+            
+        if is_search_page_title(item.get("title", "")):
+            print(f"[Services] Skipping scraped listing with search page title: {item.get('title')}")
+            continue
+
+        ext_id = str(item["external_id"])
         
         city_val = item.get("city")
         loc_val = item.get("location") or city_val

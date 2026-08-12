@@ -1655,7 +1655,7 @@
                         window.location.href = `/listings/${data.listing_id}`;
                     }, 2500);
                 } else {
-                    showAlert('Erreur lors du scraping.', 'error');
+                    showAlert(data.message || 'Erreur lors du scraping.', 'error');
                 }
             } catch (err) {
                 showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');

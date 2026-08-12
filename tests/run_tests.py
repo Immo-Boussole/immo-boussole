@@ -23,7 +23,8 @@ TEST_GROUPS = {
         "test_api_map_data.py",
         "test_db_integration.py",
         "test_parser_lbc.py",
-        "test_duplicate_relations.py"
+        "test_duplicate_relations.py",
+        "test_search_page_validation.py"
     ],
     "Network": [
         "test_tls.py"
