@@ -38,9 +38,8 @@ REMOTE=$(git rev-parse @{u})
 if [ "$LOCAL" != "$REMOTE" ]; then
     echo "$(date) - New code detected in $PROJECT_DIR. Updating..."
     
-    # 1. Update the code (reset local uncommitted server changes to avoid merge conflicts)
-    git reset --hard HEAD
-    git pull
+    # 1. Update the code (reset local branch to match the remote tracking branch exactly)
+    git reset --hard @{u}
     
     # 2. Extract pinned APP_VERSION tag from DOCKER_IMAGE.txt if present
     if [ -f "DOCKER_IMAGE.txt" ]; then
