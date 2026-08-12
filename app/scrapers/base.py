@@ -72,6 +72,7 @@ class BaseScraper(abc.ABC):
             pw = await async_playwright().start()
             
             # --- Connection with Retries ---
+            browser = None
             for attempt in range(1, max_retries + 1):
                 try:
                     print(f"[Scraper] Connexion à Browserless (tentative {attempt}/{max_retries})...")
@@ -85,7 +86,15 @@ class BaseScraper(abc.ABC):
                         print(f"[Scraper] Échec connexion Browserless (tentative {attempt}): {e}. Nouvel essai dans {retry_delay}s...")
                         await asyncio.sleep(retry_delay)
                     else:
-                        raise e # Final attempt failed
+                        print(f"[Scraper] Échec connexion Browserless après {max_retries} tentatives: {e}")
+            
+            if not browser:
+                print("[Scraper] Fallback: Lancement de Chromium local...")
+                try:
+                    browser = await pw.chromium.launch(headless=True)
+                except Exception as launch_err:
+                    print(f"[Scraper] Échec critique: Impossible de lancer Chromium en local: {launch_err}")
+                    raise launch_err
             
             try:
                 # Once connected, proceed with page extraction

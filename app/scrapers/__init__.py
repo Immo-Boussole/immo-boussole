@@ -8,3 +8,4 @@ from .notaires import NotairesScraper
 from .vinci import VinciScraper
 from .immobilier_france import ImmobilierFranceScraper
 from .orpi import OrpiScraper
+from .provimo import ProvimoScraper

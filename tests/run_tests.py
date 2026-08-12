@@ -36,7 +36,8 @@ TEST_GROUPS = {
     "Scrapers (Heavy)": [
         "test_lbc.py",
         "test_logicimmo.py",
-        "test_uc.py"
+        "test_uc.py",
+        "test_provimo.py"
     ]
 }
 

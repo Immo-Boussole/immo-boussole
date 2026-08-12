@@ -9,7 +9,8 @@ async def test():
     if not listings:
         print("No listings found, dumping HTML")
         snapshot = await scraper.extract_page_content(search_url)
-        with open("logicimmo_search.html", "w", encoding="utf-8") as f:
+        out_path = os.path.join(os.path.dirname(__file__), "logicimmo_search.html")
+        with open(out_path, "w", encoding="utf-8") as f:
             f.write(snapshot.get("html", ""))
         return
         
@@ -26,9 +27,10 @@ async def test():
         print("Only found 1 photo or none, extracting HTML...")
         snapshot = await scraper.extract_page_content(first_listing_url)
         html = snapshot.get("html", "")
-        with open("logicimmo_page.html", "w", encoding="utf-8") as f:
+        out_path2 = os.path.join(os.path.dirname(__file__), "logicimmo_page.html")
+        with open(out_path2, "w", encoding="utf-8") as f:
             f.write(html)
-        print("Saved raw HTML to logicimmo_page.html")
+        print("Saved raw HTML to tests/logicimmo_page.html")
 
 if __name__ == "__main__":
     import asyncio

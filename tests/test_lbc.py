@@ -9,10 +9,11 @@ async def main():
     html = await scraper.extract_page_content(url)
     html_content = html.get("html", "")
     
-    with open("lbc_debug.html", "w", encoding="utf-8") as f:
+    out_path = os.path.join(os.path.dirname(__file__), "lbc_debug.html")
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(html_content)
         
-    print(f"HTML sauvegardé dans lbc_debug.html ({len(html_content)} caractères).")
+    print(f"HTML sauvegardé dans tests/lbc_debug.html ({len(html_content)} caractères).")
     
     # Let's see what the scraper normally extracts
     listings = await scraper.get_listings(url)

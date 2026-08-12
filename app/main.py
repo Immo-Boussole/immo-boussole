@@ -395,7 +395,7 @@ def _resolve_scraper(url: str):
         LeboncoinScraper, SelogerScraper, LeFigaroScraper,
         LogicimmoScraper, BieniciScraper, IadfranceScraper,
         NotairesScraper, VinciScraper, ImmobilierFranceScraper,
-        OrpiScraper
+        OrpiScraper, ProvimoScraper
     )
 
     _SCRAPER_MAP = [
@@ -409,6 +409,7 @@ def _resolve_scraper(url: str):
         ("vinci-immobilier.com", Source.VINCI,             VinciScraper),
         ("immobilier-france.fr", Source.IMMOBILIER_FRANCE, ImmobilierFranceScraper),
         ("orpi.com",             Source.ORPI,              OrpiScraper),
+        ("provimo.fr",           Source.PROVIMO,           ProvimoScraper),
     ]
 
     for domain, source, scraper_cls in _SCRAPER_MAP:
