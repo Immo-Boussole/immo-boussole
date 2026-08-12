@@ -673,6 +673,177 @@
             transform: translateX(18px);
             background-color: #fff;
         }
+
+        /* ── Timeline Styling ── */
+        .timeline-wrapper {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .timeline-scroll-container {
+            position: relative;
+            width: 100%;
+            overflow-x: auto;
+            padding: 1rem 0;
+            scrollbar-width: thin;
+        }
+
+        .timeline-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .timeline-scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 27px; /* vertical center of the 32px marker (1rem padding-top + 16px center) */
+            left: 50px;
+            right: 50px;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+
+        .timeline-nodes {
+            display: flex;
+            position: relative;
+            z-index: 2;
+            gap: 2.5rem;
+            min-width: max-content;
+            padding: 0 10px;
+        }
+
+        .timeline-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            cursor: pointer;
+            position: relative;
+            transition: var(--trans);
+        }
+
+        .timeline-node:hover {
+            transform: translateY(-2px);
+        }
+
+        .node-time {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-2);
+            margin-bottom: 0.5rem;
+        }
+
+        .node-marker {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: var(--text-2);
+            transition: var(--trans);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Marker coloring based on status or type */
+        .timeline-node.effectuee .node-marker {
+            border-color: var(--green);
+            color: var(--green);
+            background: rgba(16, 217, 164, 0.1);
+        }
+        .timeline-node.programme .node-marker {
+            border-color: var(--orange);
+            color: var(--orange);
+            background: rgba(248, 168, 75, 0.1);
+        }
+        .timeline-node.annulee .node-marker {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(242, 92, 105, 0.1);
+        }
+        .timeline-node.reponse_negative .node-marker {
+            border-color: var(--red);
+            color: var(--red);
+            background: rgba(242, 92, 105, 0.1);
+        }
+
+        .timeline-node:hover .node-marker {
+            box-shadow: 0 0 12px var(--accent);
+            transform: scale(1.1);
+        }
+
+        .node-label {
+            margin-top: 0.5rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .node-type {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Tooltip style */
+        .timeline-node .timeline-tooltip {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-align: left;
+            border-radius: 8px;
+            padding: 0.75rem;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: var(--shadow);
+            pointer-events: none;
+        }
+
+        .timeline-node:hover .timeline-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .timeline-tooltip .tooltip-title {
+            font-weight: 800;
+            font-size: 0.78rem;
+            margin-bottom: 0.25rem;
+            color: var(--text);
+        }
+
+        .timeline-tooltip .tooltip-date {
+            font-size: 0.7rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .timeline-tooltip .tooltip-notes {
+            font-size: 0.68rem;
+            color: var(--text-2);
+            line-height: 1.3;
+        }
     </style>
 </head>
 <body>
@@ -753,6 +924,60 @@
             <i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.2rem; flex-shrink: 0;"></i>
             <div>
                 <strong style="color: var(--green); font-size: 0.88rem;">Zone autorisée</strong>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ── Timeline (Frise Chronologique des Visites) ── -->
+        {% if listing.visits %}
+        <div class="timeline-wrapper" style="grid-column: 1 / -1; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                <span style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-timeline" style="color: var(--accent);"></i> Frise chronologique des étapes
+                </span>
+                <span style="font-size: 0.75rem; font-weight: 500; color: var(--text-3); text-transform: none; letter-spacing: normal;">
+                    {{ listing.visits|length }} activité(s)
+                </span>
+            </h3>
+            <div class="timeline-scroll-container">
+                <div class="timeline-line"></div>
+                <div class="timeline-nodes">
+                    {% for v in listing.visits %}
+                    {% set sf = v.step_family or 'visite' %}
+                    {% set st = v.step or 'rdv_planifie' %}
+                    <div class="timeline-node {{ sf }} {{ v.status }}" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ sf|tojson }}, {{ st|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
+                        <div class="timeline-tooltip">
+                            <div class="tooltip-title">{{ listing.title }}</div>
+                            <div class="tooltip-date">{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</div>
+                            {% if v.visitor %}
+                            <div class="tooltip-notes" style="margin-bottom: 0.25rem;"><strong>Participants:</strong> {{ v.visitor }}</div>
+                            {% endif %}
+                            {% if v.notes %}
+                            <div class="tooltip-notes">{{ v.notes[:100] }}{% if v.notes|length > 100 %}...{% endif %}</div>
+                            {% endif %}
+                        </div>
+                        <div class="node-time">
+                            {{ v.scheduled_at.strftime('%d/%m') if v.scheduled_at else 'N/C' }}
+                        </div>
+                        <div class="node-marker">
+                            {% if sf == 'contact' %}
+                                <i class="fa-regular fa-paper-plane"></i>
+                            {% elif sf == 'offre' %}
+                                <i class="fa-solid fa-handshake"></i>
+                            {% elif sf == 'cloture' %}
+                                <i class="fa-solid fa-flag-checkered"></i>
+                            {% else %}
+                                <i class="fa-solid fa-house-circle-check"></i>
+                            {% endif %}
+                        </div>
+                        <div class="node-label">
+                            <div class="node-type" id="tl-node-type-{{ v.id }}">
+                                {{ v.step or v.visit_type }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endif %}
@@ -1369,50 +1594,55 @@
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
                 <div class="form-group">
-                    <label for="visitType" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Type de visite *</label>
-                    <select id="visitType" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                        <option value="visite">1ère Visite</option>
-                        <option value="contre_visite">Contre-visite</option>
-                        <option value="contact_agence">1er contact avec agence</option>
-                        <option value="relance_agence">Relance agence</option>
-                        <option value="contact_proprio">1er contact avec propriétaire</option>
-                        <option value="reponse_negative">Réponse négative (Agence / Proprio)</option>
+                    <label for="visitStepFamily" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Famille d'étape *</label>
+                    <select id="visitStepFamily" required onchange="onModalFamilyChange()" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <option value="contact">📩 Prise de contact</option>
+                        <option value="visite" selected>🏡 Rendez-vous & Visites</option>
+                        <option value="offre">🤝 Offre & Négociation</option>
+                        <option value="cloture">🏁 Issue & Clôture</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="visitStatus" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Statut *</label>
-                    <select id="visitStatus" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                        <option value="programme">Programmée</option>
-                        <option value="effectuee">Effectuée</option>
-                        <option value="annulee">Annulée</option>
+                    <label for="visitStep" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Étape précise *</label>
+                    <select id="visitStep" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <!-- Dynamically populated -->
                     </select>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                <div class="form-group">
+                    <label for="visitStatus" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Statut de l'activité *</label>
+                    <select id="visitStatus" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <option value="programme">Programmée / En cours</option>
+                        <option value="effectuee">Effectuée / Validée</option>
+                        <option value="annulee">Annulée / Abandonnée</option>
+                    </select>
+                </div>
+
                 <div class="form-group">
                     <label for="visitDateTime" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Date & Heure *</label>
                     <input type="datetime-local" id="visitDateTime" required style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Nom du visiteur</label>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem; box-sizing: border-box;">
-                        {% for u in users %}
-                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
-                            <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
-                            <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
-                        </label>
-                        {% endfor %}
-                    </div>
-                    <input type="text" id="visitVisitorCustom" placeholder="Autre(s) visiteur(s) sans compte (ex: Marie, Pierre)..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.82rem; outline: none; box-sizing: border-box;">
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Nom des participants / visiteurs</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem; box-sizing: border-box;">
+                    {% for u in users %}
+                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; cursor: pointer; color: var(--text); user-select: none;">
+                        <input type="checkbox" class="visitor-user-checkbox" value="{{ u.username }}" style="accent-color: var(--accent); cursor: pointer;">
+                        <i class="fa-solid fa-user-circle" style="color: var(--accent);"></i> {{ u.username }}
+                    </label>
+                    {% endfor %}
                 </div>
+                <input type="text" id="visitVisitorCustom" placeholder="Autre(s) interlocuteur(s) (ex: Marie, Agent Immobilier, Vendeur)..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.82rem; outline: none; box-sizing: border-box;">
             </div>
 
             <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label for="visitNotes" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Notes & Commentaires (code, contact agence, impressions)</label>
-                <textarea id="visitNotes" rows="3" placeholder="Numéro de l'agent, digicode, parking..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                <label for="visitNotes" style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Notes & Compte-rendu (coordonnées agence, impressions, offre, etc.)</label>
+                <textarea id="visitNotes" rows="3" placeholder="Notes sur le bien, digicode, prix proposé, réponse agence..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
             </div>
 
             <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
@@ -2606,21 +2836,148 @@
             }
         }
 
+        const STEP_FAMILIES = {
+            contact: {
+                label: "Prise de contact",
+                icon: "fa-regular fa-paper-plane",
+                color: "blue",
+                steps: {
+                    formulaire_envoye: { label: "Formulaire web envoyé", icon: "fa-solid fa-file-pen" },
+                    email_envoye: { label: "E-mail envoyé", icon: "fa-solid fa-envelope" },
+                    appel_direct: { label: "Appel direct effectué", icon: "fa-solid fa-phone" },
+                    message_vocal: { label: "Message vocal laissé", icon: "fa-solid fa-voicemail" },
+                    relance_sans_reponse: { label: "Relance initiale sans réponse", icon: "fa-solid fa-phone-volume" }
+                }
+            },
+            visite: {
+                label: "Rendez-vous & Visites",
+                icon: "fa-solid fa-house-circle-check",
+                color: "orange",
+                steps: {
+                    rdv_planifie: { label: "RDV Visite planifié", icon: "fa-regular fa-calendar-check" },
+                    "1ere_visite": { label: "1ère Visite effectuée", icon: "fa-solid fa-eye" },
+                    contre_visite: { label: "Contre-visite planifiée / effectuée", icon: "fa-solid fa-repeat" },
+                    visite_annulee: { label: "Visite annulée", icon: "fa-solid fa-calendar-xmark" }
+                }
+            },
+            offre: {
+                label: "Offre & Négociation",
+                icon: "fa-solid fa-handshake",
+                color: "purple",
+                steps: {
+                    dossier_demande: { label: "Documents / Dossier demandé", icon: "fa-solid fa-folder-open" },
+                    offre_transmise: { label: "Offre d'achat transmise", icon: "fa-solid fa-file-signature" },
+                    contre_proposition: { label: "Contre-proposition vendeur", icon: "fa-solid fa-scale-balanced" }
+                }
+            },
+            cloture: {
+                label: "Issue & Clôture",
+                icon: "fa-solid fa-flag-checkered",
+                color: "green",
+                steps: {
+                    offre_acceptee: { label: "Offre acceptée 🎉", icon: "fa-solid fa-circle-check" },
+                    offre_refusee: { label: "Offre refusée", icon: "fa-solid fa-ban" },
+                    bien_vendu: { label: "Bien plus sur le marché / Vendu", icon: "fa-solid fa-house-circle-xmark" },
+                    abandon: { label: "Abandon / Classé sans suite", icon: "fa-solid fa-xmark" }
+                }
+            }
+        };
+
+        const RAW_VISITS = [
+            {% for v in listing.visits %}
+            {
+                id: {{ v.id }},
+                listing_id: {{ v.listing_id }},
+                step_family: {{ (v.step_family or "visite")|tojson }},
+                step: {{ (v.step or "rdv_planifie")|tojson }},
+                status: {{ v.status|tojson }},
+                scheduled_at: {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }},
+                visitor: {{ (v.visitor or "")|tojson }},
+                notes: {{ (v.notes or "")|tojson }}
+            },
+            {% endfor %}
+        ];
+
+        function getStepLabel(family, stepKey) {
+            if (STEP_FAMILIES[family] && STEP_FAMILIES[family].steps[stepKey]) {
+                return STEP_FAMILIES[family].steps[stepKey].label;
+            }
+            switch (stepKey) {
+                case '1ere_visite': return '1ère Visite';
+                case 'contre_visite': return 'Contre-visite';
+                case 'contact_agence': return '1er contact agence';
+                case 'relance_agence': return 'Relance agence';
+                case 'contact_proprio': return '1er contact proprio';
+                case 'reponse_negative': return 'Offre/Contact refusé';
+                default: return stepKey || 'Activité';
+            }
+        }
+
+        function onModalFamilyChange(selectedStepKey = null) {
+            const famSelect = document.getElementById('visitStepFamily');
+            const stepSelect = document.getElementById('visitStep');
+            const famKey = famSelect.value;
+
+            stepSelect.innerHTML = '';
+            if (STEP_FAMILIES[famKey]) {
+                const steps = STEP_FAMILIES[famKey].steps;
+                Object.keys(steps).forEach(sKey => {
+                    const opt = document.createElement('option');
+                    opt.value = sKey;
+                    opt.textContent = steps[sKey].label;
+                    if (selectedStepKey && selectedStepKey === sKey) {
+                        opt.selected = true;
+                    }
+                    stepSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function populateTimelineLabels() {
+            RAW_VISITS.forEach(v => {
+                const el = document.getElementById(`tl-node-type-${v.id}`);
+                if (el) {
+                    el.textContent = getStepLabel(v.step_family, v.step);
+                }
+            });
+        }
+
         function openScheduleVisitModal() {
             document.getElementById('visitId').value = '';
-            document.getElementById('visitType').value = 'visite';
-            document.getElementById('visitStatus').value = 'programme';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Enregistrer une activité / visite';
+            document.getElementById('visitForm').reset();
+            
+            document.getElementById('visitListingId').value = "{{ listing.id }}";
             
             // Set current date/time by default
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('visitDateTime').value = now.toISOString().slice(0, 16);
             
-            // Reset visitor checkboxes
-            document.querySelectorAll('.visitor-user-checkbox').forEach(cb => cb.checked = false);
-            document.getElementById('visitVisitorCustom').value = '';
-            document.getElementById('visitNotes').value = '';
+            document.getElementById('visitStepFamily').value = 'visite';
+            onModalFamilyChange('rdv_planifie');
 
+            const currentUser = {{ request.session.get('username', '')|tojson }};
+            setVisitorUI(currentUser);
+
+            document.getElementById('visitModal').classList.add('open');
+        }
+
+        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes) {
+            document.getElementById('visitId').value = id;
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Modifier l\'activité / visite';
+            document.getElementById('visitListingId').value = listingId;
+            
+            const fam = stepFamily || 'visite';
+            document.getElementById('visitStepFamily').value = fam;
+            onModalFamilyChange(step || 'rdv_planifie');
+            
+            document.getElementById('visitStatus').value = status || 'programme';
+            if (scheduledAt && scheduledAt !== 'null') {
+                document.getElementById('visitDateTime').value = scheduledAt.slice(0, 16);
+            }
+            setVisitorUI(visitor || '');
+            document.getElementById('visitNotes').value = notes || '';
             document.getElementById('visitModal').classList.add('open');
         }
 
@@ -2666,7 +3023,8 @@
             e.preventDefault();
             const id = document.getElementById('visitId').value;
             const listing_id = parseInt(document.getElementById('visitListingId').value);
-            const visit_type = document.getElementById('visitType').value;
+            const step_family = document.getElementById('visitStepFamily').value;
+            const step = document.getElementById('visitStep').value;
             const status = document.getElementById('visitStatus').value;
             const scheduled_at = document.getElementById('visitDateTime').value;
             const visitor = getVisitorStringFromUI();
@@ -2674,7 +3032,7 @@
 
             if (!listing_id || !scheduled_at) return;
 
-            const payload = { listing_id, visit_type, status, scheduled_at, visitor, notes };
+            const payload = { listing_id, step_family, step, status, scheduled_at, visitor, notes };
 
             try {
                 let res;
@@ -2694,7 +3052,7 @@
                 if (res.ok) {
                     location.reload();
                 } else {
-                    alert("Erreur lors de l'enregistrement de la visite.");
+                    alert("Erreur lors de l'enregistrement de l'activité.");
                 }
             } catch (err) {
                 console.error(err);
@@ -2719,6 +3077,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", () => {
+            populateTimelineLabels();
+            onModalFamilyChange();
+
             document.querySelectorAll('.local-time').forEach(el => {
                 const ts = el.getAttribute('data-timestamp');
                 if (ts) {
