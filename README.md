@@ -5,375 +5,149 @@
 [![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3Abae342b39f5dd7ed4c08394640b08eb4e5c9b105-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 [![Wiki Documentation](https://img.shields.io/badge/docs-GitHub%20Wiki-blue?logo=github)](https://github.com/Immo-Boussole/immo-boussole/wiki)
 
-*Note: At its core, this project targets French platforms for property search. / Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens.*
+> *Note: At its core, this project targets French real estate platforms. / Note : Ce projet cible principalement les plateformes immobilières françaises.*  
+> 🇫🇷 **[Version française disponible ici (README.fr.md)](README.fr.md)**
 
-[Version française disponible ici](README.fr.md)
+**Immo-Boussole** is a modern, collaborative web application designed to centralize, catalog, evaluate, and track real estate listings across 10+ platforms (LeBonCoin, SeLoger, BienIci, LogicImmo, Le Figaro, etc.) in a structured and intuitive manner.
 
-**Immo-Boussole** is a collaborative web application designed to centralize, catalog, and evaluate real estate listings (LeBonCoin, SeLoger, and 8+ more platforms) in a structured manner.
+---
 
-![Dashboard](static/media/demo/exemple_tableaudebord.png)
-![Listings Table](static/media/demo/exemple_tableaudesannonces.png)
-![Listing Detail](static/media/demo/exemple_annonce.png)
+## 📸 Screenshots
+
+| Dashboard | Listings Overview | Listing Detail |
+|---|---|---|
+| ![Dashboard](static/media/demo/exemple_tableaudebord.png) | ![Listings Table](static/media/demo/exemple_tableaudesannonces.png) | ![Listing Detail](static/media/demo/exemple_annonce.png) |
+
+---
 
 ## 🚀 Key Features
 
-- **Smart Scraping**: Automatic extraction of details (price, area, DPE, taxes, charges, photos) from over 10 platforms:
-  - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
-- **Scheduled Auto-Search**: Automatic scraping of all "Ready to Search" entries, running **every hour from 6:00 to 22:30**. New listings appear in the "Automatic Searches" view, pre-tagged with their source platform and search criteria.
-- **Force Search**: A button in the "Automatic Searches" view lets you trigger a full scraping cycle instantly, without waiting for the next scheduled run.
-- **Local Media Management**: Photos are downloaded and served locally to avoid dead links.
-- **Collaborative Reviews**: Separate rating and comment system.
-- **Ideal Property Profile**: Generation of a dynamic profile based on top-rated listings (average price, area, recurring pros/cons).
-- **Interactive Map**: Visualize all active and new listings on a geographic map.
-- **Backup & Restore**: Built-in admin solution to export/import the entire system (DB, photos, config) in a single ZIP file.
-- **AI Assistant & MCP Service**: Chat with your listings via an integrated intelligent assistant (Ollama) or connect your own AI tools (Claude Desktop) using the MCP protocol.
-- **Premium Interface**: Modern dark design, descriptive cards, photo carousels, and a secure delete button with confirmation (slide).
+* **Smart Multi-Platform Scraping**: Automated extraction of price, area, DPE energy ratings, property taxes, HOA fees, geolocations, and full-resolution photos from over 10 platforms:
+  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo.*
+* **Automated Scheduled Scraping**: Background scheduler running hourly from 6:00 to 22:30 to automatically scrape configured searches ("Ready to Search").
+* **Instant Force Search**: Trigger a complete background scraping cycle on demand without waiting for the schedule.
+* **Local Media & Offline Storage**: Photos are downloaded and served locally to ensure zero dead links.
+* **Collaborative Reviews & Notes**: Multi-user independent ratings, notes, pros/cons, and criteria evaluations for each property.
+* **"Ideal Property" AI Synthesis**: Dynamic profile automatically synthesized from top-rated listings to identify recurring matches and red flags.
+* **Interactive Map View**: Visual geographic mapping of active, imported, and newly discovered listings.
+* **AI Assistant & MCP Protocol**: Built-in conversational AI assistant (Ollama) and Model Context Protocol (MCP) server for external LLM tools (Claude Desktop).
+* **Google Integrations**: Synchronize property visits with Google Calendar and real estate agency contacts with Google Contacts.
+* **Backup & Restore**: Built-in admin module to export and import the entire database and media library in a single ZIP file.
 
 ---
 
-## ✨ Features Demonstration
+## 📚 Complete Documentation & Guides (GitHub Wiki)
 
-The application is designed to optimize collaborative searching. Here is an overview of the main features:
+All technical deployment and configuration guides are centralized on our **[GitHub Wiki](https://github.com/Immo-Boussole/immo-boussole/wiki)**:
 
-### 📥 1. High-Quality Listings Import
-Import active listings from **LeBonCoin** and **SeLoger**. The scraper automatically retrieves titles, descriptions, prices, areas, and high-resolution photos.
-
-![Dashboard with Listings](static/media/demo/demo_dashboard.png)
-*Initial state of the dashboard after importing 4 listings.*
-
-### 🤖 2. Automatic Searches & Scheduled Scraping
-Configure your search URLs in the **"Ready to Search"** view (platform + criteria + URL). The scheduler will automatically scrape all configured searches every hour between 6:00 and 22:30. New listings appear in **"Automatic Searches"**, showing the source platform and criteria as the first two columns. A **"Force Search"** button lets you trigger a full cycle instantly.
-
-### 📸 3. Interactive Photo Gallery
-The detail page includes a responsive carousel and a premium "lightbox" gallery for an immersive view of the properties.
-
-![Photo Gallery Demo](static/media/demo/demo_gallery.png)
-
-*Interactive demonstration of the carousel and gallery.*
-
-### 👥 4. Collaborative Review System
-The application allows multiple reviewers (e.g., **Jean DUPONT** and **Marie MARTIN**) to provide independent reviews, ratings, and notes on each property.
-
-![Collaborative Reviews Demo](static/media/demo/demo_reviews.png)
-
-*Adding collaborative reviews and assigning ratings.*
-
-### 🌟 5. "Ideal Property" Dynamic Profile
-The application automatically synthesizes all highly-rated reviews to create your "Ideal Property" profile, highlighting recurring positive and negative points.
-
-![Ideal Property Profile](static/media/demo/demo_ideal_profile.png)
-
-*Dynamic synthesis of reviews into a 'Perfect Match' profile.*
-
-### 🛡️ 6. Secure "Slide to Delete"
-To prevent accidental deletions, the interface uses a premium slide-to-confirm interaction.
-
-![Deletion Demo](static/media/demo/demo_deletion.webp)
-
-*Demonstration of the secure slide-to-delete feature.*
-
-### 🔔 7. New Version Alert & Automatic Updates
-A banner automatically appears at the bottom of the home screen when a new version of the source code is available on GitHub.
-
-![Version Alert Demo](static/media/demo/demo_alert_banner.png)
-
-*Preview of the banner indicating an available update.*
-
-#### 🔄 Deployment and Updating (Dev & Prod)
-An automated Shell script [`scripts/auto_update.sh`](scripts/auto_update.sh) updates Docker containers (Dev or Prod) whenever a new commit is detected on the remote branch.
-
-- **How it works**:
-  1. Executes `git fetch` and compares local (`HEAD`) with remote (`@{u}`).
-  2. If new code is found, runs `git reset --hard` and `git pull`.
-  3. Detects pinned tag versions (`DOCKER_IMAGE.txt` / `APP_VERSION`) if configured.
-  4. Pulls latest images (`docker compose pull`) and rebuilds/restarts containers (`docker compose up -d --build`).
-  5. Cleans up dangling Docker images (`docker image prune -f`).
-
-- **Prerequisite: Passwordless `sudo` configuration (on the server)**:
-  To allow execution without an interactive password prompt (via SSH or Cron), add this rule using `sudo visudo` on your server (replace `<your_username>` with your SSH user, e.g., `ubuntu`, `debian`, etc.):
-  ```bash
-  <your_username> ALL=(ALL) NOPASSWD: /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh *
-  ```
-
-- **Manual execution (from local machine via SSH)**:
-  ```bash
-  ssh immo-dev "sudo bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml"
-  ```
-
-- **Automation via Cron (on the server)**:
-  You can set up a Cron job on the server to automatically check and apply updates (e.g. hourly):
-  ```bash
-  0 * * * * root /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml >> /var/log/immo-autoupdate.log 2>&1
-  ```
-
-### 🤖 8. AI Assistant & MCP Service
-The application now features a conversational assistant capable of analyzing your listings, answering your questions, and providing statistics. You can also expose your data to external tools like Claude Desktop via the **MCP (Model Context Protocol)**.
-
-👉 **Check the guide: [AI Assistant & MCP Service Configuration (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-EN)**
-
-### 🏠 9. Residential Proxy & Anti-Bot Bypass (DataDome)
-To avoid anti-bot blocks from platforms like LeBonCoin on VPS cloud hosting, you can deploy an encrypted residential proxy at home (on a Synology NAS or Raspberry Pi) exposed via Cloudflare Tunnel.
-
-👉 **Check the guide: [Deploying a Home Residential Proxy (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-EN)**
-
-## 🛠️ Installation & Launch
-
-### Prerequisites
-- Python 3.10+
-- A [Browserless](https://www.browserless.io/) instance (or Docker, which bundles it automatically) for full scraping.
-
-### Local Installation
-1. **Clone the project**
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # Windows
-   ```
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configure the environment**:
-   ```bash
-   cp .env.example .env
-   ```
-5. **Start the server**:
-   ```bash
-   python -m uvicorn app.main:app --reload
-   ```
-   The application is accessible at [http://127.0.0.1:8000](http://127.0.0.1:8000).
+| Guide / Topic | Description | Link |
+|---|---|---|
+| 🐳 **Docker & Cloudflare Deployment** | Production setup with Docker Compose, Portainer, and Cloudflare Zero Trust Tunnels | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-EN) |
+| 🛡️ **Residential Proxy & Anti-Bot** | Deploy a residential proxy (Synology NAS / Raspberry Pi) to bypass DataDome / 403 blocks | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-EN) |
+| 🤖 **AI Assistant & MCP Service** | Connect Ollama and expose your listings to Claude Desktop via MCP | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-EN) |
+| 💾 **Backup & Restore** | Backup and restore SQLite databases, media files, and configurations | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-EN) |
+| 🔑 **Google OAuth2 Setup** | Configure Google Calendar & Google Contacts synchronization | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Google-OAuth-Setup-EN) |
 
 ---
 
-## 🐳 Running with Docker
+## ⚡ Quick Start
 
-The project is fully containerized, automatically including the **Browserless** scraping engine. A pre-built image is available on [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) and is automatically updated after each code modification via [GitHub Actions](.github/workflows/docker-publish.yml).
+### 1. Using Docker (Recommended)
 
-1. **Launch all services**:
-   You can either build the image locally or use the pre-built image from Docker Hub:
+Immo-Boussole is containerized and includes the **Browserless** headless browser engine.
 
-   - **From source (local build)**:
-     ```bash
-     docker compose up -d --build immo-boussole
-     ```
-   - **From Docker Hub (pre-built)**:
-     ```bash
-     docker compose -f docker-compose.hub.yml up -d
-     ```
+#### Using Pre-built Image (Docker Hub)
+```bash
+docker compose -f docker-compose.hub.yml up -d
+```
 
-   > [!TIP]
-   > To update the application after a code change (when building locally), simply re-run:
-   > `docker compose up -d --build immo-boussole`
-   > The image will be updated with your changes, but **your data (database and photos) will remain intact** thanks to persistent volumes.
+#### Building from Source
+```bash
+docker compose up -d --build immo-boussole
+```
 
-2. **Access**: The interface is available at [http://localhost:8000](http://localhost:8000).
-
-3. **Persistence**: The database and media are stored in named volumes (`immo-boussole-db` and `immo-boussole-media`).
-
-### 🌐 Advanced Deployment (Portainer & Cloudflared)
-
-For secure production deployment on a remote server, you can use **Portainer** to manage your containers and **Cloudflared** (Cloudflare Zero Trust Tunnels) to securely expose the application to the Internet without opening ports.
-
-👉 **See the detailed guide: [Installation via Docker, Portainer, and Cloudflared (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-EN)**
+The application is immediately accessible at **[http://localhost:8000](http://localhost:8000)**.  
+*Persistent data (database and photos) is safely preserved in Docker named volumes.*
 
 ---
 
-## 🔄 Updating the Application (Syncing with GitHub)
+### 2. Local Python Development
 
-When new features are added to the [Immo-Boussole GitHub repository](https://github.com/Immo-Boussole/immo-boussole), you can easily update your **DEV** or **PROD** instances while keeping your databases and photos intact.
+#### Prerequisites
+* Python 3.10+
+* A running [Browserless](https://www.browserless.io/) or Chrome instance
 
-### Update your instance (DEV or PROD)
+```bash
+# 1. Clone the repository
+git clone https://github.com/Immo-Boussole/immo-boussole.git
+cd immo-boussole
 
-1. Open a terminal in your instance folder (e.g., `cd /opt/immo-boussole/dev` or `cd /opt/immo-boussole/prod`).
-2. Pull the latest source code from GitHub:
-   ```bash
-   git pull
-   ```
-3. Rebuild and restart the Docker container in the background. (Use the compose file matching your setup):
-   ```bash
-   # If using standard installation:
-   docker compose up -d --build immo-boussole
+# 2. Setup virtual environment
+python -m venv venv
+.\venv\Scripts\activate  # On Windows (or source venv/bin/activate on Linux/macOS)
 
-   # If using Cloudflared (Tunnels):
-   docker compose -f docker-compose.cloudflared.yml up -d --build
-   ```
+# 3. Install dependencies
+pip install -r requirements.txt
 
-> [!CAUTION]
-> **Database Safety**: The current structure is designed to be robust. Upon restart, the system will automatically check for new database migrations (e.g., new columns or tables) and update your `immo_boussole.db` without **ever** deleting your existing data.
+# 4. Environment setup
+cp .env.example .env
 
-### 🤖 Automating Updates (Linux / Cron)
-
-If you want your **DEV** environment to update itself automatically whenever new code is pushed, you can use the provided `scripts/auto_update.sh` script with a scheduled task (Cron):
-
-1. Make the script executable:
-   ```bash
-   chmod +x /opt/immo-boussole/dev/scripts/auto_update.sh
-   ```
-2. Edit your scheduled tasks:
-   ```bash
-   crontab -e
-   ```
-3. Add the following line to check for updates every hour (at minute 0) and log the output:
-   ```bash
-   0 * * * * /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev docker-compose.cloudflared.yml >> /var/log/immo-boussole-update.log 2>&1
-   ```
+# 5. Run development server
+python -m uvicorn app.main:app --reload
+```
 
 ---
 
 ## ⚙️ Environment Configuration
 
-Key variables in `.env`:
+Common configuration variables in `.env`:
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `SECRET_KEY` | *(required)* | Session encryption key. Change in production. |
-| `DATABASE_URL` | `sqlite:///./immo_boussole.db` | Path to the SQLite database. |
-| `BROWSERLESS_URL` | `ws://localhost:3000` | WebSocket URL for the headless browser. |
+|---|---|---|
+| `SECRET_KEY` | *(required)* | Session and token signing key. |
+| `DATABASE_URL` | `sqlite:///./immo_boussole.db` | SQLite database connection string. |
+| `BROWSERLESS_URL` | `ws://localhost:3000` | WebSocket endpoint for the headless browser scraper. |
 | `BROWSERLESS_TOKEN` | *(empty)* | Optional authentication token for Browserless. |
-| `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Human-readable** cron description displayed in the UI next to the "Force Search" button. |
-| `GEORISQUES_API_KEY` | *(optional)* | API key for the French Géorisques risk data service. |
-| `APP_VERSION` | `1.1.1-dev` | Version string shown in the sidebar footer. |
-| `OLLAMA_URL` | `http://host.docker.internal:11434` | URL of your local Ollama instance. |
-| `OLLAMA_MODEL` | `llama3` | Model used by the AI assistant. |
+| `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | Human-readable schedule displayed in the UI. |
+| `GEORISQUES_API_KEY` | *(optional)* | API key for French natural/technological risk data. |
+| `OLLAMA_URL` | `http://host.docker.internal:11434` | Endpoint for the Ollama AI assistant. |
+| `OLLAMA_MODEL` | `llama3` | Model used for chat and listing analysis. |
 
 ---
 
-## 🔒 Security & Authentication
+## 🔌 API & Swagger Documentation
 
-Access to the application is protected by a multi-user authentication system with roles.
+Immo-Boussole includes a complete REST API powered by **FastAPI**:
 
-- **Initial Setup**: On the first run, the application redirects to `/setup-admin` to create the primary administrator account.
-- **Session**: Sessions are secured using a `SECRET_KEY` (automatically generated or defined in `.env`).
-- **Access Control**: Any unauthenticated access attempt redirects to the login page.
-
----
-
-## 👥 User Roles & Permissions
-
-The system distinguishes between two primary roles:
-
-- **ADMIN**:
-  - Access to the **User Management** interface (`/admin/users`).
-  - Ability to create and delete user accounts.
-  - **Restriction**: Cannot import or scrape new listings (to maintain focus on management).
-- **USER**:
-  - Full access to property searching and evaluation.
-  - Ability to import listings via URLs or manual entry.
-  - Access to the automatic search scheduling and force-search feature.
-  - **Restriction**: No access to the administration panel.
+* **Interactive Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
+* **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ---
-
-## 📖 User Guide
-
-1. **Add a property**: Click on "+ Add Listing" and paste the LeBonCoin or SeLoger URL.
-2. **Set up auto-searches**: Go to **"Ready to Search"** and add a platform + criteria + URL. The scheduler will scrape it automatically every hour (6h–22h30).
-3. **Review new auto-found listings**: Open **"Automatic Searches"** to see, import, or reject newly discovered properties. Use **"Force Search"** to trigger an immediate cycle.
-4. **Review**: Click on a card to view details, then fill out your section.
-5. **Delete**: On the dashboard, click the trash can icon on a card and slide to confirm.
-6. **Ideal Profile**: Check the global synthesis via the sidebar to see what type of property fits you best.
-
-## 🔌 API Documentation (REST)
-
-The application exposes a comprehensive REST API built with **FastAPI**. All endpoints require authentication (active session) and return an HTTP 401 code in case of unauthorized access.
-
-### Listings
-- `GET /api/listings`: Retrieves the list of listings (optional filters: `status`, `source`, `limit`).
-- `GET /api/listings/{listing_id}`: Retrieves full details of a specific listing.
-- `POST /api/listings/submit-url`: Adds a new listing via a URL (automatically starts scraping).
-- `POST /api/listings/{listing_id}/rescrape`: Manually triggers a scrape to update an existing listing.
-- `PUT /api/listings/{listing_id}`: Manually updates the attributes of a listing.
-- `DELETE /api/listings/{listing_id}`: Deletes a listing and its associated reviews.
-- `POST /api/listings/{listing_id}/import`: Imports a listing (sets status to ACTIVE).
-- `POST /api/listings/{listing_id}/reject`: Rejects a listing (sets status to REJECTED).
-- `POST /api/listings/{listing_id}/photos`: Imports new photos from a list of URLs.
-- `POST /api/listings/{listing_id}/photos/upload`: Directly uploads photos (Multipart Form).
-
-### Automatic Searches
-- `POST /api/searches/force`: **Triggers a full scraping cycle immediately** in the background (visible in the "Automatic Searches" view).
-
-### Ready Searches
-- `GET /searches/ready` *(page)*: Lists all configured search URLs.
-- `POST /api/searches/ready`: Adds a new ready search (platform, criteria, URL).
-- `PUT /api/searches/ready/{id}`: Updates an existing ready search.
-- `DELETE /api/searches/ready/{id}`: Removes a ready search.
-
-### AI Assistant & MCP
-- `POST /api/chat`: Assistant chat endpoint (Ollama).
-- **MCP Service**: Stdio/SSE server available for connecting external clients (Claude Desktop).
-
-### Administration (Admin only)
-- `GET /admin/users`: Interface for managing users.
-- `POST /api/admin/users`: Creates a new user account.
-- `DELETE /api/admin/users/{user_id}`: Deletes a user account.
-- `GET /api/admin/backup`: Downloads a full ZIP backup of the system.
-- `POST /api/admin/restore`: Restores the system from a ZIP backup.
-
-👉 **Check the guide: [Backup & Restore Documentation (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-EN)**
-
-### Reviews
-- `GET /api/listings/{listing_id}/reviews`: Lists all reviews left on a listing.
-- `POST /api/listings/{listing_id}/reviews`: Adds or updates a collaborative review.
-- `PUT /api/reviews/{review_id}`: Modifies an existing specific review.
-- `DELETE /api/reviews/{review_id}`: Deletes an existing review.
-
-### Ideal Profile
-- `GET /api/profile/ideal`: Returns the dynamic synthesis of the ideal property.
-
-The API is also fully documented and testable via the integrated Swagger interface at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
-
-## 🏗️ Project Structure
-
-- `app/`: Backend logic (scrapers, models, API services, scheduler).
-  - `main.py`: FastAPI routes and application entry point.
-  - `models.py`: SQLAlchemy ORM models (Listing, ReadySearch, SearchQuery, …).
-  - `services.py`: Scraping and listing creation business logic.
-  - `scheduler.py`: APScheduler cron jobs (hourly 6h–22h30).
-  - `database.py`: DB engine, session factory, and automatic migrations.
-- `templates/`: Jinja2 HTML pages.
-- `static/`: CSS assets and downloaded media (listing photos).
-- `locales/`: Internationalization JSON files (`fr.json`, `en.json`).
-- `tests/`: Unit and integration test scripts.
-- `Dockerfile` & `docker-compose.yml`: Docker configuration.
-- `immo_boussole.db`: SQLite database (managed automatically).
-- [GitHub Wiki](https://github.com/Immo-Boussole/immo-boussole/wiki): Comprehensive documentation, guides, and deployment instructions.
-- `.ai/`: Specialized documentation and AI-related context.
 
 ## 🧪 Testing
 
-The project includes a comprehensive testing framework to ensure stability:
+The repository provides a test suite for API endpoints, scraping logic, database operations, and integrations:
 
-- **Run all tests**: `python tests/run_tests.py`
-- **CI Mode (Fast)**: `python tests/run_tests.py --ci`
-- **Automated CI**: Managed via GitHub Actions on every push or manual trigger.
+```bash
+# Run all tests
+python tests/run_tests.py
 
-Detailed documentation is available in [.ai/TESTING.md](.ai/TESTING.md).
+# Run in CI mode
+python tests/run_tests.py --ci
+```
 
-## 🏗️ Technical Stack
-- **Backend**: FastAPI (Python 3.12)
-- **Database**: SQLite + SQLAlchemy (Automatic migrations included, no Alembic required)
-- **Scraping**: Playwright + Browserless / BeautifulSoup4 / HTTPX
-- **Additional Scrapers**: Figaro and LogicImmo adapted from the [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper) project
-- **Frontend**: HTML5 / Vanilla CSS / Jinja2
-- **Scheduler**: APScheduler with `CronTrigger` (hourly runs, 6h–22h30)
-- **Geo & Risk**: Nominatim (geocoding), OSRM (routing), Géorisques API (risk data)
+---
 
+## 🏗️ Tech Stack
 
-## 🚀 Upcoming Features
+* **Backend**: FastAPI (Python 3.12), SQLAlchemy ORM, SQLite, APScheduler, Pydantic v2
+* **Scraping & Automation**: Playwright, Browserless, BeautifulSoup4, HTTPX
+* **Frontend**: HTML5, Vanilla CSS (Modern Dark Mode / Glassmorphism), Jinja2 templates
+* **Integrations**: Google Calendar API, Google People API, MCP (Model Context Protocol), Géorisques API, OpenStreetMap / Nominatim
 
-- ✅ Protect access to the entire site with an authentication mechanism.
-- ✅ Create an admin account setup system on first run.
-- ✅ Create an administration interface.
-- ✅ Create a user account system (admin cannot import listings).
-- ✅ Make the application multilingual (French and English).
-- ✅ Interactive map of listings.
-- ✅ Automatic scheduled searches (hourly, 6h–22h30) from "Ready to Search" entries.
-- ✅ "Force Search" button to trigger an immediate scraping cycle.
-- ✅ Platform & criteria columns in the "Automatic Searches" view.
-- ✅ MCP (Model Context Protocol) service to connect external AI tools.
-- ✅ Integrated AI Assistant (Ollama) to chat with listings.
-- ✅ Backup and restore system (ZIP) for admins.
-- ⬜ Create a real estate agent account system.
-- ⬜ Add a favorite system for listings and searches.
-- ⬜ Add a notification system (email, push, etc.).
-- ⬜ Re-implement the duplicate detection mechanism.
+---
+
+## 📄 License
+
+This project is open-source. See the repository for details.
+

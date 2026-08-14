@@ -5,375 +5,148 @@
 [![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3Abae342b39f5dd7ed4c08394640b08eb4e5c9b105-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 [![Documentation Wiki](https://img.shields.io/badge/docs-GitHub%20Wiki-blue?logo=github)](https://github.com/Immo-Boussole/immo-boussole/wiki)
 
-*Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
+> *Note : Ce projet cible principalement les plateformes immobilières françaises. / Note: At its core, this project targets French real estate platforms.*  
+> 🇬🇧 **[English version available here (README.md)](README.md)**
 
-[English version available here](README.md)
+**Immo-Boussole** est une application web collaborative moderne conçue pour centraliser, cataloguer, évaluer et suivre les offres immobilières sur plus de 10 plateformes (LeBonCoin, SeLoger, BienIci, LogicImmo, Le Figaro, etc.) de façon fluide et structurée.
 
-**Immo-Boussole** est une application web collaborative conçue pour centraliser, cataloguer et évaluer les offres immobilières (LeBonCoin, SeLoger, et 8+ autres plateformes) de manière structurée.
+---
 
-![Tableau de Bord](static/media/demo/exemple_tableaudebord.png)
-![Tableau des Annonces](static/media/demo/exemple_tableaudesannonces.png)
-![Détail Annonce](static/media/demo/exemple_annonce.png)
+## 📸 Aperçu de l'interface
 
+| Tableau de bord | Liste des annonces | Fiche détaillée |
+|---|---|---|
+| ![Tableau de Bord](static/media/demo/exemple_tableaudebord.png) | ![Tableau des Annonces](static/media/demo/exemple_tableaudesannonces.png) | ![Détail Annonce](static/media/demo/exemple_annonce.png) |
+
+---
 
 ## 🚀 Fonctionnalités Clés
 
-- **Scraping Intelligent** : Extraction automatique des détails (prix, surface, DPE, taxes, charges, photos) depuis plus de 10 plateformes :
-  - LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France.
-- **Recherches Automatiques Planifiées** : Scraping automatique de toutes les entrées "Prêt à Rechercher", exécuté **toutes les heures de 6h à 22h30**. Les nouvelles annonces apparaissent dans la vue "Recherches Automatiques", pré-étiquetées avec leur plateforme source et leurs critères de recherche.
-- **Forcer la Recherche** : Un bouton dans la vue "Recherches Automatiques" permet de déclencher instantanément un cycle complet de scraping, sans attendre la prochaine exécution planifiée.
-- **Gestion Locale des Médias** : Les photos sont téléchargées et servies localement pour éviter les liens morts.
-- **Avis Collaboratifs** : Système de notation et de commentaires séparés.
-- **Fiche Bien Idéal** : Génération d'un profil dynamique basé sur les annonces les mieux notées (moyennes de prix, surface, points positifs/négatifs récurrents).
-- **Carte Interactive** : Visualisation géographique de toutes les annonces actives et nouvelles.
-- **Sauvegarde & Restauration** : Solution d'administration intégrée pour exporter/importer tout le système (DB, photos, config) en un seul fichier ZIP.
-- **Assistant IA & Service MCP** : Discutez avec vos annonces via un assistant intelligent intégré (Ollama) ou connectez vos propres outils IA (Claude Desktop) grâce au protocole MCP.
-- **Interface Premium** : Design sombre moderne, cartes descriptives, carrousels de photos et bouton de suppression avec confirmation sécurisée (slide).
+* **Scraping Multi-Plateformes Intelligent** : Extraction automatisée des prix, surfaces, DPE, taxes foncières, charges, géolocalisations et photos haute résolution sur plus de 10 sites :
+  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo.*
+* **Recherches Automatiques Planifiées** : Planificateur d'arrière-plan exécuté toutes les heures de 6h à 22h30 pour scraper vos recherches configurées ("Prêt à Rechercher").
+* **Forcer la Recherche Immédiate** : Déclenchez un cycle de scraping complet à la demande sans attendre l'heure planifiée.
+* **Stockage Local des Médias** : Photos téléchargées et servies en local pour garantir l'absence de liens cassés.
+* **Avis Collaboratifs & Notes** : Notes individuelles multi-utilisateurs, critères d'évaluation, avantages et inconvénients pour chaque bien.
+* **Synthèse IA "Bien Idéal"** : Profil dynamique calculé à partir des meilleures annonces pour révéler vos critères clés et points de vigilance.
+* **Vue Carte Interactive** : Visualisation cartographique géographique des annonces actives, importées et nouvellement trouvées.
+* **Assistant IA & Protocole MCP** : Assistant conversationnel intégré (Ollama) et serveur Model Context Protocol (MCP) pour vos outils LLM externes (Claude Desktop).
+* **Intégrations Google** : Synchronisation des visites avec Google Calendar et des contacts d'agences avec Google Contacts.
+* **Sauvegarde & Restauration** : Module administrateur pour exporter et réimporter l'intégralité de la base de données et des photos en un clic (archive ZIP).
 
 ---
 
-## ✨ Démonstration des fonctionnalités
+## 📚 Documentation Complète & Guides (GitHub Wiki)
 
-L'application est conçue pour optimiser la recherche collaborative. Voici un aperçu des fonctionnalités principales :
+Tous les guides techniques de déploiement et de configuration sont réunis sur notre **[Wiki GitHub](https://github.com/Immo-Boussole/immo-boussole/wiki)** :
 
-### 📥 1. Importation d'Annonces Haute Qualité
-Importez des annonces actives de **LeBonCoin** et **SeLoger**. Le scraper récupère automatiquement les titres, descriptions, prix, surfaces et photos haute résolution.
-
-![Tableau de Bord avec Annonces](static/media/demo/demo_dashboard.png)
-*État initial du tableau de bord après l'importation de 4 annonces.*
-
-### 🤖 2. Recherches Automatiques & Scraping Planifié
-Configurez vos URLs de recherche dans la vue **"Prêt à Rechercher"** (plateforme + critères + URL). Le planificateur scrappe automatiquement toutes les recherches configurées chaque heure entre 6h et 22h30. Les nouvelles annonces apparaissent dans **"Recherches Automatiques"**, affichant la plateforme source et les critères comme deux premières colonnes. Un bouton **"Forcer la recherche"** permet de déclencher un cycle complet instantanément.
-
-### 📸 3. Galerie Photo Interactive
-La page de détail comprend un carrousel réactif et une galerie "lightbox" premium pour une vue immersive des biens.
-
-![Démo Galerie Photo](static/media/demo/demo_gallery.png)
-
-*Démonstration interactive du carrousel et de la galerie.*
-
-### 👥 4. Système d'Avis Collaboratif
-L'application permet à plusieurs examinateurs (ex: **Jean DUPONT** et **Marie MARTIN**) de donner des avis indépendants, des notes et des remarques sur chaque bien.
-
-![Démo Avis Collaboratifs](static/media/demo/demo_reviews.png)
-
-*Ajout d'avis collaboratifs et attribution de notes.*
-
-### 🌟 5. Profil Dynamique "Bien Idéal"
-L'application synthétise automatiquement tous les avis bien notés pour créer le profil de votre "Bien Idéal", soulignant les points positifs et négatifs récurrents.
-
-![Profil Bien Idéal](static/media/demo/demo_ideal_profile.png)
-
-*Synthèse dynamique des avis en un profil de 'Correspondance Parfaite'.*
-
-### 🛡️ 6. Suppression Sécurisée par "Glisser pour Supprimer"
-Pour éviter les suppressions accidentelles, l'interface utilise une interaction premium de glissement pour confirmer.
-
-![Démo Suppression](static/media/demo/demo_deletion.webp)
-
-*Démonstration de la fonctionnalité sécurisée de glissement pour supprimer.*
-
-### 🔔 7. Alerte de Nouvelle Version & Mise à Jour Automatique
-Une bannière s'affiche automatiquement en bas de l'écran d'accueil lorsqu'une nouvelle version du code source est disponible sur GitHub.
-
-![Démo Alerte de Version](static/media/demo/demo_alert_banner.png)
-
-*Aperçu de la bannière indiquant une mise à jour disponible.*
-
-#### 🔄 Déploiement et Mise à Jour (Dev & Prod)
-Un script Shell d'automatisation [`scripts/auto_update.sh`](scripts/auto_update.sh) permet d'actualiser les conteneurs Docker (Dev ou Prod) dès qu'un nouveau commit est disponible sur la branche courante.
-
-- **Fonctionnement du script** :
-  1. Effectue un `git fetch` et compare les commits locaux (`HEAD`) aux commits distants (`@{u}`).
-  2. S'il y a du nouveau code, exécute un `git reset --hard` et `git pull`.
-  3. Détecte le tag de version verrouillée (`DOCKER_IMAGE.txt` / `APP_VERSION`) le cas échéant.
-  4. Récupère les images récentes (`docker compose pull`) et reconstruit/redémarre les conteneurs (`docker compose up -d --build`).
-  5. Nettoie les images Docker orphelines (`docker image prune -f`).
-
-- **Configuration préalable de `sudo` sans mot de passe (sur le serveur)** :
-  Pour autoriser l'exécution de la mise à jour sans demande de mot de passe interactif (via SSH ou Cron), ajoutez cette règle avec `sudo visudo` sur le serveur (remplacez `<votre_utilisateur>` par votre nom d'utilisateur, ex: `ubuntu`, `debian`, etc.) :
-  ```bash
-  <votre_utilisateur> ALL=(ALL) NOPASSWD: /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh *
-  ```
-
-- **Exécution manuelle (depuis votre machine via SSH)** :
-  ```bash
-  ssh immo-dev "sudo bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml"
-  ```
-
-- **Automatisation via Cron (sur le serveur)** :
-  Vous pouvez ajouter une tâche Cron sur votre serveur pour vérifier et appliquer les mises à jour automatiquement (ex: toutes les heures) :
-  ```bash
-  0 * * * * root /bin/bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml >> /var/log/immo-autoupdate.log 2>&1
-  ```
-
-### 🤖 8. Assistant IA & Service MCP
-L'application intègre désormais un assistant conversationnel capable d'analyser vos annonces, de répondre à vos questions et de fournir des statistiques. Vous pouvez également exposer vos données à des outils externes comme Claude Desktop via le protocole **MCP (Model Context Protocol)**.
-
-👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-FR)**
-
-### 🏠 9. Proxy Résidentiel & Contournement Anti-Bot (DataDome)
-Pour éviter les blocages stricts de plateformes comme LeBonCoin sur les serveurs VPS, vous pouvez déployer un proxy résidentiel chiffré à domicile (sur un NAS Synology ou Raspberry Pi) exposé via Cloudflare Tunnel.
-
-👉 **Consultez le guide : [Déploiement d'un Proxy Résidentiel à Domicile (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-FR)**
-
-## 🛠️ Installation & Lancement
-
-### Prérequis
-- Python 3.10+
-- Une instance [Browserless](https://www.browserless.io/) (ou Docker, qui l'intègre automatiquement) pour le scraping complet.
-
-### Installation Locale
-1. **Cloner le projet**
-2. **Créer un environnement virtuel** :
-   ```bash
-   python -m venv venv
-   .\venv\Scripts\activate  # Windows
-   ```
-3. **Installer les dépendances** :
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configurer l'environnement** :
-   ```bash
-   cp .env.example .env
-   ```
-5. **Lancer le serveur** :
-   ```bash
-   python -m uvicorn app.main:app --reload
-   ```
-   L'application est accessible sur [http://127.0.0.1:8000](http://127.0.0.1:8000).
+| Guide / Thème | Description | Lien |
+|---|---|---|
+| 🐳 **Déploiement Docker & Cloudflare** | Mise en production avec Docker Compose, Portainer et les tunnels Cloudflare Zero Trust | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-FR) |
+| 🛡️ **Proxy Résidentiel & Anti-Bot** | Déployer un proxy résidentiel (NAS Synology / Raspberry Pi) pour contourner les blocages DataDome / 403 | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-FR) |
+| 🤖 **Assistant IA & Serveur MCP** | Connecter Ollama et exposer vos annonces à Claude Desktop via MCP | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-FR) |
+| 💾 **Sauvegarde & Restauration** | Procédures de backup et restore de la base SQLite et des médias | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-FR) |
+| 🔑 **Configuration Google OAuth2** | Configurer la synchronisation Google Calendar et Google Contacts | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Google-OAuth-Setup-FR) |
 
 ---
 
-## 🐳 Utilisation avec Docker
+## ⚡ Démarrage Rapide
 
-Le projet est entièrement containerisé, incluant automatiquement le moteur de scraping **Browserless**. Une image pré-construite est disponible sur [Docker Hub](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general) et est mise à jour automatiquement après chaque modification du code via [GitHub Actions](.github/workflows/docker-publish.yml).
+### 1. Avec Docker (Recommandé)
 
-1. **Lancer l'ensemble des services** :
-   Vous pouvez soit construire l'image localement, soit utiliser l'image pré-construite de Docker Hub :
+Immo-Boussole est entièrement conteneurisé et intègre le moteur de scraping sans tête **Browserless**.
 
-   - **Depuis les sources (construction locale)** :
-     ```bash
-     docker compose up -d --build immo-boussole
-     ```
-   - **Depuis Docker Hub (image pré-construite)** :
-     ```bash
-     docker compose -f docker-compose.hub.yml up -d
-     ```
+#### Utiliser l'image officielle (Docker Hub)
+```bash
+docker compose -f docker-compose.hub.yml up -d
+```
 
-   > [!TIP]
-   > Pour mettre à jour l'application après une modification de code (en construction locale), relancez simplement :
-   > `docker compose up -d --build immo-boussole`
-   > L'image sera mise à jour avec vos changements, mais **vos données (base de données et photos) resteront intactes** grâce aux volumes persistants.
+#### Construire depuis les sources
+```bash
+docker compose up -d --build immo-boussole
+```
 
-2. **Accès** : L'interface est disponible sur [http://localhost:8000](http://localhost:8000).
-
-3. **Persistance** : La base de données et les médias sont stockés dans des volumes nommés (`immo-boussole-db` et `immo-boussole-media`).
-
-### 🌐 Déploiement Avancé (Portainer & Cloudflared)
-
-Pour une mise en production sécurisée sur un serveur distant, vous pouvez utiliser **Portainer** pour gérer vos conteneurs et **Cloudflared** (Tunnels Cloudflare Zero Trust) pour exposer l'application sur Internet de manière sécurisée sans ouvrir de ports.
-
-👉 **Consultez le guide détaillé : [Installation via Docker, Portainer et Cloudflared (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-FR)**
+L'application est immédiatement accessible sur **[http://localhost:8000](http://localhost:8000)**.  
+*Les données (base de données et photos) sont conservées en sécurité dans des volumes nommés Docker.*
 
 ---
 
-## 🔄 Mise à jour de l'application (Synchronisation avec GitHub)
+### 2. Développement Local avec Python
 
-Lorsque de nouvelles fonctionnalités sont ajoutées au dépôt [GitHub Immo-Boussole](https://github.com/Immo-Boussole/immo-boussole), vous pouvez mettre à jour vos instances de **DEV** ou de **PROD** très facilement, tout en conservant vos bases de données et vos photos.
+#### Prérequis
+* Python 3.10+
+* Une instance [Browserless](https://www.browserless.io/) ou Chrome en local
 
-### Mettre à jour votre instance (DEV ou PROD)
+```bash
+# 1. Cloner le dépôt
+git clone https://github.com/Immo-Boussole/immo-boussole.git
+cd immo-boussole
 
-1. Ouvrez un terminal dans le dossier de votre instance (ex: `cd /opt/immo-boussole/dev` ou `cd /opt/immo-boussole/prod`).
-2. Récupérez les dernières nouveautés du code source :
-   ```bash
-   git pull
-   ```
-3. Reconstruisez et relancez le conteneur Docker en arrière-plan. (Utilisez le fichier compose correspondant à votre installation) :
-   ```bash
-   # Si vous utilisez l'installation standard :
-   docker compose up -d --build immo-boussole
+# 2. Créer l'environnement virtuel
+python -m venv venv
+.\venv\Scripts\activate  # Sous Windows (ou source venv/bin/activate sous Linux/macOS)
 
-   # Si vous utilisez Cloudflared (Tunnels) :
-   docker compose -f docker-compose.cloudflared.yml up -d --build
-   ```
+# 3. Installer les dépendances
+pip install -r requirements.txt
 
-> [!CAUTION]
-> **Base de données** : La structure actuelle de l'application est conçue pour être robuste. Au redémarrage, le système vérifiera automatiquement les nouvelles migrations de base de données (ex: nouvelles colonnes ou tables) et mettra à jour votre fichier `immo_boussole.db` sans **jamais** supprimer vos données existantes.
+# 4. Configurer les variables d'environnement
+cp .env.example .env
 
-### 🤖 Automatiser les mises à jour (Linux / Cron)
-
-Pour que votre environnement de **DEV** se mette à jour tout seul à chaque nouveau code publié, vous pouvez utiliser le script fourni `scripts/auto_update.sh` avec une tâche planifiée (Cron) :
-
-1. Rendez le script exécutable :
-   ```bash
-   chmod +x /opt/immo-boussole/dev/scripts/auto_update.sh
-   ```
-2. Éditez vos tâches planifiées :
-   ```bash
-   crontab -e
-   ```
-3. Ajoutez la ligne suivante pour vérifier les mises à jour toutes les heures (à la minute 0) et journaliser le résultat :
-   ```bash
-   0 * * * * /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev docker-compose.cloudflared.yml >> /var/log/immo-boussole-update.log 2>&1
-   ```
+# 5. Démarrer le serveur
+python -m uvicorn app.main:app --reload
+```
 
 ---
 
 ## ⚙️ Configuration de l'environnement
 
-Variables clés dans `.env` :
+Principales variables configurables dans `.env` :
 
-| Variable | Défaut | Description |
-|----------|--------|-------------|
-| `SECRET_KEY` | *(requis)* | Clé de chiffrement des sessions. À changer en production. |
-| `DATABASE_URL` | `sqlite:///./immo_boussole.db` | Chemin vers la base de données SQLite. |
-| `BROWSERLESS_URL` | `ws://localhost:3000` | URL WebSocket du navigateur headless. |
-| `BROWSERLESS_TOKEN` | *(vide)* | Token d'authentification optionnel pour Browserless. |
-| `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | **Libellé lisible** du planning cron, affiché dans l'interface à côté du bouton "Forcer la recherche". |
-| `GEORISQUES_API_KEY` | *(optionnel)* | Clé API pour le service de données de risques Géorisques. |
-| `APP_VERSION` | `1.1.1-dev` | Version affichée dans le pied de page de la barre latérale. |
-| `OLLAMA_URL` | `http://host.docker.internal:11434` | URL de votre instance Ollama locale. |
-| `OLLAMA_MODEL` | `llama3` | Modèle utilisé par l'assistant IA. |
-
----
-
-## 🔒 Sécurité & Authentification
-
-L'accès à l'application est protégé par un système d'authentification multi-utilisateur avec des rôles.
-
-- **Configuration Initiale** : Au premier démarrage, l'application redirige vers `/setup-admin` pour créer le compte administrateur principal.
-- **Session** : Les sessions sont sécurisées via une `SECRET_KEY` (générée automatiquement ou à définir dans `.env`).
-- **Contrôle d'Accès** : Toute tentative d'accès non authentifiée redirige vers la page de connexion.
+| Variable | Valeur par défaut | Description |
+|---|---|---|
+| `SECRET_KEY` | *(requis)* | Clé secrète de signature des sessions et jetons. |
+| `DATABASE_URL` | `sqlite:///./immo_boussole.db` | Chaîne de connexion SQLite. |
+| `BROWSERLESS_URL` | `ws://localhost:3000` | Endpoint WebSocket du navigateur headless. |
+| `BROWSERLESS_TOKEN` | *(vide)* | Jeton d'authentification optionnel pour Browserless. |
+| `SCRAPING_SCHEDULE` | `"Toutes les heures, de 6h à 22h30"` | Texte descriptif du planning affiché dans l'UI. |
+| `GEORISQUES_API_KEY` | *(optionnel)* | Clé API pour les risques naturels et technologiques français. |
+| `OLLAMA_URL` | `http://host.docker.internal:11434` | Endpoint pour l'assistant IA Ollama. |
+| `OLLAMA_MODEL` | `llama3` | Modèle utilisé pour le chat et l'analyse. |
 
 ---
 
-## 👥 Rôles Utilisateurs & Permissions
+## 🔌 Documentation de l'API & Swagger
 
-Le système distingue deux rôles principaux :
+Immo-Boussole intègre une API REST complète propulsée par **FastAPI** :
 
-- **ADMIN** :
-  - Accès à l'interface de **Gestion des Utilisateurs** (`/admin/users`).
-  - Capacité à créer et supprimer des comptes utilisateurs.
-  - **Restriction** : Ne peut pas importer ou scraper de nouvelles annonces (afin de se concentrer sur la gestion).
-- **USER** :
-  - Accès complet à la recherche et à l'évaluation des biens.
-  - Capacité à importer des annonces via URL ou saisie manuelle.
-  - Accès au planificateur de recherches automatiques et au bouton "Forcer la recherche".
-  - **Restriction** : Aucun accès au panneau d'administration.
+* **Interface interactive Swagger UI** : [http://localhost:8000/docs](http://localhost:8000/docs)
+* **Documentation ReDoc** : [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ---
-
-## 📖 Guide d'Utilisation
-
-1. **Ajouter un bien** : Cliquez sur "+ Ajouter une annonce" et collez l'URL LeBonCoin ou SeLoger.
-2. **Configurer les recherches auto** : Allez dans **"Prêt à Rechercher"** et ajoutez une plateforme + critères + URL. Le planificateur la scrappe automatiquement toutes les heures (6h–22h30).
-3. **Consulter les nouvelles annonces** : Ouvrez **"Recherches Automatiques"** pour voir, importer ou rejeter les biens nouvellement découverts. Utilisez **"Forcer la recherche"** pour déclencher un cycle immédiat.
-4. **Évaluer** : Cliquez sur une carte pour voir les détails, puis remplissez votre section.
-5. **Supprimer** : Sur le tableau de bord, cliquez sur la corbeille d'une carte et faites glisser le curseur pour confirmer.
-6. **Profil Idéal** : Consultez la synthèse globale via le menu latéral pour voir quel type de bien vous correspond le mieux.
-
-## 🔌 Documentation de l'API (REST)
-
-L'application expose une API REST complète construite avec **FastAPI**. Tous les endpoints nécessitent une authentification (session active) et retournent un code HTTP 401 en cas d'accès non autorisé.
-
-### Annonces (Listings)
-- `GET /api/listings` : Liste des annonces (filtres optionnels : `status`, `source`, `limit`).
-- `GET /api/listings/{listing_id}` : Détails complets d'une annonce.
-- `POST /api/listings/submit-url` : Ajoute une annonce via URL (lance le scraping).
-- `POST /api/listings/{listing_id}/rescrape` : Relance le scraping d'une annonce existante.
-- `PUT /api/listings/{listing_id}` : Mise à jour manuelle des attributs d'une annonce.
-- `DELETE /api/listings/{listing_id}` : Supprime une annonce et ses avis.
-- `POST /api/listings/{listing_id}/import` : Importe une annonce (status → ACTIVE).
-- `POST /api/listings/{listing_id}/reject` : Rejette une annonce (status → REJECTED).
-- `POST /api/listings/{listing_id}/photos` : Importe des photos depuis des URLs.
-- `POST /api/listings/{listing_id}/photos/upload` : Upload direct de photos (Multipart Form).
-
-### Recherches Automatiques
-- `POST /api/searches/force` : **Déclenche immédiatement un cycle complet de scraping** en arrière-plan.
-
-### Recherches Prêtes (Ready Searches)
-- `POST /api/searches/ready` : Ajoute une nouvelle recherche (plateforme, critères, URL).
-- `PUT /api/searches/ready/{id}` : Met à jour une recherche existante.
-- `DELETE /api/searches/ready/{id}` : Supprime une recherche.
-
-### Assistant IA & MCP
-- `POST /api/chat` : Endpoint de discussion avec l'assistant (Ollama).
-- **Service MCP** : Serveur stdio/SSE disponible pour connecter des clients externes (Claude Desktop).
-
-### Administration (Admin uniquement)
-- `GET /admin/users` : Interface de gestion des utilisateurs.
-- `POST /api/admin/users` : Crée un nouveau compte utilisateur.
-- `DELETE /api/admin/users/{user_id}` : Supprime un compte utilisateur.
-- `GET /api/admin/backup` : Télécharge une sauvegarde complète du système en ZIP.
-- `POST /api/admin/restore` : Restaure le système à partir d'une sauvegarde ZIP.
-
-👉 **Consultez le guide : [Documentation Sauvegarde & Restauration (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-FR)**
-
-### Avis (Reviews)
-- `GET /api/listings/{listing_id}/reviews` : Liste tous les avis d'une annonce.
-- `POST /api/listings/{listing_id}/reviews` : Ajoute ou met à jour un avis collaboratif.
-- `PUT /api/reviews/{review_id}` : Modifie un avis existant.
-- `DELETE /api/reviews/{review_id}` : Supprime un avis.
-
-### Profil Idéal
-- `GET /api/profile/ideal` : Retourne la synthèse dynamique du bien idéal.
-
-L'API est entièrement documentée et testable via l'interface Swagger intégrée sur [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
-
-## 🏗️ Structure du Projet
-
-- `app/` : Logique backend (scrapers, modèles, services API, planificateur).
-  - `main.py` : Routes FastAPI et point d'entrée de l'application.
-  - `models.py` : Modèles ORM SQLAlchemy (Listing, ReadySearch, SearchQuery, …).
-  - `services.py` : Logique métier de scraping et création d'annonces.
-  - `scheduler.py` : Jobs cron APScheduler (toutes les heures, 6h–22h30).
-  - `database.py` : Moteur DB, fabrique de sessions et migrations automatiques.
-- `templates/` : Pages HTML (Jinja2).
-- `static/` : Assets CSS et médias téléchargés (photos des annonces).
-- `locales/` : Fichiers JSON d'internationalisation (`fr.json`, `en.json`).
-- `tests/` : Scripts de tests unitaires et d'intégration.
-- `Dockerfile` & `docker-compose.yml` : Configuration Docker.
-- `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
-- [Wiki GitHub](https://github.com/Immo-Boussole/immo-boussole/wiki) : Documentation complète, guides et procédures d'installation.
-- `.ai/` : Documentation spécialisée et contexte lié à l'IA.
 
 ## 🧪 Tests
 
-Le projet inclut un framework de tests complet pour assurer la stabilité :
+Une suite de tests automatisés couvre les endpoints API, le scraping, la base de données et les intégrations :
 
-- **Lancer tous les tests** : `python tests/run_tests.py`
-- **Mode CI (Rapide)** : `python tests/run_tests.py --ci`
-- **CI Automatisée** : Gérée via GitHub Actions à chaque push ou déclenchement manuel.
+```bash
+# Lancer tous les tests
+python tests/run_tests.py
 
-Une documentation détaillée est disponible dans [.ai/TESTING.md](.ai/TESTING.md).
+# Mode CI (rapide)
+python tests/run_tests.py --ci
+```
+
+---
 
 ## 🏗️ Stack Technique
-- **Backend** : FastAPI (Python 3.12)
-- **Database** : SQLite + SQLAlchemy (Migrations automatiques incluses, sans Alembic)
-- **Scraping** : Playwright + Browserless / BeautifulSoup4 / HTTPX
-- **Scrapers additionnels** : Figaro et LogicImmo adaptés depuis le projet [French-eState-Scrapper](https://github.com/Web3-Serializer/French-eState-Scrapper)
-- **Frontend** : HTML5 / Vanilla CSS / Jinja2
-- **Planificateur** : APScheduler avec `CronTrigger` (toutes les heures, 6h–22h30)
-- **Géo & Risques** : Nominatim (géocodage), OSRM (itinéraires), API Géorisques (données de risques)
 
+* **Backend** : FastAPI (Python 3.12), SQLAlchemy ORM, SQLite, APScheduler, Pydantic v2
+* **Scraping & Automatisation** : Playwright, Browserless, BeautifulSoup4, HTTPX
+* **Frontend** : HTML5, Vanilla CSS (Design Sombre / Glassmorphism), Templates Jinja2
+* **Intégrations** : Google Calendar API, Google People API, MCP (Model Context Protocol), API Géorisques, OpenStreetMap / Nominatim
 
-## 🚀 Prochaines évolutions
+---
 
-- ✅ Protéger l'accès à tout le site par un mécanisme d'authentification.
-- ✅ Créer un système de création de compte d'administrateur au premier démarrage.
-- ✅ Créer une interface d'administration.
-- ✅ Créer un système de création de compte utilisateur (l'administrateur ne peut pas importer d'annonces).
-- ✅ Rendre l'application multilangue (Français et Anglais).
-- ✅ Carte interactive des annonces.
-- ✅ Recherches automatiques planifiées (toutes les heures, 6h–22h30) depuis les entrées "Prêt à Rechercher".
-- ✅ Bouton "Forcer la recherche" pour déclencher un cycle immédiat.
-- ✅ Colonnes Plateforme & Critères dans la vue "Recherches Automatiques".
-- ✅ Service MCP (Model Context Protocol) pour connecter des outils IA externes.
-- ✅ Assistant IA intégré (Ollama) pour discuter avec les annonces.
-- ✅ Système de sauvegarde et restauration (ZIP) pour les administrateurs.
-- ⬜ Créer un système de création de compte conseiller immobilier.
-- ⬜ Ajouter un système de favoris pour les annonces et les recherches.
-- ⬜ Ajouter un système de notifications (email, push, etc.).
-- ⬜ Remettre en place le mécanisme de détection de doublons.
+## 📄 Licence
+
+Ce projet est sous licence open-source. Voir le dépôt pour les détails.
