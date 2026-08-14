@@ -27,6 +27,54 @@ class BaseScraper(abc.ABC):
 
     async def extract_page_content(self, url: str) -> Dict:
         """
+        Fetches page content, rotating through the platform's proxy chain
+        if blocks or captchas are encountered.
+        """
+        platform = self.__class__.__name__.replace("Scraper", "").lower()
+        from app.proxy_router import proxy_router
+
+        chain = proxy_router.get_proxy_chain(platform)
+        start_idx = proxy_router.default_proxy_index.get(platform, 0)
+
+        snapshot = {}
+        for i in range(len(chain)):
+            attempt_idx = (start_idx + i) % len(chain)
+            proxy = proxy_router.get_current_proxy(platform, attempt_idx)
+
+            try:
+                snapshot = await self._execute_extraction(url, proxy)
+            except Exception as e:
+                print(f"[Scraper] Exception during extraction with proxy {proxy}: {e}")
+                snapshot = {}
+
+            html = snapshot.get("html", "")
+            status_code = snapshot.get("status_code", 0)
+
+            # Detect DataDome blocks
+            is_blocked = (
+                status_code == 403 or
+                "geo.captcha-delivery.com" in html or
+                "<title>leboncoin.fr</title>" in html
+            )
+
+            if is_blocked:
+                print(f"[Scraper] Bloqué par DataDome avec le proxy {proxy} (status: {status_code})")
+                proxy_router.report_block(platform, proxy)
+                # Fallback to the next proxy in the chain
+                continue
+            elif not html:
+                print(f"[Scraper] Aucun contenu HTML retourné avec le proxy {proxy}")
+                continue
+            else:
+                # Success!
+                proxy_router.report_success(platform, proxy)
+                return snapshot
+
+        print(f"[Scraper] Échec de l'extraction de {url} : tous les proxys de la chaîne ont échoué ou été bloqués.")
+        return snapshot
+
+    async def _execute_extraction(self, url: str, proxy: str) -> Dict:
+        """
         Fetches page content via Playwright connected to a Browserless
         instance over CDP (Chrome DevTools Protocol).
         Handles JavaScript rendering and applies stealth techniques.
@@ -57,8 +105,14 @@ class BaseScraper(abc.ABC):
         browserless_url = f"{base_url}?stealth=true"
         if token:
             browserless_url += f"&token={token}"
+
+        # Append external proxy if provided
+        if proxy and proxy != "direct":
+            import urllib.parse
+            encoded_proxy = urllib.parse.quote_plus(proxy)
+            browserless_url += f"&externalProxyServer={encoded_proxy}"
         
-        print(f"[Scraper] Extraction via Playwright/Browserless CDP pour : {url}")
+        print(f"[Scraper] Extraction via Playwright/Browserless CDP pour : {url} (proxy: {proxy})")
 
         pw = None
         browser = None
@@ -115,7 +169,7 @@ class BaseScraper(abc.ABC):
                 
                 html = await page.content()
                 status_code = response.status if response else 200
-                print(f"[Scraper] Succès Playwright pour {url} ({len(html)} chars, status {status_code})")
+                print(f"[Scraper] Playwright success for {url} ({len(html)} chars, status {status_code})")
                 return {"html": html, "status_code": status_code}
             except Exception as e:
                 print(f"[Scraper] Erreur durant l'extraction Playwright : {e}")

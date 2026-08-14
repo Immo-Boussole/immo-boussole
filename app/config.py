@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # Optional Browserless authentication token
     BROWSERLESS_TOKEN: str = ""
 
+    # Proxy chains configured as a JSON string
+    # Format: '{"leboncoin": ["direct", "http://gost-client:1080"], "default": ["direct"]}'
+    SCRAPING_PROXIES: str = '{"default": ["direct"]}'
+
     # Browserless connection timeout (seconds)
     BROWSERLESS_CONNECT_TIMEOUT: int = 30
 

@@ -111,6 +111,15 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # ── Gost WS Tunnel Client (Optional proxy client) ───────────────────────────
+  gost-client:
+    image: gogost/gost:latest
+    container_name: gost-client-${APP_ENV:-prod}
+    restart: always
+    networks:
+      - immo-boussole-net
+    command: ["-L", ":1080", "-F", "${GOST_UPSTREAM_URL:-}"]
+
 # ── Internal Network ─────────────────────────────────────────────────────────
 networks:
   immo-boussole-net:
