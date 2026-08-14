@@ -177,29 +177,50 @@
         /* ── Summary Stats ── */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            width: 100%;
+        }
+
+        @media (max-width: 1100px) {
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .stat-card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1.1rem 1.25rem;
+            border-radius: 10px;
+            padding: 0.55rem 0.85rem;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
+            min-height: 52px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: var(--trans);
+        }
+
+        .stat-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: var(--surface-2);
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            font-size: 1rem;
             flex-shrink: 0;
         }
 
@@ -209,8 +230,15 @@
         .stat-icon.orange { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
         .stat-icon.red { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
-        .stat-info .val { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
-        .stat-info .lbl { font-size: 0.78rem; color: var(--text-2); font-weight: 500; }
+        .stat-info {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-info .val { font-size: 1.25rem; font-weight: 800; line-height: 1.1; }
+        .stat-info .lbl { font-size: 0.72rem; color: var(--text-2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         /* ── View Tabs ── */
         .tab-bar {
