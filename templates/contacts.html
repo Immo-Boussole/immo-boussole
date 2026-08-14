@@ -199,6 +199,8 @@
         .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
         .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
         .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-hover); }
+        .btn-success { background: rgba(16, 217, 164, 0.18); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.35); }
+        .btn-success:hover { background: var(--green); color: #0b0f1a; transform: translateY(-1px); }
         .btn-purple { background: rgba(168, 85, 247, 0.18); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.35); }
         .btn-purple:hover { background: var(--purple); color: #fff; }
         .btn-danger { background: rgba(242, 92, 105, 0.15); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.3); }
@@ -1117,7 +1119,7 @@
 
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <!-- 1. Liste déroulante Contact (Meilleur match en 1ère position) -->
-                            <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                            <select class="link-select" id="detected_agent_${l.id}">
                                 ${getAgentSelectOptions(d, l.main_agent_id)}
                             </select>
 
@@ -1127,13 +1129,18 @@
                             </button>
 
                             <!-- 3. Liste déroulante Agence (Meilleur match en 1ère position) -->
-                            <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                            <select class="link-select" id="detected_agency_${l.id}">
                                 ${getAgencySelectOptions(d, l.agency_id)}
                             </select>
 
                             <!-- 4. Bouton Créer Agence -->
                             <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
                                 <i class="fa-solid fa-building-circle-check"></i> Agence manquante ? Créer fiche & Lier
+                            </button>
+
+                            <!-- 5. Bouton Sauvegarder les choix -->
+                            <button class="btn btn-success btn-sm" id="btn_save_detected_${l.id}" onclick="saveDetectedListingContact(${l.id})" style="width: 100%; justify-content: center; margin-top: 0.35rem; padding: 0.5rem 0.8rem; font-weight: 700;">
+                                <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
                             </button>
                         </div>
                     </div>
@@ -1308,11 +1315,14 @@
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="link-select" id="unassigned_select_${l.id}" style="flex: 1;">
                             <option value="">-- Rattacher à un contact existant --</option>
                             ${getContactSelectOptions(l.main_agent_id ? `agent:${l.main_agent_id}` : (l.agency_id ? `agency:${l.agency_id}` : null))}
                         </select>
+                        <button class="btn btn-success btn-sm" id="btn_save_unassigned_${l.id}" onclick="saveUnassignedListingContact(${l.id})" style="flex-shrink: 0; padding: 0.5rem 0.8rem; font-weight: 700;">
+                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -1352,7 +1362,127 @@
             `;
         }
 
-        // --- Quick Link & Unlink Actions ---
+        // --- Save Selected Links & Reload ---
+        async function saveDetectedListingContact(listingId) {
+            const agentSelect = document.getElementById(`detected_agent_${listingId}`);
+            const agencySelect = document.getElementById(`detected_agency_${listingId}`);
+            const btn = document.getElementById(`btn_save_detected_${listingId}`);
+
+            const agentVal = agentSelect ? agentSelect.value : '';
+            const agencyVal = agencySelect ? agencySelect.value : '';
+
+            if (!agentVal && !agencyVal) {
+                alert("Veuillez sélectionner au moins un contact ou une agence dans les listes.");
+                return;
+            }
+
+            const payload = { listing_id: listingId };
+
+            if (agentVal) {
+                const [type, idStr] = agentVal.split(':');
+                const id = parseInt(idStr);
+                if (!isNaN(id)) payload.agent_id = id;
+            }
+
+            if (agencyVal) {
+                if (agencyVal === 'independent') {
+                    payload.agency_id = 0;
+                } else {
+                    const [type, idStr] = agencyVal.split(':');
+                    const id = parseInt(idStr);
+                    if (!isNaN(id)) payload.agency_id = id;
+                }
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            }
+
+            try {
+                const res = await fetch('/api/contacts/link-listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    await Promise.all([
+                        loadContactsOverview(),
+                        loadDetectedContacts(detectedPage),
+                        loadUnassignedListings(unassignedPage)
+                    ]);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur lors de l'enregistrement : " + (err.detail || "Échec"));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
+                    }
+                }
+            } catch (err) {
+                console.error("Erreur enregistrement contact/agence:", err);
+                alert("Erreur réseau lors de l'enregistrement.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
+                }
+            }
+        }
+
+        async function saveUnassignedListingContact(listingId) {
+            const select = document.getElementById(`unassigned_select_${listingId}`);
+            const btn = document.getElementById(`btn_save_unassigned_${listingId}`);
+            const val = select ? select.value : '';
+
+            if (!val) {
+                alert("Veuillez sélectionner un contact ou une agence.");
+                return;
+            }
+
+            const [type, idStr] = val.split(':');
+            const id = parseInt(idStr);
+            if (isNaN(id)) return;
+
+            const payload = { listing_id: listingId };
+            if (type === 'agent') payload.agent_id = id;
+            else payload.agency_id = id;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            }
+
+            try {
+                const res = await fetch('/api/contacts/link-listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    await Promise.all([
+                        loadContactsOverview(),
+                        loadDetectedContacts(detectedPage),
+                        loadUnassignedListings(unassignedPage)
+                    ]);
+                } else {
+                    const err = await res.json();
+                    alert("Erreur : " + (err.detail || "Échec"));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Sauvegarder';
+                }
+            }
+        }
+
         async function quickLinkListing(listingId, contactValue) {
             if (!contactValue && contactValue !== 'independent') return;
             const payload = { listing_id: listingId };
