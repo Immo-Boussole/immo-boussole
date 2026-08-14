@@ -54,9 +54,18 @@ run_migrations()
 # Then create any brand-new tables (e.g. reviews)
 models.Base.metadata.create_all(bind=engine)
 
-# Create static media directory
+# Create static media directory and ensure app assets exist
 os.makedirs("static/media", exist_ok=True)
+os.makedirs("static/media/app", exist_ok=True)
 os.makedirs("templates", exist_ok=True)
+
+# Seed app icons into static/media/app if missing (handles Docker volume mount overlays)
+if os.path.exists("static/app_icons") and not os.path.exists("static/media/app/icon-192.png"):
+    import shutil
+    try:
+        shutil.copytree("static/app_icons", "static/media/app", dirs_exist_ok=True)
+    except Exception as e:
+        logger.warning(f"Could not seed static/media/app: {e}")
 
 
 # Global scheduler instance

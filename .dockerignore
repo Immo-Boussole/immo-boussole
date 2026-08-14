@@ -26,8 +26,11 @@ nodes_debug.json
 *.db-shm
 *.db-wal
 
-# Local media (stored in Docker volume)
-static/media/
+# Local media (stored in Docker volume, exclude listing photo folders)
+static/media/*
+!static/media/app/
+!static/media/demo/
+!static/media/.gitkeep
 
 # Environment files (passed via docker-compose)
 .env
