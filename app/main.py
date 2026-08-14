@@ -1416,6 +1416,18 @@ def listing_detail_page(
 
     users = db.query(models.User).order_by(models.User.username.asc()).all()
 
+    # Contact & Agency associations
+    main_agent = db.query(Agent).filter(Agent.id == listing.main_agent_id).first() if listing.main_agent_id else None
+    agency = db.query(Agency).filter(Agency.id == listing.agency_id).first() if listing.agency_id else (main_agent.agency if main_agent and main_agent.agency else None)
+
+    # Regex detection for unassigned contact info in text
+    from app.services import extract_contact_info_from_text
+    detected_contact = extract_contact_info_from_text(f"{listing.title or ''}\n{listing.description_text or ''}")
+
+    # All agents and agencies for dropdown selection
+    all_agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
+    all_agencies = db.query(Agency).order_by(Agency.commercial_name.asc(), Agency.legal_name.asc()).all()
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -1431,6 +1443,11 @@ def listing_detail_page(
         "city_rule": city_rule,
         "station1_rule": station1_rule,
         "station2_rule": station2_rule,
+        "main_agent": main_agent,
+        "agency": agency,
+        "detected_contact": detected_contact,
+        "all_agents": all_agents,
+        "all_agencies": all_agencies,
     })
 
 

@@ -181,8 +181,7 @@ def test_contacts_manager_full_flow():
         assert deleted_agent2 is None
 
         # Cleanup
-        db.delete(listing1)
-        db.delete(listing2)
+        db.query(Listing).filter(Listing.id.in_([listing1.id, listing2.id])).delete(synchronize_session=False)
         db.delete(agent1)
         db.delete(agency)
         db.commit()
