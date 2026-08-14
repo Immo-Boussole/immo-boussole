@@ -111,6 +111,11 @@ L'application intègre désormais un assistant conversationnel capable d'analyse
 
 👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP](MCP_SETUP.fr.md)**
 
+### 🏠 9. Proxy Résidentiel & Contournement Anti-Bot (DataDome)
+Pour éviter les blocages stricts de plateformes comme LeBonCoin sur les serveurs VPS, vous pouvez déployer un proxy résidentiel chiffré à domicile (sur un NAS Synology ou Raspberry Pi) exposé via Cloudflare Tunnel.
+
+👉 **Consultez le guide : [Déploiement d'un Proxy Résidentiel à Domicile (Synology + Cloudflared)](PROXY_SETUP.fr.md)**
+
 ## 🛠️ Installation & Lancement
 
 ### Prérequis

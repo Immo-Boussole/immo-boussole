@@ -411,6 +411,9 @@ class GlobalSettings(Base):
     google_oauth_tokens_json = Column(Text, nullable=True)      # OAuth Tokens (Access/Refresh Token)
     google_pilot_email = Column(String, nullable=True, default="GOOGLE_ACCOUNT_EMAIL@gmail.com")
 
+    # Scraping Proxies Settings (JSON string)
+    scraping_proxies_json = Column(Text, nullable=True)
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 

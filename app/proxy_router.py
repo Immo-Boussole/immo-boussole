@@ -13,11 +13,32 @@ class ProxyRouter:
         # Parse chains from settings
         self.proxy_chains: Dict[str, List[str]] = self._parse_proxy_chains()
 
-    def _parse_proxy_chains(self) -> Dict[str, List[str]]:
+    def _parse_proxy_chains(self, custom_json: Optional[str] = None) -> Dict[str, List[str]]:
         chains = {"default": ["direct"]}
-        if settings.SCRAPING_PROXIES:
+        raw = custom_json
+
+        # If not passed explicitly, attempt to load from database first
+        if raw is None:
             try:
-                parsed = json.loads(settings.SCRAPING_PROXIES)
+                from app.database import SessionLocal
+                from app.models import GlobalSettings
+                db = SessionLocal()
+                try:
+                    gs = db.query(GlobalSettings).first()
+                    if gs and gs.scraping_proxies_json:
+                        raw = gs.scraping_proxies_json
+                finally:
+                    db.close()
+            except Exception:
+                pass
+
+        # Fallback to settings.SCRAPING_PROXIES (.env)
+        if not raw and settings.SCRAPING_PROXIES:
+            raw = settings.SCRAPING_PROXIES
+
+        if raw:
+            try:
+                parsed = json.loads(raw)
                 if isinstance(parsed, dict):
                     for k, v in parsed.items():
                         if isinstance(v, list):
@@ -28,6 +49,11 @@ class ProxyRouter:
             except Exception as e:
                 print(f"[ProxyRouter] Erreur parsing SCRAPING_PROXIES: {e}")
         return chains
+
+    def reload_chains(self, custom_json: Optional[str] = None):
+        """Reloads the proxy chains dynamically."""
+        self.proxy_chains = self._parse_proxy_chains(custom_json)
+        print(f"[ProxyRouter] Chaînes de proxy rechargées : {self.proxy_chains}")
 
     def get_proxy_chain(self, platform: str) -> List[str]:
         """Returns the configured proxy chain for a given platform, falling back to default."""

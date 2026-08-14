@@ -413,6 +413,93 @@
                     </form>
                 </div>
 
+                <!-- Scraping Proxies & Routing Card -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <h2><i class="fas fa-network-wired" style="color: var(--accent); margin-right: 0.5rem;"></i> Routage & Chaînes de Proxys (Anti-Bot)</h2>
+                        <a href="https://github.com/jmarcalb/Immo-Boussole/blob/main/PROXY_SETUP.fr.md" target="_blank" class="btn secondary" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+                            <i class="fas fa-book"></i> Guide Proxy NAS Synology + Cloudflared
+                        </a>
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.25rem; line-height: 1.5;">
+                        Configurez les chaînes de proxys ordonnées utilisées lors du scraping. Le scraper commence toujours par la première route (généralement <code>direct</code>). En cas de blocage (ex: DataDome 403), il bascule automatiquement sur les proxys suivants. Après 3 blocages consécutifs sur la route directe, le premier proxy externe devient la route par défaut.
+                    </p>
+
+                    <!-- Platform Selector & Mode Switch -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text);">Plateforme :</label>
+                            <select id="proxy_platform_select" onchange="onProxyPlatformChange()" style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 0.5rem 0.75rem; font-size: 0.85rem; font-weight: 600;">
+                                <option value="default">⭐ Par défaut (Toutes plateformes)</option>
+                                <option value="leboncoin">LeBonCoin</option>
+                                <option value="seloger">SeLoger</option>
+                                <option value="logicimmo">Logic-Immo</option>
+                                <option value="bienici">Bien'Ici</option>
+                                <option value="lefigaro">Le Figaro Immobilier</option>
+                                <option value="orpi">Orpi</option>
+                                <option value="provimo">Provimo</option>
+                                <option value="notaires">Notaires de France</option>
+                                <option value="iadfrance">iad France</option>
+                                <option value="vinci">Vinci Immobilier</option>
+                                <option value="immobilier_france">Immobilier France</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="btn secondary" onclick="toggleProxyAdvancedJson()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                            <i class="fas fa-code"></i> <span id="proxy_json_toggle_text">Mode JSON avancé</span>
+                        </button>
+                    </div>
+
+                    <!-- Visual Interactive Editor -->
+                    <div id="proxy_visual_editor" style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h3 style="font-size: 0.9rem; font-weight: 700; margin: 0; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-list-ol" style="color: var(--accent);"></i> Ordre de la chaîne pour <span id="proxy_active_platform_label" style="color: var(--accent);">Par défaut</span>
+                            </h3>
+                            <span style="font-size: 0.75rem; color: var(--text-2);">Tentatives dans l'ordre de haut en bas</span>
+                        </div>
+
+                        <!-- Proxy items list -->
+                        <div id="proxy_items_container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                            <!-- Dynamically populated -->
+                        </div>
+
+                        <!-- Add Proxy Bar -->
+                        <div style="background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-2);"><i class="fas fa-plus-circle"></i> Ajouter une étape à la chaîne :</span>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                                <button type="button" class="btn secondary" onclick="addProxyStep('direct')" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                                    <i class="fas fa-server"></i> + Direct (VPS)
+                                </button>
+                                <button type="button" class="btn secondary" onclick="addProxyStep('http://gost-client:1080')" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                                    <i class="fas fa-home"></i> + Proxy Local Gost (http://gost-client:1080)
+                                </button>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.25rem;">
+                                <input type="text" id="custom_proxy_input" placeholder="Ex: http://user:pass@192.168.1.50:8080 ou http://proxy.domaine.fr:8080" style="flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.45rem 0.75rem; font-size: 0.85rem;">
+                                <button type="button" class="btn" onclick="addCustomProxyStep()" style="font-size: 0.8rem; padding: 0.45rem 0.9rem;">
+                                    <i class="fas fa-plus"></i> Ajouter URL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced JSON Editor (Hidden by default) -->
+                    <div id="proxy_json_editor_container" style="display: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+                        <label style="font-size: 0.85rem; font-weight: 700; color: var(--text); display: block; margin-bottom: 0.5rem;">
+                            Configuration JSON brute :
+                        </label>
+                        <textarea id="proxy_raw_json_input" rows="8" style="width: 100%; font-family: monospace; font-size: 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 0.75rem; resize: vertical;" placeholder='{"default": ["direct"], "leboncoin": ["direct", "http://gost-client:1080"]}'></textarea>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button type="button" class="btn" onclick="saveProxySettings()"><i class="fas fa-save"></i> Enregistrer les chaînes de proxy</button>
+                        <button type="button" class="btn secondary" onclick="resetProxySettingsToDefault()"><i class="fas fa-undo"></i> Réinitialiser par défaut</button>
+                    </div>
+                </div>
+
                 <!-- Google Integration Card -->
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -1368,9 +1455,247 @@
         }
 
 
+        // --- Proxy Configuration Management ---
+        let proxyChainsData = {
+            "default": ["direct"]
+        };
+        let isProxyJsonMode = false;
+
+        async function loadProxySettings() {
+            try {
+                const res = await fetch('/api/admin/settings');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.scraping_proxies_json) {
+                    try {
+                        const parsed = JSON.parse(data.scraping_proxies_json);
+                        if (typeof parsed === 'object' && parsed !== null) {
+                            proxyChainsData = parsed;
+                            if (!proxyChainsData.default) {
+                                proxyChainsData.default = ["direct"];
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Invalid scraping_proxies_json:", e);
+                    }
+                }
+                renderProxyVisualEditor();
+            } catch (err) {
+                console.error("Failed to load proxy settings:", err);
+            }
+        }
+
+        function onProxyPlatformChange() {
+            syncJsonFromVisual();
+            renderProxyVisualEditor();
+        }
+
+        function renderProxyVisualEditor() {
+            const platform = document.getElementById('proxy_platform_select').value;
+            const labelEl = document.getElementById('proxy_active_platform_label');
+            const selectEl = document.getElementById('proxy_platform_select');
+            const selectedText = selectEl.options[selectEl.selectedIndex].text;
+            labelEl.textContent = selectedText;
+
+            const chain = proxyChainsData[platform] || (platform === 'default' ? ['direct'] : [...(proxyChainsData['default'] || ['direct'])]);
+            const container = document.getElementById('proxy_items_container');
+            container.innerHTML = '';
+
+            if (!chain || chain.length === 0) {
+                container.innerHTML = '<div style="font-size: 0.85rem; color: var(--text-2); font-style: italic; padding: 0.5rem 0;">Aucun proxy configuré pour cette plateforme (utilisera la chaîne "Par défaut").</div>';
+                return;
+            }
+
+            chain.forEach((proxy, idx) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; gap: 0.5rem;';
+
+                const left = document.createElement('div');
+                left.style.cssText = 'display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 0;';
+
+                const stepBadge = document.createElement('span');
+                stepBadge.style.cssText = 'font-size: 0.75rem; font-weight: 700; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 0.15rem 0.4rem; color: var(--text-2);';
+                stepBadge.textContent = `#${idx + 1}`;
+
+                const proxyText = document.createElement('span');
+                proxyText.style.cssText = 'font-size: 0.85rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+                if (proxy === 'direct') {
+                    proxyText.innerHTML = '<i class="fas fa-server" style="color: var(--accent); margin-right: 0.35rem;"></i> <strong>direct</strong> <span style="font-size: 0.75rem; color: var(--text-2); font-weight: 400;">(Connexion VPS en direct)</span>';
+                } else if (proxy.includes('gost-client')) {
+                    proxyText.innerHTML = '<i class="fas fa-home" style="color: var(--green); margin-right: 0.35rem;"></i> <strong>Proxy Gost local</strong> <span style="font-size: 0.75rem; color: var(--text-2); font-weight: 400;">(' + escapeHtml(proxy) + ')</span>';
+                } else {
+                    proxyText.innerHTML = '<i class="fas fa-globe" style="color: #4285F4; margin-right: 0.35rem;"></i> <strong>Proxy externe</strong> <span style="font-size: 0.75rem; color: var(--text-2); font-weight: 400;">(' + escapeHtml(proxy) + ')</span>';
+                }
+
+                left.appendChild(stepBadge);
+                left.appendChild(proxyText);
+
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display: flex; gap: 0.25rem; align-items: center;';
+
+                if (idx > 0) {
+                    const upBtn = document.createElement('button');
+                    upBtn.type = 'button';
+                    upBtn.className = 'btn secondary';
+                    upBtn.style.cssText = 'padding: 0.2rem 0.45rem; font-size: 0.75rem;';
+                    upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                    upBtn.title = 'Monter d\'un rang';
+                    upBtn.onclick = () => moveProxyStep(idx, -1);
+                    actions.appendChild(upBtn);
+                }
+
+                if (idx < chain.length - 1) {
+                    const downBtn = document.createElement('button');
+                    downBtn.type = 'button';
+                    downBtn.className = 'btn secondary';
+                    downBtn.style.cssText = 'padding: 0.2rem 0.45rem; font-size: 0.75rem;';
+                    downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
+                    downBtn.title = 'Descendre d\'un rang';
+                    downBtn.onclick = () => moveProxyStep(idx, 1);
+                    actions.appendChild(downBtn);
+                }
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn secondary';
+                delBtn.style.cssText = 'padding: 0.2rem 0.45rem; font-size: 0.75rem; color: var(--red);';
+                delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                delBtn.title = 'Supprimer cette étape';
+                delBtn.onclick = () => deleteProxyStep(idx);
+                actions.appendChild(delBtn);
+
+                row.appendChild(left);
+                row.appendChild(actions);
+                container.appendChild(row);
+            });
+
+            // Update JSON textarea in background
+            document.getElementById('proxy_raw_json_input').value = JSON.stringify(proxyChainsData, null, 2);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function addProxyStep(proxyValue) {
+            const platform = document.getElementById('proxy_platform_select').value;
+            if (!proxyChainsData[platform]) {
+                proxyChainsData[platform] = platform === 'default' ? ['direct'] : [...(proxyChainsData['default'] || ['direct'])];
+            }
+            proxyChainsData[platform].push(proxyValue);
+            renderProxyVisualEditor();
+        }
+
+        function addCustomProxyStep() {
+            const input = document.getElementById('custom_proxy_input');
+            const val = input.value.trim();
+            if (!val) {
+                showAlert('Veuillez entrer une URL de proxy valide (ex: http://user:pass@host:port)', 'error');
+                return;
+            }
+            addProxyStep(val);
+            input.value = '';
+        }
+
+        function moveProxyStep(index, direction) {
+            const platform = document.getElementById('proxy_platform_select').value;
+            const chain = proxyChainsData[platform];
+            if (!chain) return;
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= chain.length) return;
+            const temp = chain[index];
+            chain[index] = chain[targetIndex];
+            chain[targetIndex] = temp;
+            renderProxyVisualEditor();
+        }
+
+        function deleteProxyStep(index) {
+            const platform = document.getElementById('proxy_platform_select').value;
+            const chain = proxyChainsData[platform];
+            if (!chain) return;
+            chain.splice(index, 1);
+            if (chain.length === 0 && platform === 'default') {
+                chain.push('direct');
+            }
+            renderProxyVisualEditor();
+        }
+
+        function toggleProxyAdvancedJson() {
+            isProxyJsonMode = !isProxyJsonMode;
+            const visualEl = document.getElementById('proxy_visual_editor');
+            const jsonEl = document.getElementById('proxy_json_editor_container');
+            const toggleText = document.getElementById('proxy_json_toggle_text');
+
+            if (isProxyJsonMode) {
+                visualEl.style.display = 'none';
+                jsonEl.style.display = 'block';
+                toggleText.textContent = 'Mode visuel interactif';
+                document.getElementById('proxy_raw_json_input').value = JSON.stringify(proxyChainsData, null, 2);
+            } else {
+                syncVisualFromJson();
+                visualEl.style.display = 'block';
+                jsonEl.style.display = 'none';
+                toggleText.textContent = 'Mode JSON avancé';
+                renderProxyVisualEditor();
+            }
+        }
+
+        function syncVisualFromJson() {
+            try {
+                const raw = document.getElementById('proxy_raw_json_input').value.trim();
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        proxyChainsData = parsed;
+                    }
+                }
+            } catch (e) {
+                showAlert('Erreur dans le JSON saisi : ' + e.message, 'error');
+            }
+        }
+
+        function syncJsonFromVisual() {
+            document.getElementById('proxy_raw_json_input').value = JSON.stringify(proxyChainsData, null, 2);
+        }
+
+        function resetProxySettingsToDefault() {
+            if (!confirm('Réinitialiser toutes les chaînes de proxy par défaut ("direct") ?')) return;
+            proxyChainsData = {
+                "default": ["direct"],
+                "leboncoin": ["direct", "http://gost-client:1080"]
+            };
+            renderProxyVisualEditor();
+            showAlert('Chaînes réinitialisées aux valeurs recommandées. N\'oubliez pas d\'enregistrer.', 'success');
+        }
+
+        async function saveProxySettings() {
+            if (isProxyJsonMode) {
+                syncVisualFromJson();
+            }
+            const jsonStr = JSON.stringify(proxyChainsData);
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scraping_proxies_json: jsonStr })
+                });
+                if (res.ok) {
+                    showAlert('Configuration des chaînes de proxy enregistrée avec succès !', 'success');
+                    loadProxySettings();
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur lors de l\'enregistrement : ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion lors de l\'enregistrement', 'error');
+            }
+        }
+
         // Initialize
         loadEnvSettings();
         loadEmailSettings();
+        loadProxySettings();
         loadGoogleAuthStatus();
     </script>
 </body>

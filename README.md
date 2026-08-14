@@ -110,6 +110,11 @@ The application now features a conversational assistant capable of analyzing you
 
 👉 **Check the guide: [AI Assistant & MCP Service Configuration](MCP_SETUP.en.md)**
 
+### 🏠 9. Residential Proxy & Anti-Bot Bypass (DataDome)
+To avoid anti-bot blocks from platforms like LeBonCoin on VPS cloud hosting, you can deploy an encrypted residential proxy at home (on a Synology NAS or Raspberry Pi) exposed via Cloudflare Tunnel.
+
+👉 **Check the guide: [Deploying a Home Residential Proxy (Synology + Cloudflared)](PROXY_SETUP.en.md)**
+
 ## 🛠️ Installation & Launch
 
 ### Prerequisites

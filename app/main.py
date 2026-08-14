@@ -315,6 +315,9 @@ class GlobalSettingsRequest(BaseModel):
     db_repair_automate: Optional[bool] = None
     db_repair_interval: Optional[str] = None
 
+    # Scraping Proxies (JSON)
+    scraping_proxies_json: Optional[str] = None
+
 
 class DuplicateMergeRequest(BaseModel):
     listing_a_id: int
@@ -777,6 +780,14 @@ def update_global_settings(
     if body.db_repair_automate is not None: settings.db_repair_automate = body.db_repair_automate
     if body.db_repair_interval is not None: settings.db_repair_interval = body.db_repair_interval
     
+    if body.scraping_proxies_json is not None:
+        settings.scraping_proxies_json = body.scraping_proxies_json.strip() or None
+        try:
+            from app.proxy_router import proxy_router
+            proxy_router.reload_chains(settings.scraping_proxies_json)
+        except Exception as e:
+            print(f"[Main] Erreur reload_chains proxy_router: {e}")
+
     db.commit()
 
     # Sync scheduler jobs
