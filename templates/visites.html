@@ -1570,7 +1570,7 @@
                             <span><strong>${timeStr}</strong> ${stepText}</span>
                             <span style="display: inline-flex; align-items: center; gap: 0.3rem;">
                                 <span style="max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${v.listing_city || ''}</span>
-                                <i class="fa-solid fa-trash" style="color: var(--red); opacity: 0.8;" onclick="event.stopPropagation(); deleteVisitDirect(${v.id});" title="Supprimer la visite"></i>
+                                <i class="fa-solid fa-trash" style="color: var(--red); opacity: 0.8; cursor: pointer; padding: 2px;" onclick="event.stopPropagation(); deleteVisit(${v.id});" title="Supprimer la visite"></i>
                             </span>
                         </div>
                     `;
@@ -1725,9 +1725,18 @@
             if (!confirm("Voulez-vous vraiment supprimer cette activité ?")) return;
             try {
                 const res = await fetch(`/api/visites/${visitId}`, { method: 'DELETE' });
-                if (res.ok) location.reload();
-            } catch (e) { console.error(e); }
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert("Erreur lors de la suppression : " + (err.detail || res.statusText));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erreur réseau lors de la suppression.");
+            }
         }
+        window.deleteVisitDirect = deleteVisit;
 
         async function toggleToVisit(listingId, btn) {
             try {
