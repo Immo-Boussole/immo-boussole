@@ -682,12 +682,12 @@
                 <div class="section-header">
                     <div class="section-title">
                         <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--orange);"></i>
-                        Contacts détectés dans les annonces (sans fiche contact)
+                        Contacts/agences détectés dans les annonces (sans fiche contact et/ou agence)
                     </div>
                     <span class="section-badge" id="detectedCountBadge">0 détecté</span>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-2);">
-                    Ces annonces contiennent des coordonnées dans leur description (nom, téléphone, mandataire, agence) mais ne sont pas encore reliées à une fiche contact officielle.
+                    Ces annonces contiennent des coordonnées dans leur description (nom, téléphone, mandataire, agence) mais n'ont pas encore de contact et/ou d'agence officiellement rattaché(e).
                 </p>
                 <div class="unassigned-grid" id="detectedGrid">
                     <!-- Dynamic detected listings -->
@@ -897,9 +897,11 @@
         async function loadAll() {
             await Promise.all([
                 loadContactsOverview(),
-                loadAgencies(),
-                loadDetectedContacts(1),
-                loadUnassignedListings(1)
+                loadAgencies()
+            ]);
+            await Promise.all([
+                loadDetectedContacts(detectedPage || 1),
+                loadUnassignedListings(unassignedPage || 1)
             ]);
         }
 
@@ -1070,7 +1072,7 @@
             badge.textContent = `${data.total} détecté${data.total > 1 ? 's' : ''}`;
 
             if (!data.items.length) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 1.5rem;">Aucune annonce avec contact non structuré en attente.</div>';
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 1.5rem;">Aucune annonce avec contact/agence non structuré(e) en attente.</div>';
                 document.getElementById('detectedPagination').innerHTML = '';
                 return;
             }
@@ -1106,22 +1108,139 @@
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                            <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
-                                <i class="fa-solid fa-user-plus"></i> Créer la fiche Contact & Lier
-                            </button>
-                            <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
-                                <i class="fa-solid fa-building-circle-check"></i> Créer la fiche Agence & Lier
-                            </button>
+                            <!-- 1. Liste déroulante Contact (Meilleur match en 1ère position) -->
                             <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
-                                <option value="">-- Ou lier à un contact existant --</option>
-                                ${getContactSelectOptions()}
+                                ${getAgentSelectOptions(d)}
                             </select>
+
+                            <!-- 2. Bouton Créer Contact -->
+                            <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
+                                <i class="fa-solid fa-user-plus"></i> Contact manquant ? Créer fiche & Lier
+                            </button>
+
+                            <!-- 3. Liste déroulante Agence (Meilleur match en 1ère position) -->
+                            <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                                ${getAgencySelectOptions(d)}
+                            </select>
+
+                            <!-- 4. Bouton Créer Agence -->
+                            <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
+                                <i class="fa-solid fa-building-circle-check"></i> Agence manquante ? Créer fiche & Lier
+                            </button>
                         </div>
                     </div>
                 `;
             }).join('');
 
             renderPagination('detectedPagination', data.page, data.pages, 'loadDetectedContacts');
+        }
+
+        function normalizeStr(str) {
+            if (!str) return '';
+            return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+        }
+
+        function getAgentSelectOptions(d) {
+            const agents = contactsData.filter(c => c.contact_type === 'agent');
+            let bestAgent = null;
+            let bestScore = 0;
+
+            const detNameNorm = normalizeStr(d ? (d.agent_name || ((d.first_name || '') + ' ' + (d.last_name || ''))) : '');
+            const detPhones = (d && d.phones ? d.phones : []).map(p => p.replace(/\s+/g, ''));
+            const detEmails = (d && d.emails ? d.emails : []).map(e => e.toLowerCase().trim());
+
+            agents.forEach(ag => {
+                let score = 0;
+                const agNameNorm = normalizeStr(ag.name);
+
+                // Phone match
+                const agMobile = (ag.phone_mobile || '').replace(/\s+/g, '');
+                const agLand = (ag.phone_landline || '').replace(/\s+/g, '');
+                if (agMobile && detPhones.some(p => p.includes(agMobile) || agMobile.includes(p))) score += 100;
+                if (agLand && detPhones.some(p => p.includes(agLand) || agLand.includes(p))) score += 100;
+
+                // Email match
+                if (ag.email && detEmails.includes(ag.email.toLowerCase().trim())) score += 100;
+
+                // Name match
+                if (detNameNorm && agNameNorm) {
+                    if (detNameNorm === agNameNorm) score += 80;
+                    else if (detNameNorm.includes(agNameNorm) || agNameNorm.includes(detNameNorm)) score += 60;
+                }
+
+                if (score > bestScore && score >= 50) {
+                    bestScore = score;
+                    bestAgent = ag;
+                }
+            });
+
+            let optionsHtml = '<option value="">-- Lier à un contact existant --</option>';
+            if (bestAgent) {
+                optionsHtml += `<option value="agent:${bestAgent.id}" style="font-weight: 700; color: var(--green);">✨ Suggéré : ${bestAgent.name} ${bestAgent.agency_name ? '(' + bestAgent.agency_name + ')' : ''}</option>`;
+            }
+
+            agents.forEach(ag => {
+                if (bestAgent && ag.id === bestAgent.id) return;
+                optionsHtml += `<option value="agent:${ag.id}">👤 ${ag.name} ${ag.agency_name ? '(' + ag.agency_name + ')' : ''}</option>`;
+            });
+
+            return optionsHtml;
+        }
+
+        function getAgencySelectOptions(d) {
+            const agencies = (agenciesData && agenciesData.length) ? agenciesData : contactsData.filter(c => c.contact_type === 'agency').map(c => ({
+                id: c.id,
+                commercial_name: c.name,
+                legal_name: c.name,
+                city: c.city,
+                phone: c.phone_mobile || c.phone_landline,
+                email: c.email
+            }));
+
+            let bestAgency = null;
+            let bestScore = 0;
+
+            const detAgencyNorm = normalizeStr(d ? (d.agency_name || '') : '');
+            const detPhones = (d && d.phones ? d.phones : []).map(p => p.replace(/\s+/g, ''));
+            const detEmails = (d && d.emails ? d.emails : []).map(e => e.toLowerCase().trim());
+
+            agencies.forEach(ag => {
+                let score = 0;
+                const agName = ag.commercial_name || ag.legal_name || '';
+                const agNameNorm = normalizeStr(agName);
+
+                // Phone match
+                const agPhone = (ag.phone || '').replace(/\s+/g, '');
+                if (agPhone && detPhones.some(p => p.includes(agPhone) || agPhone.includes(p))) score += 100;
+
+                // Email match
+                if (ag.email && detEmails.includes(ag.email.toLowerCase().trim())) score += 100;
+
+                // Agency name match
+                if (detAgencyNorm && agNameNorm) {
+                    if (detAgencyNorm === agNameNorm) score += 80;
+                    else if (detAgencyNorm.includes(agNameNorm) || agNameNorm.includes(detAgencyNorm)) score += 60;
+                }
+
+                if (score > bestScore && score >= 50) {
+                    bestScore = score;
+                    bestAgency = ag;
+                }
+            });
+
+            let optionsHtml = '<option value="">-- Lier à une agence existante --</option>';
+            if (bestAgency) {
+                const name = bestAgency.commercial_name || bestAgency.legal_name;
+                optionsHtml += `<option value="agency:${bestAgency.id}" style="font-weight: 700; color: var(--purple);">✨ Suggéré : ${name} ${bestAgency.city ? '(' + bestAgency.city + ')' : ''}</option>`;
+            }
+
+            agencies.forEach(ag => {
+                if (bestAgency && ag.id === bestAgency.id) return;
+                const name = ag.commercial_name || ag.legal_name;
+                optionsHtml += `<option value="agency:${ag.id}">🏢 ${name} ${ag.city ? '(' + ag.city + ')' : ''}</option>`;
+            });
+
+            return optionsHtml;
         }
 
         // --- Unassigned Listings ---

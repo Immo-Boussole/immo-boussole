@@ -174,13 +174,15 @@ def link_listing_to_contact(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent non trouvé")
         listing.main_agent_id = agent.id
-        listing.agency_id = agent.agency_id or body.agency_id
+        if agent.agency_id:
+            listing.agency_id = agent.agency_id
+        elif body.agency_id:
+            listing.agency_id = body.agency_id
     elif body.agency_id:
         agency = db.query(Agency).filter(Agency.id == body.agency_id).first()
         if not agency:
             raise HTTPException(status_code=404, detail="Agence non trouvée")
         listing.agency_id = agency.id
-        listing.main_agent_id = None
     else:
         raise HTTPException(status_code=400, detail="Veuillez spécifier un agent ou une agence")
 
@@ -266,11 +268,13 @@ def list_detected_contacts(
     db: Session = Depends(get_db)
 ):
     """
-    Analyzes unassigned listings to detect potential contacts mentioned in the description.
+    Analyzes listings missing a contact and/or agency to detect potential contacts mentioned in the description.
     """
     query = db.query(Listing).filter(
-        Listing.main_agent_id.is_(None),
-        Listing.agency_id.is_(None),
+        or_(
+            Listing.main_agent_id.is_(None),
+            Listing.agency_id.is_(None)
+        ),
         Listing.description_text.isnot(None),
         Listing.is_duplicate == False
     ).order_by(Listing.date_added.desc())
