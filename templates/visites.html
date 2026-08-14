@@ -393,6 +393,48 @@
         .prop-title { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .prop-price { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin: 0.2rem 0; }
         .prop-loc { font-size: 0.75rem; color: var(--text-2); }
+        .prop-contact { margin-top: 0.4rem; }
+
+        .btn-contact-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.22rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--trans);
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .btn-contact-pill.has-contact {
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--accent);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+        }
+        .btn-contact-pill.has-contact:hover {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+        .btn-contact-pill.missing-contact {
+            background: rgba(245, 158, 11, 0.12);
+            color: var(--orange, #f59e0b);
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+        }
+        .btn-contact-pill.missing-contact:hover {
+            background: rgba(245, 158, 11, 0.22);
+            border-style: solid;
+            transform: translateY(-1px);
+        }
+        .truncate-contact {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
         .prop-visits {
             padding: 0.85rem 1rem;
@@ -863,6 +905,24 @@
                                     {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}N/C{% endif %}
                                 </div>
                                 <div class="prop-loc"><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</div>
+                                <div class="prop-contact">
+                                    {% if listing.main_agent %}
+                                    <a href="/contacts?q={{ (listing.main_agent.first_name ~ ' ' ~ listing.main_agent.last_name)|urlencode }}" class="btn-contact-pill has-contact" title="Voir la fiche contact : {{ listing.main_agent.first_name }} {{ listing.main_agent.last_name }}">
+                                        <i class="fa-solid fa-user-tie"></i>
+                                        <span class="truncate-contact">{{ listing.main_agent.first_name }} {{ listing.main_agent.last_name }}{% if listing.main_agent.agency %} ({{ listing.main_agent.agency.commercial_name or listing.main_agent.agency.legal_name }}){% endif %}</span>
+                                    </a>
+                                    {% elif listing.agency %}
+                                    <a href="/contacts?q={{ (listing.agency.commercial_name or listing.agency.legal_name)|urlencode }}" class="btn-contact-pill has-contact" title="Voir la fiche agence : {{ listing.agency.commercial_name or listing.agency.legal_name }}">
+                                        <i class="fa-solid fa-building"></i>
+                                        <span class="truncate-contact">{{ listing.agency.commercial_name or listing.agency.legal_name }}</span>
+                                    </a>
+                                    {% else %}
+                                    <a href="/contacts?q={{ (listing.title or listing.location or '')|urlencode }}" class="btn-contact-pill missing-contact" title="Aucun contact relié — Attribuer ou créer un contact">
+                                        <i class="fa-solid fa-user-plus"></i>
+                                        <span>Contact manquant ? Ajoutons-le !</span>
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
 

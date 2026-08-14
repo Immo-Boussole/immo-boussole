@@ -738,9 +738,12 @@
         </div>
 
         <div class="content-body">
-            <!-- Search bar -->
+            <!-- Search bar & To-Visit Filter -->
             <div class="search-bar-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
+                <button type="button" id="btnFilterToVisit" class="btn btn-secondary" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600;">
+                    <i class="fa-regular fa-bookmark"></i> Biens à visiter
+                </button>
             </div>
 
             <!-- Tabs Navigation -->
@@ -977,6 +980,7 @@
 
     <script>
         let currentTab = 'contacts';
+        let filterToVisit = false;
         let contactsData = [];
         let agenciesOverviewData = [];
         let agenciesData = [];
@@ -987,6 +991,21 @@
             loadAll();
             checkGoogleStatus();
         });
+
+        function toggleToVisitFilter() {
+            filterToVisit = !filterToVisit;
+            const btn = document.getElementById('btnFilterToVisit');
+            if (btn) {
+                if (filterToVisit) {
+                    btn.className = 'btn btn-purple';
+                    btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Biens à visiter (Actif)';
+                } else {
+                    btn.className = 'btn btn-secondary';
+                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i> Biens à visiter';
+                }
+            }
+            loadAll();
+        }
 
         function switchMainTab(tab) {
             currentTab = tab;
@@ -1050,8 +1069,11 @@
         async function loadContactsOverview() {
             try {
                 const q = (currentTab === 'contacts') ? document.getElementById('searchInput').value.trim() : '';
-                const url = q ? `/api/contacts/overview?q=${encodeURIComponent(q)}` : '/api/contacts/overview';
-                const res = await fetch(url);
+                const params = new URLSearchParams();
+                if (q) params.append('q', q);
+                if (filterToVisit) params.append('to_visit', 'true');
+                const queryStr = params.toString() ? `?${params.toString()}` : '';
+                const res = await fetch(`/api/contacts/overview${queryStr}`);
                 contactsData = await res.json();
                 renderContacts(contactsData);
                 document.getElementById('contactsCountBadge').textContent = contactsData.length;
@@ -1063,8 +1085,11 @@
         async function loadAgenciesOverview() {
             try {
                 const q = (currentTab === 'agencies') ? document.getElementById('searchInput').value.trim() : '';
-                const url = q ? `/api/agencies/overview?q=${encodeURIComponent(q)}` : '/api/agencies/overview';
-                const res = await fetch(url);
+                const params = new URLSearchParams();
+                if (q) params.append('q', q);
+                if (filterToVisit) params.append('to_visit', 'true');
+                const queryStr = params.toString() ? `?${params.toString()}` : '';
+                const res = await fetch(`/api/agencies/overview${queryStr}`);
                 agenciesOverviewData = await res.json();
                 renderAgencies(agenciesOverviewData);
                 document.getElementById('agenciesCountBadge').textContent = agenciesOverviewData.length;
@@ -1127,6 +1152,7 @@
                                     ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
                                     ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
                                     ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                    ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                                 </div>
                             </div>
                             <button class="btn btn-danger btn-sm" title="Détacher ce bien du contact" onclick="unlinkListing(${l.id})">
@@ -1207,6 +1233,7 @@
                                     ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
                                     ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
                                     ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                    ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                                 </div>
                             </div>
                             <button class="btn btn-danger btn-sm" title="Détacher ce bien de l'agence" onclick="unlinkListing(${l.id})">
@@ -1314,7 +1341,11 @@
         async function loadDetectedContacts(page = 1) {
             detectedPage = page;
             try {
-                const res = await fetch(`/api/contacts/detected?page=${page}&limit=15`);
+                const q = document.getElementById('searchInput').value.trim();
+                const params = new URLSearchParams({ page: page, limit: 15 });
+                if (q) params.append('q', q);
+                if (filterToVisit) params.append('to_visit', 'true');
+                const res = await fetch(`/api/contacts/detected?${params.toString()}`);
                 const data = await res.json();
                 renderDetectedContacts(data);
             } catch (err) {
@@ -1349,6 +1380,7 @@
                                 <div class="mini-listing-sub">
                                     ${l.price ? `<span>${Math.round(l.price).toLocaleString('fr-FR')} €</span>` : ''}
                                     ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
+                                    ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -1527,7 +1559,11 @@
         async function loadUnassignedListings(page = 1) {
             unassignedPage = page;
             try {
-                const res = await fetch(`/api/contacts/unassigned?page=${page}&limit=15`);
+                const q = document.getElementById('searchInput').value.trim();
+                const params = new URLSearchParams({ page: page, limit: 15 });
+                if (q) params.append('q', q);
+                if (filterToVisit) params.append('to_visit', 'true');
+                const res = await fetch(`/api/contacts/unassigned?${params.toString()}`);
                 const data = await res.json();
                 renderUnassignedListings(data);
             } catch (err) {
@@ -1558,6 +1594,7 @@
                                 ${l.price ? `<span>${Math.round(l.price).toLocaleString('fr-FR')} €</span>` : ''}
                                 ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
                                 ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                             </div>
                         </div>
                     </div>

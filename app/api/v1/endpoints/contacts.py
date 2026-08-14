@@ -35,6 +35,15 @@ def _get_listing_photo_thumbnail(listing: Listing) -> Optional[str]:
     return None
 
 
+def _get_to_visit_filter_condition(db: Session):
+    """Returns SQLAlchemy condition matching listings in 'Biens à visiter' view."""
+    refused_ids = [r[0] for r in db.query(Visit.listing_id).filter(Visit.visit_type == "reponse_negative").all()]
+    cond = and_(Listing.to_visit == True, Listing.status != ListingStatus.REJECTED)
+    if refused_ids:
+        cond = and_(cond, ~Listing.id.in_(refused_ids))
+    return cond
+
+
 def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
     return schemas.AttachedListingSummary(
         id=l.id,
@@ -47,7 +56,8 @@ def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
         url=l.url,
         status=l.status.value if hasattr(l.status, 'value') else str(l.status),
         main_agent_id=l.main_agent_id,
-        agency_id=l.agency_id
+        agency_id=l.agency_id,
+        to_visit=bool(getattr(l, 'to_visit', False))
     )
 
 
@@ -56,20 +66,23 @@ def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
 @router.get("/contacts/overview", response_model=List[schemas.UnifiedContactItem])
 def get_contacts_overview(
     q: Optional[str] = None,
+    to_visit: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """
     Returns all Agent contacts with their agency information and attached listings.
+    Supports filtering by 'to_visit' (Biens à visiter).
     """
     agents = db.query(Agent).all()
     
     # Pre-fetch listings linked to agents
+    listings_query = db.query(Listing).filter(Listing.main_agent_id.isnot(None))
+    if to_visit:
+        listings_query = listings_query.filter(_get_to_visit_filter_condition(db))
+    
+    linked_listings = listings_query.order_by(Listing.date_added.desc()).all()
+    
     listings_by_agent: Dict[int, List[Listing]] = {}
-    
-    linked_listings = db.query(Listing).filter(
-        Listing.main_agent_id.isnot(None)
-    ).order_by(Listing.date_added.desc()).all()
-    
     for l in linked_listings:
         if l.main_agent_id:
             listings_by_agent.setdefault(l.main_agent_id, []).append(l)
@@ -79,6 +92,9 @@ def get_contacts_overview(
     # Add all agents
     for ag in agents:
         attached = [_format_listing_summary(l) for l in listings_by_agent.get(ag.id, [])]
+        if to_visit and len(attached) == 0:
+            continue
+
         agency_name = (ag.agency.commercial_name or ag.agency.legal_name) if ag.agency else None
         
         unified_list.append(schemas.UnifiedContactItem(
@@ -194,17 +210,21 @@ def list_unassigned_listings(
     page: int = Query(1, ge=1),
     limit: int = Query(15, ge=1, le=100),
     q: Optional[str] = None,
+    to_visit: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """
     Lists listings without any attached contact (main_agent_id IS NULL and agency_id IS NULL).
-    Supports search and pagination.
+    Supports search, to_visit filtering, and pagination.
     """
     query = db.query(Listing).filter(
         Listing.main_agent_id.is_(None),
         Listing.agency_id.is_(None),
         Listing.is_duplicate == False
     )
+
+    if to_visit:
+        query = query.filter(_get_to_visit_filter_condition(db))
 
     if q:
         search = f"%{q.strip()}%"
@@ -237,10 +257,12 @@ def list_detected_contacts(
     page: int = Query(1, ge=1),
     limit: int = Query(15, ge=1, le=100),
     q: Optional[str] = None,
+    to_visit: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """
     Analyzes listings missing a contact and/or agency to detect potential contacts mentioned in the description.
+    Supports to_visit filtering.
     """
     query = db.query(Listing).filter(
         or_(
@@ -249,7 +271,12 @@ def list_detected_contacts(
         ),
         Listing.description_text.isnot(None),
         Listing.is_duplicate == False
-    ).order_by(Listing.date_added.desc())
+    )
+
+    if to_visit:
+        query = query.filter(_get_to_visit_filter_condition(db))
+
+    query = query.order_by(Listing.date_added.desc())
 
     if q:
         search = f"%{q.strip()}%"
@@ -520,23 +547,29 @@ def merge_contacts(
 @router.get("/agencies/overview", response_model=List[schemas.AgencyOverviewItem])
 def get_agencies_overview(
     q: Optional[str] = None,
+    to_visit: Optional[bool] = None,
     db: Session = Depends(get_db)
 ):
     """
     Returns all Agencies with:
     - Affiliated agents
     - Attached listings (direct + via agents)
+    Supports filtering by 'to_visit' (Biens à visiter).
     """
     agencies = db.query(Agency).order_by(Agency.commercial_name, Agency.legal_name).all()
     agents = db.query(Agent).all()
     
     # Pre-fetch listings linked to agents or agencies
+    listings_query = db.query(Listing).filter(
+        or_(Listing.main_agent_id.isnot(None), Listing.agency_id.isnot(None))
+    )
+    if to_visit:
+        listings_query = listings_query.filter(_get_to_visit_filter_condition(db))
+
+    linked_listings = listings_query.order_by(Listing.date_added.desc()).all()
+    
     listings_by_agent: Dict[int, List[Listing]] = {}
     listings_by_agency: Dict[int, List[Listing]] = {}
-    
-    linked_listings = db.query(Listing).filter(
-        or_(Listing.main_agent_id.isnot(None), Listing.agency_id.isnot(None))
-    ).order_by(Listing.date_added.desc()).all()
     
     for l in linked_listings:
         if l.main_agent_id:
@@ -579,6 +612,8 @@ def get_agencies_overview(
                     agency_listings.append(l)
 
         attached = [_format_listing_summary(l) for l in agency_listings]
+        if to_visit and len(attached) == 0:
+            continue
 
         overview_list.append(schemas.AgencyOverviewItem(
             id=ac.id,

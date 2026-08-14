@@ -376,6 +376,7 @@ class AttachedListingSummary(BaseModel):
     status: Optional[str] = None
     main_agent_id: Optional[int] = None
     agency_id: Optional[int] = None
+    to_visit: bool = False
 
 
 class UnifiedContactItem(BaseModel):
