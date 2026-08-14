@@ -1,3 +1,160 @@
+<style>
+    /* ── Universal Sidebar Component Styles ── */
+    .sidebar {
+        width: 270px;
+        height: 100vh;
+        background: var(--surface, #131929);
+        border-right: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+        display: flex;
+        flex-direction: column;
+        padding: 1.75rem 1.5rem;
+        flex-shrink: 0;
+        overflow-y: auto;
+        z-index: 10;
+        box-sizing: border-box;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text, #eef2ff);
+        margin-bottom: 1.5rem;
+        text-decoration: none;
+    }
+
+    .logo img {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        object-fit: contain;
+        flex-shrink: 0;
+        display: inline-block;
+    }
+
+    .logo span {
+        background: linear-gradient(135deg, var(--accent, #4f8ef7), var(--accent-2, #6366f1));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: var(--surface-2, #1a2236);
+        border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+        border-radius: 12px;
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        text-align: center;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-card:hover {
+        border-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-2px);
+    }
+
+    .stat-card .val {
+        font-size: 1.25rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .stat-card .lbl {
+        font-size: 0.65rem;
+        color: var(--text-2, #8b9cc8);
+        margin-top: 0.35rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-card.new .val { color: var(--accent, #4f8ef7); }
+    .stat-card.act .val { color: var(--green, #10d9a4); }
+    .stat-card.dis .val { color: var(--red, #f25c69); }
+
+    .sidebar-section-title {
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-2, #8b9cc8);
+        letter-spacing: 0.08em;
+        margin-bottom: 0.75rem;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 9px;
+        color: var(--text-2, #8b9cc8);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 0.25rem;
+    }
+
+    .nav-link:hover, .nav-link.active {
+        background: rgba(79, 142, 247, 0.12);
+        color: var(--accent, #4f8ef7);
+    }
+
+    .nav-link i {
+        width: 18px;
+        text-align: center;
+    }
+
+    .sidebar-lang-selector {
+        display: flex;
+        background: var(--surface-2, #1a2236);
+        border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+        border-radius: 12px;
+        padding: 3px;
+        gap: 2px;
+        margin-top: 0.25rem;
+    }
+
+    .sidebar-lang-selector .lang-item {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.4rem;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-2, #8b9cc8);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-lang-selector .lang-item:hover {
+        color: var(--text, #eef2ff);
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .sidebar-lang-selector .lang-item.active {
+        background: var(--accent, #4f8ef7);
+        color: #fff;
+    }
+</style>
+
 <aside class="sidebar">
     <a href="/" class="logo">
         <img src="/static/media/app/icon-192.png" alt="Logo">
