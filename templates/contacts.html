@@ -947,13 +947,21 @@
 
         function updateAgencyDropdown() {
             const select = document.getElementById('agentAgencyId');
+            if (!select) return;
+            const currentVal = select.value;
             select.innerHTML = '<option value="">-- Indépendant / Sans agence --</option>';
-            agenciesData.forEach(ag => {
+            const sortedAgencies = [...agenciesData].sort((a, b) => {
+                const nameA = a.commercial_name || a.legal_name || '';
+                const nameB = b.commercial_name || b.legal_name || '';
+                return nameA.localeCompare(nameB, 'fr', { sensitivity: 'base' });
+            });
+            sortedAgencies.forEach(ag => {
                 const opt = document.createElement('option');
                 opt.value = ag.id;
                 opt.textContent = ag.commercial_name || ag.legal_name;
                 select.appendChild(opt);
             });
+            if (currentVal) select.value = currentVal;
         }
 
         function renderContacts(list) {
@@ -1110,7 +1118,7 @@
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <!-- 1. Liste déroulante Contact (Meilleur match en 1ère position) -->
                             <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
-                                ${getAgentSelectOptions(d)}
+                                ${getAgentSelectOptions(d, l.main_agent_id)}
                             </select>
 
                             <!-- 2. Bouton Créer Contact -->
@@ -1120,7 +1128,7 @@
 
                             <!-- 3. Liste déroulante Agence (Meilleur match en 1ère position) -->
                             <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
-                                ${getAgencySelectOptions(d)}
+                                ${getAgencySelectOptions(d, l.agency_id)}
                             </select>
 
                             <!-- 4. Bouton Créer Agence -->
@@ -1140,7 +1148,7 @@
             return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
         }
 
-        function getAgentSelectOptions(d) {
+        function getAgentSelectOptions(d, selectedAgentId = null) {
             const agents = contactsData.filter(c => c.contact_type === 'agent');
             let bestAgent = null;
             let bestScore = 0;
@@ -1176,18 +1184,26 @@
 
             let optionsHtml = '<option value="">-- Lier à un contact existant --</option>';
             if (bestAgent) {
-                optionsHtml += `<option value="agent:${bestAgent.id}" style="font-weight: 700; color: var(--green);">✨ Suggéré : ${bestAgent.name} ${bestAgent.agency_name ? '(' + bestAgent.agency_name + ')' : ''}</option>`;
+                const isSelected = (selectedAgentId === bestAgent.id);
+                optionsHtml += `<option value="agent:${bestAgent.id}" style="font-weight: 700; color: var(--green);" ${isSelected ? 'selected' : ''}>✨ Suggéré : ${bestAgent.name} ${bestAgent.agency_name ? '(' + bestAgent.agency_name + ')' : ''}</option>`;
             }
 
-            agents.forEach(ag => {
+            const sortedAgents = [...agents].sort((a, b) => {
+                const nameA = a.name || `${a.first_name || ''} ${a.last_name || ''}`;
+                const nameB = b.name || `${b.first_name || ''} ${b.last_name || ''}`;
+                return nameA.localeCompare(nameB, 'fr', { sensitivity: 'base' });
+            });
+
+            sortedAgents.forEach(ag => {
                 if (bestAgent && ag.id === bestAgent.id) return;
-                optionsHtml += `<option value="agent:${ag.id}">👤 ${ag.name} ${ag.agency_name ? '(' + ag.agency_name + ')' : ''}</option>`;
+                const isSelected = (selectedAgentId === ag.id);
+                optionsHtml += `<option value="agent:${ag.id}" ${isSelected ? 'selected' : ''}>👤 ${ag.name} ${ag.agency_name ? '(' + ag.agency_name + ')' : ''}</option>`;
             });
 
             return optionsHtml;
         }
 
-        function getAgencySelectOptions(d) {
+        function getAgencySelectOptions(d, selectedAgencyId = null) {
             const agencies = (agenciesData && agenciesData.length) ? agenciesData : contactsData.filter(c => c.contact_type === 'agency').map(c => ({
                 id: c.id,
                 commercial_name: c.name,
@@ -1231,13 +1247,24 @@
             let optionsHtml = '<option value="">-- Lier à une agence existante --</option>';
             if (bestAgency) {
                 const name = bestAgency.commercial_name || bestAgency.legal_name;
-                optionsHtml += `<option value="agency:${bestAgency.id}" style="font-weight: 700; color: var(--purple);">✨ Suggéré : ${name} ${bestAgency.city ? '(' + bestAgency.city + ')' : ''}</option>`;
+                const isSelected = (selectedAgencyId === bestAgency.id);
+                optionsHtml += `<option value="agency:${bestAgency.id}" style="font-weight: 700; color: var(--purple);" ${isSelected ? 'selected' : ''}>✨ Suggéré : ${name} ${bestAgency.city ? '(' + bestAgency.city + ')' : ''}</option>`;
             }
 
-            agencies.forEach(ag => {
+            const isIndepSelected = (selectedAgencyId === 'independent' || selectedAgencyId === 0);
+            optionsHtml += `<option value="independent" ${isIndepSelected ? 'selected' : ''}>Indépendant.e</option>`;
+
+            const sortedAgencies = [...agencies].sort((a, b) => {
+                const nameA = a.commercial_name || a.legal_name || '';
+                const nameB = b.commercial_name || b.legal_name || '';
+                return nameA.localeCompare(nameB, 'fr', { sensitivity: 'base' });
+            });
+
+            sortedAgencies.forEach(ag => {
                 if (bestAgency && ag.id === bestAgency.id) return;
                 const name = ag.commercial_name || ag.legal_name;
-                optionsHtml += `<option value="agency:${ag.id}">🏢 ${name} ${ag.city ? '(' + ag.city + ')' : ''}</option>`;
+                const isSelected = (selectedAgencyId === ag.id);
+                optionsHtml += `<option value="agency:${ag.id}" ${isSelected ? 'selected' : ''}>🏢 ${name} ${ag.city ? '(' + ag.city + ')' : ''}</option>`;
             });
 
             return optionsHtml;
@@ -1284,7 +1311,7 @@
                     <div>
                         <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
                             <option value="">-- Rattacher à un contact existant --</option>
-                            ${getContactSelectOptions()}
+                            ${getContactSelectOptions(l.main_agent_id ? `agent:${l.main_agent_id}` : (l.agency_id ? `agency:${l.agency_id}` : null))}
                         </select>
                     </div>
                 </div>
@@ -1293,12 +1320,20 @@
             renderPagination('unassignedPagination', data.page, data.pages, 'loadUnassignedListings');
         }
 
-        function getContactSelectOptions() {
-            return contactsData.map(c => `
-                <option value="${c.contact_type}:${c.id}">
-                    ${c.contact_type === 'agent' ? '👤 Agent' : '🏢 Agence'} — ${c.name} ${c.agency_name ? '(' + c.agency_name + ')' : ''}
-                </option>
-            `).join('');
+        function getContactSelectOptions(selectedValue = null) {
+            const sortedContacts = [...contactsData].sort((a, b) => {
+                return (a.name || '').localeCompare(b.name || '', 'fr', { sensitivity: 'base' });
+            });
+
+            return sortedContacts.map(c => {
+                const val = `${c.contact_type}:${c.id}`;
+                const isSelected = (selectedValue === val || selectedValue === c.id);
+                return `
+                    <option value="${val}" ${isSelected ? 'selected' : ''}>
+                        ${c.contact_type === 'agent' ? '👤 Agent' : '🏢 Agence'} — ${c.name} ${c.agency_name ? '(' + c.agency_name + ')' : ''}
+                    </option>
+                `;
+            }).join('');
         }
 
         function renderPagination(containerId, current, totalPages, fetchFnName) {
@@ -1319,13 +1354,18 @@
 
         // --- Quick Link & Unlink Actions ---
         async function quickLinkListing(listingId, contactValue) {
-            if (!contactValue) return;
-            const [type, idStr] = contactValue.split(':');
-            const id = parseInt(idStr);
-
+            if (!contactValue && contactValue !== 'independent') return;
             const payload = { listing_id: listingId };
-            if (type === 'agent') payload.agent_id = id;
-            else payload.agency_id = id;
+
+            if (contactValue === 'independent') {
+                payload.agency_id = 0;
+            } else {
+                const [type, idStr] = contactValue.split(':');
+                const id = parseInt(idStr);
+                if (isNaN(id)) return;
+                if (type === 'agent') payload.agent_id = id;
+                else payload.agency_id = id;
+            }
 
             try {
                 const res = await fetch('/api/contacts/link-listing', {

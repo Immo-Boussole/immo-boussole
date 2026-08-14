@@ -45,7 +45,9 @@ def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
         rooms=l.rooms,
         photo_thumbnail=_get_listing_photo_thumbnail(l),
         url=l.url,
-        status=l.status.value if hasattr(l.status, 'value') else str(l.status)
+        status=l.status.value if hasattr(l.status, 'value') else str(l.status),
+        main_agent_id=l.main_agent_id,
+        agency_id=l.agency_id
     )
 
 
@@ -176,13 +178,16 @@ def link_listing_to_contact(
         listing.main_agent_id = agent.id
         if agent.agency_id:
             listing.agency_id = agent.agency_id
-        elif body.agency_id:
-            listing.agency_id = body.agency_id
-    elif body.agency_id:
-        agency = db.query(Agency).filter(Agency.id == body.agency_id).first()
-        if not agency:
-            raise HTTPException(status_code=404, detail="Agence non trouvée")
-        listing.agency_id = agency.id
+        elif body.agency_id is not None:
+            listing.agency_id = None if body.agency_id == 0 else body.agency_id
+    elif body.agency_id is not None:
+        if body.agency_id == 0:
+            listing.agency_id = None
+        else:
+            agency = db.query(Agency).filter(Agency.id == body.agency_id).first()
+            if not agency:
+                raise HTTPException(status_code=404, detail="Agence non trouvée")
+            listing.agency_id = agency.id
     else:
         raise HTTPException(status_code=400, detail="Veuillez spécifier un agent ou une agence")
 

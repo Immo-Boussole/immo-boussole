@@ -374,6 +374,8 @@ class AttachedListingSummary(BaseModel):
     photo_thumbnail: Optional[str] = None
     url: Optional[str] = None
     status: Optional[str] = None
+    main_agent_id: Optional[int] = None
+    agency_id: Optional[int] = None
 
 
 class UnifiedContactItem(BaseModel):
