@@ -49,6 +49,102 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            margin: 0;
+        }
+
+        /* ── Sidebar & Navigation ── */
+        .sidebar-lang-selector {
+            display: flex;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3px;
+            gap: 2px;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-lang-selector .lang-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            padding: 0.4rem;
+            border-radius: 9px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-2);
+            transition: var(--trans);
+        }
+
+        .sidebar-lang-selector .lang-item:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+        .sidebar-lang-selector .lang-item.active { background: var(--accent); color: #fff; }
+
+        .sidebar {
+            width: 270px;
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.75rem 1.5rem;
+            flex-shrink: 0;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 1.6rem;
+            height: 1.6rem;
+            object-fit: contain;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-2);
+            letter-spacing: 0.08em;
+            margin-bottom: 0.75rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 9px;
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--trans);
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(79, 142, 247, 0.12);
+            color: var(--accent);
+        }
+
+        .nav-link i {
+            width: 18px;
+            text-align: center;
         }
 
         .main-content {
@@ -692,6 +788,7 @@
             </div>
             <form id="agencyForm" onsubmit="saveAgency(event)">
                 <input type="hidden" id="agencyId">
+                <input type="hidden" id="agencyListingIdToLink">
                 <div class="form-group">
                     <label class="form-label">Raison sociale *</label>
                     <input type="text" id="agencyLegalName" class="form-input" required placeholder="ex: SAS Immobilière des Alpes">
@@ -1004,7 +1101,10 @@
 
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
-                                <i class="fa-solid fa-user-plus"></i> Créer la fiche contact & Lier
+                                <i class="fa-solid fa-user-plus"></i> Créer la fiche Contact & Lier
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
+                                <i class="fa-solid fa-building-circle-check"></i> Créer la fiche Agence & Lier
                             </button>
                             <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
                                 <option value="">-- Ou lier à un contact existant --</option>
@@ -1203,10 +1303,29 @@
             loadAll();
         }
 
+        function createAgencyFromDetected(listingId, detectedEncoded) {
+            const detected = JSON.parse(decodeURIComponent(detectedEncoded));
+            openAgencyModal();
+            document.getElementById('agencyListingIdToLink').value = listingId;
+
+            const agencyName = detected.agency_name || (detected.first_name && detected.last_name ? `Agence ${detected.first_name} ${detected.last_name}` : '');
+            if (agencyName) {
+                document.getElementById('agencyLegalName').value = agencyName;
+                document.getElementById('agencyCommercialName').value = agencyName;
+            }
+            if (detected.phones && detected.phones[0]) {
+                document.getElementById('agencyPhone').value = detected.phones[0];
+            }
+            if (detected.emails && detected.emails[0]) {
+                document.getElementById('agencyEmail').value = detected.emails[0];
+            }
+        }
+
         // --- Agency Modal & CRUD ---
         function openAgencyModal() {
             document.getElementById('agencyForm').reset();
             document.getElementById('agencyId').value = '';
+            document.getElementById('agencyListingIdToLink').value = '';
             document.getElementById('agencyModalTitle').textContent = 'Nouvelle Agence';
             document.getElementById('agencyModal').classList.add('active');
         }
@@ -1218,6 +1337,7 @@
         async function saveAgency(e) {
             e.preventDefault();
             const id = document.getElementById('agencyId').value;
+            const listingIdToLink = document.getElementById('agencyListingIdToLink').value;
             const payload = {
                 legal_name: document.getElementById('agencyLegalName').value,
                 commercial_name: document.getElementById('agencyCommercialName').value || null,
@@ -1232,11 +1352,16 @@
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/agencies/${id}` : '/api/agencies';
 
-            await fetch(url, {
+            const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+
+            if (res.ok && listingIdToLink) {
+                const savedAgency = await res.json();
+                await quickLinkListing(parseInt(listingIdToLink), `agency:${savedAgency.id}`);
+            }
 
             closeAgencyModal();
             loadAll();
