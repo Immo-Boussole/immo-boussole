@@ -18,10 +18,14 @@
             --bg: #0b0f1a;
             --surface: #131929;
             --surface-2: #1a2236;
-            --border: rgba(255, 255, 255, 0.07);
+            --surface-3: #222d47;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
             --text: #eef2ff;
             --text-2: #8b9cc8;
+            --text-3: #5e6f99;
             --accent: #4f8ef7;
+            --accent-hover: #3b7ce8;
             --accent-2: #6366f1;
             --green: #10d9a4;
             --red: #f25c69;
@@ -47,78 +51,6 @@
             overflow: hidden;
         }
 
-        .sidebar-lang-selector {
-            display: flex;
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 3px;
-            gap: 2px;
-            margin-top: 0.25rem;
-        }
-
-        .sidebar-lang-selector .lang-item {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            padding: 0.4rem;
-            border-radius: 9px;
-            text-decoration: none;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-2);
-            transition: var(--trans);
-        }
-
-        .sidebar-lang-selector .lang-item:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
-        .sidebar-lang-selector .lang-item.active { background: var(--accent); color: #fff; }
-
-        .sidebar {
-            width: 260px;
-            background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem 1.25rem;
-            flex-shrink: 0;
-            z-index: 10;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 1.5rem;
-        }
-
-        .logo img { width: 32px; height: 32px; border-radius: 8px; }
-
-        .nav-section { margin-bottom: 1.25rem; }
-        .nav-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.05em; margin-bottom: 0.5rem; padding-left: 0.5rem; }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.65rem 0.85rem;
-            color: var(--text-2);
-            text-decoration: none;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: var(--trans);
-            margin-bottom: 0.2rem;
-        }
-
-        .nav-link:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
-        .nav-link.active { color: #fff; background: var(--accent); font-weight: 600; }
-        .nav-link i { font-size: 1rem; width: 20px; text-align: center; }
-
         .main-content {
             flex: 1;
             display: flex;
@@ -136,15 +68,22 @@
             justify-content: space-between;
             background: var(--surface);
             gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        .header-title { font-size: 1.4rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem; }
+        .header-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
         .btn {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.6rem 1.1rem;
+            padding: 0.55rem 1rem;
             border-radius: 10px;
             font-size: 0.85rem;
             font-weight: 600;
@@ -155,46 +94,28 @@
         }
 
         .btn-primary { background: var(--accent); color: #fff; }
-        .btn-primary:hover { background: #3b7ce8; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
         .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-hover); }
+        .btn-purple { background: rgba(168, 85, 247, 0.18); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.35); }
+        .btn-purple:hover { background: var(--purple); color: #fff; }
         .btn-danger { background: rgba(242, 92, 105, 0.15); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.3); }
         .btn-danger:hover { background: var(--red); color: #fff; }
-
-        .tabs-header {
-            display: flex;
-            gap: 1rem;
-            padding: 1rem 2rem 0 2rem;
-            border-bottom: 1px solid var(--border);
-            background: var(--surface);
-        }
-
-        .tab-btn {
-            padding: 0.75rem 1.25rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--text-2);
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            transition: var(--trans);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tab-btn:hover { color: var(--text); }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 8px; }
 
         .content-body {
             flex: 1;
             padding: 1.5rem 2rem;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
         }
 
         .search-bar-container {
             display: flex;
             gap: 1rem;
-            margin-bottom: 1.5rem;
+            align-items: center;
         }
 
         .search-input {
@@ -202,69 +123,342 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 0.75rem 1rem;
+            padding: 0.75rem 1.1rem;
             color: var(--text);
             font-size: 0.9rem;
             outline: none;
+            transition: var(--trans);
         }
 
-        .search-input:focus { border-color: var(--accent); }
+        .search-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.2);
+        }
 
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .section-badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            background: var(--surface-2);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+
+        /* Contact Cards Grid */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
             gap: 1.25rem;
         }
 
-        .card {
+        .contact-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 1.25rem;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.9rem;
             position: relative;
             transition: var(--trans);
         }
 
-        .card:hover { border-color: rgba(255, 255, 255, 0.2); transform: translateY(-2px); box-shadow: var(--shadow); }
+        .contact-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
 
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-title { font-size: 1.1rem; font-weight: 700; }
-        .card-subtitle { font-size: 0.8rem; color: var(--text-2); margin-top: 0.2rem; }
+        .contact-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
 
-        .card-info { font-size: 0.85rem; color: var(--text-2); display: flex; flex-direction: column; gap: 0.35rem; }
-        .card-info-item { display: flex; align-items: center; gap: 0.5rem; }
-        .card-info-item i { width: 16px; color: var(--accent); text-align: center; }
+        .contact-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent-2), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .contact-avatar.agency-avatar {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .contact-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .contact-card-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-top: 0.15rem;
+        }
 
         .badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.35rem;
             padding: 0.25rem 0.6rem;
-            border-radius: 6px;
+            border-radius: 7px;
             font-size: 0.75rem;
             font-weight: 600;
         }
+
         .badge-accent { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
         .badge-green { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .badge-orange { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+        .badge-purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
 
-        .card-actions {
-            margin-top: 0.5rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid var(--border);
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--text-2);
+            background: rgba(0, 0, 0, 0.18);
+            padding: 0.75rem;
+            border-radius: 10px;
+        }
+
+        .contact-info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .contact-info-item i {
+            width: 16px;
+            text-align: center;
+            color: var(--accent);
+            font-size: 0.85rem;
+        }
+
+        .contact-info-item a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .contact-info-item a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .attached-accordion-btn {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.6rem 0.85rem;
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: var(--trans);
+        }
+
+        .attached-accordion-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-hover);
+        }
+
+        .attached-accordion-btn.expanded {
+            background: var(--surface-3);
+            border-color: var(--accent);
+        }
+
+        .attached-listings-container {
+            display: none;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-top: 0.4rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border);
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .attached-listings-container.open {
+            display: flex;
+        }
+
+        .mini-listing-card {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem;
+            transition: var(--trans);
+        }
+
+        .mini-listing-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .mini-listing-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: var(--surface-3);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-3);
+        }
+
+        .mini-listing-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .mini-listing-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .mini-listing-title a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .mini-listing-title a:hover {
+            color: var(--accent);
+        }
+
+        .mini-listing-sub {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.15rem;
+        }
+
+        .contact-card-actions {
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
+            margin-top: 0.2rem;
+            padding-top: 0.6rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Bottom Sections */
+        .bottom-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .unassigned-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+
+        .unassigned-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: var(--trans);
+        }
+
+        .unassigned-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .detected-tag-box {
+            background: rgba(248, 168, 75, 0.08);
+            border: 1px dashed rgba(248, 168, 75, 0.35);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            font-size: 0.8rem;
+            color: #fed7aa;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .link-select {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.55rem 0.75rem;
+            color: var(--text);
+            font-size: 0.82rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .link-select:focus {
+            border-color: var(--accent);
+        }
+
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-2);
         }
 
         /* Modal styling */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -280,16 +474,19 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             width: 100%;
-            max-width: 550px;
+            max-width: 580px;
             max-height: 90vh;
             overflow-y: auto;
             padding: 1.75rem;
             box-shadow: var(--shadow);
         }
 
+        .modal-lg { max-width: 720px; }
+
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
-        .modal-title { font-size: 1.2rem; font-weight: 700; }
-        .modal-close { background: none; border: none; color: var(--text-2); font-size: 1.2rem; cursor: pointer; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; }
+        .modal-close { background: none; border: none; color: var(--text-2); font-size: 1.4rem; cursor: pointer; }
+        .modal-close:hover { color: var(--text); }
 
         .form-group { margin-bottom: 1rem; }
         .form-label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2); margin-bottom: 0.4rem; }
@@ -304,13 +501,41 @@
             outline: none;
         }
         .form-input:focus { border-color: var(--accent); }
+
+        /* Merge suggestion card */
+        .merge-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .merge-comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .merge-contact-box {
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
     </style>
 </head>
 
 <body>
     <!-- Sidebar -->
     {% include 'components/sidebar.html' %}
-
 
     <!-- Main Content -->
     <div class="main-content">
@@ -319,36 +544,74 @@
                 <i class="fa-solid fa-address-book" style="color: var(--accent);"></i>
                 Gestionnaire de Contacts
             </div>
-            <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                 <span id="googleSyncBadge" class="badge badge-accent">
-                    <i class="fa-brands fa-google"></i> Google Contacts Sync: Prêt
+                    <i class="fa-brands fa-google"></i> Google Contacts Sync
                 </span>
+                <button class="btn btn-purple" onclick="openMergeModal()"><i class="fa-solid fa-code-merge"></i> Fusionner / Doublons</button>
                 <button class="btn btn-secondary" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> Nouvelle Agence</button>
                 <button class="btn btn-primary" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> Nouvel Agent</button>
             </div>
         </div>
 
-        <div class="tabs-header">
-            <div class="tab-btn active" id="tabAgentsBtn" onclick="switchTab('agents')"><i class="fa-solid fa-user-tie"></i> Agents Immobiliers</div>
-            <div class="tab-btn" id="tabAgenciesBtn" onclick="switchTab('agencies')"><i class="fa-solid fa-building-user"></i> Agences Immobilières</div>
-        </div>
-
         <div class="content-body">
+            <!-- Search bar -->
             <div class="search-bar-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, ville, email, raison sociale..." oninput="filterContacts()">
+                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
             </div>
 
-            <!-- Tab Agents -->
-            <div id="tabAgentsContent">
-                <div class="cards-grid" id="agentsGrid">
-                    <!-- Loaded dynamically -->
+            <!-- Unified Contacts Section -->
+            <div>
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fa-solid fa-users" style="color: var(--accent);"></i>
+                        Fiches Contacts
+                    </div>
+                    <span class="section-badge" id="contactsCountBadge">0 contact</span>
+                </div>
+
+                <div class="cards-grid" id="contactsGrid">
+                    <!-- Dynamic unified contact cards -->
                 </div>
             </div>
 
-            <!-- Tab Agencies -->
-            <div id="tabAgenciesContent" style="display: none;">
-                <div class="cards-grid" id="agenciesGrid">
-                    <!-- Loaded dynamically -->
+            <!-- Bottom Section 1: Detected Contacts in Listings -->
+            <div class="bottom-section" id="detectedSection">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--orange);"></i>
+                        Contacts détectés dans les annonces (sans fiche contact)
+                    </div>
+                    <span class="section-badge" id="detectedCountBadge">0 détecté</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-2);">
+                    Ces annonces contiennent des coordonnées dans leur description (nom, téléphone, mandataire, agence) mais ne sont pas encore reliées à une fiche contact officielle.
+                </p>
+                <div class="unassigned-grid" id="detectedGrid">
+                    <!-- Dynamic detected listings -->
+                </div>
+                <div class="pagination-container" id="detectedPagination">
+                    <!-- Pagination controls -->
+                </div>
+            </div>
+
+            <!-- Bottom Section 2: Unassigned Listings -->
+            <div class="bottom-section" id="unassignedSection">
+                <div class="section-header">
+                    <div class="section-title">
+                        <i class="fa-solid fa-link-slash" style="color: var(--red);"></i>
+                        Biens orphelins (sans contact rattaché)
+                    </div>
+                    <span class="section-badge" id="unassignedCountBadge">0 orphelin</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-2);">
+                    Associez rapidement un bien à un contact ou à une agence existante via la liste déroulante.
+                </p>
+                <div class="unassigned-grid" id="unassignedGrid">
+                    <!-- Dynamic unassigned listings -->
+                </div>
+                <div class="pagination-container" id="unassignedPagination">
+                    <!-- Pagination controls -->
                 </div>
             </div>
         </div>
@@ -363,6 +626,7 @@
             </div>
             <form id="agentForm" onsubmit="saveAgent(event)">
                 <input type="hidden" id="agentId">
+                <input type="hidden" id="agentListingIdToLink">
                 <div style="display: flex; gap: 0.75rem;">
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Prénom *</label>
@@ -375,12 +639,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Fonction / Rôle</label>
-                    <input type="text" id="agentTitle" class="form-input" placeholder="ex: Négociateur Immobilier, Agent Commercial">
+                    <input type="text" id="agentTitle" class="form-input" placeholder="ex: Conseiller Immobilier, Négociateur">
                 </div>
                 <div style="display: flex; gap: 0.75rem;">
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Téléphone portable</label>
-                        <input type="tel" id="agentPhoneMobile" class="form-input">
+                        <input type="tel" id="agentPhoneMobile" class="form-input" placeholder="ex: 06 12 34 56 78">
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Téléphone fixe</label>
@@ -400,16 +664,16 @@
                 <div style="display: flex; gap: 0.75rem;">
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Préférences communication</label>
-                        <input type="text" id="agentCommPrefs" class="form-input" placeholder="ex: SMS, Email">
+                        <input type="text" id="agentCommPrefs" class="form-input" placeholder="ex: SMS, Email, Appel">
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label class="form-label">Taux commission (%)</label>
-                        <input type="number" step="0.1" id="agentCommission" class="form-input" placeholder="ex: 5.0">
+                        <input type="number" step="0.1" id="agentCommission" class="form-input" placeholder="ex: 4.5">
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Notes internes</label>
-                    <textarea id="agentNotes" class="form-input" rows="3"></textarea>
+                    <textarea id="agentNotes" class="form-input" rows="3" placeholder="Disponibilités, secteur de prédilection..."></textarea>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeAgentModal()">Annuler</button>
@@ -430,11 +694,11 @@
                 <input type="hidden" id="agencyId">
                 <div class="form-group">
                     <label class="form-label">Raison sociale *</label>
-                    <input type="text" id="agencyLegalName" class="form-input" required>
+                    <input type="text" id="agencyLegalName" class="form-input" required placeholder="ex: SAS Immobilière des Alpes">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Nom commercial</label>
-                    <input type="text" id="agencyCommercialName" class="form-input">
+                    <label class="form-label">Nom commercial / Enseigne</label>
+                    <input type="text" id="agencyCommercialName" class="form-input" placeholder="ex: Alpes Immo Grenoble">
                 </div>
                 <div style="display: flex; gap: 0.75rem;">
                     <div class="form-group" style="flex: 1;">
@@ -460,16 +724,6 @@
                         <input type="text" id="agencySiret" class="form-input">
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.75rem;">
-                    <div class="form-group" style="flex: 1;">
-                        <label class="form-label">Carte Pro (Carte T)</label>
-                        <input type="text" id="agencyCarteT" class="form-input">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label class="form-label">Garant financier</label>
-                        <input type="text" id="agencyGuarantor" class="form-input">
-                    </div>
-                </div>
                 <div class="form-group">
                     <label class="form-label">Notes & Réputation</label>
                     <textarea id="agencyNotes" class="form-input" rows="3"></textarea>
@@ -482,41 +736,107 @@
         </div>
     </div>
 
+    <!-- Modal Merge -->
+    <div class="modal-overlay" id="mergeModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-code-merge" style="color: var(--purple);"></i> Fusionner des contacts</div>
+                <button class="modal-close" onclick="closeMergeModal()">&times;</button>
+            </div>
+
+            <div style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem;">
+                <button class="btn btn-secondary btn-sm" id="tabMergeSuggestionsBtn" onclick="switchMergeTab('suggestions')"><i class="fa-solid fa-wand-magic-sparkles"></i> Suggestions intelligentes</button>
+                <button class="btn btn-secondary btn-sm" id="tabMergeManualBtn" onclick="switchMergeTab('manual')"><i class="fa-solid fa-sliders"></i> Fusion manuelle</button>
+            </div>
+
+            <!-- Tab 1: Suggestions -->
+            <div id="mergeSuggestionsTab">
+                <div id="mergeSuggestionsContainer">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-2);"><i class="fa-solid fa-spinner fa-spin"></i> Recherche des doublons potentiels...</div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Manual -->
+            <div id="mergeManualTab" style="display: none;">
+                <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1rem;">
+                    Le contact <strong>Source</strong> sera fusionné dans le contact <strong>Cible</strong>. Tous les biens et visites attachés seront automatiquement transférés, et le contact source sera supprimé.
+                </p>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.25rem;">
+                    <div style="flex: 1;">
+                        <label class="form-label">Contact Source (à supprimer) *</label>
+                        <select id="mergeSourceSelect" class="form-input" onchange="validateMergeForm()"></select>
+                    </div>
+                    <div style="font-size: 1.3rem; color: var(--accent); margin-top: 1.2rem;">➔</div>
+                    <div style="flex: 1;">
+                        <label class="form-label">Contact Cible (conservé) *</label>
+                        <select id="mergeTargetSelect" class="form-input" onchange="validateMergeForm()"></select>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeMergeModal()">Annuler</button>
+                    <button type="button" id="confirmMergeBtn" class="btn btn-purple" onclick="executeManualMerge()" disabled><i class="fa-solid fa-code-merge"></i> Confirmer la fusion</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let agentsData = [];
+        let contactsData = [];
         let agenciesData = [];
+        let detectedPage = 1;
+        let unassignedPage = 1;
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadContacts();
+            loadAll();
+            checkGoogleStatus();
         });
 
-        async function loadContacts() {
-            try {
-                const [agentsRes, agenciesRes] = await Promise.all([
-                    fetch('/api/agents'),
-                    fetch('/api/agencies')
-                ]);
-                agentsData = await agentsRes.json();
-                agenciesData = await agenciesRes.json();
+        async function loadAll() {
+            await Promise.all([
+                loadContactsOverview(),
+                loadAgencies(),
+                loadDetectedContacts(1),
+                loadUnassignedListings(1)
+            ]);
+        }
 
-                updateAgencyDropdown();
-                renderAgents(agentsData);
-                renderAgencies(agenciesData);
-            } catch (err) {
-                console.error("Erreur de chargement des contacts:", err);
+        async function checkGoogleStatus() {
+            try {
+                const res = await fetch('/api/auth/google/status');
+                const data = await res.json();
+                const badge = document.getElementById('googleSyncBadge');
+                if (data.connected) {
+                    badge.className = 'badge badge-green';
+                    badge.innerHTML = `<i class="fa-brands fa-google"></i> Google: Connecté (${data.pilot_email || 'OK'})`;
+                } else {
+                    badge.className = 'badge badge-accent';
+                    badge.innerHTML = `<i class="fa-brands fa-google"></i> Google: Non connecté`;
+                }
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            if (tab === 'agents') {
-                document.getElementById('tabAgentsBtn').classList.add('active');
-                document.getElementById('tabAgentsContent').style.display = 'block';
-                document.getElementById('tabAgenciesContent').style.display = 'none';
-            } else {
-                document.getElementById('tabAgenciesBtn').classList.add('active');
-                document.getElementById('tabAgentsContent').style.display = 'none';
-                document.getElementById('tabAgenciesContent').style.display = 'block';
+        async function loadContactsOverview() {
+            try {
+                const q = document.getElementById('searchInput').value.trim();
+                const url = q ? `/api/contacts/overview?q=${encodeURIComponent(q)}` : '/api/contacts/overview';
+                const res = await fetch(url);
+                contactsData = await res.json();
+                renderContacts(contactsData);
+                document.getElementById('contactsCountBadge').textContent = `${contactsData.length} contact${contactsData.length > 1 ? 's' : ''}`;
+            } catch (err) {
+                console.error("Erreur chargement contacts:", err);
+            }
+        }
+
+        async function loadAgencies() {
+            try {
+                const res = await fetch('/api/agencies');
+                agenciesData = await res.json();
+                updateAgencyDropdown();
+            } catch (err) {
+                console.error("Erreur chargement agences:", err);
             }
         }
 
@@ -531,83 +851,314 @@
             });
         }
 
-        function renderAgents(list) {
-            const grid = document.getElementById('agentsGrid');
+        function renderContacts(list) {
+            const grid = document.getElementById('contactsGrid');
             if (!list.length) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2rem;">Aucun agent trouvé.</div>';
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);">Aucun contact trouvé.</div>';
                 return;
             }
-            grid.innerHTML = list.map(ag => `
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title">${ag.first_name} ${ag.last_name}</div>
-                            <div class="card-subtitle">${ag.title || 'Agent Immobilier'}</div>
+
+            grid.innerHTML = list.map(c => {
+                const isAgent = c.contact_type === 'agent';
+                const countAttached = (c.attached_listings || []).length;
+                const contactKey = `${c.contact_type}_${c.id}`;
+
+                let listingsHtml = '';
+                if (countAttached > 0) {
+                    listingsHtml = c.attached_listings.map(l => `
+                        <div class="mini-listing-card">
+                            ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                            <div class="mini-listing-details">
+                                <div class="mini-listing-title" title="${l.title || ''}">
+                                    <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
+                                </div>
+                                <div class="mini-listing-sub">
+                                    ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
+                                    ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
+                                    ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" title="Détacher ce bien du contact" onclick="unlinkListing(${l.id})">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
                         </div>
-                        ${ag.agency_name ? `<span class="badge badge-accent"><i class="fa-solid fa-building"></i> ${ag.agency_name}</span>` : '<span class="badge badge-green">Indépendant</span>'}
+                    `).join('');
+                }
+
+                return `
+                    <div class="contact-card" id="card_${contactKey}">
+                        <div class="contact-card-header">
+                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                <div class="contact-avatar ${isAgent ? '' : 'agency-avatar'}">
+                                    <i class="${isAgent ? 'fa-solid fa-user-tie' : 'fa-solid fa-building'}"></i>
+                                </div>
+                                <div>
+                                    <div class="contact-card-title">${c.name}</div>
+                                    <div class="contact-card-subtitle">${c.title || (isAgent ? 'Agent Immobilier' : 'Agence')}</div>
+                                </div>
+                            </div>
+                            ${c.agency_name ? `<span class="badge badge-accent"><i class="fa-solid fa-building"></i> ${c.agency_name}</span>` : (isAgent ? '<span class="badge badge-green">Indépendant</span>' : '<span class="badge badge-purple">Agence</span>')}
+                        </div>
+
+                        <div class="contact-info">
+                            ${c.phone_mobile ? `<div class="contact-info-item"><i class="fa-solid fa-mobile-screen"></i> <a href="tel:${c.phone_mobile}">${c.phone_mobile}</a></div>` : ''}
+                            ${c.phone_landline ? `<div class="contact-info-item"><i class="fa-solid fa-phone"></i> <a href="tel:${c.phone_landline}">${c.phone_landline}</a></div>` : ''}
+                            ${c.email ? `<div class="contact-info-item"><i class="fa-solid fa-envelope"></i> <a href="mailto:${c.email}">${c.email}</a></div>` : ''}
+                            ${c.city ? `<div class="contact-info-item"><i class="fa-solid fa-location-dot"></i> ${c.city}</div>` : ''}
+                            ${c.commission_rate ? `<div class="contact-info-item"><i class="fa-solid fa-percent"></i> Commission: ${c.commission_rate}%</div>` : ''}
+                            ${c.communication_prefs ? `<div class="contact-info-item"><i class="fa-solid fa-comments"></i> Préférence: ${c.communication_prefs}</div>` : ''}
+                            ${c.notes ? `<div class="contact-info-item" style="white-space: normal; font-size: 0.8rem; color: var(--text-3);"><i class="fa-solid fa-note-sticky"></i> ${c.notes}</div>` : ''}
+                        </div>
+
+                        <!-- Accordion for attached listings -->
+                        <div>
+                            <button class="attached-accordion-btn" onclick="toggleAttachedListings('${contactKey}')">
+                                <span><i class="fa-solid fa-house-chimney" style="color: var(--accent);"></i> Biens rattachés (${countAttached})</span>
+                                <i class="fa-solid fa-chevron-down" id="chevron_${contactKey}" style="transition: var(--trans);"></i>
+                            </button>
+                            <div class="attached-listings-container" id="attached_${contactKey}">
+                                ${countAttached > 0 ? listingsHtml : '<div style="font-size: 0.8rem; color: var(--text-3); padding: 0.5rem; text-align: center;">Aucun bien rattaché pour l\'instant.</div>'}
+                            </div>
+                        </div>
+
+                        <div class="contact-card-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('${c.contact_type}', ${c.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
+                            <button class="btn btn-secondary btn-sm" onclick="editContact('${c.contact_type}', ${c.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteContact('${c.contact_type}', ${c.id})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     </div>
-                    <div class="card-info">
-                        ${ag.phone_mobile ? `<div class="card-info-item"><i class="fa-solid fa-mobile-screen"></i> ${ag.phone_mobile}</div>` : ''}
-                        ${ag.phone_landline ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${ag.phone_landline}</div>` : ''}
-                        ${ag.email ? `<div class="card-info-item"><i class="fa-solid fa-envelope"></i> <a href="mailto:${ag.email}" style="color: var(--text);">${ag.email}</a></div>` : ''}
-                        ${ag.commission_rate ? `<div class="card-info-item"><i class="fa-solid fa-percent"></i> Commission: ${ag.commission_rate}%</div>` : ''}
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn btn-secondary" onclick="editAgent(${ag.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
-                        <button class="btn btn-danger" onclick="deleteAgent(${ag.id})"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        function renderAgencies(list) {
-            const grid = document.getElementById('agenciesGrid');
-            if (!list.length) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2rem;">Aucune agence trouvée.</div>';
-                return;
+        function toggleAttachedListings(contactKey) {
+            const container = document.getElementById(`attached_${contactKey}`);
+            const chevron = document.getElementById(`chevron_${contactKey}`);
+            const isCurrentlyOpen = container.classList.contains('open');
+
+            if (isCurrentlyOpen) {
+                container.classList.remove('open');
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                container.classList.add('open');
+                chevron.style.transform = 'rotate(180deg)';
             }
-            grid.innerHTML = list.map(ag => `
-                <div class="card">
-                    <div class="card-header">
-                        <div>
-                            <div class="card-title">${ag.commercial_name || ag.legal_name}</div>
-                            <div class="card-subtitle">${ag.legal_name}</div>
-                        </div>
-                        ${ag.city ? `<span class="badge badge-accent"><i class="fa-solid fa-location-dot"></i> ${ag.city}</span>` : ''}
-                    </div>
-                    <div class="card-info">
-                        ${ag.phone ? `<div class="card-info-item"><i class="fa-solid fa-phone"></i> ${ag.phone}</div>` : ''}
-                        ${ag.email ? `<div class="card-info-item"><i class="fa-solid fa-envelope"></i> ${ag.email}</div>` : ''}
-                        ${ag.siret ? `<div class="card-info-item"><i class="fa-solid fa-id-card"></i> SIRET: ${ag.siret}</div>` : ''}
-                        ${ag.carte_t_number ? `<div class="card-info-item"><i class="fa-solid fa-certificate"></i> Carte T: ${ag.carte_t_number}</div>` : ''}
-                    </div>
-                    <div class="card-actions">
-                        <button class="btn btn-secondary" onclick="editAgency(${ag.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
-                        <button class="btn btn-danger" onclick="deleteAgency(${ag.id})"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         function filterContacts() {
-            const q = document.getElementById('searchInput').value.toLowerCase().trim();
-            const filteredAgents = agentsData.filter(a =>
-                (a.first_name + ' ' + a.last_name).toLowerCase().includes(q) ||
-                (a.email || '').toLowerCase().includes(q) ||
-                (a.agency_name || '').toLowerCase().includes(q)
-            );
-            const filteredAgencies = agenciesData.filter(a =>
-                (a.legal_name || '').toLowerCase().includes(q) ||
-                (a.commercial_name || '').toLowerCase().includes(q) ||
-                (a.city || '').toLowerCase().includes(q)
-            );
-            renderAgents(filteredAgents);
-            renderAgencies(filteredAgencies);
+            loadContactsOverview();
         }
 
+        // --- Detected Contacts in Listings ---
+        async function loadDetectedContacts(page = 1) {
+            detectedPage = page;
+            try {
+                const res = await fetch(`/api/contacts/detected?page=${page}&limit=15`);
+                const data = await res.json();
+                renderDetectedContacts(data);
+            } catch (err) {
+                console.error("Erreur contacts détectés:", err);
+            }
+        }
+
+        function renderDetectedContacts(data) {
+            const grid = document.getElementById('detectedGrid');
+            const badge = document.getElementById('detectedCountBadge');
+            badge.textContent = `${data.total} détecté${data.total > 1 ? 's' : ''}`;
+
+            if (!data.items.length) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 1.5rem;">Aucune annonce avec contact non structuré en attente.</div>';
+                document.getElementById('detectedPagination').innerHTML = '';
+                return;
+            }
+
+            grid.innerHTML = data.items.map(item => {
+                const l = item.listing;
+                const d = item.detected;
+                const detectedJson = encodeURIComponent(JSON.stringify(d));
+
+                return `
+                    <div class="unassigned-card">
+                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                            ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="mini-listing-title">
+                                    <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
+                                </div>
+                                <div class="mini-listing-sub">
+                                    ${l.price ? `<span>${Math.round(l.price).toLocaleString('fr-FR')} €</span>` : ''}
+                                    ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detected-tag-box">
+                            <div style="font-weight: 700; color: var(--orange); display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="fa-solid fa-sparkles"></i> Détecté dans le texte :
+                            </div>
+                            ${d.agent_name ? `<div><i class="fa-solid fa-user"></i> <strong>${d.agent_name}</strong></div>` : ''}
+                            ${d.agency_name ? `<div><i class="fa-solid fa-building"></i> <strong>${d.agency_name}</strong></div>` : ''}
+                            ${(d.phones || []).length ? `<div><i class="fa-solid fa-phone"></i> ${d.phones.join(', ')}</div>` : ''}
+                            ${(d.emails || []).length ? `<div><i class="fa-solid fa-envelope"></i> ${d.emails.join(', ')}</div>` : ''}
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                            <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
+                                <i class="fa-solid fa-user-plus"></i> Créer la fiche contact & Lier
+                            </button>
+                            <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                                <option value="">-- Ou lier à un contact existant --</option>
+                                ${getContactSelectOptions()}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            renderPagination('detectedPagination', data.page, data.pages, 'loadDetectedContacts');
+        }
+
+        // --- Unassigned Listings ---
+        async function loadUnassignedListings(page = 1) {
+            unassignedPage = page;
+            try {
+                const res = await fetch(`/api/contacts/unassigned?page=${page}&limit=15`);
+                const data = await res.json();
+                renderUnassignedListings(data);
+            } catch (err) {
+                console.error("Erreur biens orphelins:", err);
+            }
+        }
+
+        function renderUnassignedListings(data) {
+            const grid = document.getElementById('unassignedGrid');
+            const badge = document.getElementById('unassignedCountBadge');
+            badge.textContent = `${data.total} orphelin${data.total > 1 ? 's' : ''}`;
+
+            if (!data.items.length) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 1.5rem;">Tous vos biens ont un contact ou une agence attribuée !</div>';
+                document.getElementById('unassignedPagination').innerHTML = '';
+                return;
+            }
+
+            grid.innerHTML = data.items.map(l => `
+                <div class="unassigned-card">
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="mini-listing-title">
+                                <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
+                            </div>
+                            <div class="mini-listing-sub">
+                                ${l.price ? `<span>${Math.round(l.price).toLocaleString('fr-FR')} €</span>` : ''}
+                                ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
+                                ${l.area ? `<span>${l.area} m²</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <select class="link-select" onchange="quickLinkListing(${l.id}, this.value)">
+                            <option value="">-- Rattacher à un contact existant --</option>
+                            ${getContactSelectOptions()}
+                        </select>
+                    </div>
+                </div>
+            `).join('');
+
+            renderPagination('unassignedPagination', data.page, data.pages, 'loadUnassignedListings');
+        }
+
+        function getContactSelectOptions() {
+            return contactsData.map(c => `
+                <option value="${c.contact_type}:${c.id}">
+                    ${c.contact_type === 'agent' ? '👤 Agent' : '🏢 Agence'} — ${c.name} ${c.agency_name ? '(' + c.agency_name + ')' : ''}
+                </option>
+            `).join('');
+        }
+
+        function renderPagination(containerId, current, totalPages, fetchFnName) {
+            const container = document.getElementById(containerId);
+            if (totalPages <= 1) {
+                container.innerHTML = `<span>Page ${current} / ${totalPages}</span>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div>Page <strong>${current}</strong> sur <strong>${totalPages}</strong></div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm" ${current <= 1 ? 'disabled' : ''} onclick="${fetchFnName}(${current - 1})"><i class="fa-solid fa-chevron-left"></i> Précédent</button>
+                    <button class="btn btn-secondary btn-sm" ${current >= totalPages ? 'disabled' : ''} onclick="${fetchFnName}(${current + 1})">Suivant <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            `;
+        }
+
+        // --- Quick Link & Unlink Actions ---
+        async function quickLinkListing(listingId, contactValue) {
+            if (!contactValue) return;
+            const [type, idStr] = contactValue.split(':');
+            const id = parseInt(idStr);
+
+            const payload = { listing_id: listingId };
+            if (type === 'agent') payload.agent_id = id;
+            else payload.agency_id = id;
+
+            try {
+                const res = await fetch('/api/contacts/link-listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    loadAll();
+                }
+            } catch (err) {
+                console.error("Erreur rattachement bien:", err);
+            }
+        }
+
+        async function unlinkListing(listingId) {
+            if (!confirm("Voulez-vous détacher ce bien de son contact ?")) return;
+            try {
+                const res = await fetch('/api/contacts/unlink-listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: listingId })
+                });
+                if (res.ok) {
+                    loadAll();
+                }
+            } catch (err) {
+                console.error("Erreur détachement bien:", err);
+            }
+        }
+
+        function createContactFromDetected(listingId, detectedEncoded) {
+            const detected = JSON.parse(decodeURIComponent(detectedEncoded));
+            openAgentModal();
+            document.getElementById('agentListingIdToLink').value = listingId;
+
+            if (detected.first_name) document.getElementById('agentFirstName').value = detected.first_name;
+            if (detected.last_name) document.getElementById('agentLastName').value = detected.last_name;
+            if (detected.phones && detected.phones[0]) document.getElementById('agentPhoneMobile').value = detected.phones[0];
+            if (detected.emails && detected.emails[0]) document.getElementById('agentEmail').value = detected.emails[0];
+            
+            if (detected.agency_name) {
+                // Check if agency exists in dropdown
+                const matchingAg = agenciesData.find(a => 
+                    (a.commercial_name && a.commercial_name.toLowerCase().includes(detected.agency_name.toLowerCase())) ||
+                    (a.legal_name && a.legal_name.toLowerCase().includes(detected.agency_name.toLowerCase()))
+                );
+                if (matchingAg) {
+                    document.getElementById('agentAgencyId').value = matchingAg.id;
+                }
+            }
+        }
+
+        // --- Agent Modal & CRUD ---
         function openAgentModal() {
             document.getElementById('agentForm').reset();
             document.getElementById('agentId').value = '';
+            document.getElementById('agentListingIdToLink').value = '';
             document.getElementById('agentModalTitle').textContent = 'Nouvel Agent';
             document.getElementById('agentModal').classList.add('active');
         }
@@ -616,20 +1167,11 @@
             document.getElementById('agentModal').classList.remove('active');
         }
 
-        function openAgencyModal() {
-            document.getElementById('agencyForm').reset();
-            document.getElementById('agencyId').value = '';
-            document.getElementById('agencyModalTitle').textContent = 'Nouvelle Agence';
-            document.getElementById('agencyModal').classList.add('active');
-        }
-
-        function closeAgencyModal() {
-            document.getElementById('agencyModal').classList.remove('active');
-        }
-
         async function saveAgent(e) {
             e.preventDefault();
             const id = document.getElementById('agentId').value;
+            const listingIdToLink = document.getElementById('agentListingIdToLink').value;
+
             const payload = {
                 first_name: document.getElementById('agentFirstName').value,
                 last_name: document.getElementById('agentLastName').value,
@@ -646,38 +1188,31 @@
             const method = id ? 'PUT' : 'POST';
             const url = id ? `/api/agents/${id}` : '/api/agents';
 
-            await fetch(url, {
+            const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+
+            if (res.ok && listingIdToLink) {
+                const savedAgent = await res.json();
+                await quickLinkListing(parseInt(listingIdToLink), `agent:${savedAgent.id}`);
+            }
+
             closeAgentModal();
-            loadContacts();
+            loadAll();
         }
 
-        async function editAgent(id) {
-            const agent = agentsData.find(a => a.id === id);
-            if (!agent) return;
-            document.getElementById('agentId').value = agent.id;
-            document.getElementById('agentFirstName').value = agent.first_name || '';
-            document.getElementById('agentLastName').value = agent.last_name || '';
-            document.getElementById('agentTitle').value = agent.title || '';
-            document.getElementById('agentPhoneMobile').value = agent.phone_mobile || '';
-            document.getElementById('agentPhoneLandline').value = agent.phone_landline || '';
-            document.getElementById('agentEmail').value = agent.email || '';
-            document.getElementById('agentAgencyId').value = agent.agency_id || '';
-            document.getElementById('agentCommPrefs').value = agent.communication_prefs || '';
-            document.getElementById('agentCommission').value = agent.commission_rate || '';
-            document.getElementById('agentNotes').value = agent.internal_notes || '';
-
-            document.getElementById('agentModalTitle').textContent = 'Modifier Agent';
-            document.getElementById('agentModal').classList.add('active');
+        // --- Agency Modal & CRUD ---
+        function openAgencyModal() {
+            document.getElementById('agencyForm').reset();
+            document.getElementById('agencyId').value = '';
+            document.getElementById('agencyModalTitle').textContent = 'Nouvelle Agence';
+            document.getElementById('agencyModal').classList.add('active');
         }
 
-        async function deleteAgent(id) {
-            if (!confirm('Voulez-vous vraiment supprimer cet agent ?')) return;
-            await fetch(`/api/agents/${id}`, { method: 'DELETE' });
-            loadContacts();
+        function closeAgencyModal() {
+            document.getElementById('agencyModal').classList.remove('active');
         }
 
         async function saveAgency(e) {
@@ -691,8 +1226,6 @@
                 website: document.getElementById('agencyWebsite').value || null,
                 city: document.getElementById('agencyCity').value || null,
                 siret: document.getElementById('agencySiret').value || null,
-                carte_t_number: document.getElementById('agencyCarteT').value || null,
-                guarantor: document.getElementById('agencyGuarantor').value || null,
                 reputation_notes: document.getElementById('agencyNotes').value || null,
             };
 
@@ -704,33 +1237,196 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+
             closeAgencyModal();
-            loadContacts();
+            loadAll();
         }
 
-        async function editAgency(id) {
-            const agency = agenciesData.find(a => a.id === id);
-            if (!agency) return;
-            document.getElementById('agencyId').value = agency.id;
-            document.getElementById('agencyLegalName').value = agency.legal_name || '';
-            document.getElementById('agencyCommercialName').value = agency.commercial_name || '';
-            document.getElementById('agencyPhone').value = agency.phone || '';
-            document.getElementById('agencyEmail').value = agency.email || '';
-            document.getElementById('agencyWebsite').value = agency.website || '';
-            document.getElementById('agencyCity').value = agency.city || '';
-            document.getElementById('agencySiret').value = agency.siret || '';
-            document.getElementById('agencyCarteT').value = agency.carte_t_number || '';
-            document.getElementById('agencyGuarantor').value = agency.guarantor || '';
-            document.getElementById('agencyNotes').value = agency.reputation_notes || '';
+        async function editContact(type, id) {
+            if (type === 'agent') {
+                const res = await fetch(`/api/agents/${id}`);
+                const agent = await res.json();
+                document.getElementById('agentId').value = agent.id;
+                document.getElementById('agentFirstName').value = agent.first_name || '';
+                document.getElementById('agentLastName').value = agent.last_name || '';
+                document.getElementById('agentTitle').value = agent.title || '';
+                document.getElementById('agentPhoneMobile').value = agent.phone_mobile || '';
+                document.getElementById('agentPhoneLandline').value = agent.phone_landline || '';
+                document.getElementById('agentEmail').value = agent.email || '';
+                document.getElementById('agentAgencyId').value = agent.agency_id || '';
+                document.getElementById('agentCommPrefs').value = agent.communication_prefs || '';
+                document.getElementById('agentCommission').value = agent.commission_rate || '';
+                document.getElementById('agentNotes').value = agent.internal_notes || '';
 
-            document.getElementById('agencyModalTitle').textContent = 'Modifier Agence';
-            document.getElementById('agencyModal').classList.add('active');
+                document.getElementById('agentModalTitle').textContent = 'Modifier Agent';
+                document.getElementById('agentModal').classList.add('active');
+            } else {
+                const res = await fetch(`/api/agencies/${id}`);
+                const agency = await res.json();
+                document.getElementById('agencyId').value = agency.id;
+                document.getElementById('agencyLegalName').value = agency.legal_name || '';
+                document.getElementById('agencyCommercialName').value = agency.commercial_name || '';
+                document.getElementById('agencyPhone').value = agency.phone || '';
+                document.getElementById('agencyEmail').value = agency.email || '';
+                document.getElementById('agencyWebsite').value = agency.website || '';
+                document.getElementById('agencyCity').value = agency.city || '';
+                document.getElementById('agencySiret').value = agency.siret || '';
+                document.getElementById('agencyNotes').value = agency.reputation_notes || '';
+
+                document.getElementById('agencyModalTitle').textContent = 'Modifier Agence';
+                document.getElementById('agencyModal').classList.add('active');
+            }
         }
 
-        async function deleteAgency(id) {
-            if (!confirm('Voulez-vous vraiment supprimer cette agence ?')) return;
-            await fetch(`/api/agencies/${id}`, { method: 'DELETE' });
-            loadContacts();
+        async function deleteContact(type, id) {
+            const label = type === 'agent' ? 'cet agent' : 'cette agence';
+            if (!confirm(`Voulez-vous vraiment supprimer ${label} ? Ses biens rattachés deviendront orphelins.`)) return;
+            const url = type === 'agent' ? `/api/agents/${id}` : `/api/agencies/${id}`;
+            await fetch(url, { method: 'DELETE' });
+            loadAll();
+        }
+
+        // --- Merge Modal & Logic ---
+        function openMergeModal() {
+            populateMergeSelects();
+            loadMergeSuggestions();
+            switchMergeTab('suggestions');
+            document.getElementById('mergeModal').classList.add('active');
+        }
+
+        function openMergeWithSource(sourceType, sourceId) {
+            openMergeModal();
+            switchMergeTab('manual');
+            document.getElementById('mergeSourceSelect').value = `${sourceType}:${sourceId}`;
+            validateMergeForm();
+        }
+
+        function closeMergeModal() {
+            document.getElementById('mergeModal').classList.remove('active');
+        }
+
+        function switchMergeTab(tab) {
+            const btnSugg = document.getElementById('tabMergeSuggestionsBtn');
+            const btnMan = document.getElementById('tabMergeManualBtn');
+            const tabSugg = document.getElementById('mergeSuggestionsTab');
+            const tabMan = document.getElementById('mergeManualTab');
+
+            if (tab === 'suggestions') {
+                btnSugg.className = 'btn btn-primary btn-sm';
+                btnMan.className = 'btn btn-secondary btn-sm';
+                tabSugg.style.display = 'block';
+                tabMan.style.display = 'none';
+            } else {
+                btnSugg.className = 'btn btn-secondary btn-sm';
+                btnMan.className = 'btn btn-primary btn-sm';
+                tabSugg.style.display = 'none';
+                tabMan.style.display = 'block';
+            }
+        }
+
+        function populateMergeSelects() {
+            const src = document.getElementById('mergeSourceSelect');
+            const tgt = document.getElementById('mergeTargetSelect');
+            const opts = '<option value="">-- Sélectionner un contact --</option>' + getContactSelectOptions();
+            src.innerHTML = opts;
+            tgt.innerHTML = opts;
+        }
+
+        function validateMergeForm() {
+            const src = document.getElementById('mergeSourceSelect').value;
+            const tgt = document.getElementById('mergeTargetSelect').value;
+            const btn = document.getElementById('confirmMergeBtn');
+
+            if (src && tgt && src !== tgt) {
+                const [srcType] = src.split(':');
+                const [tgtType] = tgt.split(':');
+                if (srcType === tgtType) {
+                    btn.disabled = false;
+                    return;
+                }
+            }
+            btn.disabled = true;
+        }
+
+        async function loadMergeSuggestions() {
+            const container = document.getElementById('mergeSuggestionsContainer');
+            try {
+                const res = await fetch('/api/contacts/merge-suggestions');
+                const list = await res.json();
+
+                if (!list.length) {
+                    container.innerHTML = '<div style="text-align: center; padding: 2.5rem; color: var(--text-2);"><i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i> Aucun doublon détecté parmi vos fiches contacts.</div>';
+                    return;
+                }
+
+                container.innerHTML = list.map(item => `
+                    <div class="merge-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="badge badge-orange"><i class="fa-solid fa-chart-pie"></i> Similarité ${item.similarity_score}%</span>
+                            <span style="font-size: 0.8rem; color: var(--text-2);"><i class="fa-solid fa-circle-info"></i> ${item.reason}</span>
+                        </div>
+                        <div class="merge-comparison">
+                            <div class="merge-contact-box">
+                                <div style="font-weight: 700; color: var(--text);">${item.source.name}</div>
+                                ${item.source.email ? `<div><i class="fa-solid fa-envelope"></i> ${item.source.email}</div>` : ''}
+                                ${item.source.phone ? `<div><i class="fa-solid fa-phone"></i> ${item.source.phone}</div>` : ''}
+                                ${item.source.agency ? `<div><i class="fa-solid fa-building"></i> ${item.source.agency}</div>` : ''}
+                            </div>
+                            <div style="color: var(--purple); font-size: 1.2rem;">➔</div>
+                            <div class="merge-contact-box">
+                                <div style="font-weight: 700; color: var(--text);">${item.target.name}</div>
+                                ${item.target.email ? `<div><i class="fa-solid fa-envelope"></i> ${item.target.email}</div>` : ''}
+                                ${item.target.phone ? `<div><i class="fa-solid fa-phone"></i> ${item.target.phone}</div>` : ''}
+                                ${item.target.agency ? `<div><i class="fa-solid fa-building"></i> ${item.target.agency}</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <button class="btn btn-purple btn-sm" onclick="performMerge('${item.source.type}', ${item.source.id}, '${item.target.type}', ${item.target.id})">
+                                <i class="fa-solid fa-code-merge"></i> Fusionner vers '${item.target.name}'
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<div style="color: var(--red); text-align: center;">Erreur de chargement des suggestions.</div>';
+            }
+        }
+
+        async function performMerge(srcType, srcId, tgtType, tgtId) {
+            if (!confirm("Confirmez-vous la fusion de ce contact ? Les biens et visites rattachés seront transférés.")) return;
+
+            try {
+                const res = await fetch('/api/contacts/merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_type: srcType,
+                        source_id: srcId,
+                        target_type: tgtType,
+                        target_id: tgtId
+                    })
+                });
+
+                if (res.ok) {
+                    closeMergeModal();
+                    loadAll();
+                } else {
+                    const err = await res.json();
+                    alert("Erreur de fusion: " + (err.detail || "Échec"));
+                }
+            } catch (err) {
+                console.error("Erreur fusion:", err);
+            }
+        }
+
+        async function executeManualMerge() {
+            const src = document.getElementById('mergeSourceSelect').value;
+            const tgt = document.getElementById('mergeTargetSelect').value;
+            if (!src || !tgt) return;
+
+            const [srcType, srcId] = src.split(':');
+            const [tgtType, tgtId] = tgt.split(':');
+            await performMerge(srcType, parseInt(srcId), tgtType, parseInt(tgtId));
         }
     </script>
 </body>

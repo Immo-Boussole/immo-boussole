@@ -364,3 +364,54 @@ class VisitResponse(BaseModel):
         from_attributes = True
 
 
+class AttachedListingSummary(BaseModel):
+    id: int
+    title: Optional[str] = None
+    price: Optional[float] = None
+    city: Optional[str] = None
+    area: Optional[float] = None
+    rooms: Optional[int] = None
+    photo_thumbnail: Optional[str] = None
+    url: Optional[str] = None
+    status: Optional[str] = None
+
+
+class UnifiedContactItem(BaseModel):
+    contact_type: str  # "agent" or "agency"
+    id: int
+    name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    title: Optional[str] = None
+    agency_id: Optional[int] = None
+    agency_name: Optional[str] = None
+    phone_mobile: Optional[str] = None
+    phone_landline: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    city: Optional[str] = None
+    notes: Optional[str] = None
+    commission_rate: Optional[float] = None
+    communication_prefs: Optional[str] = None
+    google_contact_resource_name: Optional[str] = None
+    attached_listings: List[AttachedListingSummary] = []
+
+
+class LinkListingRequest(BaseModel):
+    listing_id: int
+    agent_id: Optional[int] = None
+    agency_id: Optional[int] = None
+
+
+class UnlinkListingRequest(BaseModel):
+    listing_id: int
+
+
+class MergeContactsRequest(BaseModel):
+    source_type: str  # "agent" or "agency"
+    source_id: int
+    target_type: str  # "agent" or "agency"
+    target_id: int
+
+
+

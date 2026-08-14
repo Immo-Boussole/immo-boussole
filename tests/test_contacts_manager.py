@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""
+Unit and integration tests for the enriched Contact Manager:
+- Regex and heuristic contact extraction from descriptions
+- Unified contact overview
+- Listing linking and unlinking
+- Contact merge and transfer of attached listings & visits
+- Unassigned & detected listings endpoints
+"""
+import sys
+import os
+import datetime
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import SessionLocal, run_migrations
+from app.models import Agency, Agent, Listing, Visit, VisitContact, Source, ListingStatus
+from app.services import extract_contact_info_from_text
+from app.api.v1.endpoints.contacts import (
+    get_contacts_overview,
+    link_listing_to_contact,
+    unlink_listing_from_contact,
+    list_unassigned_listings,
+    list_detected_contacts,
+    get_merge_suggestions,
+    merge_contacts
+)
+from app import schemas
+
+
+def test_contact_extraction_from_description():
+    # 1. Text with agent name, agency and mobile phone
+    desc1 = "Magnifique appartement T3 lumineux. Contactez Marc Dupont au 06 12 34 56 78 de chez iad France pour organiser une visite."
+    info1 = extract_contact_info_from_text(desc1)
+    assert info1["has_detected"] is True
+    assert "06 12 34 56 78" in info1["phones"]
+    assert info1["first_name"] == "Marc"
+    assert info1["last_name"] == "DUPONT"
+    assert info1["agency_name"] == "iad France"
+
+    # 2. Text with email and phone
+    desc2 = "Maison de village à rénover. Pour plus d'informations: contact@immo-alpes.fr ou au 04.76.11.22.33. Agence Immobilière Centrale."
+    info2 = extract_contact_info_from_text(desc2)
+    assert info2["has_detected"] is True
+    assert "04 76 11 22 33" in info2["phones"]
+    assert "contact@immo-alpes.fr" in info2["emails"]
+    assert info2["agency_name"] is not None
+
+    # 3. Empty text
+    info3 = extract_contact_info_from_text("")
+    assert info3["has_detected"] is False
+
+
+def test_contacts_manager_full_flow():
+    run_migrations()
+    db = SessionLocal()
+
+    try:
+        # 1. Setup Agency & Agent
+        agency = Agency(
+            legal_name="Agence du Centre SAS",
+            commercial_name="Centre Immo Lyon",
+            city="Lyon",
+            phone="0478000000",
+            email="contact@centre-immo.fr"
+        )
+        db.add(agency)
+        db.commit()
+        db.refresh(agency)
+
+        agent1 = Agent(
+            first_name="Jean",
+            last_name="Dupont",
+            title="Négociateur",
+            phone_mobile="0611223344",
+            email="j.dupont@centre-immo.fr",
+            agency_id=agency.id
+        )
+        agent2 = Agent(
+            first_name="Jean",
+            last_name="Dupond",  # Similar name for merge test
+            title="Agent Commercial",
+            phone_mobile="0611223344",  # Same phone
+            email="j.dupond@gmail.com"
+        )
+        db.add_all([agent1, agent2])
+        db.commit()
+        db.refresh(agent1)
+        db.refresh(agent2)
+
+        # 2. Create Listings (one unassigned with detected contact, one normal)
+        listing1 = Listing(
+            title="Appartement T2 Proche Gare",
+            url=f"http://example.com/test-cm-1-{datetime.datetime.now().timestamp()}",
+            price=185000.0,
+            city="Lyon",
+            area=45.0,
+            rooms=2,
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE,
+            description_text="Superbe T2 rénové. Contactez Jean Dupont au 06 11 22 33 44 pour visiter."
+        )
+        listing2 = Listing(
+            title="Maison avec Jardin",
+            url=f"http://example.com/test-cm-2-{datetime.datetime.now().timestamp()}",
+            price=390000.0,
+            city="Lyon",
+            area=110.0,
+            rooms=5,
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE,
+            main_agent_id=agent2.id
+        )
+        db.add_all([listing1, listing2])
+        db.commit()
+        db.refresh(listing1)
+        db.refresh(listing2)
+
+        # 3. Test link listing
+        link_res = link_listing_to_contact(
+            schemas.LinkListingRequest(listing_id=listing1.id, agent_id=agent1.id),
+            db=db
+        )
+        assert link_res["status"] == "success"
+        db.refresh(listing1)
+        assert listing1.main_agent_id == agent1.id
+        assert listing1.agency_id == agency.id
+
+        # 4. Test contacts overview
+        overview = get_contacts_overview(db=db)
+        assert len(overview) >= 2
+        agent1_item = next((item for item in overview if item.id == agent1.id and item.contact_type == "agent"), None)
+        assert agent1_item is not None
+        assert len(agent1_item.attached_listings) == 1
+        assert agent1_item.attached_listings[0].id == listing1.id
+
+        # 5. Test unlink listing
+        unlink_res = unlink_listing_from_contact(
+            schemas.UnlinkListingRequest(listing_id=listing1.id),
+            db=db
+        )
+        assert unlink_res["status"] == "success"
+        db.refresh(listing1)
+        assert listing1.main_agent_id is None
+
+        # 6. Test unassigned listings endpoint
+        unassigned_res = list_unassigned_listings(page=1, limit=10, db=db)
+        assert unassigned_res["total"] >= 1
+        assert any(item["id"] == listing1.id for item in unassigned_res["items"])
+
+        # 7. Test detected contacts endpoint
+        detected_res = list_detected_contacts(page=1, limit=10, db=db)
+        assert detected_res["total"] >= 1
+        detected_item = next((item for item in detected_res["items"] if item["listing"]["id"] == listing1.id), None)
+        assert detected_item is not None
+        assert detected_item["detected"]["has_detected"] is True
+
+        # 8. Test merge suggestions
+        suggestions = get_merge_suggestions(db=db)
+        assert len(suggestions) >= 1
+        # Similar name or same phone between agent1 and agent2
+        assert any(s["similarity_score"] >= 65 for s in suggestions)
+
+        # 9. Test merge contacts (agent2 -> agent1)
+        # Agent2 has listing2 attached
+        merge_res = merge_contacts(
+            schemas.MergeContactsRequest(
+                source_type="agent",
+                source_id=agent2.id,
+                target_type="agent",
+                target_id=agent1.id
+            ),
+            db=db
+        )
+        assert merge_res["status"] == "success"
+        db.refresh(listing2)
+        # Verify listing2 has been transferred to agent1
+        assert listing2.main_agent_id == agent1.id
+        # Verify agent2 is deleted
+        deleted_agent2 = db.query(Agent).filter(Agent.id == agent2.id).first()
+        assert deleted_agent2 is None
+
+        # Cleanup
+        db.delete(listing1)
+        db.delete(listing2)
+        db.delete(agent1)
+        db.delete(agency)
+        db.commit()
+
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    print("Running test_contact_extraction_from_description()...")
+    test_contact_extraction_from_description()
+    print("Running test_contacts_manager_full_flow()...")
+    test_contacts_manager_full_flow()
+    print("ALL CONTACT MANAGER TESTS PASSED SUCCESSFULLY!")

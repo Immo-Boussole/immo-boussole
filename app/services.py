@@ -1059,3 +1059,104 @@ def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
     # Sort by score descending
     potential_pairs.sort(key=lambda x: x["score"], reverse=True)
     return potential_pairs
+
+
+def extract_contact_info_from_text(text: str) -> dict:
+    """
+    Extracts structured contact details (names, phones, emails, agencies) from raw text / descriptions.
+    """
+    if not text or not isinstance(text, str):
+        return {"has_detected": False, "phones": [], "emails": [], "agent_name": None, "agency_name": None, "first_name": None, "last_name": None}
+
+    # 1. Phone numbers (French formats)
+    phone_pattern = re.compile(r'(?:(?:\+|00)33[\s.-]?[1-9]|0[1-9])(?:[\s.-]?\d{2}){4}')
+    phones_raw = phone_pattern.findall(text)
+    phones = []
+    for p in phones_raw:
+        cleaned = re.sub(r'[\s.-]', '', p)
+        if len(cleaned) == 10 and cleaned.startswith('0'):
+            formatted = f"{cleaned[:2]} {cleaned[2:4]} {cleaned[4:6]} {cleaned[6:8]} {cleaned[8:10]}"
+            if formatted not in phones:
+                phones.append(formatted)
+        elif cleaned.startswith('+33') and len(cleaned) == 12:
+            formatted = f"0{cleaned[3]} {cleaned[4:6]} {cleaned[6:8]} {cleaned[8:10]} {cleaned[10:12]}"
+            if formatted not in phones:
+                phones.append(formatted)
+        elif p not in phones:
+            phones.append(p.strip())
+
+    # 2. Emails
+    email_pattern = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+    emails_raw = email_pattern.findall(text)
+    emails = []
+    for e in emails_raw:
+        e_clean = e.strip().lower()
+        if not any(dummy in e_clean for dummy in ["example.com", "placeholder", "test@"]):
+            if e_clean not in emails:
+                emails.append(e_clean)
+
+    # 3. Known Networks & Agencies
+    known_networks = [
+        "iad France", "iad", "Safti", "Capifrance", "Optimhome", "MegAgence", 
+        "BSK Immobilier", "BSK", "Efficity", "Dr House Immo", "Proprietes-privees", 
+        "Orpi", "Century 21", "Laforêt", "Guy Hoquet", "Stéphane Plaza Immobilier", 
+        "Stéphane Plaza", "Foncia", "Human Immobilier", "Nexity", "Square Habitat", 
+        "Arthurimmo", "Nestenn", "ERA Immobilier", "ERA", "Cimm Immobilier", "L'Adresse"
+    ]
+    detected_agency = None
+    for net in known_networks:
+        pattern = rf'\b{re.escape(net)}\b'
+        if re.search(pattern, text, re.IGNORECASE):
+            detected_agency = net
+            break
+
+    if not detected_agency:
+        agency_match = re.search(r'\b(?:agence|cabinet|groupe|immobili[eè]re)\s+([A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+(?:\s+[A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+){0,3})', text, re.IGNORECASE)
+        if agency_match:
+            cand = agency_match.group(0).strip()
+            if len(cand) > 5 and len(cand) < 40:
+                detected_agency = cand
+
+    # 4. Agent Name patterns
+    detected_name = None
+    first_name = None
+    last_name = None
+
+    stop_words = {
+        "au", "aux", "à", "a", "pour", "sur", "tel", "tél", "le", "la", "les", "en", "de", "du", "des", 
+        "france", "immobilier", "immobilière", "agence", "honoraires", "mandat", "charge", "vendeur", 
+        "acquéreur", "prix", "chez", "par", "votre", "notre", "contact", "visite", "visiter", "disposition"
+    }
+
+    name_patterns = [
+        r'(?:contactez|contacter|votre\s+conseill(?:er|ère)|agent\s+commercial|négociat(?:eur|rice)|mandataire)\s*(?:indépendant[e]?)?\s*(?::|-)?\s*([A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+(?:\s+[A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+){1,2})',
+        r'(?:M\.|Mme|Monsieur|Madame)\s+([A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+(?:\s+[A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+){1,2})',
+        r'(?:EI|RSAC)\s+([A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+(?:\s+[A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+){1,2})',
+        r'Contact\s*:\s*([A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+(?:\s+[A-ZÀ-ÖØ-ß][a-zà-öø-ÿ\'-]+){1,2})'
+    ]
+
+    for p in name_patterns:
+        m = re.search(p, text, re.IGNORECASE)
+        if m:
+            cand = m.group(1).strip()
+            # Clean up candidate words against stop words
+            words = [w for w in cand.split() if w.lower() not in stop_words and len(w) >= 2]
+            if len(words) >= 2:
+                first_name = words[0].capitalize()
+                last_name = words[1].upper()
+                detected_name = f"{first_name} {last_name}"
+                break
+
+
+    has_detected = bool(phones or emails or detected_name or detected_agency)
+
+    return {
+        "has_detected": has_detected,
+        "phones": phones,
+        "emails": emails,
+        "agent_name": detected_name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "agency_name": detected_agency
+    }
+
