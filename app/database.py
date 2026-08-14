@@ -193,6 +193,16 @@ _MIGRATIONS = [
     ("global_settings", "google_oauth_credentials_json", "TEXT"),
     ("global_settings", "google_oauth_tokens_json",      "TEXT"),
     ("global_settings", "google_pilot_email",            "TEXT DEFAULT 'GOOGLE_ACCOUNT_EMAIL@gmail.com'"),
+
+    # global_settings — scraping proxies v25
+    ("global_settings", "scraping_proxies_json",         "TEXT"),
+
+    # agencies & agents — google contact sync v26
+    ("agencies", "google_contact_resource_name",         "TEXT"),
+    ("agents", "google_contact_resource_name",           "TEXT"),
+
+    # visit_contacts — agent link v27
+    ("visit_contacts", "agent_id",                       "INTEGER"),
 ]
 
 
