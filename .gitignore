@@ -216,6 +216,11 @@ uc_debug.html
 tests/uc_debug.html
 test_uc.py
 tests/test_uc.py
+lbc_debug.html
+tests/lbc_debug.html
+logicimmo_search.html
+tests/logicimmo_search.html
+
 
 # Media
 static/media/*
