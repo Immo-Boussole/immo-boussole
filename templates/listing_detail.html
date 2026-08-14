@@ -893,20 +893,17 @@
                 {% if main_agent %}
                 <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="Contact : {{ main_agent.first_name }} {{ main_agent.last_name }}{% if agency %} ({{ agency.commercial_name or agency.legal_name }}){% endif %}" style="color: var(--green); border-color: rgba(16, 217, 164, 0.3); background: rgba(16, 217, 164, 0.08);">
                     <i class="fa-solid fa-user-check"></i>
-                    <span class="btn-text-desktop">{{ main_agent.first_name }} {{ main_agent.last_name }}</span>
-                    <span class="btn-text-tablet-mobile">Contact</span>
+                    <span class="btn-text">{{ main_agent.first_name }} {{ main_agent.last_name }}</span>
                 </button>
                 {% elif agency %}
                 <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="Agence : {{ agency.commercial_name or agency.legal_name }}" style="color: var(--purple); border-color: rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.08);">
                     <i class="fa-solid fa-building"></i>
-                    <span class="btn-text-desktop">{{ agency.commercial_name or agency.legal_name }}</span>
-                    <span class="btn-text-tablet-mobile">Agence</span>
+                    <span class="btn-text">{{ agency.commercial_name or agency.legal_name }}</span>
                 </button>
                 {% else %}
                 <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="{% if detected_contact and detected_contact.has_detected %}Coordonnées détectées dans l'annonce - Créer ou lier un contact{% else %}Gérer ou créer le contact{% endif %}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); position: relative;">
                     <i class="fa-regular fa-address-card"></i>
-                    <span class="btn-text-desktop">Contact</span>
-                    <span class="btn-text-tablet-mobile">Contact</span>
+                    <span class="btn-text">Contact</span>
                     {% if detected_contact and detected_contact.has_detected %}
                     <span style="position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; background: var(--orange); border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 6px var(--orange);" title="Coordonnées détectées par regex"></span>
                     {% endif %}
