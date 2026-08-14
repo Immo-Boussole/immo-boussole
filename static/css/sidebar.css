@@ -40,14 +40,14 @@
     background-clip: text;
 }
 
-.stat-grid {
+.sidebar .stat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
 
-.stat-card {
+.sidebar .stat-card {
     background: var(--surface-2, #1a2236);
     border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
     border-radius: 12px;
@@ -61,18 +61,18 @@
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.stat-card:hover {
+.sidebar .stat-card:hover {
     border-color: rgba(255, 255, 255, 0.18);
     transform: translateY(-2px);
 }
 
-.stat-card .val {
+.sidebar .stat-card .val {
     font-size: 1.25rem;
     font-weight: 800;
     line-height: 1;
 }
 
-.stat-card .lbl {
+.sidebar .stat-card .lbl {
     font-size: 0.65rem;
     color: var(--text-2, #8b9cc8);
     margin-top: 0.35rem;
@@ -81,9 +81,9 @@
     letter-spacing: 0.05em;
 }
 
-.stat-card.new .val { color: var(--accent, #4f8ef7); }
-.stat-card.act .val { color: var(--green, #10d9a4); }
-.stat-card.dis .val { color: var(--red, #f25c69); }
+.sidebar .stat-card.new .val { color: var(--accent, #4f8ef7); }
+.sidebar .stat-card.act .val { color: var(--green, #10d9a4); }
+.sidebar .stat-card.dis .val { color: var(--red, #f25c69); }
 
 .sidebar-section-title {
     font-size: 0.65rem;
