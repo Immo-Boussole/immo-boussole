@@ -239,6 +239,85 @@
             box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.2);
         }
 
+        /* ── Tabs Navigation ── */
+        .tabs-header {
+            display: flex;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+            align-items: center;
+        }
+
+        .tab-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: var(--trans);
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: var(--surface-2);
+            border-color: var(--border-hover);
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 4px 14px rgba(79, 142, 247, 0.35);
+        }
+
+        .tab-btn .tab-badge {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.55rem;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.25);
+            color: inherit;
+        }
+
+        .tab-btn.active .tab-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        /* Agency Specific styles */
+        .agency-agents-box {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            background: rgba(0, 0, 0, 0.18);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+
+        .agent-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: var(--text);
+            text-decoration: none;
+            transition: var(--trans);
+        }
+
+        .agent-chip:hover {
+            border-color: var(--accent);
+            background: rgba(79, 142, 247, 0.1);
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -653,8 +732,8 @@
                     <i class="fa-brands fa-google"></i> Google Contacts Sync
                 </span>
                 <button class="btn btn-purple" onclick="openMergeModal()"><i class="fa-solid fa-code-merge"></i> Fusionner / Doublons</button>
-                <button class="btn btn-secondary" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> Nouvelle Agence</button>
-                <button class="btn btn-primary" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> Nouvel Agent</button>
+                <button class="btn btn-secondary" id="headerBtnNewAgency" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> Nouvelle Agence</button>
+                <button class="btn btn-primary" id="headerBtnNewAgent" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> Nouvel Agent</button>
             </div>
         </div>
 
@@ -664,18 +743,29 @@
                 <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
             </div>
 
-            <!-- Unified Contacts Section -->
-            <div>
-                <div class="section-header">
-                    <div class="section-title">
-                        <i class="fa-solid fa-users" style="color: var(--accent);"></i>
-                        Fiches Contacts
-                    </div>
-                    <span class="section-badge" id="contactsCountBadge">0 contact</span>
-                </div>
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+                <button class="tab-btn active" id="tabContactsBtn" onclick="switchMainTab('contacts')">
+                    <i class="fa-solid fa-user-tie"></i> Fiches Contacts
+                    <span class="tab-badge" id="contactsCountBadge">0</span>
+                </button>
+                <button class="tab-btn" id="tabAgenciesBtn" onclick="switchMainTab('agencies')">
+                    <i class="fa-solid fa-building"></i> Fiches Agences
+                    <span class="tab-badge" id="agenciesCountBadge">0</span>
+                </button>
+            </div>
 
+            <!-- Contacts Section -->
+            <div id="contactsSection">
                 <div class="cards-grid" id="contactsGrid">
-                    <!-- Dynamic unified contact cards -->
+                    <!-- Dynamic contact cards -->
+                </div>
+            </div>
+
+            <!-- Agencies Section -->
+            <div id="agenciesSection" style="display: none;">
+                <div class="cards-grid" id="agenciesGrid">
+                    <!-- Dynamic agency cards -->
                 </div>
             </div>
 
@@ -886,7 +976,9 @@
     </div>
 
     <script>
+        let currentTab = 'contacts';
         let contactsData = [];
+        let agenciesOverviewData = [];
         let agenciesData = [];
         let detectedPage = 1;
         let unassignedPage = 1;
@@ -896,9 +988,40 @@
             checkGoogleStatus();
         });
 
+        function switchMainTab(tab) {
+            currentTab = tab;
+            const tabContactsBtn = document.getElementById('tabContactsBtn');
+            const tabAgenciesBtn = document.getElementById('tabAgenciesBtn');
+            const contactsSec = document.getElementById('contactsSection');
+            const agenciesSec = document.getElementById('agenciesSection');
+            const btnNewAgent = document.getElementById('headerBtnNewAgent');
+            const btnNewAgency = document.getElementById('headerBtnNewAgency');
+
+            if (tab === 'contacts') {
+                tabContactsBtn.classList.add('active');
+                tabAgenciesBtn.classList.remove('active');
+                contactsSec.style.display = 'block';
+                agenciesSec.style.display = 'none';
+
+                if (btnNewAgent) btnNewAgent.className = 'btn btn-primary';
+                if (btnNewAgency) btnNewAgency.className = 'btn btn-secondary';
+            } else {
+                tabContactsBtn.classList.remove('active');
+                tabAgenciesBtn.classList.add('active');
+                contactsSec.style.display = 'none';
+                agenciesSec.style.display = 'block';
+
+                if (btnNewAgent) btnNewAgent.className = 'btn btn-secondary';
+                if (btnNewAgency) btnNewAgency.className = 'btn btn-primary';
+            }
+            filterContacts();
+        }
+
         async function loadAll() {
+            await checkGoogleStatus();
             await Promise.all([
                 loadContactsOverview(),
+                loadAgenciesOverview(),
                 loadAgencies()
             ]);
             await Promise.all([
@@ -926,14 +1049,27 @@
 
         async function loadContactsOverview() {
             try {
-                const q = document.getElementById('searchInput').value.trim();
+                const q = (currentTab === 'contacts') ? document.getElementById('searchInput').value.trim() : '';
                 const url = q ? `/api/contacts/overview?q=${encodeURIComponent(q)}` : '/api/contacts/overview';
                 const res = await fetch(url);
                 contactsData = await res.json();
                 renderContacts(contactsData);
-                document.getElementById('contactsCountBadge').textContent = `${contactsData.length} contact${contactsData.length > 1 ? 's' : ''}`;
+                document.getElementById('contactsCountBadge').textContent = contactsData.length;
             } catch (err) {
                 console.error("Erreur chargement contacts:", err);
+            }
+        }
+
+        async function loadAgenciesOverview() {
+            try {
+                const q = (currentTab === 'agencies') ? document.getElementById('searchInput').value.trim() : '';
+                const url = q ? `/api/agencies/overview?q=${encodeURIComponent(q)}` : '/api/agencies/overview';
+                const res = await fetch(url);
+                agenciesOverviewData = await res.json();
+                renderAgencies(agenciesOverviewData);
+                document.getElementById('agenciesCountBadge').textContent = agenciesOverviewData.length;
+            } catch (err) {
+                console.error("Erreur chargement agences overview:", err);
             }
         }
 
@@ -969,14 +1105,14 @@
         function renderContacts(list) {
             const grid = document.getElementById('contactsGrid');
             if (!list.length) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);">Aucun contact trouvé.</div>';
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);">Aucune fiche contact trouvée.</div>';
                 return;
             }
 
             grid.innerHTML = list.map(c => {
-                const isAgent = c.contact_type === 'agent';
+                const isAgent = (c.contact_type === 'agent' || c.contact_type === undefined);
                 const countAttached = (c.attached_listings || []).length;
-                const contactKey = `${c.contact_type}_${c.id}`;
+                const contactKey = `agent_${c.id}`;
 
                 let listingsHtml = '';
                 if (countAttached > 0) {
@@ -1004,15 +1140,15 @@
                     <div class="contact-card" id="card_${contactKey}">
                         <div class="contact-card-header">
                             <div style="display: flex; gap: 0.75rem; align-items: center;">
-                                <div class="contact-avatar ${isAgent ? '' : 'agency-avatar'}">
-                                    <i class="${isAgent ? 'fa-solid fa-user-tie' : 'fa-solid fa-building'}"></i>
+                                <div class="contact-avatar">
+                                    <i class="fa-solid fa-user-tie"></i>
                                 </div>
                                 <div>
                                     <div class="contact-card-title">${c.name}</div>
-                                    <div class="contact-card-subtitle">${c.title || (isAgent ? 'Agent Immobilier' : 'Agence')}</div>
+                                    <div class="contact-card-subtitle">${c.title || 'Agent Immobilier'}</div>
                                 </div>
                             </div>
-                            ${c.agency_name ? `<span class="badge badge-accent"><i class="fa-solid fa-building"></i> ${c.agency_name}</span>` : (isAgent ? '<span class="badge badge-green">Indépendant</span>' : '<span class="badge badge-purple">Agence</span>')}
+                            ${c.agency_name ? `<span class="badge badge-accent"><i class="fa-solid fa-building"></i> ${c.agency_name}</span>` : '<span class="badge badge-green">Indépendant</span>'}
                         </div>
 
                         <div class="contact-info">
@@ -1037,9 +1173,115 @@
                         </div>
 
                         <div class="contact-card-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('${c.contact_type}', ${c.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
-                            <button class="btn btn-secondary btn-sm" onclick="editContact('${c.contact_type}', ${c.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteContact('${c.contact_type}', ${c.id})"><i class="fa-solid fa-trash"></i></button>
+                            <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('agent', ${c.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
+                            <button class="btn btn-secondary btn-sm" onclick="editContact('agent', ${c.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteContact('agent', ${c.id})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAgencies(list) {
+            const grid = document.getElementById('agenciesGrid');
+            if (!list.length) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-2); text-align: center; padding: 2.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);">Aucune agence trouvée.</div>';
+                return;
+            }
+
+            grid.innerHTML = list.map(ac => {
+                const countAttached = (ac.attached_listings || []).length;
+                const countAgents = (ac.affiliated_agents || []).length;
+                const agencyKey = `agency_${ac.id}`;
+
+                let listingsHtml = '';
+                if (countAttached > 0) {
+                    listingsHtml = ac.attached_listings.map(l => `
+                        <div class="mini-listing-card">
+                            ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                            <div class="mini-listing-details">
+                                <div class="mini-listing-title" title="${l.title || ''}">
+                                    <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
+                                </div>
+                                <div class="mini-listing-sub">
+                                    ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
+                                    ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
+                                    ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                </div>
+                            </div>
+                            <button class="btn btn-danger btn-sm" title="Détacher ce bien de l'agence" onclick="unlinkListing(${l.id})">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+                let agentsChipsHtml = '<span style="font-size: 0.8rem; color: var(--text-3);">Aucun agent affilié.</span>';
+                if (countAgents > 0) {
+                    agentsChipsHtml = ac.affiliated_agents.map(ag => `
+                        <div class="agent-chip" title="${ag.title || 'Agent'} - ${ag.phone || ''} ${ag.email || ''}">
+                            <i class="fa-solid fa-user-tie" style="color: var(--accent);"></i>
+                            <strong>${ag.name}</strong>
+                            ${ag.title ? `<span style="color: var(--text-3); font-size: 0.7rem;">(${ag.title})</span>` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                const name = ac.commercial_name || ac.legal_name;
+
+                return `
+                    <div class="contact-card" id="card_${agencyKey}">
+                        <div class="contact-card-header">
+                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                <div class="contact-avatar agency-avatar">
+                                    <i class="fa-solid fa-building"></i>
+                                </div>
+                                <div>
+                                    <div class="contact-card-title">${name}</div>
+                                    <div class="contact-card-subtitle">${ac.commercial_name && ac.legal_name !== ac.commercial_name ? ac.legal_name : 'Agence Immobilière'}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
+                                <span class="badge badge-purple"><i class="fa-solid fa-users"></i> ${countAgents} agent${countAgents > 1 ? 's' : ''}</span>
+                                ${ac.city ? `<span class="badge badge-accent"><i class="fa-solid fa-location-dot"></i> ${ac.city}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="contact-info">
+                            ${ac.phone ? `<div class="contact-info-item"><i class="fa-solid fa-phone"></i> <a href="tel:${ac.phone}">${ac.phone}</a></div>` : ''}
+                            ${ac.email ? `<div class="contact-info-item"><i class="fa-solid fa-envelope"></i> <a href="mailto:${ac.email}">${ac.email}</a></div>` : ''}
+                            ${ac.website ? `<div class="contact-info-item"><i class="fa-solid fa-globe"></i> <a href="${ac.website.startsWith('http') ? ac.website : 'https://' + ac.website}" target="_blank">${ac.website}</a></div>` : ''}
+                            ${ac.address ? `<div class="contact-info-item"><i class="fa-solid fa-map-pin"></i> ${ac.address}${ac.postal_code ? ' ' + ac.postal_code : ''}${ac.city ? ' ' + ac.city : ''}</div>` : ''}
+                            ${ac.siret ? `<div class="contact-info-item"><i class="fa-solid fa-id-card"></i> SIRET: ${ac.siret}</div>` : ''}
+                            ${ac.carte_t_number ? `<div class="contact-info-item"><i class="fa-solid fa-certificate"></i> Carte T: ${ac.carte_t_number}</div>` : ''}
+                            ${ac.reputation_notes ? `<div class="contact-info-item" style="white-space: normal; font-size: 0.8rem; color: var(--text-3);"><i class="fa-solid fa-note-sticky"></i> ${ac.reputation_notes}</div>` : ''}
+                        </div>
+
+                        <!-- Affiliated Agents Box -->
+                        <div class="agency-agents-box">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-2); display: flex; align-items: center; justify-content: space-between;">
+                                <span><i class="fa-solid fa-user-group" style="color: var(--accent);"></i> Agents affiliés (${countAgents})</span>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.25rem;">
+                                ${agentsChipsHtml}
+                            </div>
+                        </div>
+
+                        <!-- Accordion for attached listings -->
+                        <div>
+                            <button class="attached-accordion-btn" onclick="toggleAttachedListings('${agencyKey}')">
+                                <span><i class="fa-solid fa-house-chimney" style="color: var(--purple);"></i> Biens rattachés (${countAttached})</span>
+                                <i class="fa-solid fa-chevron-down" id="chevron_${agencyKey}" style="transition: var(--trans);"></i>
+                            </button>
+                            <div class="attached-listings-container" id="attached_${agencyKey}">
+                                ${countAttached > 0 ? listingsHtml : '<div style="font-size: 0.8rem; color: var(--text-3); padding: 0.5rem; text-align: center;">Aucun bien rattaché à cette agence.</div>'}
+                            </div>
+                        </div>
+
+                        <div class="contact-card-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('agency', ${ac.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
+                            <button class="btn btn-secondary btn-sm" onclick="editContact('agency', ${ac.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteContact('agency', ${ac.id})"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -1061,7 +1303,11 @@
         }
 
         function filterContacts() {
-            loadContactsOverview();
+            if (currentTab === 'contacts') {
+                loadContactsOverview();
+            } else {
+                loadAgenciesOverview();
+            }
         }
 
         // --- Detected Contacts in Listings ---
@@ -1331,16 +1577,31 @@
         }
 
         function getContactSelectOptions(selectedValue = null) {
-            const sortedContacts = [...contactsData].sort((a, b) => {
+            const combined = [
+                ...contactsData.map(c => ({
+                    type: 'agent',
+                    id: c.id,
+                    name: c.name,
+                    sub: c.agency_name ? `(${c.agency_name})` : '(Indépendant)'
+                })),
+                ...(agenciesOverviewData && agenciesOverviewData.length ? agenciesOverviewData : (agenciesData || [])).map(a => ({
+                    type: 'agency',
+                    id: a.id,
+                    name: a.commercial_name || a.legal_name || a.name,
+                    sub: a.city ? `(${a.city})` : ''
+                }))
+            ];
+
+            const sorted = combined.sort((a, b) => {
                 return (a.name || '').localeCompare(b.name || '', 'fr', { sensitivity: 'base' });
             });
 
-            return sortedContacts.map(c => {
-                const val = `${c.contact_type}:${c.id}`;
-                const isSelected = (selectedValue === val || selectedValue === c.id);
+            return sorted.map(c => {
+                const val = `${c.type}:${c.id}`;
+                const isSelected = (selectedValue === val || selectedValue === c.id || selectedValue === `${c.type}:${c.id}`);
                 return `
                     <option value="${val}" ${isSelected ? 'selected' : ''}>
-                        ${c.contact_type === 'agent' ? '👤 Agent' : '🏢 Agence'} — ${c.name} ${c.agency_name ? '(' + c.agency_name + ')' : ''}
+                        ${c.type === 'agent' ? '👤 Agent' : '🏢 Agence'} — ${c.name} ${c.sub}
                     </option>
                 `;
             }).join('');
@@ -1699,11 +1960,18 @@
         }
 
         async function deleteContact(type, id) {
-            const label = type === 'agent' ? 'cet agent' : 'cette agence';
-            if (!confirm(`Voulez-vous vraiment supprimer ${label} ? Ses biens rattachés deviendront orphelins.`)) return;
-            const url = type === 'agent' ? `/api/agents/${id}` : `/api/agencies/${id}`;
-            await fetch(url, { method: 'DELETE' });
-            loadAll();
+            const isAgency = (type === 'agency');
+            const msg = isAgency
+                ? "Voulez-vous vraiment supprimer cette agence ? Les agents affiliés deviendront indépendants et les biens seront détachés."
+                : "Voulez-vous vraiment supprimer cet agent ? Ses biens rattachés deviendront orphelins.";
+            if (!confirm(msg)) return;
+            const url = isAgency ? `/api/agencies/${id}` : `/api/agents/${id}`;
+            const res = await fetch(url, { method: 'DELETE' });
+            if (res.ok) {
+                loadAll();
+            } else {
+                alert("Erreur lors de la suppression.");
+            }
         }
 
         // --- Merge Modal & Logic ---

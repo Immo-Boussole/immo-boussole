@@ -416,4 +416,38 @@ class MergeContactsRequest(BaseModel):
     target_id: int
 
 
+class AffiliatedAgentSummary(BaseModel):
+    id: int
+    name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    title: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+
+
+class AgencyOverviewItem(BaseModel):
+    id: int
+    legal_name: str
+    commercial_name: Optional[str] = None
+    name: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    siret: Optional[str] = None
+    legal_status: Optional[str] = None
+    carte_t_number: Optional[str] = None
+    guarantor: Optional[str] = None
+    geographic_zone: Optional[str] = None
+    reputation_notes: Optional[str] = None
+    google_contact_resource_name: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    affiliated_agents: List[AffiliatedAgentSummary] = []
+    attached_listings: List[AttachedListingSummary] = []
+
+
 

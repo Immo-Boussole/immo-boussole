@@ -59,30 +59,24 @@ def get_contacts_overview(
     db: Session = Depends(get_db)
 ):
     """
-    Returns a unified list of contacts:
-    - All Agents (with their agency information and attached listings)
-    - Standalone Agencies without agents (or agencies having listings directly attached)
+    Returns all Agent contacts with their agency information and attached listings.
     """
     agents = db.query(Agent).all()
-    agencies = db.query(Agency).all()
     
-    # Pre-fetch listings linked to agents or agencies
+    # Pre-fetch listings linked to agents
     listings_by_agent: Dict[int, List[Listing]] = {}
-    listings_by_agency: Dict[int, List[Listing]] = {}
     
     linked_listings = db.query(Listing).filter(
-        or_(Listing.main_agent_id.isnot(None), Listing.agency_id.isnot(None))
+        Listing.main_agent_id.isnot(None)
     ).order_by(Listing.date_added.desc()).all()
     
     for l in linked_listings:
         if l.main_agent_id:
             listings_by_agent.setdefault(l.main_agent_id, []).append(l)
-        elif l.agency_id:
-            listings_by_agency.setdefault(l.agency_id, []).append(l)
 
     unified_list: List[schemas.UnifiedContactItem] = []
 
-    # 1. Add all agents
+    # Add all agents
     for ag in agents:
         attached = [_format_listing_summary(l) for l in listings_by_agent.get(ag.id, [])]
         agency_name = (ag.agency.commercial_name or ag.agency.legal_name) if ag.agency else None
@@ -108,34 +102,6 @@ def get_contacts_overview(
             attached_listings=attached
         ))
 
-    # 2. Add standalone agencies (agencies with no agents or with directly linked listings)
-    agencies_with_agents = {ag.agency_id for ag in agents if ag.agency_id is not None}
-    for ac in agencies:
-        has_direct_listings = bool(listings_by_agency.get(ac.id))
-        is_standalone = (ac.id not in agencies_with_agents) or has_direct_listings
-        if is_standalone:
-            attached = [_format_listing_summary(l) for l in listings_by_agency.get(ac.id, [])]
-            unified_list.append(schemas.UnifiedContactItem(
-                contact_type="agency",
-                id=ac.id,
-                name=ac.commercial_name or ac.legal_name,
-                first_name=None,
-                last_name=None,
-                title="Agence Immobilière",
-                agency_id=ac.id,
-                agency_name=ac.legal_name,
-                phone_mobile=None,
-                phone_landline=ac.phone,
-                phone=ac.phone,
-                email=ac.email,
-                city=ac.city,
-                notes=ac.reputation_notes,
-                commission_rate=None,
-                communication_prefs=None,
-                google_contact_resource_name=ac.google_contact_resource_name,
-                attached_listings=attached
-            ))
-
     # Apply search filter if query provided
     if q:
         query_str = q.strip().lower()
@@ -146,11 +112,12 @@ def get_contacts_overview(
             match_phone = bool(item.phone and query_str in item.phone.replace(" ", ""))
             match_agency = bool(item.agency_name and query_str in item.agency_name.lower())
             match_city = bool(item.city and query_str in item.city.lower())
+            match_notes = bool(item.notes and query_str in item.notes.lower())
             match_listings = any(
                 query_str in (l.title or "").lower() or query_str in (l.city or "").lower()
                 for l in item.attached_listings
             )
-            if match_name or match_email or match_phone or match_agency or match_city or match_listings:
+            if match_name or match_email or match_phone or match_agency or match_city or match_notes or match_listings:
                 filtered.append(item)
         return filtered
 
@@ -550,6 +517,115 @@ def merge_contacts(
 
 # --- Agency CRUD Endpoints ---
 
+@router.get("/agencies/overview", response_model=List[schemas.AgencyOverviewItem])
+def get_agencies_overview(
+    q: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns all Agencies with:
+    - Affiliated agents
+    - Attached listings (direct + via agents)
+    """
+    agencies = db.query(Agency).order_by(Agency.commercial_name, Agency.legal_name).all()
+    agents = db.query(Agent).all()
+    
+    # Pre-fetch listings linked to agents or agencies
+    listings_by_agent: Dict[int, List[Listing]] = {}
+    listings_by_agency: Dict[int, List[Listing]] = {}
+    
+    linked_listings = db.query(Listing).filter(
+        or_(Listing.main_agent_id.isnot(None), Listing.agency_id.isnot(None))
+    ).order_by(Listing.date_added.desc()).all()
+    
+    for l in linked_listings:
+        if l.main_agent_id:
+            listings_by_agent.setdefault(l.main_agent_id, []).append(l)
+        if l.agency_id:
+            listings_by_agency.setdefault(l.agency_id, []).append(l)
+
+    # Agents grouped by agency
+    agents_by_agency: Dict[int, List[Agent]] = {}
+    for ag in agents:
+        if ag.agency_id:
+            agents_by_agency.setdefault(ag.agency_id, []).append(ag)
+
+    overview_list: List[schemas.AgencyOverviewItem] = []
+
+    for ac in agencies:
+        aff_agents = [
+            schemas.AffiliatedAgentSummary(
+                id=ag.id,
+                name=f"{ag.first_name} {ag.last_name}".strip(),
+                first_name=ag.first_name,
+                last_name=ag.last_name,
+                title=ag.title,
+                phone=ag.phone_mobile or ag.phone_landline,
+                email=ag.email
+            )
+            for ag in agents_by_agency.get(ac.id, [])
+        ]
+
+        seen_listing_ids = set()
+        agency_listings: List[Listing] = []
+        for l in listings_by_agency.get(ac.id, []):
+            if l.id not in seen_listing_ids:
+                seen_listing_ids.add(l.id)
+                agency_listings.append(l)
+        for ag in agents_by_agency.get(ac.id, []):
+            for l in listings_by_agent.get(ag.id, []):
+                if l.id not in seen_listing_ids:
+                    seen_listing_ids.add(l.id)
+                    agency_listings.append(l)
+
+        attached = [_format_listing_summary(l) for l in agency_listings]
+
+        overview_list.append(schemas.AgencyOverviewItem(
+            id=ac.id,
+            legal_name=ac.legal_name,
+            commercial_name=ac.commercial_name,
+            name=ac.commercial_name or ac.legal_name,
+            address=ac.address,
+            city=ac.city,
+            postal_code=ac.postal_code,
+            phone=ac.phone,
+            email=ac.email,
+            website=ac.website,
+            siret=ac.siret,
+            legal_status=ac.legal_status,
+            carte_t_number=ac.carte_t_number,
+            guarantor=ac.guarantor,
+            geographic_zone=ac.geographic_zone,
+            reputation_notes=ac.reputation_notes,
+            google_contact_resource_name=ac.google_contact_resource_name,
+            created_at=ac.created_at,
+            updated_at=ac.updated_at,
+            affiliated_agents=aff_agents,
+            attached_listings=attached
+        ))
+
+    if q:
+        query_str = q.strip().lower()
+        filtered = []
+        for item in overview_list:
+            match_name = query_str in item.name.lower() or query_str in item.legal_name.lower()
+            match_email = bool(item.email and query_str in item.email.lower())
+            match_phone = bool(item.phone and query_str in item.phone.replace(" ", ""))
+            match_city = bool(item.city and query_str in item.city.lower())
+            match_siret = bool(item.siret and query_str in item.siret.replace(" ", ""))
+            match_notes = bool(item.reputation_notes and query_str in item.reputation_notes.lower())
+            match_agents = any(query_str in a.name.lower() for a in item.affiliated_agents)
+            match_listings = any(
+                query_str in (l.title or "").lower() or query_str in (l.city or "").lower()
+                for l in item.attached_listings
+            )
+            if match_name or match_email or match_phone or match_city or match_siret or match_notes or match_agents or match_listings:
+                filtered.append(item)
+        return filtered
+
+    return overview_list
+
+
 @router.get("/agencies", response_model=List[schemas.AgencyResponse])
 def list_agencies(
     q: Optional[str] = None,
@@ -627,6 +703,12 @@ def delete_agency(
 
     if agency.google_contact_resource_name:
         google_service.delete_google_contact(db, agency.google_contact_resource_name)
+
+    # Detach affiliated agents (they become independent)
+    db.query(Agent).filter(Agent.agency_id == agency_id).update({"agency_id": None})
+
+    # Detach listings directly linked to this agency
+    db.query(Listing).filter(Listing.agency_id == agency_id).update({"agency_id": None})
 
     db.delete(agency)
     db.commit()
