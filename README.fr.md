@@ -3,6 +3,7 @@
 [![Build and Push Docker Image](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/Immo-Boussole/immo-boussole/actions/workflows/docker-publish.yml)
 [![Docker Hub](https://img.shields.io/badge/docker-hub-blue.svg?logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/wikijm/immo-boussole/general)
 [![Image Docker](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3Abae342b39f5dd7ed4c08394640b08eb4e5c9b105-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
+[![Documentation Wiki](https://img.shields.io/badge/docs-GitHub%20Wiki-blue?logo=github)](https://github.com/Immo-Boussole/immo-boussole/wiki)
 
 *Note : Ce projet cible à l'origine les plateformes immobilières françaises pour la recherche de biens. / Note: At its core, this project targets French platforms for property search.*
 
@@ -109,12 +110,12 @@ Un script Shell d'automatisation [`scripts/auto_update.sh`](scripts/auto_update.
 ### 🤖 8. Assistant IA & Service MCP
 L'application intègre désormais un assistant conversationnel capable d'analyser vos annonces, de répondre à vos questions et de fournir des statistiques. Vous pouvez également exposer vos données à des outils externes comme Claude Desktop via le protocole **MCP (Model Context Protocol)**.
 
-👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP](MCP_SETUP.fr.md)**
+👉 **Consultez le guide : [Configuration de l'Assistant IA & du Service MCP (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-FR)**
 
 ### 🏠 9. Proxy Résidentiel & Contournement Anti-Bot (DataDome)
 Pour éviter les blocages stricts de plateformes comme LeBonCoin sur les serveurs VPS, vous pouvez déployer un proxy résidentiel chiffré à domicile (sur un NAS Synology ou Raspberry Pi) exposé via Cloudflare Tunnel.
 
-👉 **Consultez le guide : [Déploiement d'un Proxy Résidentiel à Domicile (Synology + Cloudflared)](PROXY_SETUP.fr.md)**
+👉 **Consultez le guide : [Déploiement d'un Proxy Résidentiel à Domicile (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-FR)**
 
 ## 🛠️ Installation & Lancement
 
@@ -174,7 +175,7 @@ Le projet est entièrement containerisé, incluant automatiquement le moteur de 
 
 Pour une mise en production sécurisée sur un serveur distant, vous pouvez utiliser **Portainer** pour gérer vos conteneurs et **Cloudflared** (Tunnels Cloudflare Zero Trust) pour exposer l'application sur Internet de manière sécurisée sans ouvrir de ports.
 
-👉 **Consultez le guide détaillé : [Installation via Docker, Portainer et Cloudflared](INSTALL_Docker+Portainer+Cloudflared.fr.md)**
+👉 **Consultez le guide détaillé : [Installation via Docker, Portainer et Cloudflared (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-FR)**
 
 ---
 
@@ -308,7 +309,7 @@ L'application expose une API REST complète construite avec **FastAPI**. Tous le
 - `GET /api/admin/backup` : Télécharge une sauvegarde complète du système en ZIP.
 - `POST /api/admin/restore` : Restaure le système à partir d'une sauvegarde ZIP.
 
-👉 **Consultez le guide : [Documentation Sauvegarde & Restauration](BACKUP_RESTORE.fr.md)**
+👉 **Consultez le guide : [Documentation Sauvegarde & Restauration (Wiki)](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-FR)**
 
 ### Avis (Reviews)
 - `GET /api/listings/{listing_id}/reviews` : Liste tous les avis d'une annonce.
@@ -335,7 +336,7 @@ L'API est entièrement documentée et testable via l'interface Swagger intégré
 - `tests/` : Scripts de tests unitaires et d'intégration.
 - `Dockerfile` & `docker-compose.yml` : Configuration Docker.
 - `immo_boussole.db` : Base de données SQLite (gérée automatiquement).
-- `MCP_SETUP.fr.md` : Guide complet de configuration de l'IA et du MCP.
+- [Wiki GitHub](https://github.com/Immo-Boussole/immo-boussole/wiki) : Documentation complète, guides et procédures d'installation.
 - `.ai/` : Documentation spécialisée et contexte lié à l'IA.
 
 ## 🧪 Tests
