@@ -965,6 +965,12 @@ async def restore_backup(
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             with zipfile.ZipFile(tmp_zip_path, 'r') as zipf:
+                # Prevent Zip Slip / Path Traversal attacks during extraction
+                abs_tmp_dir = os.path.abspath(tmp_dir)
+                for member in zipf.infolist():
+                    target_path = os.path.abspath(os.path.join(tmp_dir, member.filename))
+                    if not target_path.startswith(abs_tmp_dir + os.sep) and target_path != abs_tmp_dir:
+                        raise HTTPException(status_code=400, detail="Zip file contains unsafe file path (path traversal attempt).")
                 zipf.extractall(tmp_dir)
             
             BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
