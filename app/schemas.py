@@ -384,6 +384,8 @@ class AttachedListingSummary(BaseModel):
     status: Optional[str] = None
     main_agent_id: Optional[int] = None
     agency_id: Optional[int] = None
+    agent_name: Optional[str] = None
+    agency_name: Optional[str] = None
     to_visit: bool = False
     last_visit_status: Optional[str] = None
 

@@ -129,10 +129,15 @@ def test_contacts_manager_full_flow():
         # 4. Test contacts overview
         overview = get_contacts_overview(db=db)
         assert len(overview) >= 2
+        # Check alphabetical sorting
+        names = [(item.last_name or item.name or "").lower() for item in overview]
+        assert names == sorted(names)
         agent1_item = next((item for item in overview if item.id == agent1.id and item.contact_type == "agent"), None)
         assert agent1_item is not None
         assert len(agent1_item.attached_listings) == 1
         assert agent1_item.attached_listings[0].id == listing1.id
+        assert agent1_item.attached_listings[0].agent_name == "Jean Dupont"
+        assert agent1_item.attached_listings[0].agency_name == "Centre Immo Lyon"
 
         # 5. Test unlink listing
         unlink_res = unlink_listing_from_contact(
@@ -154,6 +159,11 @@ def test_contacts_manager_full_flow():
         detected_item = next((item for item in detected_res["items"] if item["listing"]["id"] == listing1.id), None)
         assert detected_item is not None
         assert detected_item["detected"]["has_detected"] is True
+        # listing2 has agent2 attached and no agency -> detected endpoint returns listing2 with main_agent_id and agent_name
+        detected_item_2 = next((item for item in detected_res["items"] if item["listing"]["id"] == listing2.id), None)
+        if detected_item_2:
+            assert detected_item_2["listing"]["main_agent_id"] == agent2.id
+            assert detected_item_2["listing"]["agent_name"] == "Jean Dupond"
 
         # 8. Test merge suggestions
         suggestions = get_merge_suggestions(db=db)

@@ -1135,7 +1135,13 @@
                 return;
             }
 
-            grid.innerHTML = list.map(c => {
+            const sortedList = [...list].sort((a, b) => {
+                const nameA = (a.last_name ? `${a.last_name} ${a.first_name}` : a.name) || '';
+                const nameB = (b.last_name ? `${b.last_name} ${b.first_name}` : b.name) || '';
+                return nameA.localeCompare(nameB, 'fr', { sensitivity: 'base' });
+            });
+
+            grid.innerHTML = sortedList.map(c => {
                 const isAgent = (c.contact_type === 'agent' || c.contact_type === undefined);
                 const countAttached = (c.attached_listings || []).length;
                 const contactKey = `agent_${c.id}`;
@@ -1221,7 +1227,13 @@
                 return;
             }
 
-            grid.innerHTML = list.map(ac => {
+            const sortedList = [...list].sort((a, b) => {
+                const nameA = a.commercial_name || a.legal_name || a.name || '';
+                const nameB = b.commercial_name || b.legal_name || b.name || '';
+                return nameA.localeCompare(nameB, 'fr', { sensitivity: 'base' });
+            });
+
+            grid.innerHTML = sortedList.map(ac => {
                 const countAttached = (ac.attached_listings || []).length;
                 const countAgents = (ac.affiliated_agents || []).length;
                 const agencyKey = `agency_${ac.id}`;
@@ -1379,6 +1391,52 @@
                 const l = item.listing;
                 const d = item.detected;
                 const detectedJson = encodeURIComponent(JSON.stringify(d));
+                const hasAgent = Boolean(l.main_agent_id);
+                const hasAgency = Boolean(l.agency_id);
+
+                let agentSectionHtml = '';
+                if (hasAgent) {
+                    agentSectionHtml = `
+                        <div style="font-size: 0.8rem; color: var(--text-2); padding: 0.4rem 0.6rem; background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2); border-radius: 8px; display: flex; align-items: center; gap: 0.45rem;">
+                            <i class="fa-solid fa-user-check" style="color: var(--accent);"></i>
+                            <span>Contact lié : <strong>${l.agent_name || ('#' + l.main_agent_id)}</strong></span>
+                        </div>
+                    `;
+                } else {
+                    agentSectionHtml = `
+                        <!-- 1. Liste déroulante Contact (Meilleur match en 1ère position) -->
+                        <select class="link-select" id="detected_agent_${l.id}">
+                            ${getAgentSelectOptions(d, l.main_agent_id)}
+                        </select>
+
+                        <!-- 2. Bouton Créer Contact -->
+                        <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
+                            <i class="fa-solid fa-user-plus"></i> Contact manquant ? Créer fiche & Lier
+                        </button>
+                    `;
+                }
+
+                let agencySectionHtml = '';
+                if (hasAgency) {
+                    agencySectionHtml = `
+                        <div style="font-size: 0.8rem; color: var(--text-2); padding: 0.4rem 0.6rem; background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 8px; display: flex; align-items: center; gap: 0.45rem;">
+                            <i class="fa-solid fa-building-circle-check" style="color: var(--purple);"></i>
+                            <span>Agence liée : <strong>${l.agency_name || ('#' + l.agency_id)}</strong></span>
+                        </div>
+                    `;
+                } else {
+                    agencySectionHtml = `
+                        <!-- 3. Liste déroulante Agence (Meilleur match en 1ère position) -->
+                        <select class="link-select" id="detected_agency_${l.id}">
+                            ${getAgencySelectOptions(d, l.agency_id)}
+                        </select>
+
+                        <!-- 4. Bouton Créer Agence -->
+                        <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
+                            <i class="fa-solid fa-building-circle-check"></i> Agence manquante ? Créer fiche & Lier
+                        </button>
+                    `;
+                }
 
                 return `
                     <div class="unassigned-card">
@@ -1407,25 +1465,8 @@
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                            <!-- 1. Liste déroulante Contact (Meilleur match en 1ère position) -->
-                            <select class="link-select" id="detected_agent_${l.id}">
-                                ${getAgentSelectOptions(d, l.main_agent_id)}
-                            </select>
-
-                            <!-- 2. Bouton Créer Contact -->
-                            <button class="btn btn-primary btn-sm" onclick="createContactFromDetected(${l.id}, '${detectedJson}')">
-                                <i class="fa-solid fa-user-plus"></i> Contact manquant ? Créer fiche & Lier
-                            </button>
-
-                            <!-- 3. Liste déroulante Agence (Meilleur match en 1ère position) -->
-                            <select class="link-select" id="detected_agency_${l.id}">
-                                ${getAgencySelectOptions(d, l.agency_id)}
-                            </select>
-
-                            <!-- 4. Bouton Créer Agence -->
-                            <button class="btn btn-secondary btn-sm" onclick="createAgencyFromDetected(${l.id}, '${detectedJson}')">
-                                <i class="fa-solid fa-building-circle-check"></i> Agence manquante ? Créer fiche & Lier
-                            </button>
+                            ${agentSectionHtml}
+                            ${agencySectionHtml}
 
                             <!-- 5. Bouton Sauvegarder les choix -->
                             <button class="btn btn-success btn-sm" id="btn_save_detected_${l.id}" onclick="saveDetectedListingContact(${l.id})" style="width: 100%; justify-content: center; margin-top: 0.35rem; padding: 0.5rem 0.8rem; font-weight: 700;">

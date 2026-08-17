@@ -45,6 +45,13 @@ def _get_to_visit_filter_condition(db: Session):
 
 
 def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
+    agent_name = None
+    if l.main_agent:
+        agent_name = f"{l.main_agent.first_name} {l.main_agent.last_name}".strip()
+    agency_name = None
+    if l.agency:
+        agency_name = l.agency.commercial_name or l.agency.legal_name
+
     return schemas.AttachedListingSummary(
         id=l.id,
         title=l.title or f"Bien #{l.id}",
@@ -57,6 +64,8 @@ def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
         status=l.status.value if hasattr(l.status, 'value') else str(l.status),
         main_agent_id=l.main_agent_id,
         agency_id=l.agency_id,
+        agent_name=agent_name,
+        agency_name=agency_name,
         to_visit=bool(getattr(l, 'to_visit', False)),
         last_visit_status=getattr(l, 'last_visit_status', None)
     )
@@ -71,10 +80,10 @@ def get_contacts_overview(
     db: Session = Depends(get_db)
 ):
     """
-    Returns all Agent contacts with their agency information and attached listings.
+    Returns all Agent contacts with their agency information and attached listings, sorted alphabetically.
     Supports filtering by 'to_visit' (Biens à visiter).
     """
-    agents = db.query(Agent).all()
+    agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
     
     # Pre-fetch listings linked to agents
     listings_query = db.query(Listing).filter(Listing.main_agent_id.isnot(None))
@@ -136,6 +145,7 @@ def get_contacts_overview(
             )
             if match_name or match_email or match_phone or match_agency or match_city or match_notes or match_listings:
                 filtered.append(item)
+        filtered.sort(key=lambda item: ((item.last_name or "") + " " + (item.first_name or "")).strip().lower())
         return filtered
 
     return unified_list
