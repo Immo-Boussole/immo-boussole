@@ -8,8 +8,7 @@
     <meta name="theme-color" content="#0b0f1a">
     <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ t(request, 'nav.dashboard') }} — {{ t(request, 'app.title') }}</title>
-    <meta name="description"
-        content="{{ t(request, 'app.description') }}">
+    <meta name="description" content="{{ t(request, 'app.description') }}">
 
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
@@ -44,6 +43,7 @@
             gap: 0.3rem;
             cursor: pointer;
         }
+
         .city-link:hover {
             color: var(--accent);
             text-decoration: underline;
@@ -106,7 +106,8 @@
             width: 100%;
             overflow: hidden;
             margin: 0;
-            position: fixed; /* prevent scrolling of the body on mobile */
+            position: fixed;
+            /* prevent scrolling of the body on mobile */
         }
 
         /* ── Sidebar ── */
@@ -320,63 +321,6 @@
             color: #fff;
         }
 
-        .filter-chips .btn {
-            position: relative;
-            user-select: none;
-        }
-        .filter-chips .btn.active {
-            box-shadow: 0 0 0 1px currentColor, 0 2px 8px rgba(0,0,0,0.25);
-            background: var(--surface-2);
-        }
-        .filter-chips #f-nouvelle.active {
-            background: rgba(16, 217, 164, 0.16);
-            border-color: var(--green);
-            color: var(--green) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-active.active {
-            background: rgba(79, 142, 247, 0.16);
-            border-color: var(--accent);
-            color: var(--accent) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-disparue.active {
-            background: rgba(242, 92, 105, 0.16);
-            border-color: var(--red);
-            color: var(--red) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-rejected.active {
-            background: rgba(248, 168, 75, 0.16);
-            border-color: var(--orange);
-            color: var(--orange) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-favorite.active {
-            background: rgba(242, 92, 105, 0.16);
-            border-color: var(--red);
-            color: var(--red) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-liked.active {
-            background: rgba(16, 217, 164, 0.16);
-            border-color: var(--green);
-            color: var(--green) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-disliked.active {
-            background: rgba(139, 156, 200, 0.2);
-            border-color: var(--text-2);
-            color: var(--text) !important;
-            font-weight: 700;
-        }
-        .filter-chips #f-contacted.active {
-            background: rgba(79, 142, 247, 0.16);
-            border-color: var(--accent);
-            color: var(--accent) !important;
-            font-weight: 700;
-        }
-
         .filter-bar {
             display: flex;
             align-items: center;
@@ -414,38 +358,65 @@
             align-self: center;
         }
 
-        .d-mobile { display: none; }
-        .d-desktop { display: inline; }
+        .d-mobile {
+            display: none;
+        }
+
+        .d-desktop {
+            display: inline;
+        }
 
         @media (max-width: 1024px) {
-            .d-mobile { display: inline; }
-            .d-desktop { display: none; }
+            .d-mobile {
+                display: inline;
+            }
+
+            .d-desktop {
+                display: none;
+            }
         }
 
         @media (max-width: 600px) {
-            .hide-on-mobile { display: none !important; }
-            .filter-bar { 
-                padding: 0.5rem; 
-                flex-direction: row; 
-                align-items: center; 
-                gap: 0.35rem; 
+            .hide-on-mobile {
+                display: none !important;
+            }
+
+            .filter-bar {
+                padding: 0.5rem;
+                flex-direction: row;
+                align-items: center;
+                gap: 0.35rem;
                 flex-wrap: nowrap;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: none;
             }
-            .filter-bar::-webkit-scrollbar { display: none; }
-            .filter-chips { flex-wrap: nowrap; flex-shrink: 0; gap: 0.35rem; }
-            .filter-label { flex-shrink: 0; margin-right: 0; }
-            .filter-chips .btn { 
-                padding: 0 !important; 
-                width: 38px !important; 
-                min-width: 38px !important;
-                height: 38px !important;
-                flex: 0 0 38px !important;
+
+            .filter-bar::-webkit-scrollbar {
+                display: none;
+            }
+
+            .filter-chips {
+                flex-wrap: nowrap;
+                flex-shrink: 0;
+                gap: 0.35rem;
+            }
+
+            .filter-label {
+                flex-shrink: 0;
+                margin-right: 0;
+            }
+
+            .filter-chips .btn {
+                padding: 0 !important;
+                width: 44px !important;
+                min-width: 44px !important;
+                height: 44px !important;
+                flex: 0 0 44px !important;
                 justify-content: center !important;
                 gap: 0 !important;
                 overflow: hidden;
+                font-size: 1.05rem !important;
             }
         }
 
@@ -759,9 +730,17 @@
             opacity: 1;
         }
 
-        .interaction-btn.active.heart { color: #ff4757; }
-        .interaction-btn.active.like { color: var(--green); }
-        .interaction-btn.active.dislike { color: var(--red); }
+        .interaction-btn.active.heart {
+            color: #ff4757;
+        }
+
+        .interaction-btn.active.like {
+            color: var(--green);
+        }
+
+        .interaction-btn.active.dislike {
+            color: var(--red);
+        }
 
         /* ── Empty State ── */
         .empty {
@@ -968,75 +947,153 @@
 
         /* ── Bulk Address Modal ── */
         .modal-instructions {
-            background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2);
-            border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;
-            font-size: 0.85rem; color: var(--text-2); line-height: 1.5;
-            display: flex; gap: 1rem; align-items: flex-start;
+            background: rgba(79, 142, 247, 0.08);
+            border: 1px solid rgba(79, 142, 247, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-2);
+            line-height: 1.5;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
             text-align: left;
         }
+
         .modal-instructions i {
-            color: var(--accent); font-size: 1.1rem; margin-top: 0.15rem;
+            color: var(--accent);
+            font-size: 1.1rem;
+            margin-top: 0.15rem;
         }
-        .modal-instructions .instructions-content { flex: 1; }
+
+        .modal-instructions .instructions-content {
+            flex: 1;
+        }
+
         .modal-instructions code {
-            background: rgba(79, 142, 247, 0.15); color: #8eb7f9;
-            padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            background: rgba(79, 142, 247, 0.15);
+            color: #8eb7f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
             font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            display: inline-block; margin-top: 0.5rem;
+            display: inline-block;
+            margin-top: 0.5rem;
         }
 
         #bulkModal .modal {
             max-width: 560px;
         }
+
         #bulkModal textarea {
-            width: 100%; min-height: 220px; resize: none;
-            background: var(--surface-2); border: 1px solid var(--border);
-            border-radius: 12px; padding: 1.25rem; color: var(--text);
-            font-family: 'Inter', sans-serif; font-size: 0.9rem;
-            line-height: 1.6; transition: var(--trans);
+            width: 100%;
+            min-height: 220px;
+            resize: none;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            transition: var(--trans);
             margin-bottom: 1rem;
         }
-        #bulkModal textarea::placeholder { color: var(--text-2); opacity: 0.4; }
+
+        #bulkModal textarea::placeholder {
+            color: var(--text-2);
+            opacity: 0.4;
+        }
+
         #bulkModal textarea:focus {
-            outline: none; border-color: var(--accent);
+            outline: none;
+            border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
         }
 
         .modal-result {
-            margin-top: 1rem; font-size: 0.85rem; border-radius: 12px; padding: 1rem 1.25rem;
-            display: none; line-height: 1.5; text-align: left;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: none;
+            line-height: 1.5;
+            text-align: left;
         }
-        .modal-result.success { display: block; background: rgba(16, 217, 164, 0.1); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.2); }
-        .modal-result.error { display: block; background: rgba(242, 92, 105, 0.08); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.2); }
-        
+
+        .modal-result.success {
+            display: block;
+            background: rgba(16, 217, 164, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(16, 217, 164, 0.2);
+        }
+
+        .modal-result.error {
+            display: block;
+            background: rgba(242, 92, 105, 0.08);
+            color: var(--red);
+            border: 1px solid rgba(242, 92, 105, 0.2);
+        }
+
         .modal-error-list {
-            list-style: none; padding: 0; margin: 0.5rem 0 0 0;
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0 0;
         }
+
         .modal-error-list li {
-            position: relative; padding-left: 1.2rem; margin-bottom: 0.25rem;
-            opacity: 0.9; font-size: 0.8rem;
+            position: relative;
+            padding-left: 1.2rem;
+            margin-bottom: 0.25rem;
+            opacity: 0.9;
+            font-size: 0.8rem;
         }
+
         .modal-error-list li::before {
-            content: '•'; position: absolute; left: 0; color: var(--red);
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--red);
         }
 
         .modal-header {
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 1.5rem;
         }
+
         .modal-header h2 {
-            font-size: 1.1rem; font-weight: 700;
-            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
+
         .modal-close {
-            background: none; border: none; color: var(--text-2);
-            font-size: 1.2rem; cursor: pointer; padding: 0.3rem;
-            transition: var(--trans); border-radius: 6px;
+            background: none;
+            border: none;
+            color: var(--text-2);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.3rem;
+            transition: var(--trans);
+            border-radius: 6px;
         }
-        .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+        .modal-close:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05);
+        }
 
         .modal-actions {
-            display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
         }
 
         .form-group label {
@@ -1225,10 +1282,21 @@
             font-weight: 700;
         }
 
-        .status-pending { color: var(--text-2); }
-        .status-loading { color: var(--accent); }
-        .status-success { color: var(--green); }
-        .status-error { color: var(--red); }
+        .status-pending {
+            color: var(--text-2);
+        }
+
+        .status-loading {
+            color: var(--accent);
+        }
+
+        .status-success {
+            color: var(--green);
+        }
+
+        .status-error {
+            color: var(--red);
+        }
     </style>
     <link rel="stylesheet" href="/static/css/fontawesome.min.css">
 </head>
@@ -1252,8 +1320,9 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% elif is_a_visiter %}À visiter{% else %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
-                
+                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% elif is_a_visiter %}À visiter{% else
+                    %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
+
                 {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
                 <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem;">
                     <i class="fa-solid fa-plus"></i>
@@ -1269,17 +1338,21 @@
             <span class="filter-label">{{ t(request, 'dashboard.filter_label') }}</span>
             <div class="filter-chips">
                 <button class="btn" id="f-nouvelle" onclick="filter('nouvelle', this)" style="color: var(--green);">
-                    <i class="fa-solid fa-star"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.new') }}</span>
+                    <i class="fa-solid fa-star"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.new')
+                        }}</span>
                 </button>
                 <button class="btn" id="f-active" onclick="filter('active', this)" style="color: var(--accent);">
-                    <i class="fa-solid fa-eye"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.active') }}</span>
+                    <i class="fa-solid fa-eye"></i><span class="hide-on-mobile">{{ t(request,
+                        'dashboard.filters.active') }}</span>
                 </button>
                 <button class="btn" id="f-disparue" onclick="filter('disparue', this)" style="color: var(--red);">
-                    <i class="fa-solid fa-eye-slash"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.disappeared') }}</span>
+                    <i class="fa-solid fa-eye-slash"></i><span class="hide-on-mobile">{{ t(request,
+                        'dashboard.filters.disappeared') }}</span>
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-rejected" onclick="filter('rejetee', this)" style="color: var(--orange);">
-                    <i class="fa-solid fa-ban"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.rejected', 'Rejetées') }}</span>
+                    <i class="fa-solid fa-ban"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.rejected',
+                        'Rejetées') }}</span>
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
@@ -1297,7 +1370,8 @@
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <div class="visit-status-filter-wrapper" style="display: flex; align-items: center;">
-                    <select id="filterVisitStatus" onchange="applyVisitStatusFilter(this.value)" class="btn" style="background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; outline: none;">
+                    <select id="filterVisitStatus" onchange="applyVisitStatusFilter(this.value)" class="btn"
+                        style="background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; outline: none;">
                         <option value="">Tous états de visite</option>
                         <option value="none">Sans état défini</option>
                         <option value="retour_agence">🔵 Retour d'agence pour RDV</option>
@@ -1311,8 +1385,9 @@
             </div>
 
             <div class="filter-actions hide-on-mobile">
-                <button class="btn" id="btnRefreshTags" onclick="refreshTags()" style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
-                    <i class="fa-solid fa-rotate"></i> 
+                <button class="btn" id="btnRefreshTags" onclick="refreshTags()"
+                    style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
+                    <i class="fa-solid fa-rotate"></i>
                     <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>
                     <span class="d-mobile">Rafraîch. tags</span>
                 </button>
@@ -1345,37 +1420,101 @@
                         <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
                         {% endif %}
                         {% if listing.last_visit_status %}
-                        <div class="visit-status-container" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                            <div class="visit-status-badge status-{{ listing.last_visit_status }}" onclick="toggleVisitStatusDropdown(this, event)" title="Cliquer pour modifier l'état">
-                                {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence pour RDV</span>
-                                {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
-                                {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée, réflexion</span>
-                                {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite acheteur</span>
-                                {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite vendeur</span>
-                                {% elif listing.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer pour RDV</span>
+                        <div class="visit-status-container" data-listing-id="{{ listing.id }}"
+                            data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                            <div class="visit-status-badge status-{{ listing.last_visit_status }}"
+                                onclick="toggleVisitStatusDropdown(this, event)" title="Cliquer pour modifier l'état">
+                                {% if listing.last_visit_status == 'retour_agence' %}<i
+                                    class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence pour
+                                    RDV</span>
+                                {% elif listing.last_visit_status == 'visite_programmee' %}<i
+                                    class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite
+                                    programmée</span>
+                                {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i>
+                                <span class="badge-text">Déjà visitée, réflexion</span>
+                                {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i
+                                    class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite
+                                    acheteur</span>
+                                {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i
+                                    class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite vendeur</span>
+                                {% elif listing.last_visit_status == 'a_relancer' %}<i
+                                    class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer pour
+                                    RDV</span>
                                 {% endif %}
                                 <i class="fa-solid fa-chevron-down badge-caret"></i>
                             </div>
                             <div class="visit-status-menu">
-                                <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
-                                <div class="visit-status-item item-clear" data-status="" onclick="selectVisitStatus(this, event)"><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                                <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}"
+                                    data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-comments"
+                                        style="width: 14px; text-align: center;"></i><span>Retour d'agence pour
+                                        RDV</span></div>
+                                <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}"
+                                    data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-calendar-check"
+                                        style="width: 14px; text-align: center;"></i><span>Visite programmée</span>
+                                </div>
+                                <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}"
+                                    data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-brain"
+                                        style="width: 14px; text-align: center;"></i><span>Déjà visitée,
+                                        réflexion</span></div>
+                                <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}"
+                                    data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-user-slash"
+                                        style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span>
+                                </div>
+                                <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}"
+                                    data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-ban"
+                                        style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span>
+                                </div>
+                                <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}"
+                                    data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-clock-rotate-left"
+                                        style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span>
+                                </div>
+                                <div class="visit-status-item item-clear" data-status=""
+                                    onclick="selectVisitStatus(this, event)"><i class="fa-solid fa-xmark"
+                                        style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
                             </div>
                         </div>
                         {% else %}
-                        <div class="visit-status-container show-add" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                            <div class="visit-status-add-btn" onclick="toggleVisitStatusDropdown(this, event)" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                        <div class="visit-status-container show-add" data-listing-id="{{ listing.id }}"
+                            data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                            <div class="visit-status-add-btn" onclick="toggleVisitStatusDropdown(this, event)"
+                                title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
                             <div class="visit-status-menu">
-                                <div class="visit-status-item item-retour_agence" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                <div class="visit-status-item item-visite_programmee" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                <div class="visit-status-item item-deja_visitee" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                <div class="visit-status-item item-a_relancer" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                                <div class="visit-status-item item-retour_agence" data-status="retour_agence"
+                                    onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                        class="fa-solid fa-comments"
+                                        style="width: 14px; text-align: center;"></i><span>Retour d'agence pour
+                                        RDV</span></div>
+                                <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"
+                                    onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                        class="fa-solid fa-calendar-check"
+                                        style="width: 14px; text-align: center;"></i><span>Visite programmée</span>
+                                </div>
+                                <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"
+                                    onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                        class="fa-solid fa-brain"
+                                        style="width: 14px; text-align: center;"></i><span>Déjà visitée,
+                                        réflexion</span></div>
+                                <div class="visit-status-item item-sans_suite_acheteur"
+                                    data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-user-slash"
+                                        style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span>
+                                </div>
+                                <div class="visit-status-item item-sans_suite_visiteur"
+                                    data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span
+                                        class="dot"></span><i class="fa-solid fa-ban"
+                                        style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span>
+                                </div>
+                                <div class="visit-status-item item-a_relancer" data-status="a_relancer"
+                                    onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                        class="fa-solid fa-clock-rotate-left"
+                                        style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span>
+                                </div>
                             </div>
                         </div>
                         {% endif %}
@@ -1388,11 +1527,13 @@
                             %}{{ t(request, 'misc.price_nc') }}{% endif %}
                         </div>
                         {% if listing.price_per_sqm %}
-                        <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm).replace(",", " ") }} €/m²</div>
+                        <div class="card-ppsqm">{{ "{:,.0f}".format(listing.price_per_sqm).replace(",", " ") }} €/m²
+                        </div>
                         {% endif %}
 
                         <div class="card-meta">
-                            <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                            <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link"
+                                title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
                                 <i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}
                             </a>
                             {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int if
@@ -1408,25 +1549,30 @@
                         <div class="card-meta" style="margin-top: -0.4rem; font-size: 0.7rem; opacity: 0.8;">
                             {% if listing.property_type %}<span><i class="fa-solid fa-house"></i> {{
                                 listing.property_type|capitalize }}</span>{% endif %}
-                            {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> {{ t(request, 'misc.tf') }} {{
+                            {% if listing.land_tax %}<span><i class="fa-solid fa-receipt"></i> {{ t(request, 'misc.tf')
+                                }} {{
                                 listing.land_tax|int }} €</span>{% endif %}
-                            {% if listing.charges %}<span><i class="fa-solid fa-building"></i> {{ t(request, 'misc.ch') }} {{
+                            {% if listing.charges %}<span><i class="fa-solid fa-building"></i> {{ t(request, 'misc.ch')
+                                }} {{
                                 listing.charges|int }} €</span>{% endif %}
                         </div>
 
                         <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
-                            {% if listing.garden %}<i class="fa-solid fa-tree" title="{{ t(request, 'listing.garden') }}"
-                                style="color: var(--green);"></i>{% endif %}
-                            {% if listing.terrace %}<i class="fa-solid fa-sun" title="{{ t(request, 'listing.terrace') }}"
-                                style="color: var(--orange);"></i>{% endif %}
-                            {% if listing.balcony %}<i class="fa-solid fa-border-all" title="{{ t(request, 'listing.balcony') }}"
-                                style="color: var(--text-2);"></i>{% endif %}
-                            {% if listing.pool %}<i class="fa-solid fa-person-swimming" title="{{ t(request, 'listing.pool') }}"
-                                style="color: var(--accent);"></i>{% endif %}
-                            {% if listing.parking_count %}<i class="fa-solid fa-car" title="{{ t(request, 'listing.parking') }}"
-                                style="color: var(--text-2);"></i>{% endif %}
-                            {% if listing.cellar %}<i class="fa-solid fa-box-archive" title="{{ t(request, 'listing.cellar') }}"
-                                style="color: var(--text-2);"></i>{% endif %}
+                            {% if listing.garden %}<i class="fa-solid fa-tree"
+                                title="{{ t(request, 'listing.garden') }}" style="color: var(--green);"></i>{% endif %}
+                            {% if listing.terrace %}<i class="fa-solid fa-sun"
+                                title="{{ t(request, 'listing.terrace') }}" style="color: var(--orange);"></i>{% endif
+                            %}
+                            {% if listing.balcony %}<i class="fa-solid fa-border-all"
+                                title="{{ t(request, 'listing.balcony') }}" style="color: var(--text-2);"></i>{% endif
+                            %}
+                            {% if listing.pool %}<i class="fa-solid fa-person-swimming"
+                                title="{{ t(request, 'listing.pool') }}" style="color: var(--accent);"></i>{% endif %}
+                            {% if listing.parking_count %}<i class="fa-solid fa-car"
+                                title="{{ t(request, 'listing.parking') }}" style="color: var(--text-2);"></i>{% endif
+                            %}
+                            {% if listing.cellar %}<i class="fa-solid fa-box-archive"
+                                title="{{ t(request, 'listing.cellar') }}" style="color: var(--text-2);"></i>{% endif %}
                         </div>
 
                         <!-- Reviews mini-preview -->
@@ -1448,32 +1594,40 @@
 
                         <div class="card-footer">
                             <span class="source-badge">{{ listing.source.value|upper }}</span>
-                            
+
                             <div class="interaction-btns">
-                                <button class="interaction-btn visit {% if listing.to_visit %}active{% endif %}" 
-                                        onclick="event.stopPropagation(); toggleToVisit({{ listing.id }}, this)"
-                                        title="Ajouter / Retirer des biens à visiter" style="color: {% if listing.to_visit %}var(--accent){% else %}var(--text-2){% endif %};">
-                                    <i class="fa-{% if listing.to_visit %}solid{% else %}regular{% endif %} fa-bookmark"></i>
+                                <button class="interaction-btn visit {% if listing.to_visit %}active{% endif %}"
+                                    onclick="event.stopPropagation(); toggleToVisit({{ listing.id }}, this)"
+                                    title="Ajouter / Retirer des biens à visiter"
+                                    style="color: {% if listing.to_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i
+                                        class="fa-{% if listing.to_visit %}solid{% else %}regular{% endif %} fa-bookmark"></i>
                                 </button>
-                                <button class="interaction-btn heart {% if listing.is_favorite %}active{% endif %}" 
-                                        onclick="event.stopPropagation(); toggleFavorite({{ listing.id }}, this)"
-                                        title="{{ t(request, 'listing.favorite') }}">
-                                    <i class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i>
+                                <button class="interaction-btn heart {% if listing.is_favorite %}active{% endif %}"
+                                    onclick="event.stopPropagation(); toggleFavorite({{ listing.id }}, this)"
+                                    title="{{ t(request, 'listing.favorite') }}">
+                                    <i
+                                        class="fa-{% if listing.is_favorite %}solid{% else %}regular{% endif %} fa-heart"></i>
                                 </button>
-                                <button class="interaction-btn like {% if listing.is_liked %}active{% endif %}" 
-                                        onclick="event.stopPropagation(); toggleLike({{ listing.id }}, this)"
-                                        title="{{ t(request, 'listing.like') }}">
-                                    <i class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i>
+                                <button class="interaction-btn like {% if listing.is_liked %}active{% endif %}"
+                                    onclick="event.stopPropagation(); toggleLike({{ listing.id }}, this)"
+                                    title="{{ t(request, 'listing.like') }}">
+                                    <i
+                                        class="fa-{% if listing.is_liked %}solid{% else %}regular{% endif %} fa-thumbs-up"></i>
                                 </button>
-                                <button class="interaction-btn dislike {% if listing.is_disliked %}active{% endif %}" 
-                                        onclick="event.stopPropagation(); toggleDislike({{ listing.id }}, this)"
-                                        title="{{ t(request, 'listing.dislike') }}">
-                                    <i class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i>
+                                <button class="interaction-btn dislike {% if listing.is_disliked %}active{% endif %}"
+                                    onclick="event.stopPropagation(); toggleDislike({{ listing.id }}, this)"
+                                    title="{{ t(request, 'listing.dislike') }}">
+                                    <i
+                                        class="fa-{% if listing.is_disliked %}solid{% else %}regular{% endif %} fa-thumbs-down"></i>
                                 </button>
-                                <button class="interaction-btn contact {% if listing.has_contact_or_visit %}active{% endif %}" 
-                                        onclick="event.stopPropagation(); toggleContactMade({{ listing.id }}, this)"
-                                        title="Demande de contact agence effectuée" style="color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
-                                    <i class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
+                                <button
+                                    class="interaction-btn contact {% if listing.has_contact_or_visit %}active{% endif %}"
+                                    onclick="event.stopPropagation(); toggleContactMade({{ listing.id }}, this)"
+                                    title="Demande de contact agence effectuée"
+                                    style="color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i
+                                        class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
                                 </button>
                             </div>
 
@@ -1483,7 +1637,8 @@
                             </a>
                             <button class="btn-delete"
                                 onclick='event.stopPropagation(); openDeleteModal({{ listing.id }}, {{ listing.title|tojson|forceescape }})'
-                                title="{{ t(request, 'dashboard.delete_title') }}" aria-label="{{ t(request, 'listing.delete_btn') }}">
+                                title="{{ t(request, 'dashboard.delete_title') }}"
+                                aria-label="{{ t(request, 'listing.delete_btn') }}">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -1496,158 +1651,165 @@
                     <p>{{ t(request, 'dashboard.empty_state.subtitle') }}</p>
                 </div>
                 {% endfor %}
-                <div id="noFilteredResults" class="empty" style="display: none; grid-column: 1 / -1; width: 100%;">
-                    <i class="fa-solid fa-filter-circle-xmark"></i>
-                    <h2>{{ t(request, 'filter.no_results', 'Aucun résultat pour ces filtres.') }}</h2>
-                    <p style="color: var(--text-2); font-size: 0.85rem; margin-top: 0.25rem;">Essayez d'activer d'autres filtres de statut ou de réinitialiser vos critères.</p>
-                </div>
 
             </div>
         </div>
-    </div>
+        </div>
 
-    <!-- ── Modal: Ajouter URL ── -->
-    <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
-        <div class="modal" id="modalContainer" style="max-width: 600px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
-                <div>
-                    <h2><i class="fa-solid fa-link"></i> {{ t(request, 'dashboard.add_listings_title') }}</h2>
-                    <p id="modalMainDesc">{{ t(request, 'dashboard.add_listings_desc_single') }}</p>
+        <!-- ── Modal: Ajouter URL ── -->
+        <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+            <div class="modal" id="modalContainer" style="max-width: 600px;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                    <div>
+                        <h2><i class="fa-solid fa-link"></i> {{ t(request, 'dashboard.add_listings_title') }}</h2>
+                        <p id="modalMainDesc">{{ t(request, 'dashboard.add_listings_desc_single') }}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
+                        <span
+                            style="font-size: 0.65rem; font-weight: 700; color: var(--text-2); text-transform: uppercase;">{{
+                            t(request, 'dashboard.mode_multiple') }}</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleMultiple" onchange="toggleMode()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
-                    <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-2); text-transform: uppercase;">{{ t(request, 'dashboard.mode_multiple') }}</span>
-                    <label class="switch">
-                        <input type="checkbox" id="toggleMultiple" onchange="toggleMode()">
-                        <span class="slider"></span>
-                    </label>
+
+                <!-- Single Mode -->
+                <div id="singleMode">
+                    <div class="form-group">
+                        <label for="urlInput">{{ t(request, 'dashboard.url_label') }}</label>
+                        <input type="url" id="urlInput"
+                            placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
+                    </div>
+                    <div
+                        style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
+                        <i class="fa-solid fa-circle-info"></i> '<strong>{{ t(request, 'dashboard.add_without_scrape')
+                            }}</strong>' {{ t(request, 'dashboard.add_without_scrape_hint') }}
+                    </div>
+                </div>
+
+                <!-- Multiple Mode -->
+                <div id="multipleMode" style="display: none;">
+                    <div class="form-group">
+                        <label for="urlsArea">{{ t(request, 'dashboard.urls_label') }}</label>
+                        <textarea id="urlsArea"
+                            style="width: 100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;"
+                            placeholder="Collez plusieurs URLs ici..."></textarea>
+                    </div>
+                    <button class="btn sm" onclick="loadUrls()"
+                        style="width: 100%; margin-top: -0.5rem; margin-bottom: 1rem;">
+                        <i class="fa-solid fa-list-check"></i> {{ t(request, 'dashboard.analyze_urls') }}
+                    </button>
+
+                    <div id="batchContainer" style="display: none;">
+                        <div class="batch-table-wrapper">
+                            <table class="batch-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 30px;">#</th>
+                                        <th>URL</th>
+                                        <th style="width: 100px; text-align: center;">{{ t(request,
+                                            'dashboard.scrape_q') }}</th>
+                                        <th style="width: 80px;">{{ t(request, 'dashboard.status') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batchBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert" id="alertBox"></div>
+
+                <div class="modal-actions" style="flex-wrap: wrap;" id="modalActions">
+                    <button class="btn" onclick="closeModal()">{{ t(request, 'dashboard.cancel') }}</button>
+
+                    <div id="singleActions" style="display: contents;">
+                        <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)"
+                            style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
+                            <i class="fa-solid fa-bolt"></i> {{ t(request, 'dashboard.add_without_scrape') }}
+                        </button>
+                        <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
+                            <div class="spinner" id="spinner"></div>
+                            <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> {{ t(request,
+                                'dashboard.scrape_and_add') }}</span>
+                        </button>
+                    </div>
+
+                    <div id="multipleActions" style="display: none;">
+                        <button class="btn primary" id="btnRunBatch" onclick="runBatch()" disabled>
+                            <i class="fa-solid fa-play"></i> {{ t(request, 'dashboard.run_batch') }}
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Single Mode -->
-            <div id="singleMode">
-                <div class="form-group">
-                    <label for="urlInput">{{ t(request, 'dashboard.url_label') }}</label>
-                    <input type="url" id="urlInput" placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
-                </div>
-                <div style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
-                    <i class="fa-solid fa-circle-info"></i> '<strong>{{ t(request, 'dashboard.add_without_scrape') }}</strong>' {{ t(request, 'dashboard.add_without_scrape_hint') }}
-                </div>
-            </div>
+        <!-- ── Modal: Confirmation suppression (slide) ── -->
+        <div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
+            <div class="modal delete-modal">
+                <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h2>{{ t(request, 'dashboard.delete_title') }}</h2>
+                <p class="delete-title-preview" id="deleteTitlePreview"></p>
+                <p class="delete-warning">{{ t(request, 'dashboard.delete_warn')|safe }}</p>
 
-            <!-- Multiple Mode -->
-            <div id="multipleMode" style="display: none;">
-                <div class="form-group">
-                    <label for="urlsArea">{{ t(request, 'dashboard.urls_label') }}</label>
-                    <textarea id="urlsArea" style="width: 100%; min-height: 80px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 1rem; color: var(--text); font-size: 0.8rem; font-family: inherit;" placeholder="Collez plusieurs URLs ici..."></textarea>
+                <div class="slide-confirm-wrapper">
+                    <div class="slide-track" id="slideTrack">
+                        <div class="slide-thumb" id="slideThumb">
+                            <i class="fa-solid fa-chevron-right"></i>
+                            <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
+                        </div>
+                        <span class="slide-label" id="slideLabel">{{ t(request, 'listing.slide_confirm') }}</span>
+                    </div>
                 </div>
-                <button class="btn sm" onclick="loadUrls()" style="width: 100%; margin-top: -0.5rem; margin-bottom: 1rem;">
-                    <i class="fa-solid fa-list-check"></i> {{ t(request, 'dashboard.analyze_urls') }}
+
+                <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'dashboard.cancel') }}
                 </button>
-
-                <div id="batchContainer" style="display: none;">
-                    <div class="batch-table-wrapper">
-                        <table class="batch-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 30px;">#</th>
-                                    <th>URL</th>
-                                    <th style="width: 100px; text-align: center;">{{ t(request, 'dashboard.scrape_q') }}</th>
-                                    <th style="width: 80px;">{{ t(request, 'dashboard.status') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody id="batchBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert" id="alertBox"></div>
-
-            <div class="modal-actions" style="flex-wrap: wrap;" id="modalActions">
-                <button class="btn" onclick="closeModal()">{{ t(request, 'dashboard.cancel') }}</button>
-                
-                <div id="singleActions" style="display: contents;">
-                    <button class="btn" id="submitBtnNoScrape" onclick="submitUrl(true)" style="border-color: rgba(248,168,75,0.4); color: var(--orange);">
-                        <i class="fa-solid fa-bolt"></i> {{ t(request, 'dashboard.add_without_scrape') }}
-                    </button>
-                    <button class="btn primary" id="submitBtn" onclick="submitUrl(false)">
-                        <div class="spinner" id="spinner"></div>
-                        <span id="submitLabel"><i class="fa-solid fa-magnifying-glass"></i> {{ t(request, 'dashboard.scrape_and_add') }}</span>
-                    </button>
-                </div>
-
-                <div id="multipleActions" style="display: none;">
-                    <button class="btn primary" id="btnRunBatch" onclick="runBatch()" disabled>
-                        <i class="fa-solid fa-play"></i> {{ t(request, 'dashboard.run_batch') }}
-                    </button>
-                </div>
             </div>
         </div>
-    </div>
 
-    <!-- ── Modal: Confirmation suppression (slide) ── -->
-    <div class="modal-backdrop" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
-        <div class="modal delete-modal">
-            <div class="delete-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <h2>{{ t(request, 'dashboard.delete_title') }}</h2>
-            <p class="delete-title-preview" id="deleteTitlePreview"></p>
-            <p class="delete-warning">{{ t(request, 'dashboard.delete_warn')|safe }}</p>
-
-            <div class="slide-confirm-wrapper">
-                <div class="slide-track" id="slideTrack">
-                    <div class="slide-thumb" id="slideThumb">
-                        <i class="fa-solid fa-chevron-right"></i>
-                        <i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>
-                    </div>
-                    <span class="slide-label" id="slideLabel">{{ t(request, 'listing.slide_confirm') }}</span>
-                </div>
-            </div>
-
-            <button class="btn" style="width:100%;margin-top:.75rem;" onclick="closeDeleteModal()">
-                <i class="fa-solid fa-xmark"></i> {{ t(request, 'dashboard.cancel') }}
-            </button>
-        </div>
-    </div>
-
-    <script>
-        function openModal() {
-            document.getElementById('modal').classList.add('open');
-            document.getElementById('urlInput').value = '';
-            document.getElementById('urlsArea').value = '';
-            document.getElementById('toggleMultiple').checked = false;
-            document.getElementById('batchBody').innerHTML = '';
-            document.getElementById('batchContainer').style.display = 'none';
-            toggleMode();
-            hideAlert();
-            setTimeout(() => document.getElementById('urlInput').focus(), 100);
-        }
-
-        function toggleMode() {
-            const isMultiple = document.getElementById('toggleMultiple').checked;
-            document.getElementById('singleMode').style.display = isMultiple ? 'none' : 'block';
-            document.getElementById('multipleMode').style.display = isMultiple ? 'block' : 'none';
-            document.getElementById('singleActions').style.display = isMultiple ? 'none' : 'contents';
-            document.getElementById('multipleActions').style.display = isMultiple ? 'flex' : 'none';
-            document.getElementById('modalMainDesc').textContent = isMultiple 
-                ? "Collez plusieurs URLs et choisissez pour chaque ligne si vous voulez scraper."
-                : "Collez l'URL d'une annonce immobilière.";
-        }
-
-        function loadUrls() {
-            const area = document.getElementById('urlsArea');
-            const lines = area.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
-            const body = document.getElementById('batchBody');
-            body.innerHTML = '';
-            
-            if (lines.length === 0) {
-                showAlert('Aucune URL valide détectée (doit commencer par http).', 'error');
-                return;
+        <script>
+            function openModal() {
+                document.getElementById('modal').classList.add('open');
+                document.getElementById('urlInput').value = '';
+                document.getElementById('urlsArea').value = '';
+                document.getElementById('toggleMultiple').checked = false;
+                document.getElementById('batchBody').innerHTML = '';
+                document.getElementById('batchContainer').style.display = 'none';
+                toggleMode();
+                hideAlert();
+                setTimeout(() => document.getElementById('urlInput').focus(), 100);
             }
 
-            lines.forEach((url, i) => {
-                const tr = document.createElement('tr');
-                tr.dataset.url = url;
-                tr.innerHTML = `
+            function toggleMode() {
+                const isMultiple = document.getElementById('toggleMultiple').checked;
+                document.getElementById('singleMode').style.display = isMultiple ? 'none' : 'block';
+                document.getElementById('multipleMode').style.display = isMultiple ? 'block' : 'none';
+                document.getElementById('singleActions').style.display = isMultiple ? 'none' : 'contents';
+                document.getElementById('multipleActions').style.display = isMultiple ? 'flex' : 'none';
+                document.getElementById('modalMainDesc').textContent = isMultiple
+                    ? "Collez plusieurs URLs et choisissez pour chaque ligne si vous voulez scraper."
+                    : "Collez l'URL d'une annonce immobilière.";
+            }
+
+            function loadUrls() {
+                const area = document.getElementById('urlsArea');
+                const lines = area.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+                const body = document.getElementById('batchBody');
+                body.innerHTML = '';
+
+                if (lines.length === 0) {
+                    showAlert('Aucune URL valide détectée (doit commencer par http).', 'error');
+                    return;
+                }
+
+                lines.forEach((url, i) => {
+                    const tr = document.createElement('tr');
+                    tr.dataset.url = url;
+                    tr.innerHTML = `
                     <td>${i + 1}</td>
                     <td class="url-cell" title="${url}">${url}</td>
                     <td style="text-align: center;">
@@ -1658,28 +1820,88 @@
                     </td>
                     <td class="status-cell status-pending">En attente</td>
                 `;
-                body.appendChild(tr);
-            });
+                    body.appendChild(tr);
+                });
 
-            document.getElementById('batchContainer').style.display = 'block';
-            document.getElementById('btnRunBatch').disabled = false;
-            hideAlert();
-        }
+                document.getElementById('batchContainer').style.display = 'block';
+                document.getElementById('btnRunBatch').disabled = false;
+                hideAlert();
+            }
 
-        async function runBatch() {
-            const rows = document.querySelectorAll('#batchBody tr');
-            const btn = document.getElementById('btnRunBatch');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement en cours...';
+            async function runBatch() {
+                const rows = document.querySelectorAll('#batchBody tr');
+                const btn = document.getElementById('btnRunBatch');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Traitement en cours...';
 
-            let count = 0;
-            for (const row of rows) {
-                const url = row.dataset.url;
-                const skipScraping = !row.querySelector('.batch-scrape-toggle').checked;
-                const statusCell = row.querySelector('.status-cell');
-                
-                statusCell.textContent = 'En cours...';
-                statusCell.className = 'status-cell status-loading';
+                let count = 0;
+                for (const row of rows) {
+                    const url = row.dataset.url;
+                    const skipScraping = !row.querySelector('.batch-scrape-toggle').checked;
+                    const statusCell = row.querySelector('.status-cell');
+
+                    statusCell.textContent = 'En cours...';
+                    statusCell.className = 'status-cell status-loading';
+
+                    try {
+                        const res = await fetch('/api/listings/submit-url', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url, skip_scraping: skipScraping }),
+                        });
+                        const data = await res.json();
+
+                        if (data.status === 'success' || data.status === 'created' || data.status === 'already_exists') {
+                            statusCell.textContent = 'Terminé';
+                            statusCell.className = 'status-cell status-success';
+                            count++;
+                        } else {
+                            statusCell.textContent = 'Erreur';
+                            statusCell.className = 'status-cell status-error';
+                        }
+                    } catch (err) {
+                        statusCell.textContent = 'Échec';
+                        statusCell.className = 'status-cell status-error';
+                    }
+                    // Small delay between calls to be gentle with the scrapers/network
+                    await new Promise(r => setTimeout(r, 500));
+                }
+
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Terminé (' + count + '/' + rows.length + ')';
+                setTimeout(() => { if (count > 0) window.location.reload(); }, 1500);
+            }
+
+            function closeModal() {
+                document.getElementById('modal').classList.remove('open');
+            }
+
+            function showAlert(msg, type) {
+                const el = document.getElementById('alertBox');
+                el.textContent = msg;
+                el.className = 'alert ' + type;
+                el.style.display = 'block';
+            }
+
+            function hideAlert() {
+                document.getElementById('alertBox').style.display = 'none';
+            }
+
+            async function submitUrl(skipScraping = false) {
+                const url = document.getElementById('urlInput').value.trim();
+                if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
+
+                const btn = document.getElementById('submitBtn');
+                const btnNoScrape = document.getElementById('submitBtnNoScrape');
+                const spinner = document.getElementById('spinner');
+                const label = document.getElementById('submitLabel');
+
+                btn.disabled = true;
+                btnNoScrape.disabled = true;
+                if (!skipScraping) {
+                    spinner.style.display = 'block';
+                    label.style.display = 'none';
+                }
+                hideAlert();
 
                 try {
                     const res = await fetch('/api/listings/submit-url', {
@@ -1689,649 +1911,530 @@
                     });
                     const data = await res.json();
 
-                    if (data.status === 'success' || data.status === 'created' || data.status === 'already_exists') {
-                        statusCell.textContent = 'Terminé';
-                        statusCell.className = 'status-cell status-success';
-                        count++;
+                    if (data.status === 'already_exists') {
+                        showAlert(`Cette annonce est déjà dans la base (ID #${data.listing_id}).`, 'warning');
+                        if (data.listing_id) {
+                            setTimeout(() => { window.location.href = `/listings/${data.listing_id}`; }, 2500);
+                        }
+                    } else if (data.status === 'created' || data.status === 'updated' || data.status === 'success') {
+                        if (data.scraping_success === false) {
+                            showAlert('Erreur de scraping, importation sans scraping en cours.', 'warning');
+                        } else if (data.forbidden_zone_warning) {
+                            showAlert(`⚠ Zone interdite ! ${data.forbidden_zone_warning.message} — Annonce ajoutée tout de même.`, 'warning');
+                        } else {
+                            showAlert(`✓ Annonce ajoutée ! ${data.title || ''}`, 'success');
+                        }
+                        setTimeout(() => {
+                            closeModal();
+                            window.location.href = `/listings/${data.listing_id}`;
+                        }, 2500);
                     } else {
-                        statusCell.textContent = 'Erreur';
-                        statusCell.className = 'status-cell status-error';
+                        showAlert(data.message || 'Erreur lors du scraping.', 'error');
                     }
                 } catch (err) {
-                    statusCell.textContent = 'Échec';
-                    statusCell.className = 'status-cell status-error';
-                }
-                // Small delay between calls to be gentle with the scrapers/network
-                await new Promise(r => setTimeout(r, 500));
-            }
-
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> Terminé (' + count + '/' + rows.length + ')';
-            setTimeout(() => { if (count > 0) window.location.reload(); }, 1500);
-        }
-
-        function closeModal() {
-            document.getElementById('modal').classList.remove('open');
-        }
-
-        function showAlert(msg, type) {
-            const el = document.getElementById('alertBox');
-            el.textContent = msg;
-            el.className = 'alert ' + type;
-            el.style.display = 'block';
-        }
-
-        function hideAlert() {
-            document.getElementById('alertBox').style.display = 'none';
-        }
-
-        async function submitUrl(skipScraping = false) {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
-
-            const btn = document.getElementById('submitBtn');
-            const btnNoScrape = document.getElementById('submitBtnNoScrape');
-            const spinner = document.getElementById('spinner');
-            const label = document.getElementById('submitLabel');
-
-            btn.disabled = true;
-            btnNoScrape.disabled = true;
-            if (!skipScraping) {
-                spinner.style.display = 'block';
-                label.style.display = 'none';
-            }
-            hideAlert();
-
-            try {
-                const res = await fetch('/api/listings/submit-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, skip_scraping: skipScraping }),
-                });
-                const data = await res.json();
-
-                if (data.status === 'already_exists') {
-                    showAlert(`Cette annonce est déjà dans la base (ID #${data.listing_id}).`, 'warning');
-                    if (data.listing_id) {
-                        setTimeout(() => { window.location.href = `/listings/${data.listing_id}`; }, 2500);
-                    }
-                } else if (data.status === 'created' || data.status === 'updated' || data.status === 'success') {
-                    if (data.scraping_success === false) {
-                        showAlert('Erreur de scraping, importation sans scraping en cours.', 'warning');
-                    } else if (data.forbidden_zone_warning) {
-                        showAlert(`⚠ Zone interdite ! ${data.forbidden_zone_warning.message} — Annonce ajoutée tout de même.`, 'warning');
-                    } else {
-                        showAlert(`✓ Annonce ajoutée ! ${data.title || ''}`, 'success');
-                    }
-                    setTimeout(() => {
-                        closeModal();
-                        window.location.href = `/listings/${data.listing_id}`;
-                    }, 2500);
-                } else {
-                    showAlert(data.message || 'Erreur lors du scraping.', 'error');
-                }
-            } catch (err) {
-                showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');
-            } finally {
-                btn.disabled = false;
-                btnNoScrape.disabled = false;
-                spinner.style.display = 'none';
-                label.style.display = 'inline';
-            }
-        }
-
-        async function refreshTags() {
-            const btn = document.getElementById('btnRefreshTags');
-            const icon = btn.querySelector('i');
-            const span = btn.querySelector('span');
-            
-            btn.disabled = true;
-            icon.classList.add('fa-spin');
-            const originalText = span.textContent;
-            span.textContent = 'Traitement...';
-
-            try {
-                const res = await fetch('/api/listings/refresh-tags', { method: 'POST' });
-                if (res.ok) {
-                    alert('Rafraîchissement lancé en arrière-plan. Les tags seront mis à jour progressivement.');
-                } else {
-                    alert('Erreur lors du lancement du rafraîchissement.');
-                }
-            } catch (e) {
-                alert('Erreur réseau.');
-            } finally {
-                setTimeout(() => {
+                    showAlert('Erreur réseau. Vérifiez que le serveur est lancé.', 'error');
+                } finally {
                     btn.disabled = false;
-                    icon.classList.remove('fa-spin');
-                    span.textContent = originalText;
-                }, 3000);
+                    btnNoScrape.disabled = false;
+                    spinner.style.display = 'none';
+                    label.style.display = 'inline';
+                }
             }
-        }
 
-        const activeStatuses = new Set();
-        const activeReactions = new Set();
-        let isContactedFilter = false;
-        let currentVisitStatusFilter = '';
+            async function refreshTags() {
+                const btn = document.getElementById('btnRefreshTags');
+                const icon = btn.querySelector('i');
+                const span = btn.querySelector('span');
 
-        function filter(type, btn) {
-            const isStatus = ['nouvelle', 'active', 'disparue', 'rejetee'].includes(type);
-            const isReaction = ['favorite', 'liked', 'disliked'].includes(type);
-            const isContact = (type === 'contacted');
+                btn.disabled = true;
+                icon.classList.add('fa-spin');
+                const originalText = span.textContent;
+                span.textContent = 'Traitement...';
 
-            if (isStatus) {
-                if (activeStatuses.has(type)) {
-                    activeStatuses.delete(type);
-                    btn.classList.remove('active');
+                try {
+                    const res = await fetch('/api/listings/refresh-tags', { method: 'POST' });
+                    if (res.ok) {
+                        alert('Rafraîchissement lancé en arrière-plan. Les tags seront mis à jour progressivement.');
+                    } else {
+                        alert('Erreur lors du lancement du rafraîchissement.');
+                    }
+                } catch (e) {
+                    alert('Erreur réseau.');
+                } finally {
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        icon.classList.remove('fa-spin');
+                        span.textContent = originalText;
+                    }, 3000);
+                }
+            }
+
+            let currentFilterStatus = 'all';
+            let currentVisitStatusFilter = '';
+
+            function filter(status, btn) {
+                const wasActive = btn.classList.contains('active');
+                document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
+
+                if (wasActive) {
+                    currentFilterStatus = 'all';
                 } else {
-                    activeStatuses.add(type);
+                    currentFilterStatus = status;
                     btn.classList.add('active');
                 }
-            } else if (isReaction) {
-                if (activeReactions.has(type)) {
-                    activeReactions.delete(type);
-                    btn.classList.remove('active');
-                } else {
-                    activeReactions.add(type);
-                    btn.classList.add('active');
-                }
-            } else if (isContact) {
-                isContactedFilter = !isContactedFilter;
-                if (isContactedFilter) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            }
-
-            applyListingFilters();
-        }
-
-        function applyVisitStatusFilter(val) {
-            currentVisitStatusFilter = val;
-            applyListingFilters();
-        }
-
-        function applyListingFilters() {
-            const cards = document.querySelectorAll('.grid .card');
-            let visibleCount = 0;
-
-            cards.forEach(card => {
-                // Status filter: OR within active statuses; if none selected, all statuses allowed
-                const statusMatch = activeStatuses.size === 0 || activeStatuses.has(card.dataset.status);
-
-                // Reaction filter: OR within active reactions; if none selected, all reactions allowed
-                let reactionMatch = true;
-                if (activeReactions.size > 0) {
-                    const isFav = card.dataset.favorite === 'true';
-                    const isLiked = card.dataset.liked === 'true';
-                    const isDisliked = card.dataset.disliked === 'true';
-                    reactionMatch = (
-                        (activeReactions.has('favorite') && isFav) ||
-                        (activeReactions.has('liked') && isLiked) ||
-                        (activeReactions.has('disliked') && isDisliked)
-                    );
-                }
-
-                // Contacted filter
-                const contactMatch = !isContactedFilter || card.dataset.contacted === 'true';
-
-                // Visit status filter
-                let visitMatch = true;
-                if (currentVisitStatusFilter) {
-                    if (currentVisitStatusFilter === 'none') {
-                        visitMatch = !card.dataset.visitStatus;
-                    } else {
-                        visitMatch = (card.dataset.visitStatus === currentVisitStatusFilter);
-                    }
-                }
-
-                const show = statusMatch && reactionMatch && contactMatch && visitMatch;
-                card.style.display = show ? '' : 'none';
-                if (show) visibleCount++;
-            });
-
-            const noResEl = document.getElementById('noFilteredResults');
-            if (noResEl) {
-                noResEl.style.display = (cards.length > 0 && visibleCount === 0) ? 'flex' : 'none';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            {% if not is_a_voir and not is_a_visiter %}
-            // Default filter for "Toutes les annonces": Nouvelles + Actives
-            activeStatuses.add('nouvelle');
-            activeStatuses.add('active');
-            const btnNew = document.getElementById('f-nouvelle');
-            const btnAct = document.getElementById('f-active');
-            if (btnNew) btnNew.classList.add('active');
-            if (btnAct) btnAct.classList.add('active');
-            applyListingFilters();
-            {% endif %}
-        });
-
-        // Keyboard shortcut: Escape to close modal
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeModal(); closeDeleteModal(); closeBulkModal(); }
-            if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
-        });
-
-        // ── Interaction Logic ────────────────────────────────────────────────
-        async function toggleContactMade(listingId, btn) {
-            try {
-                const res = await fetch(`/api/listings/${listingId}/contact-made`, { method: 'PATCH' });
-                const data = await res.json();
-                if (res.ok) {
-                    const card = btn.closest('.card');
-                    if (data.contact_made) {
-                        btn.classList.add('active');
-                        btn.style.color = 'var(--accent)';
-                        btn.querySelector('i').className = 'fa-solid fa-envelope';
-                        if (card) card.dataset.contacted = 'true';
-                    } else {
-                        btn.classList.remove('active');
-                        btn.style.color = 'var(--text-2)';
-                        btn.querySelector('i').className = 'fa-regular fa-envelope';
-                        if (card) card.dataset.contacted = 'false';
-                    }
-                    applyListingFilters();
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function toggleToVisit(listingId, btn) {
-            try {
-                const res = await fetch(`/api/listings/${listingId}/to-visit`, { method: 'PATCH' });
-                const data = await res.json();
-                if (res.ok) {
-                    if (data.to_visit) {
-                        btn.classList.add('active');
-                        btn.style.color = 'var(--accent)';
-                        btn.querySelector('i').className = 'fa-solid fa-bookmark';
-                    } else {
-                        btn.classList.remove('active');
-                        btn.style.color = 'var(--text-2)';
-                        btn.querySelector('i').className = 'fa-regular fa-bookmark';
-                    }
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function toggleFavorite(listingId, btn) {
-            try {
-                const res = await fetch(`/api/listings/${listingId}/favorite`, { method: 'PATCH' });
-                const data = await res.json();
-                if (res.ok) {
-                    updateInteractionButtons(btn.closest('.card-footer'), data);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function toggleLike(listingId, btn) {
-            try {
-                const res = await fetch(`/api/listings/${listingId}/like`, { method: 'PATCH' });
-                const data = await res.json();
-                if (res.ok) {
-                    updateInteractionButtons(btn.closest('.card-footer'), data);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function toggleDislike(listingId, btn) {
-            try {
-                const res = await fetch(`/api/listings/${listingId}/dislike`, { method: 'PATCH' });
-                const data = await res.json();
-                if (res.ok) {
-                    updateInteractionButtons(btn.closest('.card-footer'), data);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        function updateInteractionButtons(footer, data) {
-            const heartBtn = footer.querySelector('.interaction-btn.heart');
-            const likeBtn = footer.querySelector('.interaction-btn.like');
-            const dislikeBtn = footer.querySelector('.interaction-btn.dislike');
-
-            // Favorite
-            if (data.is_favorite) {
-                heartBtn.classList.add('active');
-                heartBtn.querySelector('i').className = 'fa-solid fa-heart';
-            } else {
-                heartBtn.classList.remove('active');
-                heartBtn.querySelector('i').className = 'fa-regular fa-heart';
-            }
-
-            // Like
-            if (data.is_liked) {
-                likeBtn.classList.add('active');
-                likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
-            } else {
-                likeBtn.classList.remove('active');
-                likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
-            }
-
-            // Dislike
-            if (data.is_disliked) {
-                dislikeBtn.classList.add('active');
-                dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
-            } else {
-                dislikeBtn.classList.remove('active');
-                dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
-            }
-
-            const card = footer.closest('.card');
-            if (card) {
-                card.dataset.favorite = data.is_favorite ? 'true' : 'false';
-                card.dataset.liked = data.is_liked ? 'true' : 'false';
-                card.dataset.disliked = data.is_disliked ? 'true' : 'false';
                 applyListingFilters();
             }
-        }
 
-        // ── Bulk Address Modal Logic ──────────────────────────────────────────
-        function openBulkModal() {
-            document.getElementById('bulkModal').classList.add('open');
-            document.getElementById('bulkTextarea').value = '';
-            document.getElementById('bulkResult').style.display = 'none';
-            document.getElementById('bulkResult').innerHTML = '';
-            document.getElementById('btnSubmitBulk').disabled = false;
-        }
+            function applyVisitStatusFilter(val) {
+                currentVisitStatusFilter = val;
+                applyListingFilters();
+            }
 
-        function closeBulkModal() {
-            document.getElementById('bulkModal').classList.remove('open');
-        }
+            function applyListingFilters() {
+                document.querySelectorAll('.card').forEach(card => {
+                    let showStatus = false;
+                    if (currentFilterStatus === 'all') showStatus = true;
+                    else if (currentFilterStatus === 'favorite') showStatus = card.dataset.favorite === 'true';
+                    else if (currentFilterStatus === 'liked') showStatus = card.dataset.liked === 'true';
+                    else if (currentFilterStatus === 'disliked') showStatus = card.dataset.disliked === 'true';
+                    else if (currentFilterStatus === 'contacted') showStatus = card.dataset.contacted === 'true';
+                    else showStatus = card.dataset.status === currentFilterStatus;
 
-        async function submitBulk() {
-            const textarea = document.getElementById('bulkTextarea');
-            const resultEl = document.getElementById('bulkResult');
-            const btn = document.getElementById('btnSubmitBulk');
-            const raw = textarea.value.trim();
-
-            if (!raw) return;
-
-            const lines = raw.split('\n').filter(l => l.trim());
-            const pins = [];
-
-            for (const line of lines) {
-                const parts = line.split(';');
-                if (parts.length >= 2) {
-                    const title = parts[0].trim();
-                    const address = parts.slice(1).join(';').trim();
-                    if (title && address) {
-                        pins.push({ title, address });
+                    let showVisit = true;
+                    if (currentVisitStatusFilter) {
+                        if (currentVisitStatusFilter === 'none') {
+                            showVisit = !card.dataset.visitStatus;
+                        } else {
+                            showVisit = card.dataset.visitStatus === currentVisitStatusFilter;
+                        }
                     }
-                }
-            }
 
-            if (pins.length === 0) {
-                resultEl.className = 'modal-result error';
-                resultEl.textContent = '{{ t(request, "map.no_valid_entries", "Format invalide. Utilisez: Titre ; Adresse") }}';
-                resultEl.style.display = 'block';
-                return;
-            }
-
-            btn.disabled = true;
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout...") }}';
-            resultEl.style.display = 'none';
-
-            try {
-                const res = await fetch('/api/map-pins', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pins })
+                    card.style.display = (showStatus && showVisit) ? '' : 'none';
                 });
+            }
 
-                const data = await res.json();
+            // Keyboard shortcut: Escape to close modal
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { closeModal(); closeDeleteModal(); closeBulkModal(); }
+                if (e.key === 'Enter' && document.getElementById('modal').classList.contains('open')) submitUrl();
+            });
 
-                if (data.created > 0) {
-                    let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
-                    if (data.errors && data.errors.length > 0) {
-                        msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
-                        msg += `<ul class="modal-error-list">`;
-                        data.errors.forEach(e => {
-                            msg += `<li>${e.title} — ${e.address}</li>`;
-                        });
-                        msg += `</ul>`;
+            // ── Interaction Logic ────────────────────────────────────────────────
+            async function toggleContactMade(listingId, btn) {
+                try {
+                    const res = await fetch(`/api/listings/${listingId}/contact-made`, { method: 'PATCH' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        const card = btn.closest('.card');
+                        if (data.contact_made) {
+                            btn.classList.add('active');
+                            btn.style.color = 'var(--accent)';
+                            btn.querySelector('i').className = 'fa-solid fa-envelope';
+                            if (card) card.dataset.contacted = 'true';
+                        } else {
+                            btn.classList.remove('active');
+                            btn.style.color = 'var(--text-2)';
+                            btn.querySelector('i').className = 'fa-regular fa-envelope';
+                            if (card) card.dataset.contacted = 'false';
+                        }
                     }
-                    resultEl.className = 'modal-result success';
-                    resultEl.innerHTML = msg;
-                    resultEl.style.display = 'block';
+                } catch (e) { console.error(e); }
+            }
 
-                    if (!data.errors || data.errors.length === 0) {
-                        setTimeout(() => {
-                            closeBulkModal();
-                            // If we're not on the map, maybe we want to go there? 
-                            // Or just stay here. Let's stay here but notify.
-                        }, 2000);
+            async function toggleToVisit(listingId, btn) {
+                try {
+                    const res = await fetch(`/api/listings/${listingId}/to-visit`, { method: 'PATCH' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (data.to_visit) {
+                            btn.classList.add('active');
+                            btn.style.color = 'var(--accent)';
+                            btn.querySelector('i').className = 'fa-solid fa-bookmark';
+                        } else {
+                            btn.classList.remove('active');
+                            btn.style.color = 'var(--text-2)';
+                            btn.querySelector('i').className = 'fa-regular fa-bookmark';
+                        }
                     }
+                } catch (e) { console.error(e); }
+            }
+
+            async function toggleFavorite(listingId, btn) {
+                try {
+                    const res = await fetch(`/api/listings/${listingId}/favorite`, { method: 'PATCH' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        updateInteractionButtons(btn.closest('.card-footer'), data);
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            async function toggleLike(listingId, btn) {
+                try {
+                    const res = await fetch(`/api/listings/${listingId}/like`, { method: 'PATCH' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        updateInteractionButtons(btn.closest('.card-footer'), data);
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            async function toggleDislike(listingId, btn) {
+                try {
+                    const res = await fetch(`/api/listings/${listingId}/dislike`, { method: 'PATCH' });
+                    const data = await res.json();
+                    if (res.ok) {
+                        updateInteractionButtons(btn.closest('.card-footer'), data);
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            function updateInteractionButtons(footer, data) {
+                const heartBtn = footer.querySelector('.interaction-btn.heart');
+                const likeBtn = footer.querySelector('.interaction-btn.like');
+                const dislikeBtn = footer.querySelector('.interaction-btn.dislike');
+
+                // Favorite
+                if (data.is_favorite) {
+                    heartBtn.classList.add('active');
+                    heartBtn.querySelector('i').className = 'fa-solid fa-heart';
                 } else {
-                    let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
-                    if (data.errors && data.errors.length > 0) {
-                        errMsg += `<ul class="modal-error-list">`;
-                        data.errors.forEach(e => {
-                            errMsg += `<li>${e.title} — ${e.address}</li>`;
-                        });
-                        errMsg += `</ul>`;
+                    heartBtn.classList.remove('active');
+                    heartBtn.querySelector('i').className = 'fa-regular fa-heart';
+                }
+
+                // Like
+                if (data.is_liked) {
+                    likeBtn.classList.add('active');
+                    likeBtn.querySelector('i').className = 'fa-solid fa-thumbs-up';
+                } else {
+                    likeBtn.classList.remove('active');
+                    likeBtn.querySelector('i').className = 'fa-regular fa-thumbs-up';
+                }
+
+                // Dislike
+                if (data.is_disliked) {
+                    dislikeBtn.classList.add('active');
+                    dislikeBtn.querySelector('i').className = 'fa-solid fa-thumbs-down';
+                } else {
+                    dislikeBtn.classList.remove('active');
+                    dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+                }
+            }
+
+            // ── Bulk Address Modal Logic ──────────────────────────────────────────
+            function openBulkModal() {
+                document.getElementById('bulkModal').classList.add('open');
+                document.getElementById('bulkTextarea').value = '';
+                document.getElementById('bulkResult').style.display = 'none';
+                document.getElementById('bulkResult').innerHTML = '';
+                document.getElementById('btnSubmitBulk').disabled = false;
+            }
+
+            function closeBulkModal() {
+                document.getElementById('bulkModal').classList.remove('open');
+            }
+
+            async function submitBulk() {
+                const textarea = document.getElementById('bulkTextarea');
+                const resultEl = document.getElementById('bulkResult');
+                const btn = document.getElementById('btnSubmitBulk');
+                const raw = textarea.value.trim();
+
+                if (!raw) return;
+
+                const lines = raw.split('\n').filter(l => l.trim());
+                const pins = [];
+
+                for (const line of lines) {
+                    const parts = line.split(';');
+                    if (parts.length >= 2) {
+                        const title = parts[0].trim();
+                        const address = parts.slice(1).join(';').trim();
+                        if (title && address) {
+                            pins.push({ title, address });
+                        }
                     }
+                }
+
+                if (pins.length === 0) {
                     resultEl.className = 'modal-result error';
-                    resultEl.innerHTML = errMsg;
+                    resultEl.textContent = '{{ t(request, "map.no_valid_entries", "Format invalide. Utilisez: Titre ; Adresse") }}';
                     resultEl.style.display = 'block';
+                    return;
                 }
-            } catch (err) {
-                resultEl.className = 'modal-result error';
-                resultEl.textContent = 'Erreur réseau: ' + err.message;
-                resultEl.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        }
 
-        // ── Delete flow ──────────────────────────────────────────────────────
-        let pendingDeleteId = null;
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, "map.adding", "Ajout...") }}';
+                resultEl.style.display = 'none';
 
-        function openDeleteModal(id, title) {
-            pendingDeleteId = id;
-            document.getElementById('deleteTitlePreview').textContent = title;
-            document.getElementById('deleteModal').classList.add('open');
-            resetSlider();
-        }
+                try {
+                    const res = await fetch('/api/map-pins', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pins })
+                    });
 
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.remove('open');
-            pendingDeleteId = null;
-            resetSlider();
-        }
+                    const data = await res.json();
 
-        function resetSlider() {
-            const thumb = document.getElementById('slideThumb');
-            const label = document.getElementById('slideLabel');
-            const track = document.getElementById('slideTrack');
-            thumb.style.transition = 'left 0.3s ease';
-            thumb.style.left = '4px';
-            thumb.className = 'slide-thumb';
-            thumb.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>';
-            label.textContent = 'Glissez pour confirmer';
-            label.style.color = '';
-            track.style.borderColor = '';
-            setTimeout(() => { thumb.style.transition = ''; }, 300);
-        }
+                    if (data.created > 0) {
+                        let msg = `<strong>${data.created} {{ t(request, "map.success", "adresse(s) ajoutée(s) avec succès !") }}</strong>`;
+                        if (data.errors && data.errors.length > 0) {
+                            msg += `<div style="margin-top: 0.75rem; color: var(--red); font-weight: 600;">{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</div>`;
+                            msg += `<ul class="modal-error-list">`;
+                            data.errors.forEach(e => {
+                                msg += `<li>${e.title} — ${e.address}</li>`;
+                            });
+                            msg += `</ul>`;
+                        }
+                        resultEl.className = 'modal-result success';
+                        resultEl.innerHTML = msg;
+                        resultEl.style.display = 'block';
 
-        async function confirmDelete() {
-            if (!pendingDeleteId) return;
-            const id = pendingDeleteId;
-            closeDeleteModal();
-            try {
-                const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    // Remove card from DOM without full reload
-                    const card = document.querySelector(`.card[data-id="${id}"]`);
-                    if (card) {
-                        card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                        card.style.opacity = '0';
-                        card.style.transform = 'scale(0.9)';
-                        setTimeout(() => card.remove(), 350);
+                        if (!data.errors || data.errors.length === 0) {
+                            setTimeout(() => {
+                                closeBulkModal();
+                                // If we're not on the map, maybe we want to go there? 
+                                // Or just stay here. Let's stay here but notify.
+                            }, 2000);
+                        }
+                    } else {
+                        let errMsg = `<strong>{{ t(request, "map.geocode_failed", "Impossible de géolocaliser cette adresse") }}:</strong>`;
+                        if (data.errors && data.errors.length > 0) {
+                            errMsg += `<ul class="modal-error-list">`;
+                            data.errors.forEach(e => {
+                                errMsg += `<li>${e.title} — ${e.address}</li>`;
+                            });
+                            errMsg += `</ul>`;
+                        }
+                        resultEl.className = 'modal-result error';
+                        resultEl.innerHTML = errMsg;
+                        resultEl.style.display = 'block';
                     }
-                } else {
-                    alert('Erreur lors de la suppression.');
-                }
-            } catch (e) {
-                alert('Erreur réseau.');
-            }
-        }
-
-        // ── Slider drag logic (mouse + touch) ─────────────────────────────────
-        (() => {
-            let dragging = false, startX = 0, startLeft = 4;
-
-            const getThumb = () => document.getElementById('slideThumb');
-            const getTrack = () => document.getElementById('slideTrack');
-            const getLabel = () => document.getElementById('slideLabel');
-
-            function onStart(e) {
-                const thumb = getThumb();
-                if (thumb.classList.contains('done')) return;
-                dragging = true;
-                startX = (e.touches ? e.touches[0].clientX : e.clientX);
-                startLeft = 4;
-                thumb.style.transition = 'none';
-                e.preventDefault();
-            }
-
-            function onMove(e) {
-                if (!dragging) return;
-                if (e.cancelable) e.preventDefault(); // Prevent scrolling while dragging
-                const thumb = getThumb();
-                const track = getTrack();
-                const label = getLabel();
-                const maxLeft = track.clientWidth - thumb.clientWidth - 4;
-                const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
-                const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
-                thumb.style.left = newLeft + 'px';
-                // Progress 0-1
-                const progress = (newLeft - 4) / (maxLeft - 4);
-                label.style.opacity = 1 - progress;
-                track.style.borderColor = `rgba(242,92,105,${0.3 + progress * 0.5})`;
-                if (progress >= 0.95) {
-                    dragging = false;
-                    thumb.style.transition = 'left 0.2s ease';
-                    thumb.style.left = maxLeft + 'px';
-                    thumb.classList.add('done');
-                    thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    label.textContent = 'Suppression...';
-                    label.style.color = '#10d9a4';
-                    label.style.opacity = 1;
-                    setTimeout(confirmDelete, 400);
+                } catch (err) {
+                    resultEl.className = 'modal-result error';
+                    resultEl.textContent = 'Erreur réseau: ' + err.message;
+                    resultEl.style.display = 'block';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
                 }
             }
 
-            function onEnd() { 
-                if (dragging) {
-                    dragging = false; 
+            // ── Delete flow ──────────────────────────────────────────────────────
+            let pendingDeleteId = null;
+
+            function openDeleteModal(id, title) {
+                pendingDeleteId = id;
+                document.getElementById('deleteTitlePreview').textContent = title;
+                document.getElementById('deleteModal').classList.add('open');
+                resetSlider();
+            }
+
+            function closeDeleteModal() {
+                document.getElementById('deleteModal').classList.remove('open');
+                pendingDeleteId = null;
+                resetSlider();
+            }
+
+            function resetSlider() {
+                const thumb = document.getElementById('slideThumb');
+                const label = document.getElementById('slideLabel');
+                const track = document.getElementById('slideTrack');
+                thumb.style.transition = 'left 0.3s ease';
+                thumb.style.left = '4px';
+                thumb.className = 'slide-thumb';
+                thumb.innerHTML = '<i class="fa-solid fa-chevron-right"></i><i class="fa-solid fa-chevron-right" style="margin-left:-6px"></i>';
+                label.textContent = 'Glissez pour confirmer';
+                label.style.color = '';
+                track.style.borderColor = '';
+                setTimeout(() => { thumb.style.transition = ''; }, 300);
+            }
+
+            async function confirmDelete() {
+                if (!pendingDeleteId) return;
+                const id = pendingDeleteId;
+                closeDeleteModal();
+                try {
+                    const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        // Remove card from DOM without full reload
+                        const card = document.querySelector(`.card[data-id="${id}"]`);
+                        if (card) {
+                            card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                            card.style.opacity = '0';
+                            card.style.transform = 'scale(0.9)';
+                            setTimeout(() => card.remove(), 350);
+                        }
+                    } else {
+                        alert('Erreur lors de la suppression.');
+                    }
+                } catch (e) {
+                    alert('Erreur réseau.');
+                }
+            }
+
+            // ── Slider drag logic (mouse + touch) ─────────────────────────────────
+            (() => {
+                let dragging = false, startX = 0, startLeft = 4;
+
+                const getThumb = () => document.getElementById('slideThumb');
+                const getTrack = () => document.getElementById('slideTrack');
+                const getLabel = () => document.getElementById('slideLabel');
+
+                function onStart(e) {
                     const thumb = getThumb();
-                    if (!thumb.classList.contains('done')) {
-                        resetSlider();
+                    if (thumb.classList.contains('done')) return;
+                    dragging = true;
+                    startX = (e.touches ? e.touches[0].clientX : e.clientX);
+                    startLeft = 4;
+                    thumb.style.transition = 'none';
+                    e.preventDefault();
+                }
+
+                function onMove(e) {
+                    if (!dragging) return;
+                    if (e.cancelable) e.preventDefault(); // Prevent scrolling while dragging
+                    const thumb = getThumb();
+                    const track = getTrack();
+                    const label = getLabel();
+                    const maxLeft = track.clientWidth - thumb.clientWidth - 4;
+                    const dx = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+                    const newLeft = Math.max(4, Math.min(startLeft + dx, maxLeft));
+                    thumb.style.left = newLeft + 'px';
+                    // Progress 0-1
+                    const progress = (newLeft - 4) / (maxLeft - 4);
+                    label.style.opacity = 1 - progress;
+                    track.style.borderColor = `rgba(242,92,105,${0.3 + progress * 0.5})`;
+                    if (progress >= 0.95) {
+                        dragging = false;
+                        thumb.style.transition = 'left 0.2s ease';
+                        thumb.style.left = maxLeft + 'px';
+                        thumb.classList.add('done');
+                        thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
+                        label.textContent = 'Suppression...';
+                        label.style.color = '#10d9a4';
+                        label.style.opacity = 1;
+                        setTimeout(confirmDelete, 400);
                     }
                 }
-            }
 
-            document.addEventListener('mousedown', e => { if (e.target.closest('#slideThumb')) onStart(e); });
-            document.addEventListener('mousemove', e => { if (dragging) onMove(e); });
-            document.addEventListener('mouseup', onEnd);
-            document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); }, { passive: false });
-            document.addEventListener('touchmove', e => { if (dragging) onMove(e); }, { passive: false });
-            document.addEventListener('touchend', onEnd);
-        })();
-
-        // ── Version Update Alert ─────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', async () => {
-            const localHash = "{{ local_hash }}";
-            if (!localHash || localHash === "dummy-test-hash") {
-                // Allows us to test the banner with a fake hash
-                if (localHash !== "dummy-test-hash" && !localHash) return;
-            }
-
-            try {
-                const res = await fetch('https://api.github.com/repos/Immo-Boussole/immo-boussole/commits/main');
-                if (!res.ok) return;
-                const data = await res.json();
-                
-                if (data.sha && data.sha !== localHash) {
-                    const banner = document.getElementById('updateBanner');
-                    if (banner) {
-                        banner.style.display = 'flex';
-                        // Force reflow and transition
-                        setTimeout(() => banner.style.transform = 'translateY(0)', 100);
+                function onEnd() {
+                    if (dragging) {
+                        dragging = false;
+                        const thumb = getThumb();
+                        if (!thumb.classList.contains('done')) {
+                            resetSlider();
+                        }
                     }
                 }
-            } catch (err) {
-                console.error("Checking for updates failed", err);
-            }
-        });
-    </script>
 
-    <!-- ── Update Banner ── -->
-    <div id="updateBanner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; padding: 1.25rem 2.5rem; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 -8px 32px rgba(0,0,0,0.4); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <div style="display: flex; align-items: center; gap: 1.25rem;">
-            <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.8rem; opacity: 0.9;"></i>
-            <div>
-                <strong style="font-size: 1.05rem; letter-spacing: 0.02em;">Nouvelle version disponible !</strong>
-                <div style="font-size: 0.85rem; margin-top: 0.2rem; opacity: 0.9;">Une mise à jour d'Immo-Boussole est disponible sur GitHub avec de nouvelles fonctionnalités et corrections.</div>
-            </div>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-            <a href="https://github.com/Immo-Boussole/immo-boussole" target="_blank" class="btn" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); color: #fff; border-radius: 8px; font-weight: 600;">
-                <i class="fa-brands fa-github"></i> Voir la mise à jour
-            </a>
-            <button onclick="document.getElementById('updateBanner').style.transform = 'translateY(100%)'; setTimeout(()=>document.getElementById('updateBanner').style.display='none', 400);" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.25rem; opacity: 0.7; padding: 0.5rem; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="Fermer">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-    </div>
+                document.addEventListener('mousedown', e => { if (e.target.closest('#slideThumb')) onStart(e); });
+                document.addEventListener('mousemove', e => { if (dragging) onMove(e); });
+                document.addEventListener('mouseup', onEnd);
+                document.addEventListener('touchstart', e => { if (e.target.closest('#slideThumb')) onStart(e); }, { passive: false });
+                document.addEventListener('touchmove', e => { if (dragging) onMove(e); }, { passive: false });
+                document.addEventListener('touchend', onEnd);
+            })();
 
-    <!-- ── Bulk Address Modal ── -->
-    <div class="modal-backdrop" id="bulkModal" onclick="if(event.target===this) closeBulkModal()">
-        <div class="modal">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request, 'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
-                <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
-            </div>
+            // ── Version Update Alert ─────────────────────────────────────────────
+            document.addEventListener('DOMContentLoaded', async () => {
+                const localHash = "{{ local_hash }}";
+                if (!localHash || localHash === "dummy-test-hash") {
+                    // Allows us to test the banner with a fake hash
+                    if (localHash !== "dummy-test-hash" && !localHash) return;
+                }
 
-            <div class="modal-instructions">
-                <i class="fa-solid fa-circle-info"></i>
-                <div class="instructions-content">
-                    {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse physique') }}<br>
-                    <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                try {
+                    const res = await fetch('https://api.github.com/repos/Immo-Boussole/immo-boussole/commits/main');
+                    if (!res.ok) return;
+                    const data = await res.json();
+
+                    if (data.sha && data.sha !== localHash) {
+                        const banner = document.getElementById('updateBanner');
+                        if (banner) {
+                            banner.style.display = 'flex';
+                            // Force reflow and transition
+                            setTimeout(() => banner.style.transform = 'translateY(0)', 100);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Checking for updates failed", err);
+                }
+            });
+        </script>
+
+        <!-- ── Update Banner ── -->
+        <div id="updateBanner"
+            style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; padding: 1.25rem 2.5rem; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 -8px 32px rgba(0,0,0,0.4); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <i class="fa-solid fa-cloud-arrow-down" style="font-size: 1.8rem; opacity: 0.9;"></i>
+                <div>
+                    <strong style="font-size: 1.05rem; letter-spacing: 0.02em;">Nouvelle version disponible !</strong>
+                    <div style="font-size: 0.85rem; margin-top: 0.2rem; opacity: 0.9;">Une mise à jour d'Immo-Boussole
+                        est disponible sur GitHub avec de nouvelles fonctionnalités et corrections.</div>
                 </div>
             </div>
-
-            <textarea id="bulkTextarea"
-                placeholder="{{ t(request, 'map.bulk_placeholder', 'Mon Café Préféré ; 12 Rue de la Paix, Paris') }}"
-            ></textarea>
-
-            <div class="modal-result" id="bulkResult"></div>
-
-            <div class="modal-actions">
-                <button class="btn" onclick="closeBulkModal()">
-                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
-                </button>
-                <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk" style="padding-left: 1.25rem; padding-right: 1.25rem;">
-                    <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <a href="https://github.com/Immo-Boussole/immo-boussole" target="_blank" class="btn"
+                    style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); color: #fff; border-radius: 8px; font-weight: 600;">
+                    <i class="fa-brands fa-github"></i> Voir la mise à jour
+                </a>
+                <button
+                    onclick="document.getElementById('updateBanner').style.transform = 'translateY(100%)'; setTimeout(()=>document.getElementById('updateBanner').style.display='none', 400);"
+                    style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.25rem; opacity: 0.7; padding: 0.5rem; transition: opacity 0.2s;"
+                    onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="Fermer">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
         </div>
-    </div>
 
-    <script src="/static/js/visit-status-badge.js?v=20260817c"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker registered', reg))
-                    .catch(err => console.error('Service Worker registration failed', err));
-            });
-        }
-    </script>
+        <!-- ── Bulk Address Modal ── -->
+        <div class="modal-backdrop" id="bulkModal" onclick="if(event.target===this) closeBulkModal()">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ t(request,
+                        'map.bulk_title', 'Ajout d\'adresses en masse') }}</h2>
+                    <button class="modal-close" onclick="closeBulkModal()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="modal-instructions">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <div class="instructions-content">
+                        {{ t(request, 'map.bulk_instructions', 'Entrez une adresse par ligne au format : Titre ; Adresse
+                        physique') }}<br>
+                        <code>{{ t(request, 'table.title', 'Titre') }} ; {{ t(request, 'listing.location', 'Localisation') }}</code>
+                    </div>
+                </div>
+
+                <textarea id="bulkTextarea"
+                    placeholder="{{ t(request, 'map.bulk_placeholder', 'Mon Café Préféré ; 12 Rue de la Paix, Paris') }}"></textarea>
+
+                <div class="modal-result" id="bulkResult"></div>
+
+                <div class="modal-actions">
+                    <button class="btn" onclick="closeBulkModal()">
+                        <i class="fa-solid fa-xmark"></i> {{ t(request, 'map.cancel', 'Annuler') }}
+                    </button>
+                    <button class="btn primary" onclick="submitBulk()" id="btnSubmitBulk"
+                        style="padding-left: 1.25rem; padding-right: 1.25rem;">
+                        <i class="fa-solid fa-plus"></i> {{ t(request, 'map.submit', 'Ajouter les adresses') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="/static/js/visit-status-badge.js?v=20260817c"></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js')
+                        .then(reg => console.log('Service Worker registered', reg))
+                        .catch(err => console.error('Service Worker registration failed', err));
+                });
+            }
+        </script>
 </body>
 
 </html>
-

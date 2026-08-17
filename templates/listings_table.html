@@ -19,7 +19,7 @@
             --bg: #0b0f1a;
             --surface: #131929;
             --surface-2: #1a2236;
-            --border: rgba(255,255,255,0.07);
+            --border: rgba(255, 255, 255, 0.07);
             --text: #eef2ff;
             --text-2: #8b9cc8;
             --accent: #4f8ef7;
@@ -28,7 +28,7 @@
             --red: #f25c69;
             --orange: #f8a84b;
             --yellow: #f9d04f;
-            --shadow: 0 8px 32px rgba(0,0,0,0.5);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
             --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -42,6 +42,7 @@
             gap: 0.3rem;
             cursor: pointer;
         }
+
         .city-link:hover {
             color: var(--accent);
             text-decoration: underline;
@@ -87,7 +88,13 @@
             font-size: 1rem;
         }
 
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', sans-serif;
@@ -98,7 +105,8 @@
             width: 100%;
             overflow: hidden;
             margin: 0;
-            position: fixed; /* prevent scrolling of the body on mobile */
+            position: fixed;
+            /* prevent scrolling of the body on mobile */
         }
 
         /* ── Sidebar ── */
@@ -126,9 +134,18 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
-        .logo img {  width: 1.4rem; height: 1.4rem; object-fit: contain; }
+        .logo img {
+            width: 1.4rem;
+            height: 1.4rem;
+            object-fit: contain;
+        }
+
+        .logo img {
+            width: 1.4rem;
+            height: 1.4rem;
+            object-fit: contain;
+        }
 
         .stat-grid {
             display: grid;
@@ -204,8 +221,10 @@
             transition: var(--trans);
             margin-bottom: 0.25rem;
         }
-        .nav-link:hover, .nav-link.active {
-            background: rgba(79,142,247,0.12);
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(79, 142, 247, 0.12);
             color: var(--accent);
         }
 
@@ -228,9 +247,16 @@
             flex-shrink: 0;
         }
 
-        .topbar h1 { font-size: 1.25rem; font-weight: 700; }
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
 
-        .content { flex: 1; overflow-y: auto; padding: 1.5rem 2rem 2rem; }
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 2rem 2rem;
+        }
 
         /* ── Table Styling ── */
         .table-container {
@@ -277,10 +303,27 @@
             border-bottom: none;
         }
 
-        .col-title { font-weight: 600; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .col-price { color: var(--accent); font-weight: 800; font-size: 0.95rem; }
-        .col-source { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); }
-        
+        .col-title {
+            font-weight: 600;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .col-price {
+            color: var(--accent);
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+
+        .col-source {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-2);
+        }
+
         .badge-status {
             display: inline-flex;
             padding: 0.2rem 0.5rem;
@@ -289,20 +332,69 @@
             font-weight: 800;
             text-transform: uppercase;
         }
-        .badge-nouvelle { background: rgba(16, 217, 164, 0.15); color: var(--green); }
-        .badge-active { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
-        .badge-disparue { background: rgba(242, 92, 105, 0.15); color: var(--red); }
+
+        .badge-nouvelle {
+            background: rgba(16, 217, 164, 0.15);
+            color: var(--green);
+        }
+
+        .badge-active {
+            background: rgba(79, 142, 247, 0.15);
+            color: var(--accent);
+        }
+
+        .badge-disparue {
+            background: rgba(242, 92, 105, 0.15);
+            color: var(--red);
+        }
 
         .dpe-tag {
-            width: 24px; height: 24px; border-radius: 4px;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 900; font-size: 0.75rem; color: #000;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.75rem;
+            color: #000;
         }
-        .dpe-A { background: #00c950; } .dpe-B { background: #50d970; }
-        .dpe-C { background: #ccdf30; } .dpe-D { background: #f7c948; }
-        .dpe-E { background: #f09939; } .dpe-F { background: #e8593a; color: #fff; }
-        .dpe-G { background: #c73232; color: #fff; }
-        .dpe-NC { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
+
+        .dpe-A {
+            background: #00c950;
+        }
+
+        .dpe-B {
+            background: #50d970;
+        }
+
+        .dpe-C {
+            background: #ccdf30;
+        }
+
+        .dpe-D {
+            background: #f7c948;
+        }
+
+        .dpe-E {
+            background: #f09939;
+        }
+
+        .dpe-F {
+            background: #e8593a;
+            color: #fff;
+        }
+
+        .dpe-G {
+            background: #c73232;
+            color: #fff;
+        }
+
+        .dpe-NC {
+            background: var(--surface-2);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
 
         .row-link {
             color: var(--accent);
@@ -310,12 +402,25 @@
             font-weight: 600;
             transition: var(--trans);
         }
-        .row-link:hover { color: var(--text); }
+
+        .row-link:hover {
+            color: var(--text);
+        }
 
         /* Scrollbar styling */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+        }
+
         .btn-refresh {
             background: rgba(88, 101, 242, 0.1);
             border: 1px solid rgba(88, 101, 242, 0.2);
@@ -329,17 +434,25 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
+
         .btn-refresh:hover {
             background: var(--accent);
             color: white;
             transform: rotate(180deg);
         }
+
         .btn-refresh.loading i {
             animation: spin 1s linear infinite;
         }
+
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* ── Filter Bar ── */
@@ -372,7 +485,8 @@
             white-space: nowrap;
         }
 
-        .filter-input, .filter-select {
+        .filter-input,
+        .filter-select {
             background: var(--surface-2);
             border: 1px solid var(--border);
             border-radius: 9px;
@@ -384,11 +498,16 @@
             transition: var(--trans);
             width: 100%;
         }
-        .filter-input:focus, .filter-select:focus {
+
+        .filter-input:focus,
+        .filter-select:focus {
             border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.15);
         }
-        .filter-select option { background: var(--surface-2); }
+
+        .filter-select option {
+            background: var(--surface-2);
+        }
 
         .btn-reset-filter {
             background: transparent;
@@ -405,63 +524,10 @@
             align-items: center;
             gap: 0.4rem;
         }
+
         .btn-reset-filter:hover {
             border-color: var(--red);
             color: var(--red);
-        }
-
-        .tbl-filter-chips {
-            display: inline-flex;
-            gap: 0.35rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .tbl-filter-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.4rem 0.65rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--surface-2);
-            color: var(--text-2);
-            font-size: 0.78rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--trans);
-            user-select: none;
-        }
-        .tbl-filter-chip:hover {
-            border-color: currentColor;
-            transform: translateY(-1px);
-        }
-        .tbl-filter-chip.active {
-            box-shadow: 0 0 0 1px currentColor, 0 2px 8px rgba(0,0,0,0.2);
-        }
-        #tbl-f-nouvelle.active {
-            background: rgba(16, 217, 164, 0.16);
-            border-color: var(--green);
-            color: var(--green) !important;
-            font-weight: 700;
-        }
-        #tbl-f-active.active {
-            background: rgba(79, 142, 247, 0.16);
-            border-color: var(--accent);
-            color: var(--accent) !important;
-            font-weight: 700;
-        }
-        #tbl-f-disparue.active {
-            background: rgba(242, 92, 105, 0.16);
-            border-color: var(--red);
-            color: var(--red) !important;
-            font-weight: 700;
-        }
-        #tbl-f-rejetee.active {
-            background: rgba(248, 168, 75, 0.16);
-            border-color: var(--orange);
-            color: var(--orange) !important;
-            font-weight: 700;
         }
 
         .results-count {
@@ -471,7 +537,10 @@
             white-space: nowrap;
             padding-left: 0.25rem;
         }
-        .results-count span { color: var(--accent); }
+
+        .results-count span {
+            color: var(--accent);
+        }
 
         /* ── Sortable columns ── */
         th.sortable {
@@ -481,6 +550,7 @@
             padding-right: 1.75rem;
             white-space: nowrap;
         }
+
         th.sortable .sort-icon {
             position: absolute;
             right: 0.55rem;
@@ -490,11 +560,25 @@
             font-size: 0.65rem;
             transition: var(--trans);
         }
-        th.sortable:hover .sort-icon { opacity: 0.7; color: var(--accent); }
+
+        th.sortable:hover .sort-icon {
+            opacity: 0.7;
+            color: var(--accent);
+        }
+
         th.sortable.asc .sort-icon,
-        th.sortable.desc .sort-icon { opacity: 1; color: var(--accent); }
-        th.sortable.asc { color: var(--accent); }
-        th.sortable.desc { color: var(--accent); }
+        th.sortable.desc .sort-icon {
+            opacity: 1;
+            color: var(--accent);
+        }
+
+        th.sortable.asc {
+            color: var(--accent);
+        }
+
+        th.sortable.desc {
+            color: var(--accent);
+        }
 
         .no-results-row td {
             text-align: center;
@@ -532,21 +616,24 @@
             <div class="filter-bar" id="filter-bar">
                 <div class="filter-group" style="flex: 2; min-width: 220px;">
                     <label for="filter-search"><i class="fa-solid fa-magnifying-glass"></i></label>
-                    <input id="filter-search" class="filter-input" type="text" placeholder="{{ t(request, 'filter.search_placeholder', 'Rechercher…') }}" oninput="applyFilters()">
+                    <input id="filter-search" class="filter-input" type="text"
+                        placeholder="{{ t(request, 'filter.search_placeholder', 'Rechercher…') }}"
+                        oninput="applyFilters()">
                 </div>
 
                 <div class="filter-group">
                     <label for="filter-source">{{ t(request, 'table.source') }}</label>
                     <select id="filter-source" class="filter-select" onchange="applyFilters()">
                         <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
-                        {% set sources = listings | map(attribute='source') | map(attribute='value') | unique | list | sort %}
+                        {% set sources = listings | map(attribute='source') | map(attribute='value') | unique | list |
+                        sort %}
                         {% for src in sources %}
                         <option value="{{ src|upper }}">{{ src|upper }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="filter-group" style="flex: auto; min-width: auto;">
+                <div class="filter-group filter-chips-group" style="flex: auto; min-width: auto;">
                     <label style="margin-right: 0.25rem;">{{ t(request, 'table.status', 'Statut') }}</label>
                     <div class="tbl-filter-chips">
                         <button type="button" class="tbl-filter-chip" id="tbl-f-nouvelle" onclick="toggleTableStatusFilter('nouvelle', this)" style="color: var(--green);" title="{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}">
@@ -602,7 +689,7 @@
                     </select>
                 </div>
 
-                <button class="btn-reset-filter" onclick="resetFilters()">
+                <button class="btn-reset-filter" id="btn-reset-filter" onclick="resetFilters()">
                     <i class="fa-solid fa-xmark"></i> {{ t(request, 'filter.reset', 'Réinitialiser') }}
                 </button>
 
@@ -662,42 +749,44 @@
 
                     <tbody id="table-body">
                         {% for listing in listings %}
-                        <tr
-                            data-id="{{ listing.id }}"
-                            data-title="{{ listing.title | lower }}"
+                        <tr data-id="{{ listing.id }}" data-title="{{ listing.title | lower }}"
                             data-source="{{ listing.source.value | upper }}"
                             data-location="{{ (listing.location or listing.city or '') | lower }}"
-                            data-price="{{ listing.price or 0 }}"
-                            data-area="{{ listing.area or 0 }}"
-                            data-rooms="{{ listing.rooms or 0 }}"
-                            data-dpe="{{ listing.dpe_rating or 'NC' }}"
+                            data-price="{{ listing.price or 0 }}" data-area="{{ listing.area or 0 }}"
+                            data-rooms="{{ listing.rooms or 0 }}" data-dpe="{{ listing.dpe_rating or 'NC' }}"
                             data-status="{{ listing.user_status }}"
                             data-visit-status="{{ listing.last_visit_status or '' }}"
-                            data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
-                        >
+                            data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}">
                             <td>
                                 {% if request.session.get('role') == 'user' %}
-                                <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'table.reload') }}">
+                                <button class="btn-refresh" onclick="rescrapeListing({{ listing.id }}, this)"
+                                    title="{{ t(request, 'table.reload') }}">
                                     <i class="fa-solid fa-arrows-rotate"></i>
                                 </button>
                                 {% endif %}
                             </td>
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
-                             <td>
-                                 <a href="/carte?city={{ listing.location or listing.city or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
-                                     {{ listing.location or listing.city or '-' }}
-                                 </a>
-                             </td>
-                            <td class="col-price" data-raw="{{ listing.price or 0 }}">{{ "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request, 'misc.nc') }} {% if listing.price %}€{% endif %}</td>
-                            <td data-raw="{{ listing.area or 0 }}">{{ listing.area|round|int if listing.area else t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
-                            <td data-raw="{{ listing.rooms or 0 }}">{{ listing.rooms|int if listing.rooms else '-' }}</td>
+                            <td>
+                                <a href="/carte?city={{ listing.location or listing.city or '' }}" class="city-link"
+                                    title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                    {{ listing.location or listing.city or '-' }}
+                                </a>
+                            </td>
+                            <td class="col-price" data-raw="{{ listing.price or 0 }}">{{
+                                "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request,
+                                'misc.nc') }} {% if listing.price %}€{% endif %}</td>
+                            <td data-raw="{{ listing.area or 0 }}">{{ listing.area|round|int if listing.area else
+                                t(request, 'misc.nc') }} {% if listing.area %}m²{% endif %}</td>
+                            <td data-raw="{{ listing.rooms or 0 }}">{{ listing.rooms|int if listing.rooms else '-' }}
+                            </td>
                             <td>
                                 <button class="btn-contact-table {% if listing.has_contact_or_visit %}active{% endif %}"
-                                        onclick="toggleContactMade({{ listing.id }}, this)"
-                                        title="Demande de contact agence effectuée"
-                                        style="border: none; background: transparent; cursor: pointer; font-size: 0.95rem; color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
-                                    <i class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
+                                    onclick="toggleContactMade({{ listing.id }}, this)"
+                                    title="Demande de contact agence effectuée"
+                                    style="border: none; background: transparent; cursor: pointer; font-size: 0.95rem; color: {% if listing.has_contact_or_visit %}var(--accent){% else %}var(--text-2){% endif %};">
+                                    <i
+                                        class="fa-{% if listing.has_contact_or_visit %}solid{% else %}regular{% endif %} fa-envelope"></i>
                                 </button>
                             </td>
                             <td>
@@ -714,48 +803,124 @@
                             </td>
                             <td style="position: relative; min-width: 170px;">
                                 {% if listing.last_visit_status %}
-                                <div class="visit-status-container" style="position: relative; top: auto; right: auto;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                                    <div class="visit-status-badge status-{{ listing.last_visit_status }}" onclick="toggleVisitStatusDropdown(this, event)" title="Cliquer pour modifier l'état">
-                                        {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence</span>
-                                        {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
-                                        {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée</span>
-                                        {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite (ach.)</span>
-                                        {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite (vend.)</span>
-                                        {% elif listing.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer</span>
+                                <div class="visit-status-container" style="position: relative; top: auto; right: auto;"
+                                    data-listing-id="{{ listing.id }}"
+                                    data-listing-title="{{ listing.title|default('') }}"
+                                    onclick="event.stopPropagation();">
+                                    <div class="visit-status-badge status-{{ listing.last_visit_status }}"
+                                        onclick="toggleVisitStatusDropdown(this, event)"
+                                        title="Cliquer pour modifier l'état">
+                                        {% if listing.last_visit_status == 'retour_agence' %}<i
+                                            class="fa-solid fa-comments"></i> <span class="badge-text">Retour
+                                            d'agence</span>
+                                        {% elif listing.last_visit_status == 'visite_programmee' %}<i
+                                            class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite
+                                            programmée</span>
+                                        {% elif listing.last_visit_status == 'deja_visitee' %}<i
+                                            class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée</span>
+                                        {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i
+                                            class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite
+                                            (ach.)</span>
+                                        {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i
+                                            class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite
+                                            (vend.)</span>
+                                        {% elif listing.last_visit_status == 'a_relancer' %}<i
+                                            class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A
+                                            relancer</span>
                                         {% endif %}
                                         <i class="fa-solid fa-chevron-down badge-caret"></i>
                                     </div>
                                     <div class="visit-status-menu">
-                                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
-                                        <div class="visit-status-item item-clear" data-status="" onclick="selectVisitStatus(this, event)"><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}"
+                                            data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span
+                                                class="dot"></span><i class="fa-solid fa-comments"
+                                                style="width: 14px; text-align: center;"></i><span>Retour d'agence pour
+                                                RDV</span></div>
+                                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}"
+                                            data-status="visite_programmee" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-calendar-check"
+                                                style="width: 14px; text-align: center;"></i><span>Visite
+                                                programmée</span></div>
+                                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}"
+                                            data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span
+                                                class="dot"></span><i class="fa-solid fa-brain"
+                                                style="width: 14px; text-align: center;"></i><span>Déjà visitée,
+                                                réflexion</span></div>
+                                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}"
+                                            data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-user-slash"
+                                                style="width: 14px; text-align: center;"></i><span>Sans suite
+                                                acheteur</span></div>
+                                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}"
+                                            data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-ban"
+                                                style="width: 14px; text-align: center;"></i><span>Sans suite
+                                                vendeur</span></div>
+                                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}"
+                                            data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span
+                                                class="dot"></span><i class="fa-solid fa-clock-rotate-left"
+                                                style="width: 14px; text-align: center;"></i><span>A relancer pour
+                                                RDV</span></div>
+                                        <div class="visit-status-item item-clear" data-status=""
+                                            onclick="selectVisitStatus(this, event)"><i class="fa-solid fa-xmark"
+                                                style="width: 14px; text-align: center;"></i><span>Effacer l'état</span>
+                                        </div>
                                     </div>
                                 </div>
                                 {% else %}
-                                <div class="visit-status-container show-add" style="position: relative; top: auto; right: auto;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                                    <div class="visit-status-add-btn" style="opacity: 1;" onclick="toggleVisitStatusDropdown(this, event)" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                                <div class="visit-status-container show-add"
+                                    style="position: relative; top: auto; right: auto;"
+                                    data-listing-id="{{ listing.id }}"
+                                    data-listing-title="{{ listing.title|default('') }}"
+                                    onclick="event.stopPropagation();">
+                                    <div class="visit-status-add-btn" style="opacity: 1;"
+                                        onclick="toggleVisitStatusDropdown(this, event)"
+                                        title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
                                     <div class="visit-status-menu">
-                                        <div class="visit-status-item item-retour_agence" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                        <div class="visit-status-item item-visite_programmee" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                        <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                        <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                        <div class="visit-status-item item-a_relancer" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                                        <div class="visit-status-item item-retour_agence" data-status="retour_agence"
+                                            onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                                class="fa-solid fa-comments"
+                                                style="width: 14px; text-align: center;"></i><span>Retour d'agence pour
+                                                RDV</span></div>
+                                        <div class="visit-status-item item-visite_programmee"
+                                            data-status="visite_programmee" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-calendar-check"
+                                                style="width: 14px; text-align: center;"></i><span>Visite
+                                                programmée</span></div>
+                                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"
+                                            onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                                class="fa-solid fa-brain"
+                                                style="width: 14px; text-align: center;"></i><span>Déjà visitée,
+                                                réflexion</span></div>
+                                        <div class="visit-status-item item-sans_suite_acheteur"
+                                            data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-user-slash"
+                                                style="width: 14px; text-align: center;"></i><span>Sans suite
+                                                acheteur</span></div>
+                                        <div class="visit-status-item item-sans_suite_visiteur"
+                                            data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)">
+                                            <span class="dot"></span><i class="fa-solid fa-ban"
+                                                style="width: 14px; text-align: center;"></i><span>Sans suite
+                                                vendeur</span></div>
+                                        <div class="visit-status-item item-a_relancer" data-status="a_relancer"
+                                            onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                                class="fa-solid fa-clock-rotate-left"
+                                                style="width: 14px; text-align: center;"></i><span>A relancer pour
+                                                RDV</span></div>
                                     </div>
                                 </div>
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="/listings/{{ listing.id }}" class="row-link" target="_blank">{{ t(request, 'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
+                                <a href="/listings/{{ listing.id }}" class="row-link" target="_blank">{{ t(request,
+                                    'table.details') }} <i class="fa-solid fa-arrow-right"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
                         <tr id="no-results-row" class="no-results-row" style="display:none;">
-                            <td colspan="11"><i class="fa-solid fa-filter-circle-xmark" style="margin-right:0.5rem; color:var(--text-2);"></i>{{ t(request, 'filter.no_results', 'Aucun résultat pour ces filtres.') }}</td>
+                            <td colspan="11"><i class="fa-solid fa-filter-circle-xmark"
+                                    style="margin-right:0.5rem; color:var(--text-2);"></i>{{ t(request,
+                                'filter.no_results', 'Aucun résultat pour ces filtres.') }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -802,23 +967,12 @@
 
         /* ── Filter ── */
         const TOTAL = document.querySelectorAll('#table-body tr:not(#no-results-row)').length;
-        const activeTableStatuses = new Set(['nouvelle', 'active']);
-
-        function toggleTableStatusFilter(status, btn) {
-            if (activeTableStatuses.has(status)) {
-                activeTableStatuses.delete(status);
-                btn.classList.remove('active');
-            } else {
-                activeTableStatuses.add(status);
-                btn.classList.add('active');
-            }
-            applyFilters();
-        }
 
         function applyFilters() {
-            const search  = document.getElementById('filter-search').value.toLowerCase().trim();
-            const source  = document.getElementById('filter-source').value;
-            const dpe     = document.getElementById('filter-dpe').value;
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const source = document.getElementById('filter-source').value;
+            const status = document.getElementById('filter-status').value;
+            const dpe = document.getElementById('filter-dpe').value;
             const contacted = document.getElementById('filter-contacted').value;
             const visitStatus = document.getElementById('filter-visit-status') ? document.getElementById('filter-visit-status').value : '';
 
@@ -832,14 +986,10 @@
                     row.dataset.location.includes(search) ||
                     row.dataset.id === searchVal;
                 const matchSource = !source || row.dataset.source === source;
-                
-                // Status multi-filter: if activeTableStatuses is empty, show all statuses. Otherwise row status must match one of the active statuses.
-                const rowStatus = row.dataset.status;
-                const matchStatus = activeTableStatuses.size === 0 || activeTableStatuses.has(rowStatus);
-
-                const matchDpe    = !dpe    || row.dataset.dpe === dpe;
+                const matchStatus = !status || row.dataset.status === status;
+                const matchDpe = !dpe || row.dataset.dpe === dpe;
                 const matchContacted = !contacted || row.dataset.contacted === contacted;
-                
+
                 let matchVisit = true;
                 if (visitStatus) {
                     if (visitStatus === 'none') {
@@ -861,31 +1011,21 @@
         function resetFilters() {
             document.getElementById('filter-search').value = '';
             document.getElementById('filter-source').value = '';
+            document.getElementById('filter-status').value = '';
             document.getElementById('filter-dpe').value = '';
             document.getElementById('filter-contacted').value = '';
             if (document.getElementById('filter-visit-status')) {
                 document.getElementById('filter-visit-status').value = '';
             }
-            activeTableStatuses.clear();
-            document.querySelectorAll('.tbl-filter-chip').forEach(b => b.classList.remove('active'));
             applyFilters();
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Apply default status chips (Nouvelles + Actives)
-            const btnNew = document.getElementById('tbl-f-nouvelle');
-            const btnAct = document.getElementById('tbl-f-active');
-            if (btnNew) btnNew.classList.add('active');
-            if (btnAct) btnAct.classList.add('active');
-            applyFilters();
-        });
 
         /* ── Sort ── */
         let currentSortCol = null;
         let currentSortDir = 'asc';
 
         function sortTable(th) {
-            const col  = parseInt(th.dataset.col);
+            const col = parseInt(th.dataset.col);
             const type = th.dataset.type;
             const icon = th.querySelector('.sort-icon');
 
@@ -909,7 +1049,7 @@
 
             // Collect & sort rows (excluding no-results placeholder)
             const tbody = document.getElementById('table-body');
-            const rows  = Array.from(tbody.querySelectorAll('tr:not(#no-results-row)'));
+            const rows = Array.from(tbody.querySelectorAll('tr:not(#no-results-row)'));
 
             rows.sort((a, b) => {
                 const aCell = a.cells[col];
@@ -925,7 +1065,7 @@
                 }
 
                 if (aVal < bVal) return currentSortDir === 'asc' ? -1 : 1;
-                if (aVal > bVal) return currentSortDir === 'asc' ?  1 : -1;
+                if (aVal > bVal) return currentSortDir === 'asc' ? 1 : -1;
                 return 0;
             });
 
@@ -945,5 +1085,5 @@
         }
     </script>
 </body>
-</html>
 
+</html>

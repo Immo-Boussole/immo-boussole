@@ -1310,6 +1310,7 @@ def contacts_page(
 
 
 
+@app.get("/tableau")
 @app.get("/listings/table")
 def listings_table_page(
     request: Request, 
