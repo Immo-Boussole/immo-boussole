@@ -1,9 +1,9 @@
-const CACHE_NAME = 'immo-boussole-v1';
+const CACHE_NAME = 'immo-boussole-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/inter.css',
   '/static/css/fontawesome.min.css',
-  '/static/css/mobile.css',
+  '/static/css/mobile.css?v=20260817d',
   '/static/media/app/icon-192.png',
   '/static/media/app/icon-512.png'
 ];
