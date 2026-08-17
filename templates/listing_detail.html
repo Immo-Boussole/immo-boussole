@@ -461,6 +461,8 @@
         .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.78rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: var(--trans); font-family: inherit; }
         .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
         .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.danger { background: rgba(242, 92, 105, 0.12); color: var(--red); border-color: rgba(242, 92, 105, 0.3); }
+        .btn.danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
         .btn.sm { padding: 0.35rem 0.65rem; font-size: 0.72rem; }
         .btn-toggle { width: 100%; justify-content: center; margin-top: 0.5rem; }
 
@@ -1843,6 +1845,7 @@
             <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
                 <button type="button" class="btn" onclick="closeVisitModal()">Annuler</button>
                 <button type="submit" class="btn primary" id="btnSaveVisit"><i class="fa-solid fa-check"></i> Enregistrer</button>
+                <button type="button" class="btn danger" id="btnDeleteVisitInModal" style="display: none;" onclick="onDeleteVisitFromModal()"><i class="fa-solid fa-trash-can"></i> Supprimer</button>
             </div>
         </form>
     </div>
@@ -3702,6 +3705,9 @@
             setVisitorUI(currentUser);
             initListingContactDefault();
 
+            const btnDel = document.getElementById('btnDeleteVisitInModal');
+            if (btnDel) btnDel.style.display = 'none';
+
             document.getElementById('visitModal').classList.add('open');
         }
 
@@ -3733,7 +3739,33 @@
                 initListingContactDefault();
             }
 
+            const btnDel = document.getElementById('btnDeleteVisitInModal');
+            if (btnDel) btnDel.style.display = 'inline-flex';
+
             document.getElementById('visitModal').classList.add('open');
+        }
+
+        function onDeleteVisitFromModal() {
+            const id = document.getElementById('visitId').value;
+            if (!id) return;
+            closeVisitModal();
+            deleteVisit(id);
+        }
+
+        async function deleteVisit(visitId) {
+            if (!confirm("Voulez-vous vraiment supprimer cette activité ?")) return;
+            try {
+                const res = await fetch(`/api/visites/${visitId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    alert("Erreur lors de la suppression : " + (err.detail || res.statusText));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Erreur réseau lors de la suppression.");
+            }
         }
 
         function closeVisitModal() {

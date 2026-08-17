@@ -168,6 +168,8 @@
         .btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
         .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
         .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+        .btn.danger { background: rgba(242, 92, 105, 0.12); color: var(--red); border-color: rgba(242, 92, 105, 0.3); }
+        .btn.danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
         .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
         .content {
@@ -1372,6 +1374,7 @@
                 <div class="modal-actions">
                     <button type="button" class="btn" onclick="closeVisitModal()">Annuler</button>
                     <button type="submit" class="btn primary" id="btnSaveVisit"><i class="fa-solid fa-check"></i> Enregistrer</button>
+                    <button type="button" class="btn danger" id="btnDeleteVisitInModal" style="display: none;" onclick="onDeleteVisitFromModal()"><i class="fa-solid fa-trash-can"></i> Supprimer</button>
                 </div>
             </form>
         </div>
@@ -2127,6 +2130,8 @@
 
             const currentUser = {{ request.session.get('username', '')|tojson }};
             setVisitorUI(currentUser);
+            const btnDel = document.getElementById('btnDeleteVisitInModal');
+            if (btnDel) btnDel.style.display = 'none';
             document.getElementById('visitModal').classList.add('open');
         }
 
@@ -2175,7 +2180,17 @@
                 onVisitListingChanged();
             }
 
+            const btnDel = document.getElementById('btnDeleteVisitInModal');
+            if (btnDel) btnDel.style.display = 'inline-flex';
+
             document.getElementById('visitModal').classList.add('open');
+        }
+
+        function onDeleteVisitFromModal() {
+            const id = document.getElementById('visitId').value;
+            if (!id) return;
+            closeVisitModal();
+            deleteVisit(id);
         }
 
         async function saveVisit(e) {
