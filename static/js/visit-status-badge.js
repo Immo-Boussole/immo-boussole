@@ -135,44 +135,59 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
 /**
  * Sets up global event delegation for all visit status badges
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // Toggle dropdown open/close on badge or add-btn click
-    document.addEventListener('click', (e) => {
-        const trigger = e.target.closest('.visit-status-badge, .visit-status-add-btn');
-        if (trigger) {
-            e.preventDefault();
-            e.stopPropagation();
-            const container = trigger.closest('.visit-status-container');
-            const wasOpen = container.classList.contains('open');
+function handleVisitStatusClick(e) {
+    const trigger = e.target.closest('.visit-status-badge, .visit-status-add-btn');
+    if (trigger) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const container = trigger.closest('.visit-status-container');
+        if (!container) return;
+        const wasOpen = container.classList.contains('open');
 
-            // Close all others
-            document.querySelectorAll('.visit-status-container.open').forEach(c => c.classList.remove('open'));
-
-            if (!wasOpen) {
-                container.classList.add('open');
-            }
-            return;
-        }
-
-        // Handle item selection in dropdown
-        const item = e.target.closest('.visit-status-item');
-        if (item) {
-            e.preventDefault();
-            e.stopPropagation();
-            const container = item.closest('.visit-status-container');
-            const listingId = container.dataset.listingId;
-            const listingTitle = container.dataset.listingTitle || '';
-            const newStatus = item.dataset.status;
-
-            container.classList.remove('open');
-            updateListingVisitStatus(listingId, newStatus, listingTitle);
-            return;
-        }
-
-        // Click outside closes all dropdowns
+        // Close all others
         document.querySelectorAll('.visit-status-container.open').forEach(c => c.classList.remove('open'));
+
+        if (!wasOpen) {
+            container.classList.add('open');
+        }
+        return;
+    }
+
+    // Handle item selection in dropdown
+    const item = e.target.closest('.visit-status-item');
+    if (item) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const container = item.closest('.visit-status-container');
+        if (!container) return;
+        const listingId = container.dataset.listingId;
+        const listingTitle = container.dataset.listingTitle || '';
+        const newStatus = item.dataset.status;
+
+        container.classList.remove('open');
+        updateListingVisitStatus(listingId, newStatus, listingTitle);
+        return;
+    }
+
+    // If click is inside an open menu, stop propagation to parent card navigation
+    if (e.target.closest('.visit-status-menu')) {
+        e.stopPropagation();
+        return;
+    }
+
+    // Click outside closes all dropdowns
+    document.querySelectorAll('.visit-status-container.open').forEach(c => c.classList.remove('open'));
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('click', handleVisitStatusClick, true);
     });
-});
+} else {
+    document.addEventListener('click', handleVisitStatusClick, true);
+}
 
 /**
  * Updates a listing's visit status via API and updates UI
