@@ -8,7 +8,9 @@ import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal, run_migrations
-from app.models import Listing, Visit, Source, ListingStatus
+from fastapi.testclient import TestClient
+from app.main import app, user_required
+from app.models import Listing, Visit, VisitContact, Agent, Agency, Source, ListingStatus
 from app import schemas
 from app.mcp_server import (
     tool_toggle_listing_to_visit,
@@ -23,9 +25,21 @@ def test_visits_flow():
     # Ensure migrations run
     run_migrations()
     db = SessionLocal()
+    app.dependency_overrides[user_required] = lambda: {"username": "admin", "role": "admin"}
+    client = TestClient(app)
 
     try:
-        # 1. Create a dummy listing
+        # 1. Create a dummy listing and dummy agent / agency
+        test_agency = Agency(legal_name="Agence Test Visite", commercial_name="Agence Visite", city="Grenoble")
+        db.add(test_agency)
+        db.commit()
+        db.refresh(test_agency)
+
+        test_agent = Agent(first_name="Sophie", last_name="Martin", email="sophie.martin@test.fr", agency_id=test_agency.id)
+        db.add(test_agent)
+        db.commit()
+        db.refresh(test_agent)
+
         test_listing = Listing(
             title="Appartement Test Visite",
             url=f"http://example.com/test-visit-{datetime.datetime.now().timestamp()}",
@@ -76,38 +90,59 @@ def test_visits_flow():
         db.refresh(v_db)
         assert v_db.status == "effectuee"
 
-        # 6. Test DB creation & updates with step_family and step
-        visit_contact = Visit(
-            listing_id=listing_id,
-            scheduled_at=datetime.datetime.now(datetime.timezone.utc),
-            step_family="contact",
-            step="appel_direct",
-            visit_type="contact_agence",
-            status="effectuee",
-            visitor="Jean Dupont",
-            notes="Appel direct passé"
-        )
-        db.add(visit_contact)
-        db.commit()
-        db.refresh(visit_contact)
-        assert visit_contact.step_family == "contact"
-        assert visit_contact.step == "appel_direct"
+        # 6. Test REST API: Create Visit with contact and update_listing_contact
+        resp = client.post("/api/visites", json={
+            "listing_id": listing_id,
+            "step_family": "contact",
+            "step": "appel_direct",
+            "status": "effectuee",
+            "scheduled_at": "2026-08-21T10:00:00",
+            "visitor": "Jean Dupont",
+            "notes": "1er contact téléphonique avec Sophie Martin",
+            "agent_ids": [test_agent.id],
+            "update_listing_contact": True
+        })
+        assert resp.status_code == 200, f"API create visit failed: {resp.text}"
+        v_data = resp.json()
+        assert v_data["step_family"] == "contact"
+        assert v_data["step"] == "appel_direct"
+        assert len(v_data["contacts"]) == 1
+        assert v_data["contacts"][0]["agent_id"] == test_agent.id
 
-        # 7. Check stats tool includes visits
+        db.refresh(test_listing)
+        assert test_listing.main_agent_id == test_agent.id, "Listing main_agent_id should have been updated"
+        assert test_listing.agency_id == test_agency.id, "Listing agency_id should have been synced from agent"
+
+        # 7. Test REST API: Update Visit with agency and update_listing_contact
+        v2_id = v_data["id"]
+        resp_up = client.put(f"/api/visites/{v2_id}", json={
+            "agency_ids": [test_agency.id],
+            "agent_ids": [],
+            "update_listing_contact": True
+        })
+        assert resp_up.status_code == 200, f"API update visit failed: {resp_up.text}"
+        v2_updated = resp_up.json()
+        assert len(v2_updated["contacts"]) == 1
+        assert v2_updated["contacts"][0]["agency_id"] == test_agency.id
+
+        db.refresh(test_listing)
+        assert test_listing.agency_id == test_agency.id
+
+        # 8. Check stats tool includes visits
         stats_json = tool_get_stats()
         print("Stats res:", stats_json)
         assert "annonces_a_visiter" in stats_json
         assert "total_visites" in stats_json
 
-        # 8. Clean up test data
+        # 9. Clean up test data
         tool_delete_visit(visit_id)
-        v2_db = db.query(Visit).filter(Visit.listing_id == listing_id).all()
-        for v in v2_db:
-            db.delete(v)
+        tool_delete_visit(v2_id)
         db.delete(test_listing)
+        db.delete(test_agent)
+        db.delete(test_agency)
         db.commit()
         print("Cleaned up test data successfully!")
-        print("ALL VISIT TESTS PASSED!")
+        print("ALL VISIT & CONTACT TESTS PASSED!")
 
     finally:
         db.close()

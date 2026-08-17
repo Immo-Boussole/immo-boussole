@@ -333,6 +333,7 @@ class VisitCreateRequest(BaseModel):
     notes: Optional[str] = None
     agent_ids: List[int] = []
     agency_ids: List[int] = []
+    update_listing_contact: Optional[bool] = None
 
 class VisitUpdateRequest(BaseModel):
     visit_type: Optional[str] = None
@@ -344,6 +345,7 @@ class VisitUpdateRequest(BaseModel):
     notes: Optional[str] = None
     agent_ids: Optional[List[int]] = None
     agency_ids: Optional[List[int]] = None
+    update_listing_contact: Optional[bool] = None
 
 class VisitContactSchema(BaseModel):
     agent_id: Optional[int] = None

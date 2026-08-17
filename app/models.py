@@ -293,6 +293,21 @@ class Visit(Base):
     listing = relationship("Listing", back_populates="visits")
     visit_contacts = relationship("VisitContact", back_populates="visit", cascade="all, delete-orphan")
 
+    @property
+    def contacts(self):
+        result = []
+        if self.visit_contacts:
+            for vc in self.visit_contacts:
+                agent_name = f"{vc.agent.first_name} {vc.agent.last_name}".strip() if vc.agent else None
+                agency_name = (vc.agency.commercial_name or vc.agency.legal_name) if vc.agency else None
+                result.append({
+                    "agent_id": vc.agent_id,
+                    "agent_name": agent_name,
+                    "agency_id": vc.agency_id,
+                    "agency_name": agency_name,
+                })
+        return result
+
 
 class VisitContact(Base):
     __tablename__ = "visit_contacts"

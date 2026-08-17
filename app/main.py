@@ -1269,6 +1269,8 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
                 "listing": l
             })
 
+    all_agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
+    all_agencies = db.query(Agency).order_by(Agency.commercial_name.asc(), Agency.legal_name.asc()).all()
     local_hash = get_local_commit_hash()
 
     return templates.TemplateResponse(request=request, name="visites.html", context={
@@ -1277,6 +1279,8 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
         "visits_with_listings": visits_with_listings,
         "queries": queries,
         "users": users,
+        "all_agents": all_agents,
+        "all_agencies": all_agencies,
         "local_hash": local_hash,
         "app_version": settings.APP_VERSION,
         "title": "Gestionnaire de visites — Immo-Boussole",
@@ -3787,9 +3791,16 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
     if body.agent_ids:
         for aid in body.agent_ids:
             db.add(VisitContact(visit_id=visit.id, agent_id=aid))
+        if listing and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
+            listing.main_agent_id = body.agent_ids[0]
+            ag = db.query(Agent).filter(Agent.id == body.agent_ids[0]).first()
+            if ag and ag.agency_id:
+                listing.agency_id = ag.agency_id
     if body.agency_ids:
         for agid in body.agency_ids:
             db.add(VisitContact(visit_id=visit.id, agency_id=agid))
+        if listing and not body.agent_ids and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
+            listing.agency_id = body.agency_ids[0]
     if body.agent_ids or body.agency_ids:
         db.commit()
         db.refresh(visit)
@@ -3895,9 +3906,16 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
         if body.agent_ids:
             for aid in body.agent_ids:
                 db.add(VisitContact(visit_id=visit.id, agent_id=aid))
+            if listing and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
+                listing.main_agent_id = body.agent_ids[0]
+                ag = db.query(Agent).filter(Agent.id == body.agent_ids[0]).first()
+                if ag and ag.agency_id:
+                    listing.agency_id = ag.agency_id
         if body.agency_ids:
             for agid in body.agency_ids:
                 db.add(VisitContact(visit_id=visit.id, agency_id=agid))
+            if listing and not body.agent_ids and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
+                listing.agency_id = body.agency_ids[0]
 
     db.commit()
     db.refresh(visit)

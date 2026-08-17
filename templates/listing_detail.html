@@ -967,7 +967,7 @@
                     {% for v in listing.visits %}
                     {% set sf = v.step_family or 'visite' %}
                     {% set st = v.step or 'rdv_planifie' %}
-                    <div class="timeline-node {{ sf }} {{ v.status }}" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ sf|tojson }}, {{ st|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }})'>
+                    <div class="timeline-node {{ sf }} {{ v.status }}" onclick='editVisit({{ v.id }}, {{ v.listing_id }}, {{ sf|tojson }}, {{ st|tojson }}, {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }}, {{ v.status|tojson }}, {{ (v.visitor or "")|tojson }}, {{ (v.notes or "")|tojson }}, {{ (v.visit_contacts[0].agent_id if v.visit_contacts and v.visit_contacts[0].agent_id else "null") }}, {{ (v.visit_contacts[0].agency_id if v.visit_contacts and v.visit_contacts[0].agency_id else "null") }})'>
                         <div class="timeline-tooltip">
                             <div class="tooltip-title">{{ listing.title }}</div>
                             <div class="tooltip-date">{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</div>
@@ -1786,6 +1786,39 @@
                 </div>
             </div>
 
+            <!-- ── Contact lié à l'activité (Hybride: Liste déroulante / Recherche / Texte libre) ── -->
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <label for="visitContactInput" style="font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0;">
+                        <i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Contact lié à l'activité
+                    </label>
+                    <span id="visitContactBadge" style="display: none; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 4px; background: rgba(79, 142, 247, 0.15); color: var(--accent); font-weight: 600; text-transform: none;"></span>
+                </div>
+                <div style="position: relative;">
+                    <input type="text" id="visitContactInput" list="visitContactsList" placeholder="Choisir un contact (agent, agence) ou saisir un nom libre..." autocomplete="off" oninput="onVisitContactInputChanged()" onfocus="this.select()" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 2.2rem 0.6rem 2.2rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    <i id="visitContactIcon" class="fa-solid fa-user-tie" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-2); pointer-events: none; font-size: 0.85rem;"></i>
+                    <button type="button" id="btnClearVisitContact" onclick="clearVisitContactSelection()" style="display: none; position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--text-2); cursor: pointer; padding: 0.2rem;" title="Effacer"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <datalist id="visitContactsList">
+                    {% for ag in all_agents %}
+                    <option value="{{ ag.first_name }} {{ ag.last_name }}{% if ag.agency %} ({{ ag.agency.commercial_name or ag.agency.legal_name }}){% endif %}" data-type="agent" data-id="{{ ag.id }}" data-agency-id="{{ ag.agency_id or '' }}" data-name="{{ ag.first_name }} {{ ag.last_name }}">
+                    {% endfor %}
+                    {% for ac in all_agencies %}
+                    <option value="{{ ac.commercial_name or ac.legal_name }}{% if ac.city %} ({{ ac.city }}){% endif %} — [Agence]" data-type="agency" data-id="{{ ac.id }}" data-name="{{ ac.commercial_name or ac.legal_name }}">
+                    {% endfor %}
+                </datalist>
+                <input type="hidden" id="visitContactType" value="">
+                <input type="hidden" id="visitContactId" value="">
+                <input type="hidden" id="visitContactRawName" value="">
+
+                <div id="visitListingContactCheckboxContainer" style="display: none; margin-top: 0.4rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-2); cursor: pointer;">
+                        <input type="checkbox" id="chkUpdateListingContact" style="accent-color: var(--accent); cursor: pointer;">
+                        <span>Définir également comme contact principal de l'annonce</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-bottom: 1.25rem;">
                 <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Nom des participants / visiteurs</label>
                 <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; background: var(--surface-2); padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 0.4rem; box-sizing: border-box;">
@@ -1807,6 +1840,123 @@
             <div class="form-actions" style="justify-content: flex-end; display: flex; gap: 0.75rem;">
                 <button type="button" class="btn" onclick="closeVisitModal()">Annuler</button>
                 <button type="submit" class="btn primary" id="btnSaveVisit"><i class="fa-solid fa-check"></i> Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Modal: Proposition de création de contact post-enregistrement ── -->
+<div class="modal-backdrop" id="visitContactPromptModal" style="z-index: 10000;" onclick="if(event.target===this)closeVisitContactPromptModal()">
+    <div class="modal" style="max-width: 460px; text-align: left; padding: 2rem; border-radius: 12px;">
+        <div style="text-align: center; margin-bottom: 1.25rem;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: rgba(79, 142, 247, 0.12); color: var(--accent); font-size: 1.5rem; margin-bottom: 0.85rem;">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.2rem; color: var(--text);">Activité enregistrée !</h3>
+            <p style="margin: 0; color: var(--text-2); font-size: 0.88rem; line-height: 1.5;">
+                Le contact « <strong id="promptContactNameText" style="color: var(--text);"></strong> » a été lié à l'activité sous forme de texte libre.<br>
+                Souhaitez-vous créer sa fiche contact dès maintenant ?
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+            <button type="button" class="btn" onclick="skipCreateContactPostSave()" style="flex: 1;">Plus tard / Non merci</button>
+            <button type="button" class="btn primary" onclick="openQuickContactModalFromPrompt()" style="flex: 1;"><i class="fa-solid fa-user-check"></i> Créer la fiche</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Formulaire rapide de création de contact ── -->
+<div class="modal-backdrop" id="quickContactModal" style="z-index: 10001;" onclick="if(event.target===this)closeQuickContactModal()">
+    <div class="modal" style="max-width: 520px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto; border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <h3 style="color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem;" id="quickContactModalTitle">
+                <i class="fa-solid fa-address-card" style="color: var(--accent);"></i> Nouveau contact
+            </h3>
+            <button class="btn sm" onclick="closeQuickContactModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="quickContactForm" onsubmit="submitQuickContactForm(event)">
+            <input type="hidden" id="qcVisitId" value="">
+            <input type="hidden" id="qcListingId" value="">
+
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; background: var(--surface-2); padding: 0.3rem; border-radius: 8px; border: 1px solid var(--border);">
+                <button type="button" id="qcBtnTypeAgent" class="btn sm active" onclick="switchQuickContactType('agent')" style="flex: 1;">
+                    <i class="fa-solid fa-user-tie"></i> Agent / Conseiller
+                </button>
+                <button type="button" id="qcBtnTypeAgency" class="btn sm" onclick="switchQuickContactType('agency')" style="flex: 1;">
+                    <i class="fa-solid fa-building"></i> Agence Immobilière
+                </button>
+            </div>
+
+            <!-- Agent Fields -->
+            <div id="qcAgentFields">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
+                    <div class="form-group">
+                        <label for="qcAgentFirstName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Prénom *</label>
+                        <input type="text" id="qcAgentFirstName" required placeholder="ex: Jean" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label for="qcAgentLastName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Nom *</label>
+                        <input type="text" id="qcAgentLastName" required placeholder="ex: Dupont" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
+                    <div class="form-group">
+                        <label for="qcAgentPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Téléphone</label>
+                        <input type="tel" id="qcAgentPhone" placeholder="06 12 34 56 78" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label for="qcAgentEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Email</label>
+                        <input type="email" id="qcAgentEmail" placeholder="jean.dupont@immo.fr" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                    <label for="qcAgentAgencySelect" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Agence rattachée (optionnel)</label>
+                    <select id="qcAgentAgencySelect" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <option value="">-- Sans agence --</option>
+                        {% for ac in all_agencies %}
+                        <option value="{{ ac.id }}">{{ ac.commercial_name or ac.legal_name }}{% if ac.city %} ({{ ac.city }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Agency Fields -->
+            <div id="qcAgencyFields" style="display: none;">
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                    <label for="qcAgencyName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Nom de l'agence / Enseigne *</label>
+                    <input type="text" id="qcAgencyName" placeholder="ex: Agence Immobilière Centrale" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
+                    <div class="form-group">
+                        <label for="qcAgencyPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Téléphone</label>
+                        <input type="tel" id="qcAgencyPhone" placeholder="04 76 00 00 00" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label for="qcAgencyEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Email</label>
+                        <input type="email" id="qcAgencyEmail" placeholder="contact@agence.fr" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.85rem;">
+                    <label for="qcAgencyCity" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Ville</label>
+                    <input type="text" id="qcAgencyCity" placeholder="ex: Grenoble" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.82rem; color: var(--text); cursor: pointer;">
+                    <input type="checkbox" id="qcChkLinkListing" checked style="accent-color: var(--accent); cursor: pointer;">
+                    <span>Rattacher également comme contact principal de l'annonce</span>
+                </label>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeQuickContactModal()">Ignorer</button>
+                <button type="submit" class="btn primary" id="btnSubmitQuickContact"><i class="fa-solid fa-check"></i> Créer & Rattacher</button>
             </div>
         </form>
     </div>
@@ -3306,10 +3456,176 @@
                 status: {{ v.status|tojson }},
                 scheduled_at: {{ v.scheduled_at.isoformat()|tojson if v.scheduled_at else "null" }},
                 visitor: {{ (v.visitor or "")|tojson }},
-                notes: {{ (v.notes or "")|tojson }}
+                notes: {{ (v.notes or "")|tojson }},
+                agent_ids: [{% for vc in v.visit_contacts %}{% if vc.agent_id %}{{ vc.agent_id }},{% endif %}{% endfor %}],
+                agency_ids: [{% for vc in v.visit_contacts %}{% if vc.agency_id %}{{ vc.agency_id }},{% endif %}{% endfor %}]
             },
             {% endfor %}
         ];
+
+        const CURRENT_LISTING_CONTACT = {
+            main_agent_id: {{ listing.main_agent_id or 'null' }},
+            agency_id: {{ listing.agency_id or 'null' }}
+        };
+
+        const ALL_AGENTS_MAP = {
+            {% for ag in all_agents %}
+            {{ ag.id }}: {
+                id: {{ ag.id }},
+                name: {{ (ag.first_name ~ " " ~ ag.last_name)|tojson }},
+                first_name: {{ ag.first_name|tojson }},
+                last_name: {{ ag.last_name|tojson }},
+                phone: {{ (ag.phone_mobile or ag.phone_landline or "")|tojson }},
+                email: {{ (ag.email or "")|tojson }},
+                agency_id: {{ ag.agency_id or 'null' }},
+                agency_name: {{ ((ag.agency.commercial_name or ag.agency.legal_name) if ag.agency else "")|tojson }},
+                display_label: {{ (ag.first_name ~ " " ~ ag.last_name ~ (" (" ~ (ag.agency.commercial_name or ag.agency.legal_name) ~ ")" if ag.agency else ""))|tojson }}
+            },
+            {% endfor %}
+        };
+
+        const ALL_AGENCIES_MAP = {
+            {% for ac in all_agencies %}
+            {{ ac.id }}: {
+                id: {{ ac.id }},
+                name: {{ (ac.commercial_name or ac.legal_name)|tojson }},
+                city: {{ (ac.city or "")|tojson }},
+                phone: {{ (ac.phone or "")|tojson }},
+                email: {{ (ac.email or "")|tojson }},
+                display_label: {{ ((ac.commercial_name or ac.legal_name) ~ (" (" ~ ac.city ~ ")" if ac.city else "") ~ " — [Agence]")|tojson }}
+            },
+            {% endfor %}
+        };
+
+        // ── Contact Selector Handlers ──────────────────────────────────────────
+        let postSaveContext = { visitId: null, listingId: {{ listing.id }}, freeContactName: '' };
+
+        function onVisitContactInputChanged() {
+            const input = document.getElementById('visitContactInput');
+            const val = input.value.trim();
+            const clearBtn = document.getElementById('btnClearVisitContact');
+            const badge = document.getElementById('visitContactBadge');
+            const typeInput = document.getElementById('visitContactType');
+            const idInput = document.getElementById('visitContactId');
+            const rawInput = document.getElementById('visitContactRawName');
+            const chkContainer = document.getElementById('visitListingContactCheckboxContainer');
+
+            clearBtn.style.display = val ? 'block' : 'none';
+
+            if (!val) {
+                typeInput.value = '';
+                idInput.value = '';
+                rawInput.value = '';
+                badge.style.display = 'none';
+                chkContainer.style.display = 'none';
+                return;
+            }
+
+            // Check if matching an agent in datalist
+            const datalist = document.getElementById('visitContactsList');
+            const matchedOption = Array.from(datalist.options).find(opt => opt.value.toLowerCase() === val.toLowerCase());
+
+            if (matchedOption) {
+                const cType = matchedOption.getAttribute('data-type');
+                const cId = matchedOption.getAttribute('data-id');
+                typeInput.value = cType;
+                idInput.value = cId;
+                rawInput.value = matchedOption.getAttribute('data-name') || val;
+
+                badge.textContent = cType === 'agent' ? '👤 Agent' : '🏢 Agence';
+                badge.style.display = 'inline-block';
+                badge.style.background = cType === 'agent' ? 'rgba(79, 142, 247, 0.15)' : 'rgba(168, 85, 247, 0.15)';
+                badge.style.color = cType === 'agent' ? 'var(--accent)' : 'var(--purple)';
+
+                const hasExistingListingContact = CURRENT_LISTING_CONTACT.main_agent_id || CURRENT_LISTING_CONTACT.agency_id;
+                if (hasExistingListingContact) {
+                    const isSame = (cType === 'agent' && CURRENT_LISTING_CONTACT.main_agent_id == cId) || (cType === 'agency' && CURRENT_LISTING_CONTACT.agency_id == cId);
+                    chkContainer.style.display = isSame ? 'none' : 'block';
+                    document.getElementById('chkUpdateListingContact').checked = false;
+                } else {
+                    chkContainer.style.display = 'none';
+                }
+            } else {
+                // Free text entered
+                typeInput.value = 'custom';
+                idInput.value = '';
+                rawInput.value = val;
+                badge.textContent = '✏️ Saisie libre';
+                badge.style.display = 'inline-block';
+                badge.style.background = 'rgba(248, 168, 75, 0.15)';
+                badge.style.color = 'var(--orange)';
+                chkContainer.style.display = 'none';
+            }
+        }
+
+        function clearVisitContactSelection() {
+            document.getElementById('visitContactInput').value = '';
+            document.getElementById('visitContactType').value = '';
+            document.getElementById('visitContactId').value = '';
+            document.getElementById('visitContactRawName').value = '';
+            document.getElementById('visitContactBadge').style.display = 'none';
+            document.getElementById('btnClearVisitContact').style.display = 'none';
+            document.getElementById('visitListingContactCheckboxContainer').style.display = 'none';
+            document.getElementById('visitContactInput').focus();
+        }
+
+        function setContactSelection(type, id, label, isListingContact = false) {
+            const input = document.getElementById('visitContactInput');
+            const typeInput = document.getElementById('visitContactType');
+            const idInput = document.getElementById('visitContactId');
+            const rawInput = document.getElementById('visitContactRawName');
+            const badge = document.getElementById('visitContactBadge');
+            const clearBtn = document.getElementById('btnClearVisitContact');
+
+            if (!id && !label) {
+                clearVisitContactSelection();
+                return;
+            }
+
+            if (type === 'agent' && ALL_AGENTS_MAP[id]) {
+                const ag = ALL_AGENTS_MAP[id];
+                input.value = ag.display_label;
+                typeInput.value = 'agent';
+                idInput.value = id;
+                rawInput.value = ag.name;
+                badge.textContent = isListingContact ? '⭐ Contact annonce' : '👤 Agent';
+                badge.style.display = 'inline-block';
+                badge.style.background = isListingContact ? 'rgba(248, 168, 75, 0.15)' : 'rgba(79, 142, 247, 0.15)';
+                badge.style.color = isListingContact ? 'var(--orange)' : 'var(--accent)';
+                clearBtn.style.display = 'block';
+            } else if (type === 'agency' && ALL_AGENCIES_MAP[id]) {
+                const ac = ALL_AGENCIES_MAP[id];
+                input.value = ac.display_label;
+                typeInput.value = 'agency';
+                idInput.value = id;
+                rawInput.value = ac.name;
+                badge.textContent = isListingContact ? '⭐ Contact annonce' : '🏢 Agence';
+                badge.style.display = 'inline-block';
+                badge.style.background = isListingContact ? 'rgba(248, 168, 75, 0.15)' : 'rgba(168, 85, 247, 0.15)';
+                badge.style.color = isListingContact ? 'var(--orange)' : 'var(--purple)';
+                clearBtn.style.display = 'block';
+            } else if (label) {
+                input.value = label;
+                typeInput.value = 'custom';
+                idInput.value = '';
+                rawInput.value = label;
+                badge.textContent = '✏️ Saisie libre';
+                badge.style.display = 'inline-block';
+                badge.style.background = 'rgba(248, 168, 75, 0.15)';
+                badge.style.color = 'var(--orange)';
+                clearBtn.style.display = 'block';
+            }
+        }
+
+        function initListingContactDefault() {
+            if (CURRENT_LISTING_CONTACT.main_agent_id) {
+                setContactSelection('agent', CURRENT_LISTING_CONTACT.main_agent_id, null, true);
+            } else if (CURRENT_LISTING_CONTACT.agency_id) {
+                setContactSelection('agency', CURRENT_LISTING_CONTACT.agency_id, null, true);
+            } else {
+                clearVisitContactSelection();
+            }
+        }
 
         function getStepLabel(family, stepKey) {
             if (STEP_FAMILIES[family] && STEP_FAMILIES[family].steps[stepKey]) {
@@ -3372,11 +3688,12 @@
 
             const currentUser = {{ request.session.get('username', '')|tojson }};
             setVisitorUI(currentUser);
+            initListingContactDefault();
 
             document.getElementById('visitModal').classList.add('open');
         }
 
-        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes) {
+        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes, agentId = null, agencyId = null) {
             document.getElementById('visitId').value = id;
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Modifier l\'activité / visite';
             document.getElementById('visitListingId').value = listingId;
@@ -3391,6 +3708,19 @@
             }
             setVisitorUI(visitor || '');
             document.getElementById('visitNotes').value = notes || '';
+
+            // Handle contact pre-population
+            clearVisitContactSelection();
+            if (agentId && agentId !== 'null' && ALL_AGENTS_MAP[agentId]) {
+                const isListingAgent = CURRENT_LISTING_CONTACT.main_agent_id == agentId;
+                setContactSelection('agent', agentId, null, isListingAgent);
+            } else if (agencyId && agencyId !== 'null' && ALL_AGENCIES_MAP[agencyId]) {
+                const isListingAgency = CURRENT_LISTING_CONTACT.agency_id == agencyId;
+                setContactSelection('agency', agencyId, null, isListingAgency);
+            } else {
+                initListingContactDefault();
+            }
+
             document.getElementById('visitModal').classList.add('open');
         }
 
@@ -3443,9 +3773,25 @@
             const visitor = getVisitorStringFromUI();
             const notes = document.getElementById('visitNotes').value;
 
+            const cType = document.getElementById('visitContactType').value;
+            const cId = document.getElementById('visitContactId').value;
+            const contactInputVal = document.getElementById('visitContactInput').value.trim();
+            const chkUpdateListing = document.getElementById('chkUpdateListingContact').checked;
+
             if (!listing_id || !scheduled_at) return;
 
-            const payload = { listing_id, step_family, step, status, scheduled_at, visitor, notes };
+            const payload = { 
+                listing_id, 
+                step_family, 
+                step, 
+                status, 
+                scheduled_at, 
+                visitor, 
+                notes,
+                agent_ids: (cType === 'agent' && cId) ? [parseInt(cId)] : [],
+                agency_ids: (cType === 'agency' && cId) ? [parseInt(cId)] : [],
+                update_listing_contact: chkUpdateListing
+            };
 
             try {
                 let res;
@@ -3462,14 +3808,222 @@
                         body: JSON.stringify(payload)
                     });
                 }
+
                 if (res.ok) {
-                    location.reload();
+                    const savedData = await res.json();
+                    closeVisitModal();
+
+                    // If user entered a custom / free-text contact name that is not an existing contact
+                    if (cType === 'custom' && contactInputVal) {
+                        openVisitContactPromptModal(savedData.id || id, listing_id, contactInputVal);
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     alert("Erreur lors de l'enregistrement de l'activité.");
                 }
             } catch (err) {
                 console.error(err);
                 alert("Erreur réseau: " + err.message);
+            }
+        }
+
+        // ── Post-Save Proposal & Quick Contact Modal ───────────────────────────
+        function openVisitContactPromptModal(visitId, listingId, contactName) {
+            postSaveContext = { visitId, listingId, freeContactName: contactName };
+            document.getElementById('promptContactNameText').textContent = contactName;
+            document.getElementById('visitContactPromptModal').classList.add('open');
+        }
+
+        function closeVisitContactPromptModal() {
+            document.getElementById('visitContactPromptModal').classList.remove('open');
+        }
+
+        function skipCreateContactPostSave() {
+            closeVisitContactPromptModal();
+            location.reload();
+        }
+
+        function parseContactText(text) {
+            const raw = text.trim();
+            const phoneMatch = raw.match(/(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}/);
+            const emailMatch = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+
+            let cleanName = raw;
+            let phone = '';
+            let email = '';
+
+            if (phoneMatch) {
+                phone = phoneMatch[0].replace(/\s+/g, ' ');
+                cleanName = cleanName.replace(phoneMatch[0], ' ');
+            }
+            if (emailMatch) {
+                email = emailMatch[0];
+                cleanName = cleanName.replace(emailMatch[0], ' ');
+            }
+
+            cleanName = cleanName.replace(/[\(\)\[\]\-—,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+            const isAgencyKeyword = /(agence|immobilier|cabinet|iad|century|orpi|square|foncia|nexity|human|plaza|safti|capifrance|megagence)/i.test(raw);
+
+            let firstName = '';
+            let lastName = '';
+
+            if (!isAgencyKeyword) {
+                const parts = cleanName.split(' ').filter(Boolean);
+                if (parts.length === 1) {
+                    firstName = parts[0];
+                    lastName = '';
+                } else if (parts.length >= 2) {
+                    firstName = parts[0];
+                    lastName = parts.slice(1).join(' ');
+                }
+            }
+
+            return {
+                isAgency: isAgencyKeyword,
+                agencyName: isAgencyKeyword ? cleanName : '',
+                firstName: firstName,
+                lastName: lastName,
+                phone: phone,
+                email: email
+            };
+        }
+
+        let currentQuickContactType = 'agent';
+
+        function switchQuickContactType(type) {
+            currentQuickContactType = type;
+            const btnAgent = document.getElementById('qcBtnTypeAgent');
+            const btnAgency = document.getElementById('qcBtnTypeAgency');
+            const agentFields = document.getElementById('qcAgentFields');
+            const agencyFields = document.getElementById('qcAgencyFields');
+
+            if (type === 'agent') {
+                btnAgent.classList.add('active');
+                btnAgency.classList.remove('active');
+                agentFields.style.display = 'block';
+                agencyFields.style.display = 'none';
+                document.getElementById('qcAgentFirstName').required = true;
+                document.getElementById('qcAgentLastName').required = true;
+                document.getElementById('qcAgencyName').required = false;
+            } else {
+                btnAgent.classList.remove('active');
+                btnAgency.classList.add('active');
+                agentFields.style.display = 'none';
+                agencyFields.style.display = 'block';
+                document.getElementById('qcAgentFirstName').required = false;
+                document.getElementById('qcAgentLastName').required = false;
+                document.getElementById('qcAgencyName').required = true;
+            }
+        }
+
+        function openQuickContactModalFromPrompt() {
+            closeVisitContactPromptModal();
+
+            const { visitId, listingId, freeContactName } = postSaveContext;
+            document.getElementById('qcVisitId').value = visitId || '';
+            document.getElementById('qcListingId').value = listingId || '';
+
+            const parsed = parseContactText(freeContactName);
+
+            if (parsed.isAgency) {
+                switchQuickContactType('agency');
+                document.getElementById('qcAgencyName').value = parsed.agencyName || freeContactName;
+                document.getElementById('qcAgencyPhone').value = parsed.phone || '';
+                document.getElementById('qcAgencyEmail').value = parsed.email || '';
+            } else {
+                switchQuickContactType('agent');
+                document.getElementById('qcAgentFirstName').value = parsed.firstName || freeContactName;
+                document.getElementById('qcAgentLastName').value = parsed.lastName || '';
+                document.getElementById('qcAgentPhone').value = parsed.phone || '';
+                document.getElementById('qcAgentEmail').value = parsed.email || '';
+            }
+
+            document.getElementById('quickContactModal').classList.add('open');
+        }
+
+        function closeQuickContactModal() {
+            document.getElementById('quickContactModal').classList.remove('open');
+            location.reload();
+        }
+
+        async function submitQuickContactForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitQuickContact');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Création...';
+
+            const visitId = document.getElementById('qcVisitId').value;
+            const listingId = document.getElementById('qcListingId').value;
+            const linkListing = document.getElementById('qcChkLinkListing').checked;
+
+            try {
+                let createdId = null;
+                let contactKind = currentQuickContactType;
+
+                if (contactKind === 'agent') {
+                    const firstName = document.getElementById('qcAgentFirstName').value.trim();
+                    const lastName = document.getElementById('qcAgentLastName').value.trim();
+                    const phone = document.getElementById('qcAgentPhone').value.trim();
+                    const email = document.getElementById('qcAgentEmail').value.trim();
+                    const agencyIdVal = document.getElementById('qcAgentAgencySelect').value;
+
+                    const res = await fetch('/api/v1/agents', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            first_name: firstName,
+                            last_name: lastName,
+                            phone_mobile: phone || null,
+                            email: email || null,
+                            agency_id: agencyIdVal ? parseInt(agencyIdVal) : null,
+                            title: 'Conseiller immobilier'
+                        })
+                    });
+                    if (!res.ok) throw new Error("Erreur création agent");
+                    const agent = await res.json();
+                    createdId = agent.id;
+                } else {
+                    const name = document.getElementById('qcAgencyName').value.trim();
+                    const phone = document.getElementById('qcAgencyPhone').value.trim();
+                    const email = document.getElementById('qcAgencyEmail').value.trim();
+                    const city = document.getElementById('qcAgencyCity').value.trim();
+
+                    const res = await fetch('/api/v1/agencies', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            commercial_name: name,
+                            phone: phone || null,
+                            email: email || null,
+                            city: city || null
+                        })
+                    });
+                    if (!res.ok) throw new Error("Erreur création agence");
+                    const agency = await res.json();
+                    createdId = agency.id;
+                }
+
+                // Link the newly created contact to the visit
+                if (visitId && createdId) {
+                    await fetch(`/api/visites/${visitId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            agent_ids: contactKind === 'agent' ? [createdId] : [],
+                            agency_ids: contactKind === 'agency' ? [createdId] : [],
+                            update_listing_contact: linkListing
+                        })
+                    });
+                }
+
+                location.reload();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la création du contact: " + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Créer & Rattacher';
             }
         }
 
