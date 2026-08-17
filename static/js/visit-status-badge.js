@@ -34,8 +34,8 @@ const VISIT_STATUS_CONFIG = {
         icon: "fa-solid fa-brain",
         badgeClass: "status-deja_visitee",
         itemClass: "item-deja_visitee",
-        stepFamily: "visite",
-        step: "1ere_visite",
+        stepFamily: "reflexion",
+        step: "en_reflexion_sans_offre",
         status: "effectuee",
         color: "#fbbf24"
     },

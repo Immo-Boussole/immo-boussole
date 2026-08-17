@@ -757,9 +757,9 @@
                 </button>
                 <!-- Moteur de recherche -->
                 <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
-                <!-- Filtre "Biens à visiter" -->
-                <button type="button" id="btnFilterToVisit" class="btn btn-secondary" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
-                    <i class="fa-regular fa-bookmark"></i> Biens à visiter
+                <!-- Filtre "Biens à visiter" (Actif par défaut) -->
+                <button type="button" id="btnFilterToVisit" class="btn btn-purple" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
+                    <i class="fa-solid fa-bookmark"></i> Biens à visiter (Actif)
                 </button>
             </div>
 
@@ -985,7 +985,7 @@
 
     <script>
         let currentTab = 'contacts';
-        let filterToVisit = false;
+        let filterToVisit = true;
         let contactsData = [];
         let agenciesOverviewData = [];
         let agenciesData = [];

@@ -27,6 +27,7 @@
             --green: #10d9a4;
             --red: #f25c69;
             --orange: #f8a84b;
+            --yellow: #f9d04f;
             --purple: #a855f7;
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             --radius: 14px;
@@ -178,7 +179,7 @@
         /* ── Summary Stats ── */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(6, minmax(0, 1fr));
             gap: 0.75rem;
             margin-bottom: 1.25rem;
             width: 100%;
@@ -229,6 +230,7 @@
         .stat-icon.green { background: rgba(16, 217, 164, 0.15); color: var(--green); }
         .stat-icon.purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
         .stat-icon.orange { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+        .stat-icon.yellow { background: rgba(249, 208, 79, 0.15); color: var(--yellow); }
         .stat-icon.red { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
         .stat-info {
@@ -347,6 +349,7 @@
 
         .visit-chip.programme.visite { background: rgba(79, 142, 247, 0.2); color: #8eb7f9; border: 1px solid rgba(79, 142, 247, 0.4); }
         .visit-chip.programme.contre_visite { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); }
+        .visit-chip.programme.reflexion { background: rgba(249, 208, 79, 0.2); color: #fde047; border: 1px solid rgba(249, 208, 79, 0.4); }
         .visit-chip.programme.contact_agence,
         .visit-chip.programme.relance_agence,
         .visit-chip.programme.contact_proprio { background: rgba(248, 168, 75, 0.2); color: #fed7aa; border: 1px solid rgba(248, 168, 75, 0.4); }
@@ -492,7 +495,11 @@
             font-size: 0.72rem;
             font-weight: 700;
         }
+        .badge-type.contact { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
         .badge-type.visite { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .badge-type.reflexion { background: rgba(249, 208, 79, 0.15); color: var(--yellow); }
+        .badge-type.offre { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+        .badge-type.cloture { background: rgba(16, 217, 164, 0.15); color: var(--green); }
         .badge-type.contre_visite { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
         .badge-type.reponse_negative { background: rgba(242, 92, 105, 0.15); color: var(--red); }
 
@@ -787,6 +794,7 @@
             {% set total_targets = target_listings|length %}
             {% set contact_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "contact")|list|length %}
             {% set visite_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "visite")|list|length %}
+            {% set reflexion_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "reflexion")|list|length %}
             {% set offre_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "offre")|list|length %}
             {% set cloture_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "cloture")|list|length %}
 
@@ -795,7 +803,7 @@
                     <i class="fa-solid fa-chart-pie" style="color: var(--accent); margin-right: 0.4rem;"></i> Vue d'ensemble du Pipeline
                 </h2>
                 <button class="btn" style="font-size: 0.78rem;" onclick="toggleDetailedStepsStats()">
-                    <i class="fa-solid fa-layer-group"></i> <span id="toggleStepsBtnText">Afficher le détail par Étape (15)</span>
+                    <i class="fa-solid fa-layer-group"></i> <span id="toggleStepsBtnText">Afficher le détail par Étape (16)</span>
                 </button>
             </div>
 
@@ -821,6 +829,13 @@
                         <div class="lbl">Rendez-vous & Visites</div>
                     </div>
                 </div>
+                <div class="stat-card yellow">
+                    <div class="stat-icon yellow"><i class="fa-solid fa-brain"></i></div>
+                    <div class="stat-info">
+                        <div class="val" id="statFamilyReflexionCnt">{{ reflexion_cnt }}</div>
+                        <div class="lbl">Réflexion</div>
+                    </div>
+                </div>
                 <div class="stat-card purple">
                     <div class="stat-icon purple"><i class="fa-solid fa-handshake"></i></div>
                     <div class="stat-info">
@@ -840,7 +855,7 @@
             <!-- ── Detailed Steps Grid (Hidden by default) ── -->
             <div id="detailedStepsGrid" style="display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; animation: slideUp 0.25s ease;">
                 <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                    Compteurs détaillés par Étape du Pipeline (15 étapes)
+                    Compteurs détaillés par Étape du Pipeline (16 étapes)
                 </div>
                 <div id="stepsCountersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
                     <!-- Populated dynamically via JS -->
@@ -1018,6 +1033,7 @@
                                 <option value="">Toutes les familles</option>
                                 <option value="contact">📩 Prise de contact</option>
                                 <option value="visite">🏡 Rendez-vous & Visites</option>
+                                <option value="reflexion">🧠 Réflexion</option>
                                 <option value="offre">🤝 Offre & Négociation</option>
                                 <option value="cloture">🏁 Issue & Clôture</option>
                             </select>
@@ -1075,6 +1091,8 @@
                                     <div class="node-marker">
                                         {% if sf == 'contact' %}
                                             <i class="fa-regular fa-paper-plane"></i>
+                                        {% elif sf == 'reflexion' %}
+                                            <i class="fa-solid fa-brain"></i>
                                         {% elif sf == 'offre' %}
                                             <i class="fa-solid fa-handshake"></i>
                                         {% elif sf == 'cloture' %}
@@ -1270,6 +1288,7 @@
                         <select id="visitStepFamily" required onchange="onModalFamilyChange()">
                             <option value="contact">📩 Prise de contact</option>
                             <option value="visite" selected>🏡 Rendez-vous & Visites</option>
+                            <option value="reflexion">🧠 Réflexion</option>
                             <option value="offre">🤝 Offre & Négociation</option>
                             <option value="cloture">🏁 Issue & Clôture</option>
                         </select>
@@ -1501,6 +1520,14 @@
                     visite_annulee: { label: "Visite annulée", icon: "fa-solid fa-calendar-xmark" }
                 }
             },
+            reflexion: {
+                label: "Réflexion",
+                icon: "fa-solid fa-brain",
+                color: "yellow",
+                steps: {
+                    en_reflexion_sans_offre: { label: "En réflexion sans offre faite", icon: "fa-solid fa-brain" }
+                }
+            },
             offre: {
                 label: "Offre & Négociation",
                 icon: "fa-solid fa-handshake",
@@ -1603,6 +1630,7 @@
             switch (stepKey) {
                 case '1ere_visite': return '1ère Visite';
                 case 'contre_visite': return 'Contre-visite';
+                case 'en_reflexion_sans_offre': return 'En réflexion sans offre faite';
                 case 'contact_agence': return '1er contact agence';
                 case 'relance_agence': return 'Relance agence';
                 case 'contact_proprio': return '1er contact proprio';
@@ -1631,16 +1659,16 @@
             });
         }
 
-        // ── 15-Step Detailed Grid ─────────────────────────────────────────────
+        // ── 16-Step Detailed Grid ─────────────────────────────────────────────
         function toggleDetailedStepsStats() {
             const grid = document.getElementById('detailedStepsGrid');
             const btnText = document.getElementById('toggleStepsBtnText');
             if (grid.style.display === 'none') {
                 grid.style.display = 'block';
-                btnText.textContent = 'Masquer le détail par Étape (15)';
+                btnText.textContent = 'Masquer le détail par Étape (16)';
             } else {
                 grid.style.display = 'none';
-                btnText.textContent = 'Afficher le détail par Étape (15)';
+                btnText.textContent = 'Afficher le détail par Étape (16)';
             }
         }
 

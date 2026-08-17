@@ -3707,6 +3707,8 @@ def _derive_visit_status_from_visit(visit: Visit) -> Optional[str]:
         if visit.step == "relance_sans_reponse" or visit.visit_type == "relance_agence":
             return "a_relancer"
         return "retour_agence"
+    if visit.step_family == "reflexion" or visit.step in ("en_reflexion_sans_offre", "en_reflexion"):
+        return "deja_visitee"
     if visit.step_family == "visite" or visit.visit_type in ("visite", "contre_visite"):
         if visit.status == "effectuee":
             return "deja_visitee"
@@ -3760,6 +3762,9 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
             visit_type = "relance_agence"
         else:
             visit_type = "contact_agence"
+        listing.to_visit = True
+    elif step_family == "reflexion" or step in ("en_reflexion_sans_offre", "en_reflexion"):
+        visit_type = "visite"
         listing.to_visit = True
     elif step == "contre_visite":
         visit_type = "contre_visite"

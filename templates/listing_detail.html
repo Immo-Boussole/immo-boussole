@@ -984,6 +984,8 @@
                         <div class="node-marker">
                             {% if sf == 'contact' %}
                                 <i class="fa-regular fa-paper-plane"></i>
+                            {% elif sf == 'reflexion' %}
+                                <i class="fa-solid fa-brain"></i>
                             {% elif sf == 'offre' %}
                                 <i class="fa-solid fa-handshake"></i>
                             {% elif sf == 'cloture' %}
@@ -1757,6 +1759,7 @@
                     <select id="visitStepFamily" required onchange="onModalFamilyChange()" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                         <option value="contact">📩 Prise de contact</option>
                         <option value="visite" selected>🏡 Rendez-vous & Visites</option>
+                        <option value="reflexion">🧠 Réflexion</option>
                         <option value="offre">🤝 Offre & Négociation</option>
                         <option value="cloture">🏁 Issue & Clôture</option>
                     </select>
@@ -3423,6 +3426,14 @@
                     visite_annulee: { label: "Visite annulée", icon: "fa-solid fa-calendar-xmark" }
                 }
             },
+            reflexion: {
+                label: "Réflexion",
+                icon: "fa-solid fa-brain",
+                color: "yellow",
+                steps: {
+                    en_reflexion_sans_offre: { label: "En réflexion sans offre faite", icon: "fa-solid fa-brain" }
+                }
+            },
             offre: {
                 label: "Offre & Négociation",
                 icon: "fa-solid fa-handshake",
@@ -3634,6 +3645,7 @@
             switch (stepKey) {
                 case '1ere_visite': return '1ère Visite';
                 case 'contre_visite': return 'Contre-visite';
+                case 'en_reflexion_sans_offre': return 'En réflexion sans offre faite';
                 case 'contact_agence': return '1er contact agence';
                 case 'relance_agence': return 'Relance agence';
                 case 'contact_proprio': return '1er contact proprio';

@@ -112,5 +112,22 @@ class TestVisitStatus(unittest.TestCase):
         self.db.refresh(self.listing)
         self.assertEqual(self.listing.last_visit_status, "deja_visitee")
 
+    def test_reflexion_step_syncs_deja_visitee(self):
+        # 5. Creating a reflexion step activity should set last_visit_status to deja_visitee and to_visit to True
+        res = self.client.post("/api/visites", json={
+            "listing_id": self.listing.id,
+            "step_family": "reflexion",
+            "step": "en_reflexion_sans_offre",
+            "status": "effectuee",
+            "scheduled_at": datetime.datetime.now().isoformat(),
+            "notes": "Phase de réflexion après visite"
+        })
+        self.assertEqual(res.status_code, 200)
+
+        self.db.refresh(self.listing)
+        self.assertEqual(self.listing.last_visit_status, "deja_visitee")
+        self.assertTrue(self.listing.to_visit)
+
 if __name__ == "__main__":
     unittest.main()
+
