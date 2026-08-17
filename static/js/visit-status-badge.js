@@ -53,8 +53,8 @@ const VISIT_STATUS_CONFIG = {
     },
     sans_suite_visiteur: {
         key: 'sans_suite_visiteur',
-        label: "Sans suite visiteur",
-        shortLabel: "Sans suite (visiteur)",
+        label: "Sans suite vendeur",
+        shortLabel: "Sans suite (vend.)",
         icon: "fa-solid fa-ban",
         badgeClass: "status-sans_suite_visiteur",
         itemClass: "item-sans_suite_visiteur",

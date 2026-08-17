@@ -3690,6 +3690,7 @@ VALID_VISIT_STATUSES = {
     "deja_visitee",
     "sans_suite_acheteur",
     "sans_suite_visiteur",
+    "sans_suite_vendeur",
     "a_relancer"
 }
 
@@ -3734,7 +3735,7 @@ def update_listing_visit_status(
     # Adjust to_visit flag if relevant
     if status_val in {"visite_programmee", "retour_agence", "deja_visitee", "a_relancer"}:
         listing.to_visit = True
-    elif status_val in {"sans_suite_acheteur", "sans_suite_visiteur"}:
+    elif status_val in {"sans_suite_acheteur", "sans_suite_visiteur", "sans_suite_vendeur"}:
         listing.to_visit = False
 
     db.commit()
