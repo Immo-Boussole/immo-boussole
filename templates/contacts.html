@@ -12,6 +12,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link href="/static/css/visit-status-badge.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1141,9 +1142,15 @@
 
                 let listingsHtml = '';
                 if (countAttached > 0) {
-                    listingsHtml = c.attached_listings.map(l => `
+                    listingsHtml = c.attached_listings.map(l => {
+                        const badge = typeof renderVisitStatusBadge === 'function' ? renderVisitStatusBadge(l.id, l.last_visit_status, l.title) : '';
+                        const thumb = l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`;
+                        return `
                         <div class="mini-listing-card">
-                            ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                            <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
+                                ${thumb}
+                                ${badge}
+                            </div>
                             <div class="mini-listing-details">
                                 <div class="mini-listing-title" title="${l.title || ''}">
                                     <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
@@ -1152,14 +1159,13 @@
                                     ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
                                     ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
                                     ${l.area ? `<span>${l.area} m²</span>` : ''}
-                                    ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                                 </div>
                             </div>
                             <button class="btn btn-danger btn-sm" title="Détacher ce bien du contact" onclick="unlinkListing(${l.id})">
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
-                    `).join('');
+                    `;}).join('');
                 }
 
                 return `
@@ -1222,9 +1228,15 @@
 
                 let listingsHtml = '';
                 if (countAttached > 0) {
-                    listingsHtml = ac.attached_listings.map(l => `
+                    listingsHtml = ac.attached_listings.map(l => {
+                        const badge = typeof renderVisitStatusBadge === 'function' ? renderVisitStatusBadge(l.id, l.last_visit_status, l.title) : '';
+                        const thumb = l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`;
+                        return `
                         <div class="mini-listing-card">
-                            ${l.photo_thumbnail ? `<img src="${l.photo_thumbnail}" class="mini-listing-thumb" alt="Photo" onerror="this.outerHTML='<div class=\\\'mini-listing-thumb\\\'><i class=\\\'fa-solid fa-image\\\'></i></div>'">` : `<div class="mini-listing-thumb"><i class="fa-solid fa-home"></i></div>`}
+                            <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0;">
+                                ${thumb}
+                                ${badge}
+                            </div>
                             <div class="mini-listing-details">
                                 <div class="mini-listing-title" title="${l.title || ''}">
                                     <a href="${l.url}" target="_blank">${l.title || 'Bien #' + l.id} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; color: var(--accent);"></i></a>
@@ -1233,14 +1245,13 @@
                                     ${l.price ? `<span><strong>${Math.round(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
                                     ${l.city ? `<span><i class="fa-solid fa-location-dot"></i> ${l.city}</span>` : ''}
                                     ${l.area ? `<span>${l.area} m²</span>` : ''}
-                                    ${l.to_visit ? `<span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;"><i class="fa-solid fa-bookmark"></i> À visiter</span>` : ''}
                                 </div>
                             </div>
                             <button class="btn btn-danger btn-sm" title="Détacher ce bien de l'agence" onclick="unlinkListing(${l.id})">
                                 <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
-                    `).join('');
+                    `;}).join('');
                 }
 
                 let agentsChipsHtml = '<span style="font-size: 0.8rem; color: var(--text-3);">Aucun agent affilié.</span>';
@@ -2154,5 +2165,6 @@
             await performMerge(srcType, parseInt(srcId), tgtType, parseInt(tgtId));
         }
     </script>
+    <script src="/static/js/visit-status-badge.js"></script>
 </body>
 </html>

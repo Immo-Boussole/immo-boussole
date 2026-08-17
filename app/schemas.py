@@ -32,6 +32,11 @@ class ListingUpdateRequest(BaseModel):
     parking_count: Optional[int] = None
     is_favorite: Optional[bool] = None
     contact_made: Optional[bool] = None
+    last_visit_status: Optional[str] = None
+
+
+class ListingVisitStatusUpdate(BaseModel):
+    last_visit_status: Optional[str] = None  # None or one of: retour_agence, visite_programmee, deja_visitee, sans_suite_acheteur, sans_suite_visiteur, a_relancer
 
 
 class PhotoImportRequest(BaseModel):
@@ -209,6 +214,7 @@ class ListingResponse(BaseModel):
     is_favorite: bool
     to_visit: bool = False
     contact_made: bool = False
+    last_visit_status: Optional[str] = None
     is_duplicate: bool
     date_added: Optional[datetime] = None
     date_updated: Optional[datetime] = None
@@ -377,6 +383,7 @@ class AttachedListingSummary(BaseModel):
     main_agent_id: Optional[int] = None
     agency_id: Optional[int] = None
     to_visit: bool = False
+    last_visit_status: Optional[str] = None
 
 
 class UnifiedContactItem(BaseModel):

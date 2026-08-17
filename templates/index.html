@@ -14,6 +14,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
+    <link href="/static/css/visit-status-badge.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1237,6 +1238,19 @@
                 <button class="btn" id="f-contacted" onclick="filter('contacted', this)" style="color: var(--accent);">
                     <i class="fa-solid fa-envelope"></i><span class="hide-on-mobile">Contacté</span>
                 </button>
+                <div class="vertical-separator hide-on-mobile"></div>
+                <div class="visit-status-filter-wrapper" style="display: flex; align-items: center;">
+                    <select id="filterVisitStatus" onchange="applyVisitStatusFilter(this.value)" class="btn" style="background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; outline: none;">
+                        <option value="">Tous états de visite</option>
+                        <option value="none">Sans état défini</option>
+                        <option value="retour_agence">🔵 Retour d'agence pour RDV</option>
+                        <option value="visite_programmee">🟣 Visite programmée</option>
+                        <option value="deja_visitee">🟡 Déjà visitée, réflexion</option>
+                        <option value="sans_suite_acheteur">🔴 Sans suite acheteur</option>
+                        <option value="sans_suite_visiteur">🔴 Sans suite visiteur</option>
+                        <option value="a_relancer">🟠 A relancer pour RDV</option>
+                    </select>
+                </div>
             </div>
 
             <div class="filter-actions hide-on-mobile">
@@ -1258,6 +1272,7 @@
                     data-liked="{{ 'true' if listing.is_liked else 'false' }}"
                     data-disliked="{{ 'true' if listing.is_disliked else 'false' }}"
                     data-to-visit="{{ 'true' if listing.to_visit else 'false' }}"
+                    data-visit-status="{{ listing.last_visit_status or '' }}"
                     data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
@@ -1271,6 +1286,41 @@
                         <span class="badge {{ listing.user_status }}">{{ listing.user_status }}</span>
                         {% if listing.dpe_rating %}
                         <div class="dpe-pill dpe-{{ listing.dpe_rating }}">{{ listing.dpe_rating }}</div>
+                        {% endif %}
+                        {% if listing.last_visit_status %}
+                        <div class="visit-status-container" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                            <div class="visit-status-badge status-{{ listing.last_visit_status }}" title="Cliquer pour modifier l'état">
+                                {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence pour RDV</span>
+                                {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
+                                {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée, réflexion</span>
+                                {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite acheteur</span>
+                                {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite visiteur</span>
+                                {% elif listing.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer pour RDV</span>
+                                {% endif %}
+                                <i class="fa-solid fa-chevron-down badge-caret"></i>
+                            </div>
+                            <div class="visit-status-menu">
+                                <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
+                                <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
+                                <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
+                                <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
+                                <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
+                                <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                                <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="visit-status-container show-add" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                            <div class="visit-status-add-btn" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                            <div class="visit-status-menu">
+                                <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
+                                <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
+                                <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
+                                <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
+                                <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
+                                <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                            </div>
+                        </div>
                         {% endif %}
                     </div>
 
@@ -1695,26 +1745,47 @@
             }
         }
 
+        let currentFilterStatus = 'all';
+        let currentVisitStatusFilter = '';
+
         function filter(status, btn) {
             const wasActive = btn.classList.contains('active');
             document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
             
-            let currentStatus = status;
             if (wasActive) {
-                currentStatus = 'all';
+                currentFilterStatus = 'all';
             } else {
+                currentFilterStatus = status;
                 btn.classList.add('active');
             }
+            applyListingFilters();
+        }
 
+        function applyVisitStatusFilter(val) {
+            currentVisitStatusFilter = val;
+            applyListingFilters();
+        }
+
+        function applyListingFilters() {
             document.querySelectorAll('.card').forEach(card => {
-                let show = false;
-                if (currentStatus === 'all') show = true;
-                else if (currentStatus === 'favorite') show = card.dataset.favorite === 'true';
-                else if (currentStatus === 'liked') show = card.dataset.liked === 'true';
-                else if (currentStatus === 'disliked') show = card.dataset.disliked === 'true';
-                else if (currentStatus === 'contacted') show = card.dataset.contacted === 'true';
-                else show = card.dataset.status === currentStatus;
-                card.style.display = show ? '' : 'none';
+                let showStatus = false;
+                if (currentFilterStatus === 'all') showStatus = true;
+                else if (currentFilterStatus === 'favorite') showStatus = card.dataset.favorite === 'true';
+                else if (currentFilterStatus === 'liked') showStatus = card.dataset.liked === 'true';
+                else if (currentFilterStatus === 'disliked') showStatus = card.dataset.disliked === 'true';
+                else if (currentFilterStatus === 'contacted') showStatus = card.dataset.contacted === 'true';
+                else showStatus = card.dataset.status === currentFilterStatus;
+
+                let showVisit = true;
+                if (currentVisitStatusFilter) {
+                    if (currentVisitStatusFilter === 'none') {
+                        showVisit = !card.dataset.visitStatus;
+                    } else {
+                        showVisit = card.dataset.visitStatus === currentVisitStatusFilter;
+                    }
+                }
+
+                card.style.display = (showStatus && showVisit) ? '' : 'none';
             });
         }
 
@@ -2122,6 +2193,7 @@
         </div>
     </div>
 
+    <script src="/static/js/visit-status-badge.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

@@ -145,6 +145,7 @@ class Listing(Base):
     is_disliked = Column(Boolean, default=False)
     to_visit = Column(Boolean, default=False)
     contact_made = Column(Boolean, default=False)
+    last_visit_status = Column(String(50), nullable=True)  # retour_agence, visite_programmee, deja_visitee, sans_suite_acheteur, sans_suite_visiteur, a_relancer
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
     date_added = Column(DateTime(timezone=True), server_default=func.now())
     date_updated = Column(DateTime(timezone=True), onupdate=func.now())

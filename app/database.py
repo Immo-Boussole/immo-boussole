@@ -203,6 +203,9 @@ _MIGRATIONS = [
 
     # visit_contacts — agent link v27
     ("visit_contacts", "agent_id",                       "INTEGER"),
+
+    # listings — last visit status v28
+    ("listings", "last_visit_status",                   "TEXT"),
 ]
 
 

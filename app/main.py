@@ -2298,6 +2298,7 @@ def get_db_repair_status(_auth = Depends(admin_required)):
 def get_listings(
     db: Session = Depends(get_db),
     status: Optional[str] = None,
+    visit_status: Optional[str] = None,
     source: Optional[str] = None,
     q: Optional[str] = None,
     limit: int = 100,
@@ -2307,6 +2308,11 @@ def get_listings(
     query = db.query(Listing)
     if status:
         query = query.filter(Listing.status == status)
+    if visit_status:
+        if visit_status == "none":
+            query = query.filter((Listing.last_visit_status == None) | (Listing.last_visit_status == ""))
+        else:
+            query = query.filter(Listing.last_visit_status == visit_status)
     if source:
         query = query.filter(Listing.source == source)
     if q:
@@ -2346,6 +2352,7 @@ def get_listings(
             "charges": l.charges,
             "source": l.source,
             "status": l.status,
+            "last_visit_status": l.last_visit_status,
             "is_duplicate": l.is_duplicate,
             "photos": json_to_photos(l.photos_local),
             "date_added": l.date_added.isoformat() if l.date_added else None,
@@ -2549,6 +2556,7 @@ def get_map_data(
                 "lon": l.longitude,
                 "url": f"/listings/{l.id}",
                 "status": l.user_status,
+                "last_visit_status": l.last_visit_status,
                 "photos": json_to_photos(l.photos_local)
             }
             for l in listings
@@ -3672,6 +3680,63 @@ def toggle_contact_made(request: Request, listing_id: int, db: Session = Depends
     return {"status": "updated", "contact_made": listing.contact_made, "listing_id": listing.id}
 
 
+VALID_VISIT_STATUSES = {
+    "retour_agence",
+    "visite_programmee",
+    "deja_visitee",
+    "sans_suite_acheteur",
+    "sans_suite_visiteur",
+    "a_relancer"
+}
+
+
+def _derive_visit_status_from_visit(visit: Visit) -> Optional[str]:
+    """Helper to derive the listing visit status from a Visit entity."""
+    if not visit:
+        return None
+    if visit.step_family == "cloture" or visit.visit_type == "reponse_negative" or visit.step in ("offre_refusee", "bien_vendu", "abandon"):
+        if visit.step == "abandon":
+            return "sans_suite_visiteur"
+        return "sans_suite_acheteur"
+    if visit.step_family == "contact" or visit.visit_type in ("contact_agence", "relance_agence", "contact_proprio"):
+        if visit.step == "relance_sans_reponse" or visit.visit_type == "relance_agence":
+            return "a_relancer"
+        return "retour_agence"
+    if visit.step_family == "visite" or visit.visit_type in ("visite", "contre_visite"):
+        if visit.status == "effectuee":
+            return "deja_visitee"
+        return "visite_programmee"
+    return None
+
+
+@app.patch("/api/listings/{listing_id}/visit-status")
+def update_listing_visit_status(
+    request: Request,
+    listing_id: int,
+    body: schemas.ListingVisitStatusUpdate,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    status_val = body.last_visit_status
+    if status_val is not None and status_val != "" and status_val not in VALID_VISIT_STATUSES:
+        raise HTTPException(status_code=400, detail="Statut de visite invalide")
+    
+    listing.last_visit_status = status_val if status_val else None
+    
+    # Adjust to_visit flag if relevant
+    if status_val in {"visite_programmee", "retour_agence", "deja_visitee", "a_relancer"}:
+        listing.to_visit = True
+    elif status_val in {"sans_suite_acheteur", "sans_suite_visiteur"}:
+        listing.to_visit = False
+
+    db.commit()
+    return {"status": "updated", "last_visit_status": listing.last_visit_status, "listing_id": listing.id}
+
+
 @app.post("/api/visites", response_model=schemas.VisitResponse)
 def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session = Depends(get_db), _auth = Depends(user_required)):
     listing = db.query(Listing).filter(Listing.id == body.listing_id).first()
@@ -3710,6 +3775,11 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
         notes=body.notes
     )
     db.add(visit)
+    
+    derived = _derive_visit_status_from_visit(visit)
+    if derived:
+        listing.last_visit_status = derived
+
     db.commit()
     db.refresh(visit)
 
@@ -3806,6 +3876,9 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
             listing.to_visit = False
         else:
             listing.to_visit = True
+        derived = _derive_visit_status_from_visit(visit)
+        if derived:
+            listing.last_visit_status = derived
 
     if body.scheduled_at is not None:
         visit.scheduled_at = body.scheduled_at

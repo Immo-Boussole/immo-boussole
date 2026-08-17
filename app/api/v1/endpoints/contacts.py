@@ -57,7 +57,8 @@ def _format_listing_summary(l: Listing) -> schemas.AttachedListingSummary:
         status=l.status.value if hasattr(l.status, 'value') else str(l.status),
         main_agent_id=l.main_agent_id,
         agency_id=l.agency_id,
-        to_visit=bool(getattr(l, 'to_visit', False))
+        to_visit=bool(getattr(l, 'to_visit', False)),
+        last_visit_status=getattr(l, 'last_visit_status', None)
     )
 
 
