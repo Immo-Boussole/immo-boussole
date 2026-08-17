@@ -320,6 +320,63 @@
             color: #fff;
         }
 
+        .filter-chips .btn {
+            position: relative;
+            user-select: none;
+        }
+        .filter-chips .btn.active {
+            box-shadow: 0 0 0 1px currentColor, 0 2px 8px rgba(0,0,0,0.25);
+            background: var(--surface-2);
+        }
+        .filter-chips #f-nouvelle.active {
+            background: rgba(16, 217, 164, 0.16);
+            border-color: var(--green);
+            color: var(--green) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-active.active {
+            background: rgba(79, 142, 247, 0.16);
+            border-color: var(--accent);
+            color: var(--accent) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-disparue.active {
+            background: rgba(242, 92, 105, 0.16);
+            border-color: var(--red);
+            color: var(--red) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-rejected.active {
+            background: rgba(248, 168, 75, 0.16);
+            border-color: var(--orange);
+            color: var(--orange) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-favorite.active {
+            background: rgba(242, 92, 105, 0.16);
+            border-color: var(--red);
+            color: var(--red) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-liked.active {
+            background: rgba(16, 217, 164, 0.16);
+            border-color: var(--green);
+            color: var(--green) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-disliked.active {
+            background: rgba(139, 156, 200, 0.2);
+            border-color: var(--text-2);
+            color: var(--text) !important;
+            font-weight: 700;
+        }
+        .filter-chips #f-contacted.active {
+            background: rgba(79, 142, 247, 0.16);
+            border-color: var(--accent);
+            color: var(--accent) !important;
+            font-weight: 700;
+        }
+
         .filter-bar {
             display: flex;
             align-items: center;
@@ -1439,6 +1496,11 @@
                     <p>{{ t(request, 'dashboard.empty_state.subtitle') }}</p>
                 </div>
                 {% endfor %}
+                <div id="noFilteredResults" class="empty" style="display: none; grid-column: 1 / -1; width: 100%;">
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <h2>{{ t(request, 'filter.no_results', 'Aucun résultat pour ces filtres.') }}</h2>
+                    <p style="color: var(--text-2); font-size: 0.85rem; margin-top: 0.25rem;">Essayez d'activer d'autres filtres de statut ou de réinitialiser vos critères.</p>
+                </div>
 
             </div>
         </div>
@@ -1745,19 +1807,41 @@
             }
         }
 
-        let currentFilterStatus = 'all';
+        const activeStatuses = new Set();
+        const activeReactions = new Set();
+        let isContactedFilter = false;
         let currentVisitStatusFilter = '';
 
-        function filter(status, btn) {
-            const wasActive = btn.classList.contains('active');
-            document.querySelectorAll('.filter-bar .btn').forEach(b => b.classList.remove('active'));
-            
-            if (wasActive) {
-                currentFilterStatus = 'all';
-            } else {
-                currentFilterStatus = status;
-                btn.classList.add('active');
+        function filter(type, btn) {
+            const isStatus = ['nouvelle', 'active', 'disparue', 'rejetee'].includes(type);
+            const isReaction = ['favorite', 'liked', 'disliked'].includes(type);
+            const isContact = (type === 'contacted');
+
+            if (isStatus) {
+                if (activeStatuses.has(type)) {
+                    activeStatuses.delete(type);
+                    btn.classList.remove('active');
+                } else {
+                    activeStatuses.add(type);
+                    btn.classList.add('active');
+                }
+            } else if (isReaction) {
+                if (activeReactions.has(type)) {
+                    activeReactions.delete(type);
+                    btn.classList.remove('active');
+                } else {
+                    activeReactions.add(type);
+                    btn.classList.add('active');
+                }
+            } else if (isContact) {
+                isContactedFilter = !isContactedFilter;
+                if (isContactedFilter) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
             }
+
             applyListingFilters();
         }
 
@@ -1767,27 +1851,62 @@
         }
 
         function applyListingFilters() {
-            document.querySelectorAll('.card').forEach(card => {
-                let showStatus = false;
-                if (currentFilterStatus === 'all') showStatus = true;
-                else if (currentFilterStatus === 'favorite') showStatus = card.dataset.favorite === 'true';
-                else if (currentFilterStatus === 'liked') showStatus = card.dataset.liked === 'true';
-                else if (currentFilterStatus === 'disliked') showStatus = card.dataset.disliked === 'true';
-                else if (currentFilterStatus === 'contacted') showStatus = card.dataset.contacted === 'true';
-                else showStatus = card.dataset.status === currentFilterStatus;
+            const cards = document.querySelectorAll('.grid .card');
+            let visibleCount = 0;
 
-                let showVisit = true;
+            cards.forEach(card => {
+                // Status filter: OR within active statuses; if none selected, all statuses allowed
+                const statusMatch = activeStatuses.size === 0 || activeStatuses.has(card.dataset.status);
+
+                // Reaction filter: OR within active reactions; if none selected, all reactions allowed
+                let reactionMatch = true;
+                if (activeReactions.size > 0) {
+                    const isFav = card.dataset.favorite === 'true';
+                    const isLiked = card.dataset.liked === 'true';
+                    const isDisliked = card.dataset.disliked === 'true';
+                    reactionMatch = (
+                        (activeReactions.has('favorite') && isFav) ||
+                        (activeReactions.has('liked') && isLiked) ||
+                        (activeReactions.has('disliked') && isDisliked)
+                    );
+                }
+
+                // Contacted filter
+                const contactMatch = !isContactedFilter || card.dataset.contacted === 'true';
+
+                // Visit status filter
+                let visitMatch = true;
                 if (currentVisitStatusFilter) {
                     if (currentVisitStatusFilter === 'none') {
-                        showVisit = !card.dataset.visitStatus;
+                        visitMatch = !card.dataset.visitStatus;
                     } else {
-                        showVisit = card.dataset.visitStatus === currentVisitStatusFilter;
+                        visitMatch = (card.dataset.visitStatus === currentVisitStatusFilter);
                     }
                 }
 
-                card.style.display = (showStatus && showVisit) ? '' : 'none';
+                const show = statusMatch && reactionMatch && contactMatch && visitMatch;
+                card.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
             });
+
+            const noResEl = document.getElementById('noFilteredResults');
+            if (noResEl) {
+                noResEl.style.display = (cards.length > 0 && visibleCount === 0) ? 'flex' : 'none';
+            }
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            {% if not is_a_voir and not is_a_visiter %}
+            // Default filter for "Toutes les annonces": Nouvelles + Actives
+            activeStatuses.add('nouvelle');
+            activeStatuses.add('active');
+            const btnNew = document.getElementById('f-nouvelle');
+            const btnAct = document.getElementById('f-active');
+            if (btnNew) btnNew.classList.add('active');
+            if (btnAct) btnAct.classList.add('active');
+            applyListingFilters();
+            {% endif %}
+        });
 
         // Keyboard shortcut: Escape to close modal
         document.addEventListener('keydown', e => {
@@ -1813,6 +1932,7 @@
                         btn.querySelector('i').className = 'fa-regular fa-envelope';
                         if (card) card.dataset.contacted = 'false';
                     }
+                    applyListingFilters();
                 }
             } catch (e) { console.error(e); }
         }
@@ -1895,6 +2015,14 @@
             } else {
                 dislikeBtn.classList.remove('active');
                 dislikeBtn.querySelector('i').className = 'fa-regular fa-thumbs-down';
+            }
+
+            const card = footer.closest('.card');
+            if (card) {
+                card.dataset.favorite = data.is_favorite ? 'true' : 'false';
+                card.dataset.liked = data.is_liked ? 'true' : 'false';
+                card.dataset.disliked = data.is_disliked ? 'true' : 'false';
+                applyListingFilters();
             }
         }
 

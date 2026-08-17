@@ -410,6 +410,60 @@
             color: var(--red);
         }
 
+        .tbl-filter-chips {
+            display: inline-flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tbl-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.65rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-2);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--trans);
+            user-select: none;
+        }
+        .tbl-filter-chip:hover {
+            border-color: currentColor;
+            transform: translateY(-1px);
+        }
+        .tbl-filter-chip.active {
+            box-shadow: 0 0 0 1px currentColor, 0 2px 8px rgba(0,0,0,0.2);
+        }
+        #tbl-f-nouvelle.active {
+            background: rgba(16, 217, 164, 0.16);
+            border-color: var(--green);
+            color: var(--green) !important;
+            font-weight: 700;
+        }
+        #tbl-f-active.active {
+            background: rgba(79, 142, 247, 0.16);
+            border-color: var(--accent);
+            color: var(--accent) !important;
+            font-weight: 700;
+        }
+        #tbl-f-disparue.active {
+            background: rgba(242, 92, 105, 0.16);
+            border-color: var(--red);
+            color: var(--red) !important;
+            font-weight: 700;
+        }
+        #tbl-f-rejetee.active {
+            background: rgba(248, 168, 75, 0.16);
+            border-color: var(--orange);
+            color: var(--orange) !important;
+            font-weight: 700;
+        }
+
         .results-count {
             font-size: 0.72rem;
             font-weight: 600;
@@ -492,15 +546,22 @@
                     </select>
                 </div>
 
-                <div class="filter-group">
-                    <label for="filter-status">{{ t(request, 'table.status') }}</label>
-                    <select id="filter-status" class="filter-select" onchange="applyFilters()">
-                        <option value="">{{ t(request, 'filter.all', 'Tous') }}</option>
-                        {% set statuses = listings | map(attribute='user_status') | unique | list | sort %}
-                        {% for st in statuses %}
-                        <option value="{{ st }}">{{ t(request, 'misc.' + st, st|upper) }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="filter-group" style="flex: auto; min-width: auto;">
+                    <label style="margin-right: 0.25rem;">{{ t(request, 'table.status', 'Statut') }}</label>
+                    <div class="tbl-filter-chips">
+                        <button type="button" class="tbl-filter-chip" id="tbl-f-nouvelle" onclick="toggleTableStatusFilter('nouvelle', this)" style="color: var(--green);" title="{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}">
+                            <i class="fa-solid fa-star"></i> <span>{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}</span>
+                        </button>
+                        <button type="button" class="tbl-filter-chip" id="tbl-f-active" onclick="toggleTableStatusFilter('active', this)" style="color: var(--accent);" title="{{ t(request, 'dashboard.filters.active', 'Actives') }}">
+                            <i class="fa-solid fa-eye"></i> <span>{{ t(request, 'dashboard.filters.active', 'Actives') }}</span>
+                        </button>
+                        <button type="button" class="tbl-filter-chip" id="tbl-f-disparue" onclick="toggleTableStatusFilter('disparue', this)" style="color: var(--red);" title="{{ t(request, 'dashboard.filters.disappeared', 'Disparues') }}">
+                            <i class="fa-solid fa-eye-slash"></i> <span>{{ t(request, 'dashboard.filters.disappeared', 'Disparues') }}</span>
+                        </button>
+                        <button type="button" class="tbl-filter-chip" id="tbl-f-rejetee" onclick="toggleTableStatusFilter('rejetee', this)" style="color: var(--orange);" title="{{ t(request, 'dashboard.rejected', 'Rejetées') }}">
+                            <i class="fa-solid fa-ban"></i> <span>{{ t(request, 'dashboard.rejected', 'Rejetées') }}</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="filter-group">
@@ -741,11 +802,22 @@
 
         /* ── Filter ── */
         const TOTAL = document.querySelectorAll('#table-body tr:not(#no-results-row)').length;
+        const activeTableStatuses = new Set(['nouvelle', 'active']);
+
+        function toggleTableStatusFilter(status, btn) {
+            if (activeTableStatuses.has(status)) {
+                activeTableStatuses.delete(status);
+                btn.classList.remove('active');
+            } else {
+                activeTableStatuses.add(status);
+                btn.classList.add('active');
+            }
+            applyFilters();
+        }
 
         function applyFilters() {
             const search  = document.getElementById('filter-search').value.toLowerCase().trim();
             const source  = document.getElementById('filter-source').value;
-            const status  = document.getElementById('filter-status').value;
             const dpe     = document.getElementById('filter-dpe').value;
             const contacted = document.getElementById('filter-contacted').value;
             const visitStatus = document.getElementById('filter-visit-status') ? document.getElementById('filter-visit-status').value : '';
@@ -760,7 +832,11 @@
                     row.dataset.location.includes(search) ||
                     row.dataset.id === searchVal;
                 const matchSource = !source || row.dataset.source === source;
-                const matchStatus = !status || row.dataset.status === status;
+                
+                // Status multi-filter: if activeTableStatuses is empty, show all statuses. Otherwise row status must match one of the active statuses.
+                const rowStatus = row.dataset.status;
+                const matchStatus = activeTableStatuses.size === 0 || activeTableStatuses.has(rowStatus);
+
                 const matchDpe    = !dpe    || row.dataset.dpe === dpe;
                 const matchContacted = !contacted || row.dataset.contacted === contacted;
                 
@@ -785,14 +861,24 @@
         function resetFilters() {
             document.getElementById('filter-search').value = '';
             document.getElementById('filter-source').value = '';
-            document.getElementById('filter-status').value = '';
             document.getElementById('filter-dpe').value = '';
             document.getElementById('filter-contacted').value = '';
             if (document.getElementById('filter-visit-status')) {
                 document.getElementById('filter-visit-status').value = '';
             }
+            activeTableStatuses.clear();
+            document.querySelectorAll('.tbl-filter-chip').forEach(b => b.classList.remove('active'));
             applyFilters();
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Apply default status chips (Nouvelles + Actives)
+            const btnNew = document.getElementById('tbl-f-nouvelle');
+            const btnAct = document.getElementById('tbl-f-active');
+            if (btnNew) btnNew.classList.add('active');
+            if (btnAct) btnAct.classList.add('active');
+            applyFilters();
+        });
 
         /* ── Sort ── */
         let currentSortCol = null;
