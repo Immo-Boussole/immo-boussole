@@ -227,12 +227,13 @@
             flex: 1;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 0.75rem 1.1rem;
+            border-radius: 10px;
+            padding: 0.6rem 1.1rem;
             color: var(--text);
             font-size: 0.9rem;
             outline: none;
             transition: var(--trans);
+            min-width: 200px;
         }
 
         .search-input:focus {
@@ -240,13 +241,14 @@
             box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.2);
         }
 
-        /* ── Tabs Navigation ── */
+        /* ── Tabs Navigation & Search Toolbar ── */
         .tabs-header {
             display: flex;
             gap: 0.75rem;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 0.75rem;
+            padding-bottom: 0.85rem;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .tab-btn {
@@ -262,6 +264,8 @@
             align-items: center;
             gap: 0.6rem;
             transition: var(--trans);
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .tab-btn:hover {
@@ -739,23 +743,23 @@
         </div>
 
         <div class="content-body">
-            <!-- Search bar & To-Visit Filter -->
-            <div class="search-bar-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
-                <button type="button" id="btnFilterToVisit" class="btn btn-secondary" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600;">
-                    <i class="fa-regular fa-bookmark"></i> Biens à visiter
-                </button>
-            </div>
-
-            <!-- Tabs Navigation -->
+            <!-- Tabs & Search Toolbar on a single line -->
             <div class="tabs-header">
+                <!-- Onglet 1 -->
                 <button class="tab-btn active" id="tabContactsBtn" onclick="switchMainTab('contacts')">
                     <i class="fa-solid fa-user-tie"></i> Fiches Contacts
                     <span class="tab-badge" id="contactsCountBadge">0</span>
                 </button>
+                <!-- Onglet 2 -->
                 <button class="tab-btn" id="tabAgenciesBtn" onclick="switchMainTab('agencies')">
                     <i class="fa-solid fa-building"></i> Fiches Agences
                     <span class="tab-badge" id="agenciesCountBadge">0</span>
+                </button>
+                <!-- Moteur de recherche -->
+                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
+                <!-- Filtre "Biens à visiter" -->
+                <button type="button" id="btnFilterToVisit" class="btn btn-secondary" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
+                    <i class="fa-regular fa-bookmark"></i> Biens à visiter
                 </button>
             </div>
 
