@@ -11,7 +11,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css" rel="stylesheet">
-    <link href="/static/css/visit-status-badge.css" rel="stylesheet">
+    <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1010,8 +1010,8 @@
             <!-- Photo Carousel -->
             <div class="carousel" id="carousel">
                 {% if listing.last_visit_status %}
-                <div class="visit-status-container" style="top: 12px; right: 12px; z-index: 10;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                    <div class="visit-status-badge status-{{ listing.last_visit_status }}" title="Cliquer pour modifier l'état">
+                <div class="visit-status-container" style="top: 12px; right: 12px; z-index: 50;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                    <div class="visit-status-badge status-{{ listing.last_visit_status }}" onclick="toggleVisitStatusDropdown(this, event)" title="Cliquer pour modifier l'état">
                         {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence pour RDV</span>
                         {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
                         {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée, réflexion</span>
@@ -1022,25 +1022,25 @@
                         <i class="fa-solid fa-chevron-down badge-caret"></i>
                     </div>
                     <div class="visit-status-menu">
-                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
-                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
-                        <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
+                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
+                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
+                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
+                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
+                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                        <div class="visit-status-item item-clear" data-status="" onclick="selectVisitStatus(this, event)"><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
                     </div>
                 </div>
                 {% else %}
-                <div class="visit-status-container show-add" style="top: 12px; right: 12px; z-index: 10;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                    <div class="visit-status-add-btn" style="opacity: 1;" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                <div class="visit-status-container show-add" style="top: 12px; right: 12px; z-index: 50;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
+                    <div class="visit-status-add-btn" style="opacity: 1;" onclick="toggleVisitStatusDropdown(this, event)" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
                     <div class="visit-status-menu">
-                        <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                        <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                        <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                        <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
-                        <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                        <div class="visit-status-item item-retour_agence" data-status="retour_agence" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
+                        <div class="visit-status-item item-visite_programmee" data-status="visite_programmee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
+                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
+                        <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
+                        <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite visiteur</span></div>
+                        <div class="visit-status-item item-a_relancer" data-status="a_relancer" onclick="selectVisitStatus(this, event)"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
                     </div>
                 </div>
                 {% endif %}
@@ -3776,7 +3776,7 @@
             });
         });
     </script>
-    <script src="/static/js/visit-status-badge.js"></script>
+    <script src="/static/js/visit-status-badge.js?v=20260817c"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

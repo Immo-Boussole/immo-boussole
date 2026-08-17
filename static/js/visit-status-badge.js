@@ -87,7 +87,7 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
     let badgeHtml = '';
     if (current) {
         badgeHtml = `
-            <div class="visit-status-badge ${current.badgeClass}" title="${current.label} (cliquer pour modifier)">
+            <div class="visit-status-badge ${current.badgeClass}" onclick="toggleVisitStatusDropdown(this, event)" title="${current.label} (cliquer pour modifier)">
                 <i class="${current.icon}"></i>
                 <span class="badge-text">${current.label}</span>
                 <i class="fa-solid fa-chevron-down badge-caret"></i>
@@ -95,7 +95,7 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
         `;
     } else {
         badgeHtml = `
-            <div class="visit-status-add-btn" title="Définir un état de visite">
+            <div class="visit-status-add-btn" onclick="toggleVisitStatusDropdown(this, event)" title="Définir un état de visite">
                 <i class="fa-solid fa-plus"></i>
             </div>
         `;
@@ -105,7 +105,7 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
     for (const [key, cfg] of Object.entries(VISIT_STATUS_CONFIG)) {
         const isActive = (currentStatus === key) ? 'active' : '';
         menuItems += `
-            <div class="visit-status-item ${cfg.itemClass} ${isActive}" data-status="${key}">
+            <div class="visit-status-item ${cfg.itemClass} ${isActive}" data-status="${key}" onclick="selectVisitStatus(this, event)">
                 <span class="dot"></span>
                 <i class="${cfg.icon}" style="width: 14px; text-align: center;"></i>
                 <span>${cfg.label}</span>
@@ -115,7 +115,7 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
 
     if (currentStatus) {
         menuItems += `
-            <div class="visit-status-item item-clear" data-status="">
+            <div class="visit-status-item item-clear" data-status="" onclick="selectVisitStatus(this, event)">
                 <i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i>
                 <span>Effacer l'état</span>
             </div>
@@ -133,41 +133,63 @@ function renderVisitStatusBadge(listingId, currentStatus, listingTitle = '') {
 }
 
 /**
- * Sets up global event delegation for all visit status badges
+ * Direct toggle handler
+ */
+function toggleVisitStatusDropdown(trigger, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }
+    const container = trigger.closest('.visit-status-container');
+    if (!container) return;
+    const wasOpen = container.classList.contains('open');
+
+    // Close all other dropdowns
+    document.querySelectorAll('.visit-status-container.open').forEach(c => c.classList.remove('open'));
+
+    if (!wasOpen) {
+        container.classList.add('open');
+    }
+}
+
+/**
+ * Direct selection handler
+ */
+function selectVisitStatus(item, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+    }
+    const container = item.closest('.visit-status-container');
+    if (!container) return;
+    const listingId = container.dataset.listingId;
+    const listingTitle = container.dataset.listingTitle || '';
+    const newStatus = item.dataset.status;
+
+    container.classList.remove('open');
+    updateListingVisitStatus(listingId, newStatus, listingTitle);
+}
+
+window.toggleVisitStatusDropdown = toggleVisitStatusDropdown;
+window.selectVisitStatus = selectVisitStatus;
+window.renderVisitStatusBadge = renderVisitStatusBadge;
+
+/**
+ * Sets up global event delegation for all visit status badges (fallback)
  */
 function handleVisitStatusClick(e) {
     const trigger = e.target.closest('.visit-status-badge, .visit-status-add-btn');
     if (trigger) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        const container = trigger.closest('.visit-status-container');
-        if (!container) return;
-        const wasOpen = container.classList.contains('open');
-
-        // Close all others
-        document.querySelectorAll('.visit-status-container.open').forEach(c => c.classList.remove('open'));
-
-        if (!wasOpen) {
-            container.classList.add('open');
-        }
+        toggleVisitStatusDropdown(trigger, e);
         return;
     }
 
     // Handle item selection in dropdown
     const item = e.target.closest('.visit-status-item');
     if (item) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        const container = item.closest('.visit-status-container');
-        if (!container) return;
-        const listingId = container.dataset.listingId;
-        const listingTitle = container.dataset.listingTitle || '';
-        const newStatus = item.dataset.status;
-
-        container.classList.remove('open');
-        updateListingVisitStatus(listingId, newStatus, listingTitle);
+        selectVisitStatus(item, e);
         return;
     }
 
