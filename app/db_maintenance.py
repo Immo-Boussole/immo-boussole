@@ -125,16 +125,24 @@ def identify_problems(db: Session):
     forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
+    forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+    ).all()}
 
     forbidden_zone_listings = []
     for l in active_listings_all:
-        city_match = False
+        zone_match = False
         if l.city and is_city_in_forbidden_set(l.city, forbidden_cities):
-            city_match = True
+            zone_match = True
         elif l.location and is_city_in_forbidden_set(l.location, forbidden_cities):
-            city_match = True
+            zone_match = True
+        elif forbidden_stations:
+            s1 = (l.nearest_sncf_station or "").strip().lower()
+            s2 = (l.second_sncf_station or "").strip().lower()
+            if any(fs in s1 or fs == s1 for fs in forbidden_stations) or any(fs in s2 or fs == s2 for fs in forbidden_stations):
+                zone_match = True
 
-        if city_match:
+        if zone_match:
             forbidden_zone_listings.append(l)
 
     # Incorrect price per sqm

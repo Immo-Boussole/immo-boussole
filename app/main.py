@@ -1417,9 +1417,11 @@ def listing_detail_page(
                 db.commit()
 
     # ─── Zone Rule Detection ──────────────────────────────────────────────────
+    from app.geo import is_city_in_forbidden_set
     all_zone_rules = db.query(ZoneRule).all()
     city_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "city"}
     station_rules = {r.name.strip().lower(): r.rule for r in all_zone_rules if r.zone_type == "station"}
+    forbidden_cities = {r.name.strip().lower() for r in all_zone_rules if r.zone_type == "city" and r.rule == "forbidden"}
 
     listing_city_lower = (listing.city or "").strip().lower()
     listing_location_lower = (listing.location or "").strip().lower()
@@ -1430,9 +1432,20 @@ def listing_detail_page(
             if name and name in listing_location_lower:
                 city_rule = rule
                 break
+    if not city_rule and (
+        (listing.city and is_city_in_forbidden_set(listing.city, forbidden_cities)) or
+        (listing.location and is_city_in_forbidden_set(listing.location, forbidden_cities))
+    ):
+        city_rule = "forbidden"
 
     station1_rule = station_rules.get((listing.nearest_sncf_station or "").strip().lower())
     station2_rule = station_rules.get((listing.second_sncf_station or "").strip().lower())
+
+    # Auto-reject listing if located in a forbidden zone
+    if (city_rule == "forbidden" or station1_rule == "forbidden" or station2_rule == "forbidden") and listing.status != ListingStatus.REJECTED:
+        listing.status = ListingStatus.REJECTED
+        db.commit()
+        db.refresh(listing)
 
     users = db.query(models.User).order_by(models.User.username.asc()).all()
 
@@ -1854,6 +1867,31 @@ def create_zone_rule(
     db.add(rule)
     db.commit()
     db.refresh(rule)
+
+    # If the new rule is 'forbidden', retroactively reject all matching active/new listings
+    if body.rule == "forbidden":
+        from app.geo import is_city_in_forbidden_set
+        active_listings = db.query(Listing).filter(Listing.status != ListingStatus.REJECTED).all()
+        rejected_count = 0
+        if body.zone_type == "city":
+            forbidden_set = {normalized_name.lower()}
+            for l in active_listings:
+                if (l.city and is_city_in_forbidden_set(l.city, forbidden_set)) or \
+                   (l.location and is_city_in_forbidden_set(l.location, forbidden_set)):
+                    l.status = ListingStatus.REJECTED
+                    rejected_count += 1
+        elif body.zone_type == "station":
+            norm_station = normalized_name.lower()
+            for l in active_listings:
+                s1 = (l.nearest_sncf_station or "").strip().lower()
+                s2 = (l.second_sncf_station or "").strip().lower()
+                if norm_station in s1 or norm_station in s2 or s1 == norm_station or s2 == norm_station:
+                    l.status = ListingStatus.REJECTED
+                    rejected_count += 1
+        if rejected_count > 0:
+            db.commit()
+            print(f"[ZoneRule] {rejected_count} listing(s) retroactively marked as REJECTED for forbidden zone: {normalized_name}")
+
     return {
         "id": rule.id,
         "zone_type": rule.zone_type,
@@ -3187,11 +3225,20 @@ async def rescrape_listing(
     forbidden_cities_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
+    forbidden_stations_rescrape = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+    ).all()}
     
     city_to_check = updated_listing.city or updated_listing.location
     in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities_rescrape)
+    s1 = (updated_listing.nearest_sncf_station or "").strip().lower()
+    s2 = (updated_listing.second_sncf_station or "").strip().lower()
+    in_forbidden_station = bool(forbidden_stations_rescrape and (
+        any(fs in s1 or fs == s1 for fs in forbidden_stations_rescrape) or
+        any(fs in s2 or fs == s2 for fs in forbidden_stations_rescrape)
+    ))
 
-    if in_forbidden_city:
+    if in_forbidden_city or in_forbidden_station:
         updated_listing.status = ListingStatus.REJECTED
         db.commit()
         rescrape_response["forbidden_zone_warning"] = {
@@ -3380,11 +3427,20 @@ async def submit_listing_url(
     forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
         ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
     ).all()}
+    forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+        ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+    ).all()}
     
     city_to_check = listing.city or listing.location
     in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities)
+    s1 = (listing.nearest_sncf_station or "").strip().lower()
+    s2 = (listing.second_sncf_station or "").strip().lower()
+    in_forbidden_station = bool(forbidden_stations and (
+        any(fs in s1 or fs == s1 for fs in forbidden_stations) or
+        any(fs in s2 or fs == s2 for fs in forbidden_stations)
+    ))
 
-    if in_forbidden_city:
+    if in_forbidden_city or in_forbidden_station:
         listing.status = ListingStatus.REJECTED
         db.commit()
         response["forbidden_zone_warning"] = {
