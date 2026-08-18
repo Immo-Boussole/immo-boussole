@@ -128,6 +128,24 @@ class TestVisitStatus(unittest.TestCase):
         self.assertEqual(self.listing.last_visit_status, "deja_visitee")
         self.assertTrue(self.listing.to_visit)
 
+    def test_rdv_planifie_syncs_visite_programmee(self):
+        # 6. Creating a scheduled visit (rdv_planifie) should sync listing.last_visit_status to visite_programmee
+        res = self.client.post("/api/visites", json={
+            "listing_id": self.listing.id,
+            "visit_type": "visite",
+            "step_family": "visite",
+            "step": "rdv_planifie",
+            "status": "programme",
+            "scheduled_at": datetime.datetime.now().isoformat(),
+            "notes": "Créé automatiquement suite au passage à l'état 'Visite programmée'"
+        })
+        self.assertEqual(res.status_code, 200)
+
+        self.db.refresh(self.listing)
+        self.assertEqual(self.listing.last_visit_status, "visite_programmee")
+        self.assertTrue(self.listing.to_visit)
+
 if __name__ == "__main__":
     unittest.main()
+
 

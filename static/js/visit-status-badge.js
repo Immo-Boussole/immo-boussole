@@ -11,7 +11,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-retour_agence",
         itemClass: "item-retour_agence",
         stepFamily: "contact",
+        familyLabel: "Contact & Prise de contact",
         step: "appel_direct",
+        stepLabel: "Appel direct",
         status: "programme",
         color: "#38bdf8"
     },
@@ -23,7 +25,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-visite_programmee",
         itemClass: "item-visite_programmee",
         stepFamily: "visite",
-        step: "1ere_visite",
+        familyLabel: "Rendez-vous & Visites",
+        step: "rdv_planifie",
+        stepLabel: "RDV Visite planifié",
         status: "programme",
         color: "#818cf8"
     },
@@ -35,7 +39,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-deja_visitee",
         itemClass: "item-deja_visitee",
         stepFamily: "reflexion",
+        familyLabel: "Réflexion",
         step: "en_reflexion_sans_offre",
+        stepLabel: "En réflexion sans offre faite",
         status: "effectuee",
         color: "#fbbf24"
     },
@@ -47,7 +53,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-sans_suite_acheteur",
         itemClass: "item-sans_suite_acheteur",
         stepFamily: "cloture",
+        familyLabel: "Issue & Clôture",
         step: "offre_refusee",
+        stepLabel: "Offre refusée",
         status: "annulee",
         color: "#ef4444"
     },
@@ -59,7 +67,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-sans_suite_visiteur",
         itemClass: "item-sans_suite_visiteur",
         stepFamily: "cloture",
+        familyLabel: "Issue & Clôture",
         step: "abandon",
+        stepLabel: "Abandon / Refus vendeur",
         status: "annulee",
         color: "#ef4444"
     },
@@ -71,7 +81,9 @@ const VISIT_STATUS_CONFIG = {
         badgeClass: "status-a_relancer",
         itemClass: "item-a_relancer",
         stepFamily: "contact",
+        familyLabel: "Contact & Prise de contact",
         step: "relance_sans_reponse",
+        stepLabel: "Relance initiale sans réponse",
         status: "programme",
         color: "#fb923c"
     }
@@ -279,6 +291,10 @@ function showVisitSyncConfirmationModal(listingId, statusKey, listingTitle) {
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
+    const stepDisplay = (cfg.familyLabel && cfg.stepLabel)
+        ? `${cfg.familyLabel} &gt; ${cfg.stepLabel}`
+        : `${cfg.stepFamily.toUpperCase()} (${cfg.step})`;
+
     const modalHtml = `
         <div class="visit-status-modal-overlay" id="visitStatusSyncModal" onclick="closeVisitSyncModal(event)">
             <div class="visit-status-modal" onclick="event.stopPropagation()">
@@ -300,7 +316,7 @@ function showVisitSyncConfirmationModal(listingId, statusKey, listingTitle) {
                         </div>
                         <div class="visit-status-preview-row">
                             <span class="visit-status-preview-label">Étape :</span>
-                            <span class="visit-status-preview-value">${cfg.stepFamily.toUpperCase()} (${cfg.step})</span>
+                            <span class="visit-status-preview-value">${stepDisplay}</span>
                         </div>
                         <div class="visit-status-preview-row">
                             <span class="visit-status-preview-label">Date :</span>
