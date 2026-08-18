@@ -691,6 +691,18 @@
         .form-input:focus { border-color: var(--accent); }
 
         /* Merge suggestion card */
+        .merge-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.85rem;
+            font-size: 0.85rem;
+        }
+
         .merge-card {
             background: var(--surface-2);
             border: 1px solid var(--border);
@@ -700,6 +712,18 @@
             flex-direction: column;
             gap: 0.75rem;
             margin-bottom: 0.85rem;
+            transition: border-color 0.2s;
+        }
+        .merge-card.selected {
+            border-color: var(--purple);
+            background: rgba(168, 85, 247, 0.04);
+        }
+
+        .merge-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .merge-comparison {
@@ -717,6 +741,19 @@
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
+        }
+
+        .merge-footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            margin-top: 0.5rem;
+            border-top: 1px solid var(--border);
+            position: sticky;
+            bottom: 0;
+            background: var(--surface);
+            z-index: 5;
         }
     </style>
 </head>
@@ -954,8 +991,21 @@
 
             <!-- Tab 1: Suggestions -->
             <div id="mergeSuggestionsTab">
+                <div id="mergeToolbar" class="merge-toolbar" style="display: none;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; font-weight: 500;">
+                        <input type="checkbox" id="selectAllMergeSuggestions" onchange="toggleSelectAllMergeSuggestions(this.checked)" style="accent-color: var(--purple); width: 1.1rem; height: 1.1rem; cursor: pointer;">
+                        <span>Tout sélectionner</span>
+                    </label>
+                    <span id="mergeSelectedCountBadge" style="color: var(--text-2); font-size: 0.8rem;">0 sélectionné(s)</span>
+                </div>
                 <div id="mergeSuggestionsContainer">
                     <div style="text-align: center; padding: 2rem; color: var(--text-2);"><i class="fa-solid fa-spinner fa-spin"></i> Recherche des doublons potentiels...</div>
+                </div>
+                <div id="mergeSuggestionsFooter" class="merge-footer-bar" style="display: none;">
+                    <button type="button" class="btn btn-secondary" onclick="closeMergeModal()">Fermer</button>
+                    <button type="button" id="bulkMergeBtn" class="btn btn-purple" onclick="performBulkMerge()" disabled>
+                        <i class="fa-solid fa-code-merge"></i> Fusionner la sélection (<span id="bulkMergeCount">0</span>)
+                    </button>
                 </div>
             </div>
 
@@ -2129,21 +2179,48 @@
             btn.disabled = true;
         }
 
+        let currentMergeSuggestions = [];
+
         async function loadMergeSuggestions() {
             const container = document.getElementById('mergeSuggestionsContainer');
+            const toolbar = document.getElementById('mergeToolbar');
+            const footer = document.getElementById('mergeSuggestionsFooter');
+            const selectAllCb = document.getElementById('selectAllMergeSuggestions');
+
+            if (selectAllCb) selectAllCb.checked = false;
+            updateMergeSelectionUI();
+
             try {
                 const res = await fetch('/api/contacts/merge-suggestions');
                 const list = await res.json();
+                currentMergeSuggestions = list || [];
 
                 if (!list.length) {
+                    if (toolbar) toolbar.style.display = 'none';
+                    if (footer) footer.style.display = 'none';
                     container.innerHTML = '<div style="text-align: center; padding: 2.5rem; color: var(--text-2);"><i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i> Aucun doublon détecté parmi vos fiches contacts.</div>';
                     return;
                 }
 
-                container.innerHTML = list.map(item => `
-                    <div class="merge-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="badge badge-orange"><i class="fa-solid fa-chart-pie"></i> Similarité ${item.similarity_score}%</span>
+                if (toolbar) toolbar.style.display = 'flex';
+                if (footer) footer.style.display = 'flex';
+
+                container.innerHTML = list.map((item, idx) => `
+                    <div class="merge-card" id="mergeCard_${idx}">
+                        <div class="merge-card-header">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
+                                <input type="checkbox" class="merge-suggestion-cb" 
+                                    data-idx="${idx}"
+                                    data-src-type="${item.source.type}"
+                                    data-src-id="${item.source.id}"
+                                    data-tgt-type="${item.target.type}"
+                                    data-tgt-id="${item.target.id}"
+                                    data-src-name="${encodeURIComponent(item.source.name)}"
+                                    data-tgt-name="${encodeURIComponent(item.target.name)}"
+                                    onchange="onMergeSuggestionCheckboxChange(${idx}, this.checked)"
+                                    style="accent-color: var(--purple); width: 1.1rem; height: 1.1rem; cursor: pointer;">
+                                <span class="badge badge-orange"><i class="fa-solid fa-chart-pie"></i> Similarité ${item.similarity_score}%</span>
+                            </label>
                             <span style="font-size: 0.8rem; color: var(--text-2);"><i class="fa-solid fa-circle-info"></i> ${item.reason}</span>
                         </div>
                         <div class="merge-comparison">
@@ -2153,7 +2230,7 @@
                                 ${item.source.phone ? `<div><i class="fa-solid fa-phone"></i> ${item.source.phone}</div>` : ''}
                                 ${item.source.agency ? `<div><i class="fa-solid fa-building"></i> ${item.source.agency}</div>` : ''}
                             </div>
-                            <div style="color: var(--purple); font-size: 1.2rem;">➔</div>
+                            <div style="color: var(--purple); font-size: 1.2rem; text-align: center;">➔</div>
                             <div class="merge-contact-box">
                                 <div style="font-weight: 700; color: var(--text);">${item.target.name}</div>
                                 ${item.target.email ? `<div><i class="fa-solid fa-envelope"></i> ${item.target.email}</div>` : ''}
@@ -2162,18 +2239,69 @@
                             </div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-                            <button class="btn btn-purple btn-sm" onclick="performMerge('${item.source.type}', ${item.source.id}, '${item.target.type}', ${item.target.id})">
+                            <button class="btn btn-purple btn-sm" onclick="performMerge('${item.source.type}', ${item.source.id}, '${item.target.type}', ${item.target.id}, true)">
                                 <i class="fa-solid fa-code-merge"></i> Fusionner vers '${item.target.name}'
                             </button>
                         </div>
                     </div>
                 `).join('');
+                updateMergeSelectionUI();
             } catch (err) {
+                if (toolbar) toolbar.style.display = 'none';
+                if (footer) footer.style.display = 'none';
                 container.innerHTML = '<div style="color: var(--red); text-align: center;">Erreur de chargement des suggestions.</div>';
             }
         }
 
-        async function performMerge(srcType, srcId, tgtType, tgtId) {
+        function onMergeSuggestionCheckboxChange(idx, checked) {
+            const card = document.getElementById(`mergeCard_${idx}`);
+            if (card) {
+                if (checked) card.classList.add('selected');
+                else card.classList.remove('selected');
+            }
+            updateMergeSelectionUI();
+        }
+
+        function toggleSelectAllMergeSuggestions(checked) {
+            const checkboxes = document.querySelectorAll('.merge-suggestion-cb');
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+                const idx = cb.getAttribute('data-idx');
+                const card = document.getElementById(`mergeCard_${idx}`);
+                if (card) {
+                    if (checked) card.classList.add('selected');
+                    else card.classList.remove('selected');
+                }
+            });
+            updateMergeSelectionUI();
+        }
+
+        function updateMergeSelectionUI() {
+            const checkboxes = document.querySelectorAll('.merge-suggestion-cb');
+            const checkedBoxes = document.querySelectorAll('.merge-suggestion-cb:checked');
+            const total = checkboxes.length;
+            const count = checkedBoxes.length;
+
+            const selectAllCb = document.getElementById('selectAllMergeSuggestions');
+            if (selectAllCb) {
+                selectAllCb.checked = (total > 0 && count === total);
+                selectAllCb.indeterminate = (count > 0 && count < total);
+            }
+
+            const badge = document.getElementById('mergeSelectedCountBadge');
+            if (badge) {
+                badge.innerText = `${count} sur ${total} sélectionné(s)`;
+            }
+
+            const bulkBtn = document.getElementById('bulkMergeBtn');
+            const countSpan = document.getElementById('bulkMergeCount');
+            if (countSpan) countSpan.innerText = count;
+            if (bulkBtn) {
+                bulkBtn.disabled = (count === 0);
+            }
+        }
+
+        async function performMerge(srcType, srcId, tgtType, tgtId, keepModalOpen = true) {
             if (!confirm("Confirmez-vous la fusion de ce contact ? Les biens et visites rattachés seront transférés.")) return;
 
             try {
@@ -2189,15 +2317,85 @@
                 });
 
                 if (res.ok) {
-                    closeMergeModal();
-                    loadAll();
+                    if (keepModalOpen) {
+                        loadMergeSuggestions();
+                        loadAll();
+                    } else {
+                        closeMergeModal();
+                        loadAll();
+                    }
                 } else {
                     const err = await res.json();
                     alert("Erreur de fusion: " + (err.detail || "Échec"));
                 }
             } catch (err) {
                 console.error("Erreur fusion:", err);
+                alert("Une erreur inattendue est survenue lors de la fusion.");
             }
+        }
+
+        async function performBulkMerge() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.merge-suggestion-cb:checked'));
+            if (!checkedBoxes.length) return;
+
+            const total = checkedBoxes.length;
+            if (!confirm(`Confirmez-vous la fusion en masse de ${total} paire(s) de contacts ? Les biens et visites rattachés seront transférés.`)) return;
+
+            const bulkBtn = document.getElementById('bulkMergeBtn');
+            const originalText = bulkBtn.innerHTML;
+            bulkBtn.disabled = true;
+            bulkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Fusion en cours (0/${total})...`;
+
+            let successCount = 0;
+            let errorCount = 0;
+            const errors = [];
+
+            for (let i = 0; i < total; i++) {
+                const cb = checkedBoxes[i];
+                bulkBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Fusion en cours (${i + 1}/${total})...`;
+
+                const srcType = cb.getAttribute('data-src-type');
+                const srcId = parseInt(cb.getAttribute('data-src-id'), 10);
+                const tgtType = cb.getAttribute('data-tgt-type');
+                const tgtId = parseInt(cb.getAttribute('data-tgt-id'), 10);
+                const srcName = decodeURIComponent(cb.getAttribute('data-src-name') || '');
+                const tgtName = decodeURIComponent(cb.getAttribute('data-tgt-name') || '');
+
+                try {
+                    const res = await fetch('/api/contacts/merge', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            source_type: srcType,
+                            source_id: srcId,
+                            target_type: tgtType,
+                            target_id: tgtId
+                        })
+                    });
+
+                    if (res.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        const err = await res.json().catch(() => ({}));
+                        errors.push(`'${srcName}' -> '${tgtName}': ${err.detail || 'Erreur'}`);
+                    }
+                } catch (err) {
+                    errorCount++;
+                    errors.push(`'${srcName}' -> '${tgtName}': Erreur réseau`);
+                }
+            }
+
+            bulkBtn.innerHTML = originalText;
+
+            let report = `${successCount} fusion(s) réussie(s).`;
+            if (errorCount > 0) {
+                report += `\n${errorCount} échec(s) :\n- ` + errors.join('\n- ');
+            }
+            alert(report);
+
+            loadMergeSuggestions();
+            loadAll();
         }
 
         async function executeManualMerge() {
@@ -2207,7 +2405,7 @@
 
             const [srcType, srcId] = src.split(':');
             const [tgtType, tgtId] = tgt.split(':');
-            await performMerge(srcType, parseInt(srcId), tgtType, parseInt(tgtId));
+            await performMerge(srcType, parseInt(srcId), tgtType, parseInt(tgtId), false);
         }
     </script>
     <script src="/static/js/visit-status-badge.js?v=20260817c"></script>
