@@ -462,4 +462,23 @@ class AgencyOverviewItem(BaseModel):
     attached_listings: List[AttachedListingSummary] = []
 
 
+class RouteCalcRequest(BaseModel):
+    start_lat: float
+    start_lon: float
+    end_lat: float
+    end_lon: float
+    start_name: Optional[str] = "Point A"
+    end_name: Optional[str] = "Point B"
+
+
+class ReferencePointRequest(BaseModel):
+    name: str
+    address: str
+    lat: float
+    lon: float
+    icon: Optional[str] = "fa-location-dot"
+    category: Optional[str] = "custom"
+
+
+
 

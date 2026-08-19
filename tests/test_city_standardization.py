@@ -38,6 +38,10 @@ def test_standardize_and_enrich_city():
     test_cases = [
         ("saint-clair-du-rhône (38)", "Saint-Clair-du-Rhône"),
         ("Saint-Clair-du-Rhône", "Saint-Clair-du-Rhône"),
+        ("St Alban Du Rhone (38370)", "Saint-Alban-du-Rhône"),
+        ("St Alban Du Rhone", "Saint-Alban-du-Rhône"),
+        ("Saint-Alban-du-Rhône (38370)", "Saint-Alban-du-Rhône"),
+        ("Ste Colombe (69560)", "Sainte-Colombe"),
         ("Lyon", "Lyon"),
         ("Paris 15", "Paris"),
     ]

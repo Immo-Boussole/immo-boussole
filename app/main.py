@@ -42,7 +42,15 @@ from app.services import (
     generate_ideal_profile,
     find_potential_duplicates,
 )
-from app.geo import fetch_sncf_times_for_city, find_nearby_stations, calculate_station_times, get_coordinates, get_postal_code
+from app.geo import (
+    fetch_sncf_times_for_city,
+    find_nearby_stations,
+    calculate_station_times,
+    get_coordinates,
+    get_postal_code,
+    search_places_unified,
+    calculate_multi_route
+)
 from app.media import json_to_photos, photos_to_json
 from app.config import settings
 from app.translations import get_text
@@ -1976,6 +1984,79 @@ def map_page(
     })
 
 
+@app.get("/distance-temps")
+def distance_temps_page(
+    request: Request,
+    listing_id: Optional[int] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    name: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE])
+    ).order_by(Listing.date_added.desc()).limit(300).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+    
+    # User Reference Points
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    user_points = []
+    if user:
+        if user.work_address and user.work_lat and user.work_lon:
+            user_points.append({
+                "id": "work",
+                "name": "Mon travail",
+                "address": user.work_address,
+                "lat": user.work_lat,
+                "lon": user.work_lon,
+                "icon": "fa-briefcase",
+                "is_work": True
+            })
+        if user.poi_json:
+            try:
+                pois = json.loads(user.poi_json)
+                for idx, poi in enumerate(pois):
+                    poi_id = poi.get("id") or f"poi_{idx}"
+                    user_points.append({
+                        "id": str(poi_id),
+                        "name": poi.get("name", "Point d'intérêt"),
+                        "address": poi.get("address", ""),
+                        "lat": poi.get("lat"),
+                        "lon": poi.get("lon"),
+                        "icon": poi.get("icon", "fa-location-dot"),
+                        "is_work": False
+                    })
+            except Exception as e:
+                print(f"[DistanceTemps] Error loading poi_json: {e}")
+
+    # Shared Map Pins
+    map_pins = db.query(MapPin).filter(MapPin.lat.isnot(None), MapPin.lon.isnot(None)).all()
+
+    selected_listing = None
+    if listing_id:
+        selected_listing = db.query(Listing).filter(Listing.id == listing_id).first()
+        if selected_listing:
+            _enrich_listings([selected_listing], viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="distance_temps.html", context={
+        "title": "Distance & Temps — Immo-Boussole",
+        "queries": queries,
+        "listings": listings,
+        "user_points": user_points,
+        "map_pins": map_pins,
+        "selected_listing": selected_listing,
+        "init_lat": lat,
+        "init_lon": lon,
+        "init_name": name,
+    })
+
+
+
 @app.get("/chat")
 def chat_page(
     request: Request, 
@@ -2639,6 +2720,143 @@ def get_map_data(
         ],
         "to_qualify_cities": to_qualify_cities,
     }
+
+
+# ─── API: Geo Distance & Autocomplete ─────────────────────────────────────────
+
+@app.get("/api/geo/autocomplete")
+def api_geo_autocomplete(
+    q: str,
+    limit: int = 8,
+    _auth = Depends(login_required)
+):
+    """Unified autocomplete search for addresses, cities, and SNCF stations."""
+    results = search_places_unified(q, limit=limit)
+    return {"results": results}
+
+
+@app.post("/api/geo/route-calc")
+def api_geo_route_calc(
+    body: schemas.RouteCalcRequest,
+    _auth = Depends(login_required)
+):
+    """Calculates route distance and durations for car, bike, walking."""
+    data = calculate_multi_route(
+        start_lat=body.start_lat,
+        start_lon=body.start_lon,
+        end_lat=body.end_lat,
+        end_lon=body.end_lon,
+        start_name=body.start_name or "Point A",
+        end_name=body.end_name or "Point B"
+    )
+    return data
+
+
+@app.get("/api/geo/reference-points")
+def api_get_reference_points(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    points = []
+    if user.work_address and user.work_lat and user.work_lon:
+        points.append({
+            "id": "work",
+            "name": "Mon travail",
+            "address": user.work_address,
+            "lat": user.work_lat,
+            "lon": user.work_lon,
+            "icon": "fa-briefcase",
+            "is_work": True
+        })
+    if user.poi_json:
+        try:
+            pois = json.loads(user.poi_json)
+            for idx, poi in enumerate(pois):
+                points.append({
+                    "id": str(poi.get("id") or f"poi_{idx}"),
+                    "name": poi.get("name", "Point d'intérêt"),
+                    "address": poi.get("address", ""),
+                    "lat": poi.get("lat"),
+                    "lon": poi.get("lon"),
+                    "icon": poi.get("icon", "fa-location-dot"),
+                    "is_work": False
+                })
+        except:
+            pass
+            
+    return {"points": points}
+
+
+@app.post("/api/geo/reference-points")
+def api_add_reference_point(
+    request: Request,
+    body: schemas.ReferencePointRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    pois = []
+    if user.poi_json:
+        try:
+            pois = json.loads(user.poi_json)
+        except:
+            pois = []
+            
+    import uuid
+    new_poi = {
+        "id": f"poi_{uuid.uuid4().hex[:8]}",
+        "name": body.name.strip(),
+        "address": body.address.strip(),
+        "lat": body.lat,
+        "lon": body.lon,
+        "icon": body.icon or "fa-location-dot",
+        "category": body.category or "custom"
+    }
+    pois.append(new_poi)
+    user.poi_json = json.dumps(pois, ensure_ascii=False)
+    db.commit()
+    return {"status": "ok", "point": new_poi}
+
+
+@app.delete("/api/geo/reference-points/{point_id}")
+def api_delete_reference_point(
+    request: Request,
+    point_id: str,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if point_id == "work":
+        user.work_address = None
+        user.work_lat = None
+        user.work_lon = None
+        db.commit()
+        return {"status": "deleted", "id": "work"}
+        
+    if user.poi_json:
+        try:
+            pois = json.loads(user.poi_json)
+            pois = [p for p in pois if str(p.get("id")) != point_id]
+            user.poi_json = json.dumps(pois, ensure_ascii=False)
+            db.commit()
+        except:
+            pass
+            
+    return {"status": "deleted", "id": point_id}
 
 
 @app.post("/api/map-pins")

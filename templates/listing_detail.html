@@ -915,6 +915,10 @@
 
                 <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
 
+                <a href="/distance-temps?listing_id={{ listing.id }}" class="btn btn-route-nav" title="Calculer Distance & Temps" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); text-decoration: none;">
+                    <i class="fa-solid fa-route"></i> <span class="btn-text">Itinéraire</span>
+                </a>
+
                 <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'listing.refresh') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-arrows-rotate"></i> <span class="btn-text">{{ t(request, 'listing.refresh') }}</span>
                 </button>
@@ -1186,11 +1190,16 @@
 
                 <!-- Mobilité / Transports (SNCF) -->
                 {% if (listing.nearest_sncf_station and listing.nearest_sncf_station != "NOT_FOUND") or (listing.second_sncf_station) %}
-                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div class="section-title" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     <span><i class="fa-solid fa-train"></i> {{ t(request, 'listing.transport_title') }}</span>
-                    <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: auto;" onclick="openStationModal()">
-                        <i class="fa-solid fa-pen-to-square"></i> {{ t(request, 'listing.edit_stations') }}
-                    </button>
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                        <a href="/distance-temps?listing_id={{ listing.id }}" class="btn" style="text-decoration: none; padding: 0.25rem 0.6rem; font-size: 0.72rem; height: auto; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08);">
+                            <i class="fa-solid fa-route"></i> Distance & Temps
+                        </a>
+                        <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: auto;" onclick="openStationModal()">
+                            <i class="fa-solid fa-pen-to-square"></i> {{ t(request, 'listing.edit_stations') }}
+                        </button>
+                    </div>
                 </div>
 
                 {# Station 1 #}

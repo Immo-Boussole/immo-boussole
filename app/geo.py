@@ -136,29 +136,96 @@ def search_stations(query_str: str) -> list:
         print(f"[Geo] Station search failed for {query_str}: {e}")
         return []
 
+def normalize_city_name(s: str) -> str:
+    """
+    Normalizes a French city name: lowercases, removes accents,
+    expands 'st'/'ste' abbreviations to 'saint'/'sainte',
+    and removes non-alphanumeric characters.
+    """
+    if not s:
+        return ""
+    import unicodedata
+    import re
+    s = s.lower().strip()
+    s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+    s = re.sub(r"\bst\b", "saint", s)
+    s = re.sub(r"\bste\b", "sainte", s)
+    s = re.sub(r"[^a-z0-9]", "", s)
+    return s
+
+
+def expand_saint_abbr(s: str) -> str:
+    """
+    Expands 'st' / 'ste' abbreviations in a city name to 'Saint' / 'Sainte'
+    for API queries (e.g. geo.api.gouv.fr).
+    """
+    if not s:
+        return ""
+    import re
+    s = re.sub(r"\bst\b", "Saint", s, flags=re.I)
+    s = re.sub(r"\bste\b", "Sainte", s, flags=re.I)
+    return s.strip()
+
+
 def search_cities(query_str: str) -> list:
-    """Searches for cities by name via Nominatim."""
+    """Searches for cities by name or postal code via geo.api.gouv.fr with Nominatim fallback."""
+    if not query_str:
+        return []
+    
+    clean_query = query_str.strip()
+    expanded_query = expand_saint_abbr(clean_query)
+    
+    # 1. Try geo.api.gouv.fr (fast, official French database, no 429 rate limit)
+    try:
+        url = "https://geo.api.gouv.fr/communes"
+        if clean_query.isdigit():
+            params = {"codePostal": clean_query, "fields": "nom,code,codesPostaux,centre", "limit": 10}
+        else:
+            params = {"nom": expanded_query, "boost": "population", "fields": "nom,code,codesPostaux,centre", "limit": 10}
+            
+        res = httpx.get(url, params=params, timeout=5.0)
+        if res.status_code == 200:
+            data = res.json()
+            if data:
+                cities = []
+                for item in data:
+                    nom = item.get("nom", "")
+                    cps = item.get("codesPostaux", [])
+                    cp_str = f" ({cps[0]})" if cps else ""
+                    coords = item.get("centre", {}).get("coordinates", [])
+                    lat = coords[1] if len(coords) >= 2 else None
+                    lon = coords[0] if len(coords) >= 2 else None
+                    
+                    if lat is not None and lon is not None:
+                        cities.append({
+                            "name": f"{nom}{cp_str}",
+                            "lat": float(lat),
+                            "lon": float(lon)
+                        })
+                if cities:
+                    return cities
+    except Exception as e:
+        print(f"[Geo] geo.api.gouv.fr city search failed for {query_str}: {e}")
+
+    # 2. Fallback to Nominatim
     headers = {"User-Agent": "Immo-Boussole/1.0"}
     url = "https://nominatim.openstreetmap.org/search"
     params = {
-        "q": query_str,
+        "q": expanded_query,
         "format": "json",
         "limit": 10,
         "countrycodes": "fr"
     }
     try:
-        res = httpx.get(url, params=params, headers=headers, timeout=10.0)
+        res = httpx.get(url, params=params, headers=headers, timeout=5.0)
         res.raise_for_status()
         data = res.json()
         cities = []
         for item in data:
-            # Nominatim returns cities as place=city/town/village OR boundary=administrative
             cls = item.get("class")
             typ = item.get("type")
-            
             is_city = (cls == "place" and typ in ["city", "town", "village", "hamlet"]) or \
                       (cls == "boundary" and typ == "administrative")
-            
             if is_city:
                 cities.append({
                     "name": item["display_name"],
@@ -167,7 +234,7 @@ def search_cities(query_str: str) -> list:
                 })
         return cities
     except Exception as e:
-        print(f"[Geo] City search failed for {query_str}: {e}")
+        print(f"[Geo] Nominatim city search failed for {query_str}: {e}")
         return []
 
 def get_railway_path(lat1: float, lon1: float, lat2: float, lon2: float) -> list:
@@ -513,31 +580,33 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
 
     name, zip_code, dept_code = parse_city_input(city_str_cleaned)
     name_cleaned = clean_arrondissement(name)
+    expanded_name = expand_saint_abbr(name_cleaned)
+    norm_input = normalize_city_name(name_cleaned)
 
     results = []
 
-    # Strategy 1: Search by name and department if we have a department code
-    if name_cleaned:
+    # Strategy 1: Search by expanded name and department if we have a department code
+    if expanded_name:
         try:
             url = "https://geo.api.gouv.fr/communes"
-            params = {"nom": name_cleaned, "boost": "population", "limit": 10}
+            params = {"nom": expanded_name, "boost": "population", "limit": 10}
             if dept_code:
                 params["codeDepartement"] = dept_code
             res = httpx.get(url, params=params, timeout=5.0)
             if res.status_code == 200:
                 results = res.json()
         except Exception as e:
-            print(f"[Geo API] Search by name {name_cleaned} failed: {e}")
+            print(f"[Geo API] Search by name {expanded_name} failed: {e}")
 
     # Strategy 1b: Search by name only if name+dept returned nothing
-    if not results and name_cleaned and dept_code:
+    if not results and expanded_name and dept_code:
         try:
             url = "https://geo.api.gouv.fr/communes"
-            res = httpx.get(url, params={"nom": name_cleaned, "boost": "population", "limit": 10}, timeout=5.0)
+            res = httpx.get(url, params={"nom": expanded_name, "boost": "population", "limit": 10}, timeout=5.0)
             if res.status_code == 200:
                 results = res.json()
         except Exception as e:
-            print(f"[Geo API] Search by name only {name_cleaned} failed: {e}")
+            print(f"[Geo API] Search by name only {expanded_name} failed: {e}")
 
     # Strategy 2: Search by zip code if Strategy 1 failed or if we didn't have a name
     if not results and zip_code:
@@ -550,11 +619,11 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
             print(f"[Geo API] Search by zip {zip_code} failed: {e}")
 
     # Strategy 3: Fuzzy or broad word match fallback
-    if not results and name_cleaned:
-        m = re.match(r'^([a-zA-Z\s\-]+)', name_cleaned)
+    if not results and expanded_name:
+        m = re.match(r'^([a-zA-Z\s\-]+)', expanded_name)
         if m:
             broad_name = m.group(1).strip()
-            if broad_name != name_cleaned:
+            if broad_name != expanded_name:
                 try:
                     url = "https://geo.api.gouv.fr/communes"
                     res = httpx.get(url, params={"nom": broad_name, "boost": "population", "limit": 10}, timeout=5.0)
@@ -570,12 +639,11 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
 
     best_commune = None
 
-    # First try to find a commune that matches both the name (case-insensitive) and zip/dept
-    if name_cleaned:
-        normalized_name_cleaned = name_cleaned.lower().replace('-', ' ').strip()
+    # First try: exact normalized name match
+    if norm_input:
         for c in results:
-            c_nom = c.get("nom", "").lower().replace('-', ' ').strip()
-            if normalized_name_cleaned in c_nom or c_nom in normalized_name_cleaned:
+            c_norm = normalize_city_name(c.get("nom", ""))
+            if c_norm == norm_input:
                 if zip_code:
                     if zip_code in c.get("codesPostaux", []):
                         best_commune = c
@@ -588,8 +656,47 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
                     best_commune = c
                     break
 
-    # Second try: try to match zip or dept code only
-    if not best_commune:
+        if not best_commune:
+            for c in results:
+                c_norm = normalize_city_name(c.get("nom", ""))
+                if c_norm == norm_input:
+                    best_commune = c
+                    break
+
+        # Second try: substring / inclusion match
+        if not best_commune:
+            for c in results:
+                c_norm = normalize_city_name(c.get("nom", ""))
+                if norm_input in c_norm or c_norm in norm_input:
+                    if zip_code:
+                        if zip_code in c.get("codesPostaux", []):
+                            best_commune = c
+                            break
+                    elif dept_code:
+                        if c.get("codeDepartement") == dept_code:
+                            best_commune = c
+                            break
+                    else:
+                        best_commune = c
+                        break
+
+    # If no name match was found but we had a zip code search, try querying by expanded name directly
+    if not best_commune and norm_input and zip_code:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            res = httpx.get(url, params={"nom": expanded_name, "boost": "population", "limit": 10}, timeout=5.0)
+            if res.status_code == 200:
+                name_results = res.json()
+                for c in name_results:
+                    c_norm = normalize_city_name(c.get("nom", ""))
+                    if c_norm == norm_input or norm_input in c_norm or c_norm in norm_input:
+                        best_commune = c
+                        break
+        except Exception:
+            pass
+
+    # If still no commune matched by name, match zip or dept code only if no name was given
+    if not best_commune and not norm_input:
         if zip_code:
             for c in results:
                 if zip_code in c.get("codesPostaux", []):
@@ -602,7 +709,12 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
                     break
 
     if not best_commune:
-        best_commune = results[0]
+        # If we had results and couldn't match a specific name, but name was empty, take first
+        if not norm_input and results:
+            best_commune = results[0]
+        else:
+            fallback_name = fallback_standardize_city(city_str_cleaned)
+            return fallback_name, zip_code, None
 
     postalcodes = best_commune.get("codesPostaux", [])
     selected_zip = zip_code if (zip_code and zip_code in postalcodes) else (postalcodes[0] if postalcodes else None)
@@ -654,8 +766,9 @@ def is_city_in_forbidden_set(city_or_location: str, forbidden_cities: set) -> bo
         n = n.replace('-', ' ').replace("'", ' ').strip()
         n = re.sub(r'\s+', ' ', n)
         
-        # Normalize "st " to "saint "
+        # Normalize "st " to "saint " and "ste " to "sainte "
         n = re.sub(r'\bst\b', 'saint', n)
+        n = re.sub(r'\bste\b', 'sainte', n)
         
         return n
 
@@ -670,3 +783,232 @@ def is_city_in_forbidden_set(city_or_location: str, forbidden_cities: set) -> bo
             return True
             
     return False
+
+
+def format_duration(minutes: int) -> str:
+    """Formats minutes into human-readable string (e.g., '25 min', '1h 15 min', '2h')."""
+    if minutes is None or minutes <= 0:
+        return "1 min"
+    if minutes < 60:
+        return f"{minutes} min"
+    hours = minutes // 60
+    rem_mins = minutes % 60
+    if rem_mins == 0:
+        return f"{hours}h"
+    return f"{hours}h {rem_mins:02d} min"
+
+
+def search_places_unified(query_str: str, limit: int = 8) -> list:
+    """
+    Unified smart autocomplete searching across French addresses, cities, and SNCF train stations.
+    Returns a standardized list of places with lat/lon and type badge.
+    """
+    if not query_str or len(query_str.strip()) < 2:
+        return []
+
+    q = query_str.strip()
+    results = []
+    seen_coords = set()
+
+    # 1. Query French Base Adresse Nationale (BAN) - extremely fast and comprehensive
+    try:
+        ban_url = "https://api-adresse.data.gouv.fr/search/"
+        headers = {"User-Agent": "ImmoBoussole/1.0"}
+        res = httpx.get(ban_url, params={"q": q, "limit": limit}, headers=headers, timeout=5.0)
+        if res.status_code == 200:
+            data = res.json()
+            features = data.get("features", [])
+            for feat in features:
+                props = feat.get("properties", {})
+                geometry = feat.get("geometry", {})
+                coords = geometry.get("coordinates", [])
+                if len(coords) == 2:
+                    lon, lat = float(coords[0]), float(coords[1])
+                    coord_key = (round(lat, 4), round(lon, 4))
+                    if coord_key in seen_coords:
+                        continue
+                    seen_coords.add(coord_key)
+
+                    ptype = props.get("type", "address")
+                    if ptype == "municipality":
+                        category = "city"
+                        display_type = "Ville"
+                    elif ptype in ("housenumber", "street", "locality"):
+                        category = "address"
+                        display_type = "Adresse"
+                    else:
+                        category = "address"
+                        display_type = "Lieu-dit"
+
+                    label = props.get("label") or props.get("name") or q
+                    city = props.get("city") or ""
+                    postcode = props.get("postcode") or ""
+                    context = props.get("context") or ""
+
+                    results.append({
+                        "id": f"ban_{lat}_{lon}",
+                        "label": label,
+                        "name": props.get("name") or label,
+                        "type": category,
+                        "type_label": display_type,
+                        "city": city,
+                        "postcode": postcode,
+                        "context": context,
+                        "lat": lat,
+                        "lon": lon
+                    })
+    except Exception as e:
+        print(f"[Geo Unified Search] BAN search failed for '{q}': {e}")
+
+    # 2. Query SNCF Stations if query looks like a station or to enrich results
+    try:
+        stations_query = q
+        if "gare" not in q.lower() and len(q) >= 3:
+            stations_query = f"Gare {q}"
+
+        station_url = "https://nominatim.openstreetmap.org/search"
+        headers = {"User-Agent": "Immo-Boussole/1.0 (contact@immo-boussole.local)"}
+        params = {
+            "q": stations_query,
+            "format": "json",
+            "limit": 4,
+            "countrycodes": "fr"
+        }
+        res_station = httpx.get(station_url, params=params, headers=headers, timeout=5.0)
+        if res_station.status_code == 200:
+            station_data = res_station.json()
+            for item in station_data:
+                display_name = item.get("display_name", "")
+                is_station = item.get("class") == "railway" or "gare" in display_name.lower()
+                if is_station:
+                    s_lat = float(item["lat"])
+                    s_lon = float(item["lon"])
+                    coord_key = (round(s_lat, 4), round(s_lon, 4))
+                    if coord_key in seen_coords:
+                        continue
+                    seen_coords.add(coord_key)
+
+                    # Extract short clean name
+                    parts = display_name.split(",")
+                    station_name = parts[0].strip() if parts else display_name
+
+                    results.append({
+                        "id": f"station_{s_lat}_{s_lon}",
+                        "label": display_name,
+                        "name": station_name,
+                        "type": "station",
+                        "type_label": "Gare SNCF",
+                        "city": parts[1].strip() if len(parts) > 1 else "",
+                        "postcode": "",
+                        "context": ", ".join(parts[1:3]) if len(parts) > 1 else "",
+                        "lat": s_lat,
+                        "lon": s_lon
+                    })
+    except Exception as e:
+        print(f"[Geo Unified Search] Station search failed for '{q}': {e}")
+
+    return results[:limit]
+
+
+def calculate_multi_route(
+    start_lat: float, 
+    start_lon: float, 
+    end_lat: float, 
+    end_lon: float,
+    start_name: str = "Point A",
+    end_name: str = "Point B"
+) -> dict:
+    """
+    Calculates detailed itinerary, distances, and travel times (car, bike, walking)
+    between two geographic points, with Leaflet polyline geometry and Google Maps links.
+    """
+    # 1. Query OSRM Driving router
+    url_osrm = (
+        f"http://router.project-osrm.org/route/v1/driving/"
+        f"{start_lon},{start_lat};{end_lon},{end_lat}?overview=full&geometries=geojson"
+    )
+
+    polyline = []
+    road_distance_m = None
+    car_duration_s = None
+
+    try:
+        res_osrm = httpx.get(url_osrm, timeout=8.0)
+        if res_osrm.status_code == 200:
+            data_osrm = res_osrm.json()
+            if data_osrm.get("code") == "Ok" and data_osrm.get("routes"):
+                route = data_osrm["routes"][0]
+                road_distance_m = route.get("distance", 0)
+                car_duration_s = route.get("duration", 0)
+                coords = route.get("geometry", {}).get("coordinates", [])
+                # OSRM returns [lon, lat], Leaflet needs [lat, lon]
+                polyline = [[c[1], c[0]] for c in coords]
+    except Exception as e:
+        print(f"[Geo Multi Route] OSRM query failed: {e}")
+
+    # Fallback to straight-line distance if OSRM failed or returned 0
+    if not road_distance_m or road_distance_m <= 0:
+        h_km = haversine_km(start_lat, start_lon, end_lat, end_lon)
+        # Detour factor ~1.28 on average road network
+        road_distance_m = max(100, int(h_km * 1.28 * 1000))
+        car_duration_s = int((road_distance_m / 1000.0) / 50.0 * 3600)  # ~50 km/h
+        polyline = [[start_lat, start_lon], [end_lat, end_lon]]
+
+    road_distance_km = round(road_distance_m / 1000.0, 1)
+    
+    # Calculate durations in minutes
+    car_min = max(1, round(car_duration_s / 60))
+    # Cycling: ~15 km/h
+    bike_min = max(1, round((road_distance_m / 1000.0) / 15.0 * 60))
+    # Walking: ~5 km/h
+    walk_min = max(1, round((road_distance_m / 1000.0) / 5.0 * 60))
+
+    # Google Maps Directions URLs
+    gmaps_base = "https://www.google.com/maps/dir/?api=1"
+    gmaps_car = f"{gmaps_base}&origin={start_lat},{start_lon}&destination={end_lat},{end_lon}&travelmode=driving"
+    gmaps_bike = f"{gmaps_base}&origin={start_lat},{start_lon}&destination={end_lat},{end_lon}&travelmode=bicycling"
+    gmaps_walk = f"{gmaps_base}&origin={start_lat},{start_lon}&destination={end_lat},{end_lon}&travelmode=walking"
+
+    return {
+        "success": True,
+        "distance_km": road_distance_km,
+        "distance_m": int(road_distance_m),
+        "start": {
+            "name": start_name,
+            "lat": start_lat,
+            "lon": start_lon
+        },
+        "end": {
+            "name": end_name,
+            "lat": end_lat,
+            "lon": end_lon
+        },
+        "modes": {
+            "car": {
+                "label": "Voiture",
+                "icon": "fa-car",
+                "duration_minutes": car_min,
+                "formatted_duration": format_duration(car_min),
+                "distance_km": road_distance_km,
+                "gmaps_url": gmaps_car
+            },
+            "bike": {
+                "label": "Vélo",
+                "icon": "fa-bicycle",
+                "duration_minutes": bike_min,
+                "formatted_duration": format_duration(bike_min),
+                "distance_km": road_distance_km,
+                "gmaps_url": gmaps_bike
+            },
+            "walk": {
+                "label": "À pied",
+                "icon": "fa-person-walking",
+                "duration_minutes": walk_min,
+                "formatted_duration": format_duration(walk_min),
+                "distance_km": road_distance_km,
+                "gmaps_url": gmaps_walk
+            }
+        },
+        "polyline": polyline
+    }
+

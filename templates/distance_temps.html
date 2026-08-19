@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
+    <title>{{ t(request, 'distance_temps.title', 'Distance & Temps') }} — {{ t(request, 'app.title') }}</title>
+    
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="/static/css/leaflet.css">
+    
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --surface: #131929;
+            --surface-2: #1a2236;
+            --surface-3: #222c44;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text: #eef2ff;
+            --text-2: #8b9cc8;
+            --text-3: #58688d;
+            --accent: #4f8ef7;
+            --accent-2: #6366f1;
+            --accent-glow: rgba(79, 142, 247, 0.25);
+            --green: #10d9a4;
+            --green-glow: rgba(16, 217, 164, 0.2);
+            --red: #f25c69;
+            --orange: #f8a84b;
+            --purple: #a855f7;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        /* ── Main App Layout ── */
+        .app-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Topbar */
+        .topbar {
+            height: 60px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            z-index: 20;
+            gap: 0.75rem;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .topbar-title-block {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .topbar-title-block h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .topbar-title-block h1 i {
+            color: var(--accent);
+        }
+
+        .topbar-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Content Area: Split View */
+        .split-view {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Left Side Calculator Panel */
+        .calc-panel {
+            width: 440px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            flex-shrink: 0;
+            z-index: 10;
+            padding: 1.25rem;
+            gap: 1.25rem;
+        }
+
+        .calc-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .calc-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .calc-panel::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background: #111;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Card blocks */
+        .calc-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+        }
+
+        .calc-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .calc-card-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .calc-card-title.point-a { color: var(--green); }
+        .calc-card-title.point-b { color: var(--accent); }
+
+        /* Search input with autocomplete */
+        .search-field-wrapper {
+            position: relative;
+        }
+
+        .search-input-box {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.75rem;
+            gap: 0.5rem;
+            transition: var(--trans);
+        }
+
+        .search-input-box:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .search-input-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 0.88rem;
+            font-family: inherit;
+        }
+
+        .search-input-box input::placeholder {
+            color: var(--text-3);
+        }
+
+        .search-input-box .btn-clear {
+            background: transparent;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            display: none;
+        }
+        .search-input-box .btn-clear:hover {
+            color: var(--text);
+        }
+
+        /* Autocomplete dropdown */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--surface-3);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            z-index: 100;
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 0.6rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: var(--trans);
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover, .autocomplete-item.active {
+            background: rgba(79, 142, 247, 0.12);
+        }
+
+        .item-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.45rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .item-badge.city { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .item-badge.address { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .item-badge.station { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+
+        .item-details {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-sub {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Chips & Quick Action buttons */
+        .quick-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-2);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: var(--trans);
+            user-select: none;
+            min-height: 32px;
+        }
+
+        .action-chip:hover {
+            color: var(--text);
+            border-color: var(--accent);
+            background: rgba(79, 142, 247, 0.08);
+        }
+
+        .action-chip.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .action-chip.gps {
+            color: var(--green);
+            border-color: rgba(16, 217, 164, 0.3);
+        }
+        .action-chip.gps:hover {
+            background: rgba(16, 217, 164, 0.12);
+        }
+
+        .action-chip .chip-delete {
+            font-size: 0.7rem;
+            margin-left: 0.2rem;
+            opacity: 0.6;
+            transition: var(--trans);
+        }
+        .action-chip .chip-delete:hover {
+            opacity: 1;
+            color: var(--red);
+        }
+
+        /* Swap button container */
+        .swap-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: -0.25rem 0;
+            position: relative;
+        }
+
+        .btn-swap {
+            width: 36px;
+            height: 36px;
+            min-width: 44px;
+            min-height: 44px;
+            background: var(--surface-2);
+            border: 1px solid var(--border-hover);
+            border-radius: 50%;
+            color: var(--text-2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--trans);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-swap:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            transform: rotate(180deg);
+            background: var(--surface-3);
+        }
+
+        /* Point B Tabs */
+        .tab-switcher {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-2);
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            background: var(--surface-2);
+            color: var(--accent);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Listing Selector Dropdown/List */
+        .listing-select-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .listing-select-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.45rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--trans);
+            border: 1px solid transparent;
+        }
+
+        .listing-select-item:hover {
+            background: var(--surface-2);
+        }
+
+        .listing-select-item.selected {
+            background: rgba(79, 142, 247, 0.12);
+            border-color: rgba(79, 142, 247, 0.3);
+        }
+
+        .listing-thumb {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            background: var(--surface-2);
+            object-fit: cover;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-3);
+            font-size: 0.9rem;
+        }
+
+        .listing-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .listing-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .listing-meta {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Calculate button */
+        .btn-calc-main {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: var(--trans);
+            box-shadow: 0 4px 14px var(--accent-glow);
+            min-height: 44px;
+        }
+
+        .btn-calc-main:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        /* Results section */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .results-header-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .results-distance-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(79, 142, 247, 0.15);
+            color: var(--accent);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        /* Mode Cards Grid */
+        .modes-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .mode-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.85rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: var(--trans);
+        }
+
+        .mode-card:hover {
+            border-color: var(--border-hover);
+            transform: translateX(2px);
+        }
+
+        .mode-card.car .mode-icon { color: var(--orange); background: rgba(248, 168, 75, 0.12); }
+        .mode-card.bike .mode-icon { color: var(--green); background: rgba(16, 217, 164, 0.12); }
+        .mode-card.walk .mode-icon { color: var(--accent); background: rgba(79, 142, 247, 0.12); }
+
+        .mode-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .mode-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+
+        .mode-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mode-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .mode-time {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .mode-distance {
+            font-size: 0.7rem;
+            color: var(--text-3);
+        }
+
+        .mode-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-gmaps {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.45rem 0.7rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: var(--trans);
+            min-height: 38px;
+        }
+
+        .btn-gmaps:hover {
+            background: var(--surface-3);
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .btn-gmaps i {
+            font-size: 0.8rem;
+            color: var(--accent);
+        }
+
+        /* Save Favorite Modal */
+        .fav-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .fav-modal {
+            background: var(--surface-2);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .fav-modal h3 {
+            font-size: 1.1rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .fav-modal input, .fav-modal select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.75rem;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.88rem;
+            outline: none;
+        }
+
+        .fav-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-modal-cancel {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.5rem 0.85rem;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .btn-modal-save {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Marker icons & Map enhancements */
+        .custom-map-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 800;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+        }
+
+        .custom-map-pin.pin-a {
+            background: var(--green);
+        }
+
+        .custom-map-pin.pin-b {
+            background: var(--accent);
+        }
+
+        /* ── Responsive adjustments ── */
+        @media (max-width: 900px) {
+            .topbar {
+                height: 56px !important;
+                padding: 0 0.85rem !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 0.5rem !important;
+            }
+            .topbar-subtitle {
+                display: none !important;
+            }
+            .topbar-title-block h1 {
+                font-size: 1rem !important;
+            }
+            .topbar-right {
+                width: auto !important;
+                display: flex !important;
+                align-items: center !important;
+                overflow: visible !important;
+            }
+            .topbar-right .btn-gmaps {
+                padding: 0.35rem 0.6rem !important;
+                height: 36px !important;
+                width: auto !important;
+                min-width: 36px !important;
+                flex: 0 0 auto !important;
+            }
+            .split-view {
+                flex-direction: column !important;
+            }
+            .calc-panel {
+                width: 100% !important;
+                height: 52% !important;
+                max-height: 52% !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border) !important;
+                padding: 0.75rem !important;
+                gap: 0.75rem !important;
+            }
+            .map-container {
+                height: 48% !important;
+                width: 100% !important;
+            }
+            .mobile-menu-btn {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Universal Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <div class="app-main">
+        <!-- Top Header -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button type="button" class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu" aria-label="Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="topbar-title-block">
+                    <h1><i class="fa-solid fa-route"></i> {{ t(request, 'distance_temps.title', 'Distance & Temps') }}</h1>
+                    <div class="topbar-subtitle">{{ t(request, 'distance_temps.subtitle', 'Calculateur de trajets multi-modes (Voiture, Vélo, Piéton) vers vos biens et destinations') }}</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <a href="/carte" class="btn-gmaps" title="{{ t(request, 'nav.map', 'Voir sur la carte globale') }}" style="min-height: 36px; padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                    <i class="fa-solid fa-map-location-dot"></i> <span class="hide-mobile">{{ t(request, 'nav.map', 'Carte') }}</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Split View: Left Controls + Right Map -->
+        <div class="split-view">
+            <!-- Left Side Panel -->
+            <aside class="calc-panel">
+                
+                <!-- ── Point A: Départ ── -->
+                <div class="calc-card">
+                    <div class="calc-card-header">
+                        <span class="calc-card-title point-a">
+                            <i class="fa-solid fa-circle-dot"></i> {{ t(request, 'distance_temps.point_a', 'Point de départ A') }}
+                        </span>
+                        <button type="button" class="action-chip gps" onclick="locateUserPosition()" title="{{ t(request, 'distance_temps.my_position', 'Utiliser ma position GPS') }}">
+                            <i class="fa-solid fa-crosshairs"></i> {{ t(request, 'distance_temps.my_position', 'Ma position') }}
+                        </button>
+                    </div>
+
+                    <div class="search-field-wrapper">
+                        <div class="search-input-box">
+                            <i class="fa-solid fa-magnifying-glass" style="color: var(--green);"></i>
+                            <input type="text" id="inputPointA" aria-label="{{ t(request, 'distance_temps.point_a', 'Point de départ A') }}" placeholder="{{ t(request, 'distance_temps.placeholder_a', 'Saisir une ville, adresse ou gare SNCF...') }}" autocomplete="off" oninput="handleSearchInput('A')" onfocus="showAutocomplete('A')" />
+                            <button type="button" class="btn-clear" id="btnClearA" onclick="clearPoint('A')" aria-label="Effacer">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div class="autocomplete-dropdown" id="dropdownA"></div>
+                    </div>
+
+                    <!-- Favorite Presets & Recent Searches -->
+                    <div class="quick-actions" id="userFavoritesContainer">
+                        {% for pt in user_points %}
+                        <span class="action-chip" onclick='selectFavoritePoint({{ pt|tojson }})' title="{{ pt.address }}">
+                            <i class="fa-solid {{ pt.icon or 'fa-location-dot' }}" style="color: var(--accent);"></i> {{ pt.name }}
+                            {% if not pt.is_work %}
+                            <i class="fa-solid fa-trash-can chip-delete" onclick='event.stopPropagation(); deleteFavoritePoint("{{ pt.id }}")' title="Supprimer ce repère"></i>
+                            {% endif %}
+                        </span>
+                        {% endfor %}
+                        <button type="button" class="action-chip" onclick="openSaveFavModal()" title="Enregistrer le point A actuel dans vos repères">
+                            <i class="fa-solid fa-star" style="color: var(--orange);"></i> + Favori
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── Swap Button ── -->
+                <div class="swap-container">
+                    <button type="button" class="btn-swap" onclick="swapPoints()" title="{{ t(request, 'distance_temps.swap_points', 'Inverser les points') }}" aria-label="Inverser les points">
+                        <i class="fa-solid fa-arrow-down-up-across-line"></i>
+                    </button>
+                </div>
+
+                <!-- ── Point B: Arrivée ── -->
+                <div class="calc-card">
+                    <div class="calc-card-header">
+                        <span class="calc-card-title point-b">
+                            <i class="fa-solid fa-location-dot"></i> {{ t(request, 'distance_temps.point_b', 'Point d\'arrivée B') }}
+                        </span>
+                        <!-- Tab Switcher (Listing vs Custom) -->
+                        <div class="tab-switcher">
+                            <button type="button" class="tab-btn active" id="tabBtnListing" onclick="switchPointBTab('listing')">
+                                <i class="fa-solid fa-house"></i> {{ t(request, 'distance_temps.tab_listing', 'Bien immo') }}
+                            </button>
+                            <button type="button" class="tab-btn" id="tabBtnCustom" onclick="switchPointBTab('custom')">
+                                <i class="fa-solid fa-map-pin"></i> {{ t(request, 'distance_temps.tab_custom', 'Adresse libre') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subview 1: Listing Picker -->
+                    <div id="pointBListingView">
+                        <div class="search-input-box" style="margin-bottom: 0.5rem;">
+                            <i class="fa-solid fa-filter" style="color: var(--text-3);"></i>
+                            <input type="text" id="inputFilterListings" aria-label="Filtrer les annonces immobilières" placeholder="Filtrer parmi les annonces..." oninput="filterListingChoices()" />
+                        </div>
+                        <div class="listing-select-box" id="listingChoicesContainer">
+                            {% for l in listings %}
+                            {% set photos = l._photos if l._photos is defined else [] %}
+                            {% set photo = photos[0] if photos and photos|length > 0 else '' %}
+                            <div class="listing-select-item {% if selected_listing and selected_listing.id == l.id %}selected{% endif %}" 
+                                 id="listingItem_{{ l.id }}"
+                                 onclick='selectListingPoint({{ l.id }}, {{ l.title|tojson }}, {{ (l.location or l.city)|tojson }}, {{ l.latitude or 0 }}, {{ l.longitude or 0 }}, {{ l.price or 0 }})'
+                                 data-title="{{ l.title|lower }}"
+                                 data-city="{{ (l.city or l.location or '')|lower }}">
+                                {% if photo %}
+                                <img src="/{{ photo.lstrip('/') }}" class="listing-thumb" alt="Photo" />
+                                {% else %}
+                                <div class="listing-thumb"><i class="fa-solid fa-image"></i></div>
+                                {% endif %}
+                                <div class="listing-info">
+                                    <div class="listing-title">{{ l.title }}</div>
+                                    <div class="listing-meta">
+                                        <span><i class="fa-solid fa-location-dot"></i> {{ l.city or l.location }}</span>
+                                        <span><strong>{{ l.price|int if l.price else 'N/C' }} €</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Subview 2: Free Address / Station / City Autocomplete -->
+                    <div id="pointBCustomView" style="display: none;">
+                        <div class="search-field-wrapper">
+                            <div class="search-input-box">
+                                <i class="fa-solid fa-magnifying-glass" style="color: var(--accent);"></i>
+                                <input type="text" id="inputPointB" aria-label="{{ t(request, 'distance_temps.point_b', 'Point d\'arrivée B') }}" placeholder="{{ t(request, 'distance_temps.placeholder_b', 'Saisir une destination libre...') }}" autocomplete="off" oninput="handleSearchInput('B')" onfocus="showAutocomplete('B')" />
+                                <button type="button" class="btn-clear" id="btnClearB" onclick="clearPoint('B')" aria-label="Effacer">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="autocomplete-dropdown" id="dropdownB"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calculate Action Button -->
+                <button type="button" class="btn-calc-main" id="btnCalculate" onclick="calculateRoute()">
+                    <i class="fa-solid fa-route"></i> {{ t(request, 'distance_temps.calculate', 'Calculer Distance & Temps') }}
+                </button>
+
+                <!-- ── Results Section ── -->
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <div class="results-header">
+                        <div class="results-header-title">
+                            <i class="fa-solid fa-check-circle" style="color: var(--green);"></i> Résultats du trajet
+                        </div>
+                        <div class="results-distance-tag" id="summaryDistance">0.0 km</div>
+                    </div>
+
+                    <div class="modes-container">
+                        <!-- Mode 1: Car -->
+                        <div class="mode-card car" id="modeCardCar">
+                            <div class="mode-left">
+                                <div class="mode-icon"><i class="fa-solid fa-car"></i></div>
+                                <div class="mode-info">
+                                    <span class="mode-name">{{ t(request, 'distance_temps.car', 'Voiture') }}</span>
+                                    <span class="mode-time" id="timeCar">--</span>
+                                    <span class="mode-distance" id="distCar">--</span>
+                                </div>
+                            </div>
+                            <div class="mode-actions">
+                                <a href="#" target="_blank" rel="noopener" class="btn-gmaps" id="gmapsLinkCar" title="{{ t(request, 'distance_temps.open_gmaps', 'Ouvrir dans Google Maps') }}">
+                                    <i class="fa-brands fa-google"></i> Maps
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Mode 2: Bike -->
+                        <div class="mode-card bike" id="modeCardBike">
+                            <div class="mode-left">
+                                <div class="mode-icon"><i class="fa-solid fa-bicycle"></i></div>
+                                <div class="mode-info">
+                                    <span class="mode-name">{{ t(request, 'distance_temps.bike', 'Vélo') }}</span>
+                                    <span class="mode-time" id="timeBike">--</span>
+                                    <span class="mode-distance" id="distBike">--</span>
+                                </div>
+                            </div>
+                            <div class="mode-actions">
+                                <a href="#" target="_blank" rel="noopener" class="btn-gmaps" id="gmapsLinkBike" title="{{ t(request, 'distance_temps.open_gmaps', 'Ouvrir dans Google Maps') }}">
+                                    <i class="fa-brands fa-google"></i> Maps
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Mode 3: Walk -->
+                        <div class="mode-card walk" id="modeCardWalk">
+                            <div class="mode-left">
+                                <div class="mode-icon"><i class="fa-solid fa-person-walking"></i></div>
+                                <div class="mode-info">
+                                    <span class="mode-name">{{ t(request, 'distance_temps.walk', 'À pied') }}</span>
+                                    <span class="mode-time" id="timeWalk">--</span>
+                                    <span class="mode-distance" id="distWalk">--</span>
+                                </div>
+                            </div>
+                            <div class="mode-actions">
+                                <a href="#" target="_blank" rel="noopener" class="btn-gmaps" id="gmapsLinkWalk" title="{{ t(request, 'distance_temps.open_gmaps', 'Ouvrir dans Google Maps') }}">
+                                    <i class="fa-brands fa-google"></i> Maps
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- Right Interactive Leaflet Map -->
+            <main class="map-container">
+                <div id="map"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ── Modal Enregistrement Favori ── -->
+    <div class="fav-modal-overlay" id="favModalOverlay" onclick="if(event.target === this) closeSaveFavModal()">
+        <div class="fav-modal">
+            <h3><i class="fa-solid fa-star" style="color: var(--orange);"></i> Enregistrer un repère favori</h3>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-2); display: block; margin-bottom: 0.35rem;">Nom du repère (ex: Mon Travail, École, Maison)</label>
+                <input type="text" id="favNameInput" placeholder="ex: Travail Paris 8e" style="width: 100%;" />
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-2); display: block; margin-bottom: 0.35rem;">Icône</label>
+                <select id="favIconSelect" style="width: 100%;">
+                    <option value="fa-briefcase">🏢 Travail / Bureau</option>
+                    <option value="fa-house">🏠 Domicile / Famille</option>
+                    <option value="fa-graduation-cap">🎓 École / Université</option>
+                    <option value="fa-train">🚆 Gare SNCF</option>
+                    <option value="fa-heart">❤️ Lieu Coup de Cœur</option>
+                    <option value="fa-location-dot">📍 Autre repère</option>
+                </select>
+            </div>
+            <div class="fav-modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeSaveFavModal()">Annuler</button>
+                <button type="button" class="btn-modal-save" onclick="saveCurrentPointAFavorite()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="/static/js/leaflet.js"></script>
+
+    <script>
+        // ── State Variables ──
+        let currentPointA = null; // { name, lat, lon, address }
+        let currentPointB = null; // { name, lat, lon, address, listingId }
+        let searchDebounceTimer = null;
+        let routePolylineLayer = null;
+        let markerALayer = null;
+        let markerBLayer = null;
+        let activePointBTab = 'listing';
+
+        // ── Map Initialization ──
+        const map = L.map('map', { zoomControl: false }).setView([46.603354, 1.888334], 6); // Default France view
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Dark Theme CartoDB Tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // ── Autocomplete Search Logic ──
+        function handleSearchInput(target) {
+            clearTimeout(searchDebounceTimer);
+            const input = document.getElementById(`inputPoint${target}`);
+            const clearBtn = document.getElementById(`btnClear${target}`);
+            const query = input.value.trim();
+
+            clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+            if (query.length < 2) {
+                document.getElementById(`dropdown${target}`).style.display = 'none';
+                return;
+            }
+
+            searchDebounceTimer = setTimeout(() => {
+                fetchAutocompleteResults(query, target);
+            }, 250);
+        }
+
+        async function fetchAutocompleteResults(query, target) {
+            const dropdown = document.getElementById(`dropdown${target}`);
+            dropdown.innerHTML = `<div style="padding: 0.75rem; text-align: center; color: var(--text-2); font-size: 0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> Recherche...</div>`;
+            dropdown.style.display = 'block';
+
+            try {
+                const res = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(query)}&limit=7`);
+                const data = await res.json();
+                const items = data.results || [];
+
+                if (items.length === 0) {
+                    dropdown.innerHTML = `<div style="padding: 0.75rem; text-align: center; color: var(--text-3); font-size: 0.8rem;">Aucun résultat trouvé</div>`;
+                    return;
+                }
+
+                dropdown.innerHTML = items.map((item, idx) => {
+                    const icon = item.type === 'station' ? 'fa-train' : (item.type === 'city' ? 'fa-city' : 'fa-location-dot');
+                    return `
+                        <div class="autocomplete-item" onclick='selectAutocompleteItem("${target}", ${JSON.stringify(item).replace(/'/g, "&apos;")})'>
+                            <span class="item-badge ${item.type}">
+                                <i class="fa-solid ${icon}"></i> ${item.type_label}
+                            </span>
+                            <div class="item-details">
+                                <div class="item-name">${escapeHtml(item.name || item.label)}</div>
+                                <div class="item-sub">${escapeHtml(item.context || item.city || item.label)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error("Autocomplete error:", err);
+                dropdown.innerHTML = `<div style="padding: 0.75rem; text-align: center; color: var(--red); font-size: 0.8rem;">Erreur de recherche</div>`;
+            }
+        }
+
+        function showAutocomplete(target) {
+            const input = document.getElementById(`inputPoint${target}`);
+            if (input.value.trim().length >= 2) {
+                document.getElementById(`dropdown${target}`).style.display = 'block';
+            }
+        }
+
+        function selectAutocompleteItem(target, item) {
+            const pointObj = {
+                name: item.name || item.label,
+                label: item.label,
+                address: item.label,
+                lat: parseFloat(item.lat),
+                lon: parseFloat(item.lon),
+                type: item.type
+            };
+
+            if (target === 'A') {
+                currentPointA = pointObj;
+                document.getElementById('inputPointA').value = item.label;
+                document.getElementById('dropdownA').style.display = 'none';
+                updateMarkerA();
+            } else {
+                currentPointB = pointObj;
+                document.getElementById('inputPointB').value = item.label;
+                document.getElementById('dropdownB').style.display = 'none';
+                updateMarkerB();
+            }
+
+            // If both points are set, trigger calculation
+            if (currentPointA && currentPointB) {
+                calculateRoute();
+            }
+        }
+
+        function clearPoint(target) {
+            if (target === 'A') {
+                currentPointA = null;
+                document.getElementById('inputPointA').value = '';
+                document.getElementById('btnClearA').style.display = 'none';
+                document.getElementById('dropdownA').style.display = 'none';
+                if (markerALayer) map.removeLayer(markerALayer);
+            } else {
+                currentPointB = null;
+                document.getElementById('inputPointB').value = '';
+                document.getElementById('btnClearB').style.display = 'none';
+                document.getElementById('dropdownB').style.display = 'none';
+                if (markerBLayer) map.removeLayer(markerBLayer);
+                document.querySelectorAll('.listing-select-item').forEach(el => el.classList.remove('selected'));
+            }
+            if (routePolylineLayer) map.removeLayer(routePolylineLayer);
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-field-wrapper')) {
+                document.getElementById('dropdownA').style.display = 'none';
+                document.getElementById('dropdownB').style.display = 'none';
+            }
+        });
+
+        // ── Geolocation "Ma Position" ──
+        function locateUserPosition() {
+            if (!navigator.geolocation) {
+                alert("La géolocalisation n'est pas supportée par votre navigateur.");
+                return;
+            }
+            const btn = document.querySelector('.action-chip.gps');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Détection...`;
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    currentPointA = {
+                        name: "Ma position actuelle",
+                        label: "Position GPS",
+                        address: `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+                        lat: lat,
+                        lon: lon
+                    };
+                    document.getElementById('inputPointA').value = "📍 Ma position actuelle";
+                    document.getElementById('btnClearA').style.display = 'block';
+                    btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Ma position`;
+                    updateMarkerA();
+
+                    if (currentPointA && currentPointB) {
+                        calculateRoute();
+                    }
+                },
+                (err) => {
+                    console.error("GPS error:", err);
+                    alert("Impossible d'accéder à votre position GPS. Veuillez autoriser la localisation.");
+                    btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Ma position`;
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        // ── Selection of Favorite Landmark ──
+        function selectFavoritePoint(pt) {
+            currentPointA = {
+                name: pt.name,
+                label: pt.address || pt.name,
+                address: pt.address,
+                lat: parseFloat(pt.lat),
+                lon: parseFloat(pt.lon)
+            };
+            document.getElementById('inputPointA').value = pt.name + (pt.address ? ` (${pt.address})` : '');
+            document.getElementById('btnClearA').style.display = 'block';
+            updateMarkerA();
+
+            if (currentPointA && currentPointB) {
+                calculateRoute();
+            }
+        }
+
+        // ── Point B Switcher & Selection ──
+        function switchPointBTab(tab) {
+            activePointBTab = tab;
+            const tabBtnListing = document.getElementById('tabBtnListing');
+            const tabBtnCustom = document.getElementById('tabBtnCustom');
+            const viewListing = document.getElementById('pointBListingView');
+            const viewCustom = document.getElementById('pointBCustomView');
+
+            if (tab === 'listing') {
+                tabBtnListing.classList.add('active');
+                tabBtnCustom.classList.remove('active');
+                viewListing.style.display = 'block';
+                viewCustom.style.display = 'none';
+            } else {
+                tabBtnCustom.classList.add('active');
+                tabBtnListing.classList.remove('active');
+                viewCustom.style.display = 'block';
+                viewListing.style.display = 'none';
+            }
+        }
+
+        async function selectListingPoint(id, title, city, lat, lon, price) {
+            document.querySelectorAll('.listing-select-item').forEach(el => el.classList.remove('selected'));
+            const selectedItem = document.getElementById(`listingItem_${id}`);
+            if (selectedItem) selectedItem.classList.add('selected');
+
+            let finalLat = parseFloat(lat);
+            let finalLon = parseFloat(lon);
+
+            // Fallback: if coordinates are missing on the listing, dynamically geocode via city
+            if (!finalLat || !finalLon || isNaN(finalLat) || isNaN(finalLon)) {
+                if (city) {
+                    try {
+                        const geoRes = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(city)}&limit=1`);
+                        const geoData = await geoRes.json();
+                        if (geoData.results && geoData.results.length > 0) {
+                            finalLat = geoData.results[0].lat;
+                            finalLon = geoData.results[0].lon;
+                        }
+                    } catch (e) {
+                        console.warn("Geocoding fallback failed for listing city:", city, e);
+                    }
+                }
+            }
+
+            if (!finalLat || !finalLon) {
+                alert("Impossible de localiser ce bien automatiquement. Veuillez saisir une adresse dans 'Adresse libre'.");
+                return;
+            }
+
+            currentPointB = {
+                name: title,
+                label: `${title} (${city || 'Bien'})`,
+                address: city || '',
+                lat: finalLat,
+                lon: finalLon,
+                listingId: id,
+                price: price
+            };
+
+            updateMarkerB();
+
+            if (currentPointA && currentPointB) {
+                calculateRoute();
+            }
+        }
+
+        function filterListingChoices() {
+            const query = document.getElementById('inputFilterListings').value.toLowerCase().trim();
+            const items = document.querySelectorAll('.listing-select-item');
+            items.forEach(el => {
+                const title = el.getAttribute('data-title') || '';
+                const city = el.getAttribute('data-city') || '';
+                if (title.includes(query) || city.includes(query)) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        }
+
+        // ── Swap Points ──
+        function swapPoints() {
+            if (!currentPointA && !currentPointB) return;
+            const temp = currentPointA;
+            currentPointA = currentPointB;
+            currentPointB = temp;
+
+            document.getElementById('inputPointA').value = currentPointA ? (currentPointA.name || currentPointA.address) : '';
+            document.getElementById('btnClearA').style.display = currentPointA ? 'block' : 'none';
+
+            if (currentPointB) {
+                if (currentPointB.listingId) {
+                    switchPointBTab('listing');
+                    document.querySelectorAll('.listing-select-item').forEach(el => el.classList.remove('selected'));
+                    const item = document.getElementById(`listingItem_${currentPointB.listingId}`);
+                    if (item) item.classList.add('selected');
+                } else {
+                    switchPointBTab('custom');
+                    document.getElementById('inputPointB').value = currentPointB.name || currentPointB.address;
+                    document.getElementById('btnClearB').style.display = 'block';
+                }
+            } else {
+                document.getElementById('inputPointB').value = '';
+                document.getElementById('btnClearB').style.display = 'none';
+            }
+
+            updateMarkerA();
+            updateMarkerB();
+
+            if (currentPointA && currentPointB) {
+                calculateRoute();
+            }
+        }
+
+        // ── Markers & Map Updates ──
+        function updateMarkerA() {
+            if (!currentPointA || !currentPointA.lat || !currentPointA.lon) return;
+            if (markerALayer) map.removeLayer(markerALayer);
+
+            const iconA = L.divIcon({
+                className: '',
+                html: `<div class="custom-map-pin pin-a" title="Point A">A</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            markerALayer = L.marker([currentPointA.lat, currentPointA.lon], { icon: iconA })
+                .addTo(map)
+                .bindPopup(`<strong>Point A (Départ)</strong><br>${escapeHtml(currentPointA.name || currentPointA.address)}`);
+
+            map.setView([currentPointA.lat, currentPointA.lon], 13);
+        }
+
+        function updateMarkerB() {
+            if (!currentPointB || !currentPointB.lat || !currentPointB.lon) return;
+            if (markerBLayer) map.removeLayer(markerBLayer);
+
+            const iconB = L.divIcon({
+                className: '',
+                html: `<div class="custom-map-pin pin-b" title="Point B">B</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            let popupContent = `<strong>Point B (Arrivée)</strong><br>${escapeHtml(currentPointB.name || currentPointB.address)}`;
+            if (currentPointB.listingId) {
+                popupContent += `<br><a href="/listings/${currentPointB.listingId}" target="_blank" style="color:var(--accent); font-weight:600; font-size:0.75rem;">Voir la fiche du bien</a>`;
+            }
+
+            markerBLayer = L.marker([currentPointB.lat, currentPointB.lon], { icon: iconB })
+                .addTo(map)
+                .bindPopup(popupContent);
+
+            if (!currentPointA) {
+                map.setView([currentPointB.lat, currentPointB.lon], 13);
+            }
+        }
+
+        // ── Calculate Route via Backend API ──
+        async function calculateRoute() {
+            if (!currentPointA || !currentPointA.lat || !currentPointA.lon) {
+                alert("Veuillez sélectionner un point de départ A.");
+                return;
+            }
+            if (!currentPointB || !currentPointB.lat || !currentPointB.lon) {
+                alert("Veuillez sélectionner un point d'arrivée B.");
+                return;
+            }
+
+            const btn = document.getElementById('btnCalculate');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> {{ t(request, 'distance_temps.calculating', 'Calcul en cours...') }}`;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/geo/route-calc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_lat: currentPointA.lat,
+                        start_lon: currentPointA.lon,
+                        end_lat: currentPointB.lat,
+                        end_lon: currentPointB.lon,
+                        start_name: currentPointA.name || currentPointA.address,
+                        end_name: currentPointB.name || currentPointB.address
+                    })
+                });
+
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error("Erreur lors du calcul d'itinéraire");
+                }
+
+                // Render Results
+                document.getElementById('summaryDistance').textContent = `${data.distance_km} km`;
+
+                // Modes
+                const car = data.modes.car;
+                const bike = data.modes.bike;
+                const walk = data.modes.walk;
+
+                document.getElementById('timeCar').textContent = car.formatted_duration;
+                document.getElementById('distCar').textContent = `${car.distance_km} km`;
+                document.getElementById('gmapsLinkCar').href = car.gmaps_url;
+
+                document.getElementById('timeBike').textContent = bike.formatted_duration;
+                document.getElementById('distBike').textContent = `${bike.distance_km} km`;
+                document.getElementById('gmapsLinkBike').href = bike.gmaps_url;
+
+                document.getElementById('timeWalk').textContent = walk.formatted_duration;
+                document.getElementById('distWalk').textContent = `${walk.distance_km} km`;
+                document.getElementById('gmapsLinkWalk').href = walk.gmaps_url;
+
+                document.getElementById('resultsSection').style.display = 'flex';
+
+                // Render Polyline on Leaflet
+                if (routePolylineLayer) map.removeLayer(routePolylineLayer);
+
+                if (data.polyline && data.polyline.length > 0) {
+                    routePolylineLayer = L.polyline(data.polyline, {
+                        color: '#4f8ef7',
+                        weight: 5,
+                        opacity: 0.85,
+                        lineJoin: 'round'
+                    }).addTo(map);
+
+                    const bounds = L.latLngBounds(data.polyline);
+                    bounds.extend([currentPointA.lat, currentPointA.lon]);
+                    bounds.extend([currentPointB.lat, currentPointB.lon]);
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+
+            } catch (err) {
+                console.error("Calculation failed:", err);
+                alert("Impossible de calculer l'itinéraire entre ces deux points. Veuillez réessayer.");
+            } finally {
+                btn.innerHTML = `<i class="fa-solid fa-route"></i> {{ t(request, 'distance_temps.calculate', 'Calculer Distance & Temps') }}`;
+                btn.disabled = false;
+            }
+        }
+
+        // ── Favorite Management ──
+        function openSaveFavModal() {
+            if (!currentPointA || !currentPointA.lat || !currentPointA.lon) {
+                alert("Veuillez d'abord sélectionner une adresse ou ville en Point A pour pouvoir l'enregistrer.");
+                return;
+            }
+            document.getElementById('favNameInput').value = currentPointA.name || currentPointA.address || '';
+            document.getElementById('favModalOverlay').style.display = 'flex';
+        }
+
+        function closeSaveFavModal() {
+            document.getElementById('favModalOverlay').style.display = 'none';
+        }
+
+        async function saveCurrentPointAFavorite() {
+            const name = document.getElementById('favNameInput').value.trim();
+            const icon = document.getElementById('favIconSelect').value;
+
+            if (!name) {
+                alert("Veuillez renseigner un nom pour ce repère.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/geo/reference-points', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        address: currentPointA.address || currentPointA.name,
+                        lat: currentPointA.lat,
+                        lon: currentPointA.lon,
+                        icon: icon
+                    })
+                });
+
+                if (res.ok) {
+                    closeSaveFavModal();
+                    // Reload favorites
+                    loadUserFavorites();
+                } else {
+                    alert("Erreur lors de l'enregistrement du favori.");
+                }
+            } catch (err) {
+                console.error("Error saving favorite:", err);
+                alert("Erreur réseau lors de l'enregistrement.");
+            }
+        }
+
+        async function deleteFavoritePoint(pointId) {
+            if (!confirm("Voulez-vous supprimer ce point de repère favori ?")) return;
+
+            try {
+                const res = await fetch(`/api/geo/reference-points/${pointId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadUserFavorites();
+                }
+            } catch (err) {
+                console.error("Error deleting favorite:", err);
+            }
+        }
+
+        async function loadUserFavorites() {
+            try {
+                const res = await fetch('/api/geo/reference-points');
+                const data = await res.json();
+                const container = document.getElementById('userFavoritesContainer');
+                const points = data.points || [];
+
+                let html = points.map(pt => `
+                    <span class="action-chip" onclick='selectFavoritePoint(${JSON.stringify(pt).replace(/'/g, "&apos;")})' title="${escapeHtml(pt.address)}">
+                        <i class="fa-solid ${pt.icon || 'fa-location-dot'}" style="color: var(--accent);"></i> ${escapeHtml(pt.name)}
+                        ${!pt.is_work ? `<i class="fa-solid fa-trash-can chip-delete" onclick='event.stopPropagation(); deleteFavoritePoint("${pt.id}")' title="Supprimer ce repère"></i>` : ''}
+                    </span>
+                `).join('');
+
+                html += `
+                    <button type="button" class="action-chip" onclick="openSaveFavModal()" title="Enregistrer le point A actuel dans vos repères">
+                        <i class="fa-solid fa-star" style="color: var(--orange);"></i> + Favori
+                    </button>
+                `;
+
+                container.innerHTML = html;
+            } catch (err) {
+                console.error("Failed to reload favorites:", err);
+            }
+        }
+
+        // Utility: HTML Escaper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        // ── Initialization on Page Load ──
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if pre-selected listing was passed
+            {% if selected_listing and selected_listing.latitude and selected_listing.longitude %}
+            selectListingPoint(
+                {{ selected_listing.id }},
+                {{ selected_listing.title|tojson }},
+                {{ (selected_listing.location or selected_listing.city)|tojson }},
+                {{ selected_listing.latitude }},
+                {{ selected_listing.longitude }},
+                {{ selected_listing.price or 0 }}
+            );
+            {% endif %}
+
+            // Check if initial coords passed
+            {% if init_lat and init_lon %}
+            currentPointA = {
+                name: {{ (init_name or 'Point de départ')|tojson }},
+                label: {{ (init_name or 'Point de départ')|tojson }},
+                address: {{ (init_name or '')|tojson }},
+                lat: {{ init_lat }},
+                lon: {{ init_lon }}
+            };
+            document.getElementById('inputPointA').value = currentPointA.name;
+            document.getElementById('btnClearA').style.display = 'block';
+            updateMarkerA();
+            {% endif %}
+
+            // Default to Work location as Point A if available and Point A is not yet set
+            {% if user_points and user_points|length > 0 and not init_lat %}
+            const firstFav = {{ user_points[0]|tojson }};
+            if (firstFav && firstFav.lat && firstFav.lon) {
+                selectFavoritePoint(firstFav);
+            }
+            {% endif %}
+
+            // Auto resize map on window resize
+            window.addEventListener('resize', () => {
+                if (typeof map !== 'undefined' && map) {
+                    map.invalidateSize();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -2267,13 +2267,29 @@
             }
         }
 
+        function normalizeCityName(str) {
+            if (!str) return '';
+            let s = str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            s = s.replace(/\bst\b/g, 'saint').replace(/\bste\b/g, 'sainte');
+            s = s.replace(/[^a-z0-9]/g, '');
+            return s;
+        }
+
+        function expandSaintAbbr(str) {
+            if (!str) return '';
+            return str
+                .replace(/\bst\b/gi, 'Saint')
+                .replace(/\bste\b/gi, 'Sainte')
+                .trim();
+        }
+
         // Helper to fetch commune contour from geo.api.gouv.fr supporting "City Name (Zip)" format
         async function fetchCommuneData(cityNameOrRuleName) {
             if (!cityNameOrRuleName) return null;
             let cityNameOnly = cityNameOrRuleName.trim();
             let zipCode = null;
 
-            // Extract zip code from parentheses if present, e.g. "Colombier (07430)"
+            // Extract zip code from parentheses if present, e.g. "St Alban Du Rhone (38370)"
             const parenMatch = cityNameOrRuleName.match(/\(([^)]+)\)/);
             if (parenMatch) {
                 cityNameOnly = cityNameOrRuleName.replace(parenMatch[0], '').trim();
@@ -2290,51 +2306,81 @@
                 cityNameOnly = cityNameOnly.substring(0, endMatch.index).trim();
             }
 
-            let url = '';
-            // Strategy 1: query by codePostal if we extracted a 5-digit zip code
+            // Clean trailing non-alphanumeric punctuation from city name
+            cityNameOnly = cityNameOnly.replace(/[\s()\-]+$/, '').trim();
+            const normInput = normalizeCityName(cityNameOnly);
+            const expandedName = expandSaintAbbr(cityNameOnly);
+
+            let data = [];
+
+            // Strategy 1: query by codePostal if we have a zip code
             if (zipCode) {
-                url = `https://geo.api.gouv.fr/communes?codePostal=${zipCode}&fields=nom,code,contour&format=json&geometry=contour`;
-            } else {
-                url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
+                try {
+                    const url = `https://geo.api.gouv.fr/communes?codePostal=${zipCode}&fields=nom,code,codesPostaux,contour&format=json&geometry=contour`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        data = await res.json();
+                    }
+                } catch (e) {
+                    console.error("Error fetching commune by postal code:", e);
+                }
             }
 
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                if (data && data.length > 0) {
-                    // Try to find exact match by name ignoring case
-                    const lowerName = cityNameOnly.toLowerCase();
-                    let match = data.find(c => c.nom.toLowerCase() === lowerName);
-                    
-                    // Fallback: search ignoring accents or hyphens
-                    if (!match) {
-                        const normStr = str => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-                        const normCityName = normStr(cityNameOnly);
-                        match = data.find(c => normStr(c.nom) === normCityName);
-                    }
+            // Match within zipCode results if available
+            if (data && data.length > 0) {
+                if (normInput) {
+                    // Exact normalized match (handles St -> Saint, Ste -> Sainte, accents, hyphens)
+                    let match = data.find(c => normalizeCityName(c.nom) === normInput);
+                    if (match) return match;
 
-                    // Fallback: first result
-                    if (!match) {
-                        match = data[0];
-                    }
-                    return match;
+                    // Substring match
+                    match = data.find(c => {
+                        const cNorm = normalizeCityName(c.nom);
+                        return cNorm.includes(normInput) || normInput.includes(cNorm);
+                    });
+                    if (match) return match;
+                } else {
+                    return data[0];
                 }
-                
-                // If Strategy 1 by zipCode returned nothing, fallback to Strategy 2 by name only
-                if (zipCode) {
-                    const fallbackUrl = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(cityNameOnly)}&fields=nom,code,contour&format=json&geometry=contour`;
-                    const fallbackRes = await fetch(fallbackUrl);
-                    const fallbackData = await fallbackRes.json();
-                    if (fallbackData && fallbackData.length > 0) {
-                        const lowerName = cityNameOnly.toLowerCase();
-                        let match = fallbackData.find(c => c.nom.toLowerCase() === lowerName) || fallbackData[0];
-                        return match;
-                    }
-                }
-            } catch (e) {
-                console.error("Error fetching commune data from geo.api.gouv.fr:", e);
             }
+
+            // Strategy 2: query by name (expanded) if Strategy 1 found no matching commune or no zipCode
+            if (expandedName) {
+                try {
+                    const url = `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(expandedName)}&boost=population&fields=nom,code,codesPostaux,contour&format=json&geometry=contour`;
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const nameData = await res.json();
+                        if (nameData && nameData.length > 0) {
+                            if (normInput) {
+                                // If we had a zipCode, try to match both name and zip
+                                if (zipCode) {
+                                    let match = nameData.find(c => normalizeCityName(c.nom) === normInput && c.codesPostaux && c.codesPostaux.includes(zipCode));
+                                    if (match) return match;
+                                }
+
+                                let match = nameData.find(c => normalizeCityName(c.nom) === normInput);
+                                if (match) return match;
+
+                                match = nameData.find(c => {
+                                    const cNorm = normalizeCityName(c.nom);
+                                    return cNorm.includes(normInput) || normInput.includes(cNorm);
+                                });
+                                if (match) return match;
+                            }
+                            return nameData[0];
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching commune by name:", e);
+                }
+            }
+
+            // If we only had zip code and 1 single result, fallback to it
+            if (data && data.length === 1 && !normInput) {
+                return data[0];
+            }
+
             return null;
         }
 
