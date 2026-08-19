@@ -8,6 +8,7 @@ from app.models import Base, Listing, ListingStatus, Source
 from app.services import (
     is_error_or_generic_title,
     has_valid_local_photos,
+    is_missing_or_corrupt_photos,
     repair_listing_photos,
     create_listing_from_details
 )
@@ -99,6 +100,31 @@ def test_has_valid_local_photos(tmp_path):
     assert has_valid_local_photos(l_valid) is True
 
 
+def test_is_missing_or_corrupt_photos(tmp_path):
+    dummy_photo = tmp_path / "photo_0.webp"
+    dummy_photo.write_bytes(b"dummy image data")
+
+    # None photos_local -> missing
+    l_none = Listing(photos_local=None)
+    assert is_missing_or_corrupt_photos(l_none) is True
+
+    # "[]" with no original URLs -> confirmed 0 photos, NOT missing/corrupt
+    l_confirmed_no_photos = Listing(photos_local="[]", original_photo_urls="[]")
+    assert is_missing_or_corrupt_photos(l_confirmed_no_photos) is False
+
+    # "[]" with original URLs present -> missing/corrupt (needs download)
+    l_pending_download = Listing(photos_local="[]", original_photo_urls=json.dumps(["http://example.com/1.jpg"]))
+    assert is_missing_or_corrupt_photos(l_pending_download) is True
+
+    # Nonexistent photo path -> corrupt
+    l_corrupt = Listing(photos_local=json.dumps(["/non/existent/path.webp"]))
+    assert is_missing_or_corrupt_photos(l_corrupt) is True
+
+    # Valid photo -> not missing/corrupt
+    l_valid = Listing(photos_local=json.dumps([str(dummy_photo)]))
+    assert is_missing_or_corrupt_photos(l_valid) is False
+
+
 def test_identify_problems_missing_photos(db_session, tmp_path):
     valid_photo = tmp_path / "valid.jpg"
     valid_photo.write_bytes(b"valid content")
@@ -117,7 +143,15 @@ def test_identify_problems_missing_photos(db_session, tmp_path):
         status=ListingStatus.ACTIVE,
         photos_local=None
     )
-    db_session.add_all([l_good, l_missing])
+    l_no_photos = Listing(
+        external_id="ext_no_photos",
+        url="https://example.com/3",
+        title="Confirmed no photos listing",
+        status=ListingStatus.ACTIVE,
+        photos_local="[]",
+        original_photo_urls="[]"
+    )
+    db_session.add_all([l_good, l_missing, l_no_photos])
     db_session.commit()
 
     problems = identify_problems(db_session)
@@ -125,6 +159,7 @@ def test_identify_problems_missing_photos(db_session, tmp_path):
     assert problems[MISSING_PHOTOS]["count"] == 1
     assert l_missing.id in problems[MISSING_PHOTOS]["ids"]
     assert l_good.id not in problems[MISSING_PHOTOS]["ids"]
+    assert l_no_photos.id not in problems[MISSING_PHOTOS]["ids"]
 
 
 def test_repair_listing_photos_from_original_urls(db_session, tmp_path):
@@ -149,3 +184,33 @@ def test_repair_listing_photos_from_original_urls(db_session, tmp_path):
         assert success is True
         mock_dl.assert_called_once_with(listing.id, ["https://img.leboncoin.fr/ad-image/123.jpg"])
         assert json.loads(listing.photos_local) == [str(local_photo)]
+
+
+def test_repair_listing_photos_marks_no_photos_when_unavailable(db_session):
+    import asyncio
+
+    listing = Listing(
+        external_id="ext_no_photo_repair",
+        url="https://example.com/no-photos",
+        title="No Photos Available Listing",
+        status=ListingStatus.ACTIVE,
+        original_photo_urls=None,
+        photos_local=None
+    )
+    db_session.add(listing)
+    db_session.commit()
+
+    with patch("app.main._resolve_scraper") as mock_resolve, \
+         patch("app.services.fetch_basic_metadata", new_callable=AsyncMock) as mock_meta:
+        mock_resolve.return_value = (None, None)
+        mock_meta.return_value = {"title": "No Photos Available Listing", "photo_urls": []}
+        
+        success = asyncio.run(repair_listing_photos(listing, db_session))
+        assert success is True
+        assert listing.photos_local == "[]"
+        assert listing.original_photo_urls == "[]"
+
+        # Verify that identify_problems no longer flags this listing
+        problems = identify_problems(db_session)
+        assert listing.id not in problems[MISSING_PHOTOS]["ids"]
+

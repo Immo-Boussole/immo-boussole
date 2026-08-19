@@ -1,6 +1,13 @@
 from sqlalchemy.orm import Session
 from app.models import Listing, ListingStatus, MapPin
-from app.services import refresh_listing_status, has_valid_local_photos, repair_listing_photos
+from app.services import (
+    refresh_listing_status,
+    has_valid_local_photos,
+    repair_listing_photos,
+    is_missing_or_corrupt_photos,
+    is_error_or_generic_title,
+    repair_listing_title
+)
 from app.database import SessionLocal
 import asyncio
 import re
@@ -26,17 +33,19 @@ def identify_problems(db: Session):
     Identifies problematic listings.
     Returns counts for each problem type and lists of IDs.
     """
+    active_listings_all = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])
+    ).all()
+
     # Empty description
-    empty_desc_listings = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        (Listing.description_text == None) | (Listing.description_text == "")
-    ).all()
+    empty_desc_listings = [
+        l for l in active_listings_all if not l.description_text or not l.description_text.strip()
+    ]
     
-    # Generic title "Annonce Le Figaro"
-    generic_title_listings = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        Listing.title == "Annonce Le Figaro"
-    ).all()
+    # Generic / Error titles (e.g. "Annonce Le Figaro", "Annonce (...) - Erreur 403", "leboncoin.fr", etc.)
+    generic_title_listings = [
+        l for l in active_listings_all if is_error_or_generic_title(l.title)
+    ]
 
     # Duplicate postal code in location (e.g., "Chavanay (42) (42)")
     # Broad SQL filter first
@@ -159,7 +168,7 @@ def identify_problems(db: Session):
     # Missing or corrupted photos
     missing_photos_listings = []
     for l in active_listings_all:
-        if not has_valid_local_photos(l):
+        if is_missing_or_corrupt_photos(l):
             missing_photos_listings.append(l)
 
     return {
@@ -329,6 +338,9 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                 db.commit()
                             elif problem_type == MISSING_PHOTOS:
                                 await repair_listing_photos(listing, db)
+                            elif problem_type == GENERIC_TITLE_FIGARO:
+                                await repair_listing_title(listing, db)
+                                await refresh_listing_status(listing, db, force_update=True)
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)
                         except Exception as e:

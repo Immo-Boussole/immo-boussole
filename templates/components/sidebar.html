@@ -243,6 +243,7 @@
         
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
+        <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
         <a href="/carte" class="nav-link{% if request.url.path == '/carte' %} active{% endif %}"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
         <a href="/distance-temps" class="nav-link{% if request.url.path == '/distance-temps' %} active{% endif %}"><i class="fa-solid fa-route"></i> {{ t(request, 'nav.distance_temps', 'Distance & Temps') }}</a>
         <a href="/points-interet" class="nav-link{% if request.url.path == '/points-interet' %} active{% endif %}"><i class="fa-solid fa-location-crosshairs"></i> {{ t(request, 'nav.points_interet', 'Points d\'Intérêt') }}</a>
@@ -257,7 +258,6 @@
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
         <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' or request.url.path.startswith('/duplicates') %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
-        <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
         
         {% if request.session.get('role') == 'admin' %}
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">

@@ -129,7 +129,7 @@ def is_error_or_generic_title(title: Optional[str]) -> bool:
     t = title.strip()
     t_lower = t.lower()
     
-    if t_lower in ("", "none", "null", "leboncoin.fr", "annonce le figaro"):
+    if t_lower in ("", "none", "null", "leboncoin.fr", "annonce le figaro", "sans titre", "annonce", "bien immobilier"):
         return True
     if re.search(r'\berreur\s*\d{3}\b', t_lower):
         return True
@@ -142,6 +142,162 @@ def is_error_or_generic_title(title: Optional[str]) -> bool:
     if is_search_page_title(t):
         return True
     return False
+
+
+def clean_extracted_title(title: Optional[str]) -> Optional[str]:
+    """
+    Cleans an extracted title by unescaping HTML entities, removing portal suffixes
+    (e.g., ' - Leboncoin', ' | SeLoger', ' - Le Figaro Immobilier', etc.), and trimming whitespace.
+    """
+    if not title:
+        return None
+    import html
+    t = html.unescape(str(title)).strip()
+    # Remove surrounding quotes
+    t = re.sub(r'^["\'«»“”]+|["\'«»“”]+$', '', t).strip()
+    # Strip site brand suffixes
+    suffixes = [
+        r'\s*[-|–—:]\s*leboncoin(?:\.fr)?\s*$',
+        r'\s*[-|–—:]\s*seloger(?:\.com)?\s*$',
+        r'\s*[-|–—:]\s*le figaro immobilier\s*$',
+        r'\s*[-|–—:]\s*figaro immobilier\s*$',
+        r'\s*[-|–—:]\s*pap(?:\.fr)?\s*$',
+        r'\s*[-|–—:]\s*bien[\']?ici\s*$',
+        r'\s*[-|–—:]\s*logic[- ]immo\s*$',
+        r'\s*[-|–—:]\s*orpi(?:\.com)?\s*$',
+        r'\s*[-|–—:]\s*iad france\s*$',
+    ]
+    for s in suffixes:
+        t = re.sub(s, '', t, flags=re.I).strip()
+    # Normalize multiple whitespace
+    t = re.sub(r'\s+', ' ', t).strip()
+    return t if t else None
+
+
+def extract_title_from_url_slug(url: str) -> Optional[str]:
+    """
+    Attempts to extract a human-readable title from the URL path slug.
+    E.g.: 'https://www.leboncoin.fr/ad/ventes_immobilieres/maison-5-pieces-saint-etienne-2881234567'
+    -> 'Maison 5 pièces saint etienne'
+    """
+    if not url:
+        return None
+    import urllib.parse
+    parsed = urllib.parse.urlparse(url)
+    path = parsed.path.strip("/")
+    parts = [p for p in path.split("/") if p]
+    if not parts:
+        return None
+
+    # Filter out generic directories like 'ad', 'ventes_immobilieres', 'locations', 'annonces', 'achat', etc.
+    ignore_segments = {
+        "ad", "ads", "ventes_immobilieres", "locations", "colocations", "bureaux_commerces",
+        "annonces", "annonce", "achat", "vente", "immobilier", "detail", "item", "prop", "fr"
+    }
+
+    meaningful_slug = None
+    for segment in reversed(parts):
+        seg_lower = segment.lower()
+        if seg_lower in ignore_segments or seg_lower.endswith(".htm") or seg_lower.endswith(".html"):
+            segment_clean = re.sub(r'\.html?$', '', segment, flags=re.I)
+            if segment_clean.lower() in ignore_segments:
+                continue
+            seg_lower = segment_clean.lower()
+        else:
+            segment_clean = segment
+
+        # Check if segment is solely numeric (e.g., ad ID "2881234567")
+        if re.match(r'^\d+$', segment_clean) or re.match(r'^[a-f0-9-]{32,}$', segment_clean):
+            continue
+
+        meaningful_slug = segment_clean
+        break
+
+    if not meaningful_slug:
+        return None
+
+    # Decode percent-encoding
+    decoded = urllib.parse.unquote(meaningful_slug)
+    # Remove trailing digits/ID attached with hyphen or underscore (e.g. "superbe-maison-123456789")
+    decoded = re.sub(r'[-_]\d{3,}$', '', decoded)
+    # Replace hyphens and underscores with spaces
+    words = re.sub(r'[-_]+', ' ', decoded).strip()
+    if not words or len(words) < 5 or words.isdigit():
+        return None
+
+    clean_words = words[0].upper() + words[1:]
+    if is_error_or_generic_title(clean_words):
+        return None
+    return clean_words
+
+
+def generate_synthetic_title_from_listing(listing: Listing) -> Optional[str]:
+    """
+    Generates a structured, standard real-estate title from listing attributes:
+    property_type, rooms, area, and city.
+    E.g.: 'Maison 5 pièces 120 m² - Saint-Étienne'
+    """
+    if not listing:
+        return None
+    
+    # 1. Property Type
+    ptype = None
+    if listing.property_type and listing.property_type.strip():
+        ptype = listing.property_type.strip().capitalize()
+    else:
+        desc_low = (listing.description_text or "").lower()
+        if "maison" in desc_low or "villa" in desc_low:
+            ptype = "Maison"
+        elif "appartement" in desc_low or "studio" in desc_low or "duplex" in desc_low:
+            ptype = "Appartement"
+        elif "terrain" in desc_low:
+            ptype = "Terrain"
+        elif "immeuble" in desc_low:
+            ptype = "Immeuble"
+        else:
+            ptype = "Bien immobilier"
+
+    # 2. Rooms
+    rooms_part = f"{listing.rooms} pièces" if listing.rooms and listing.rooms > 0 else ""
+
+    # 3. Area
+    area_part = ""
+    if listing.area and listing.area > 0:
+        area_fmt = int(listing.area) if listing.area == int(listing.area) else round(listing.area, 1)
+        area_part = f"{area_fmt} m²"
+
+    # 4. Location
+    city_part = (listing.city or listing.location or "").strip()
+    city_part = re.sub(r'\s*\(\d{5}\)$', '', city_part).strip()
+
+    title_elements = [ptype]
+    if rooms_part:
+        title_elements.append(rooms_part)
+    if area_part:
+        title_elements.append(area_part)
+    
+    core_title = " ".join(title_elements)
+    if city_part:
+        return f"{core_title} - {city_part.title()}"
+    return core_title
+
+
+def extract_title_from_description(description: Optional[str]) -> Optional[str]:
+    """
+    Attempts to extract a title from the first sentence or heading of the listing description.
+    """
+    if not description:
+        return None
+    lines = [l.strip() for l in description.splitlines() if l.strip()]
+    for line in lines[:4]:
+        cleaned = re.sub(r'^[^\w\d]+', '', line)
+        cleaned = re.sub(r'^(?:à\s*vendre|a\s*vendre|exclusivité|exclusivite|coup\s*de\s*coeur|opportunité)\s*[:\-–—]\s*', '', cleaned, flags=re.I).strip()
+        if 10 <= len(cleaned) <= 120 and not re.search(r'https?://|\d{2}[-.\s]\d{2}[-.\s]\d{2}|\b0[1-9]\d{8}\b', cleaned):
+            if re.search(r'\b(maison|appartement|villa|studio|duplex|loft|immeuble|terrain|pièces?|chambres?|m²)\b', cleaned, flags=re.I):
+                c = clean_extracted_title(cleaned)
+                if c and not is_error_or_generic_title(c):
+                    return c
+    return None
 
 
 def has_valid_local_photos(listing: Listing) -> bool:
@@ -157,6 +313,42 @@ def has_valid_local_photos(listing: Listing) -> bool:
         if p and os.path.exists(p) and os.path.getsize(p) > 0:
             return True
     return False
+
+
+def is_missing_or_corrupt_photos(listing: Listing) -> bool:
+    """
+    Returns True if a listing has missing or corrupted photos that require repair.
+    Returns False if valid local photo files exist on disk OR if photo processing
+    was completed and confirmed that 0 photos exist for this listing.
+    """
+    if not listing:
+        return False
+
+    if has_valid_local_photos(listing):
+        return False
+
+    # Check if photos_local is explicitly "[]" and no original URLs exist to download
+    if listing.photos_local is not None:
+        try:
+            local_list = json_to_photos(listing.photos_local)
+            if isinstance(local_list, list) and len(local_list) == 0:
+                orig_list = []
+                if listing.original_photo_urls:
+                    try:
+                        parsed = json.loads(listing.original_photo_urls)
+                        if isinstance(parsed, list):
+                            orig_list = [u for u in parsed if isinstance(u, str) and u.startswith("http")]
+                        elif isinstance(parsed, str) and parsed.startswith("http"):
+                            orig_list = [parsed]
+                    except Exception:
+                        orig_list = []
+                if not orig_list:
+                    # Explicitly 0 photos locally and remotely: not a missing/corrupt photo issue
+                    return False
+        except Exception:
+            pass
+
+    return True
 
 
 async def repair_listing_photos(listing: Listing, db: Session) -> bool:
@@ -223,129 +415,284 @@ async def repair_listing_photos(listing: Listing, db: Session) -> bool:
         except Exception as e:
             print(f"[Services] Photo download failed during fresh repair for listing {listing.id}: {e}")
 
-    return has_valid_local_photos(listing)
+    # If no valid photos could be fetched/downloaded, mark as confirmed 0 photos
+    # so maintenance doesn't continuously flag it as missing photos
+    if not has_valid_local_photos(listing):
+        listing.photos_local = json.dumps([])
+        listing.original_photo_urls = json.dumps([])
+        db.commit()
+        print(f"[Services] Repair processed for listing {listing.id}: confirmed 0 photos available.")
+
+    return not is_missing_or_corrupt_photos(listing)
+
+
+async def repair_listing_title(listing: Listing, db: Session, force: bool = False) -> Tuple[bool, str]:
+    """
+    Attempts to repair/recover a valid title for a listing if it currently has an error or generic title
+    (e.g., 'Annonce (https://www.leboncoin.fr/ad/ventes_immob…) - Erreur 403', 'leboncoin.fr', etc.).
+
+    Recovery pipeline:
+    1. Re-scrape via platform scraper or multi-UA fetch_basic_metadata.
+    2. Extract meaningful title from URL slug.
+    3. Extract title from description_text.
+    4. Synthesize standard structured title from attributes (property_type, rooms, area, city).
+
+    Returns:
+        (was_repaired: bool, final_title: str)
+    """
+    if not listing:
+        return False, ""
+        
+    if not force and not is_error_or_generic_title(listing.title):
+        return False, listing.title or ""
+
+    print(f"[Services] Attempting title repair for listing #{listing.id} (Current: {listing.title!r})")
+
+    new_title = None
+
+    # ── 1. Try re-extracting from URL via scraper or fetch_basic_metadata ──
+    from app.main import _resolve_scraper
+    source, scraper = _resolve_scraper(listing.url)
+    details = {}
+    if scraper:
+        try:
+            details = await scraper.get_listing_details(listing.url)
+        except Exception as e:
+            print(f"[Services] Scraper failed during title repair for listing {listing.id}: {e}")
+
+    if not details or is_error_or_generic_title(details.get("title")):
+        try:
+            fb = await fetch_basic_metadata(listing.url)
+            if fb and not is_error_or_generic_title(fb.get("title")):
+                details = fb
+        except Exception as e:
+            print(f"[Services] Metadata fetch failed during title repair for listing {listing.id}: {e}")
+
+    if details and details.get("title") and not is_error_or_generic_title(details.get("title")):
+        new_title = clean_extracted_title(details.get("title"))
+        # Also populate missing fields if any were extracted
+        if details.get("description_text") and not listing.description_text:
+            listing.description_text = details.get("description_text")
+        if details.get("price") and (not listing.price or listing.price <= 0):
+            listing.price = float(details["price"])
+        if details.get("city") and not listing.city:
+            listing.city = details["city"]
+        if details.get("area") and not listing.area:
+            listing.area = float(details["area"])
+        if details.get("rooms") and not listing.rooms:
+            listing.rooms = int(details["rooms"])
+        if details.get("photo_urls") and not listing.photos_local:
+            listing.original_photo_urls = json.dumps(details["photo_urls"])
+
+    # ── 2. Try URL Slug Extraction ──
+    if not new_title or is_error_or_generic_title(new_title):
+        slug_title = extract_title_from_url_slug(listing.url)
+        if slug_title and not is_error_or_generic_title(slug_title):
+            new_title = slug_title
+            print(f"[Services] Recovered title from URL slug for listing {listing.id}: {new_title!r}")
+
+    # ── 3. Try Description Extraction ──
+    if not new_title or is_error_or_generic_title(new_title):
+        desc_title = extract_title_from_description(listing.description_text)
+        if desc_title and not is_error_or_generic_title(desc_title):
+            new_title = desc_title
+            print(f"[Services] Recovered title from description for listing {listing.id}: {new_title!r}")
+
+    # ── 4. Synthesize Structured Title from Listing Attributes ──
+    if not new_title or is_error_or_generic_title(new_title):
+        syn_title = generate_synthetic_title_from_listing(listing)
+        if syn_title and not is_error_or_generic_title(syn_title):
+            new_title = syn_title
+            print(f"[Services] Synthesized title from attributes for listing {listing.id}: {new_title!r}")
+
+    if new_title and not is_error_or_generic_title(new_title):
+        listing.title = new_title
+        db.commit()
+        db.refresh(listing)
+        print(f"[Services] Title successfully repaired for listing #{listing.id} -> {new_title!r}")
+        return True, new_title
+
+    return False, listing.title or ""
 
 
 # ─── Basic Metadata Extraction ────────────────────────────────────────────────
 
 async def fetch_basic_metadata(url: str) -> dict:
     """
-    Attempts to retrieve listing metadata (title, description, image) 
-    using basic HTTP requests and OpenGraph meta tags.
-    For LeBonCoin, injects WhatsApp User-Agent and extracts full __NEXT_DATA__ payload to bypass Datadome.
+    Attempts to retrieve listing metadata (title, description, image, price, location) 
+    using resilient HTTP requests with User-Agent rotation (WhatsApp bot, Facebook bot, Googlebot, etc.)
+    and extracting from __NEXT_DATA__, JSON-LD, and OpenGraph tags.
     """
     details = {}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Accept-Language": "fr-FR,fr;q=0.9",
-    }
     
-    # Bypass Datadome for LeBonCoin
-    if "leboncoin.fr" in url:
-        headers["User-Agent"] = "WhatsApp/2.21.19.21 A"
+    USER_AGENTS = [
+        "WhatsApp/2.21.19.21 A",
+        "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+        "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        "Twitterbot/1.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/124.0.0.0",
+    ]
+    
+    # If not LeBonCoin, put standard browser UA first
+    if "leboncoin.fr" not in url:
+        USER_AGENTS.insert(0, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/124.0.0.0")
+    
+    last_status = 0
+    html_content = ""
+    for ua in USER_AGENTS:
+        headers = {
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Referer": "https://www.google.fr/",
+        }
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=12) as client:
+                resp = await client.get(url, headers=headers)
+                last_status = resp.status_code
+                if resp.status_code == 200 and len(resp.text) > 200:
+                    html_content = resp.text
+                    break
+        except Exception as e:
+            print(f"[Services] Attempt with UA {ua[:20]} failed for {url}: {e}")
+            continue
 
-    try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-            resp = await client.get(url, headers=headers)
-        if resp.status_code == 200:
-            html_content = resp.text
-            
-            # ── LeBonCoin __NEXT_DATA__ bypass ──
-            if "leboncoin.fr" in url:
-                import re
-                match = re.search(
-                    r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
-                    html_content, re.DOTALL
-                )
-                if match:
-                    try:
-                        data = json.loads(match.group(1))
-                        ad = data.get("props", {}).get("pageProps", {}).get("ad", {})
-                        if ad:
-                            details["title"] = ad.get("subject", "")
-                            details["description_text"] = ad.get("body", "")
-                            price_list = ad.get("price", [0])
-                            details["price"] = float(price_list[0]) if price_list else 0.0
-                            
-                            location = ad.get("location", {})
-                            city = location.get("city", "")
-                            zipcode = location.get("zipcode", "")
-                            details["location"] = f"{city} {zipcode}".strip()
-                            details["city"] = city
-                            
-                            images = ad.get("images", {})
-                            urls = images.get("urls_large") or images.get("urls")
-                            if isinstance(urls, list):
-                                details["photo_urls"] = [u for u in urls if isinstance(u, str)]
-                            elif isinstance(urls, str):
-                                details["photo_urls"] = [urls]
-                                
-                            # Attributes
-                            for attr in ad.get("attributes", []):
-                                key = attr.get("key")
-                                val = attr.get("value")
-                                if key == "square":
-                                    try: details["area"] = float(str(val).replace(",", "."))
-                                    except (ValueError, TypeError): pass
-                                elif key == "rooms":
-                                    try: details["rooms"] = int(val)
-                                    except (ValueError, TypeError): pass
-                                elif key == "energy_rate":
-                                    details["dpe_rating"] = str(val).upper()[:1] if val else None
-                                elif key == "ges":
-                                    details["ges_rating"] = str(val).upper()[:1] if val else None
-                                elif key in ("annual_charges", "charges"):
-                                    try: details["charges"] = float(str(val).replace(",", "."))
-                                    except (ValueError, TypeError): pass
-                            
-                            print(f"[Services] LBC Fast Scrape OK: {details['title']} ({len(details.get('photo_urls', []))} photos)")
-                            return details
-                    except Exception as e:
-                        print(f"[Services] LBC __NEXT_DATA__ fast extraction failed: {e}")
-
-            # ── Fallback standard OpenGraph ──
-            soup = BeautifulSoup(html_content, "html.parser")
-            og_title = soup.find("meta", attrs={"property": "og:title"})
-            og_desc = soup.find("meta", attrs={"property": "og:description"})
-            page_title = soup.find("title")
-
-            fb_title = (
-                og_title.get("content") if og_title else
-                page_title.text.strip() if page_title else
-                f"Annonce ({url[:40]}…)"
+    if html_content:
+        # ── 1. LeBonCoin __NEXT_DATA__ bypass ──
+        if "leboncoin.fr" in url:
+            match = re.search(
+                r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
+                html_content, re.DOTALL
             )
-            details["title"] = fb_title
-            if og_desc:
-                details["description_text"] = og_desc.get("content", "")
-            
-            # Multiple photos from OpenGraph and Twitter tags
-            photo_urls = []
-            for og_img in soup.find_all("meta", attrs={"property": "og:image"}):
-                content = og_img.get("content")
-                if content: photo_urls.append(content)
-            
-            for tw_img in soup.find_all("meta", attrs={"name": "twitter:image"}):
-                content = tw_img.get("content")
-                if content: photo_urls.append(content)
+            if match:
+                try:
+                    data = json.loads(match.group(1))
+                    ad = data.get("props", {}).get("pageProps", {}).get("ad", {})
+                    if ad:
+                        subject = ad.get("subject", "")
+                        cleaned_sub = clean_extracted_title(subject)
+                        details["title"] = cleaned_sub or subject
+                        details["description_text"] = ad.get("body", "")
+                        price_list = ad.get("price", [0])
+                        details["price"] = float(price_list[0]) if price_list else 0.0
+                        
+                        location = ad.get("location", {})
+                        city = location.get("city", "")
+                        zipcode = location.get("zipcode", "")
+                        details["location"] = f"{city} {zipcode}".strip()
+                        details["city"] = city
+                        
+                        images = ad.get("images", {})
+                        urls = images.get("urls_large") or images.get("urls")
+                        if isinstance(urls, list):
+                            details["photo_urls"] = [u for u in urls if isinstance(u, str)]
+                        elif isinstance(urls, str):
+                            details["photo_urls"] = [urls]
+                            
+                        # Attributes
+                        for attr in ad.get("attributes", []):
+                            key = attr.get("key")
+                            val = attr.get("value")
+                            if key == "square":
+                                try: details["area"] = float(str(val).replace(",", "."))
+                                except (ValueError, TypeError): pass
+                            elif key == "rooms":
+                                try: details["rooms"] = int(val)
+                                except (ValueError, TypeError): pass
+                            elif key == "real_estate_type":
+                                details["property_type"] = str(val).capitalize()
+                            elif key == "energy_rate":
+                                details["dpe_rating"] = str(val).upper()[:1] if val else None
+                            elif key == "ges":
+                                details["ges_rating"] = str(val).upper()[:1] if val else None
+                            elif key in ("annual_charges", "charges"):
+                                try: details["charges"] = float(str(val).replace(",", "."))
+                                except (ValueError, TypeError): pass
+                        
+                        print(f"[Services] LBC Fast Scrape OK: {details['title']} ({len(details.get('photo_urls', []))} photos)")
+                        return details
+                except Exception as e:
+                    print(f"[Services] LBC __NEXT_DATA__ fast extraction failed: {e}")
 
-            # Fallback to certain <img> tags if no meta images found
-            if not photo_urls:
-                import re
-                img_tags = soup.find_all("img", src=re.compile(r'ad-image|listing|property|photo|gallery', re.I))
-                for img in img_tags:
-                    src = img.get("src") or img.get("data-src")
-                    if src and src.startswith("http"):
-                        photo_urls.append(src)
+        # ── 2. JSON-LD schema extraction ──
+        soup = BeautifulSoup(html_content, "html.parser")
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                if script.string:
+                    ld_data = json.loads(script.string)
+                    if isinstance(ld_data, dict):
+                        ld_name = ld_data.get("name") or ld_data.get("headline")
+                        if ld_name and not is_error_or_generic_title(ld_name):
+                            c_ld = clean_extracted_title(ld_name)
+                            if c_ld:
+                                details["title"] = c_ld
+                        if ld_data.get("description") and not details.get("description_text"):
+                            details["description_text"] = ld_data.get("description")
+                        if ld_data.get("image") and not details.get("photo_urls"):
+                            imgs = ld_data.get("image")
+                            if isinstance(imgs, list):
+                                details["photo_urls"] = [i for i in imgs if isinstance(i, str)]
+                            elif isinstance(imgs, str):
+                                details["photo_urls"] = [imgs]
+            except Exception:
+                pass
+
+        # ── 3. OpenGraph / Meta tags extraction ──
+        og_title = soup.find("meta", attrs={"property": "og:title"})
+        tw_title = soup.find("meta", attrs={"name": "twitter:title"})
+        og_desc = soup.find("meta", attrs={"property": "og:description"})
+        page_title = soup.find("title")
+        h1 = soup.find("h1")
+
+        raw_title = (
+            details.get("title") or
+            (og_title.get("content") if og_title and og_title.get("content") else None) or
+            (tw_title.get("content") if tw_title and tw_title.get("content") else None) or
+            (h1.get_text().strip() if h1 and len(h1.get_text().strip()) > 3 else None) or
+            (page_title.text.strip() if page_title and page_title.text.strip() else None)
+        )
+        
+        fb_title = clean_extracted_title(raw_title)
+        if not fb_title or is_error_or_generic_title(fb_title):
+            # Try slug from url
+            slug_t = extract_title_from_url_slug(url)
+            fb_title = slug_t if slug_t else f"Annonce ({url[:40]}…)"
             
-            if photo_urls:
-                details["photo_urls"] = list(dict.fromkeys(photo_urls))
-            
-            print(f"[Services] Basic metadata OK: {fb_title!r} ({len(photo_urls)} photos)")
+        details["title"] = fb_title
+        if og_desc and not details.get("description_text"):
+            details["description_text"] = og_desc.get("content", "")
+        
+        # Multiple photos from OpenGraph and Twitter tags
+        photo_urls = details.get("photo_urls", [])
+        for og_img in soup.find_all("meta", attrs={"property": "og:image"}):
+            content = og_img.get("content")
+            if content: photo_urls.append(content)
+        
+        for tw_img in soup.find_all("meta", attrs={"name": "twitter:image"}):
+            content = tw_img.get("content")
+            if content: photo_urls.append(content)
+
+        # Fallback to certain <img> tags if no meta images found
+        if not photo_urls:
+            img_tags = soup.find_all("img", src=re.compile(r'ad-image|listing|property|photo|gallery', re.I))
+            for img in img_tags:
+                src = img.get("src") or img.get("data-src")
+                if src and src.startswith("http"):
+                    photo_urls.append(src)
+        
+        if photo_urls:
+            details["photo_urls"] = list(dict.fromkeys(photo_urls))
+        
+        print(f"[Services] Basic metadata OK: {fb_title!r} ({len(details.get('photo_urls', []))} photos)")
+    else:
+        # If all HTTP attempts failed, try slug before setting error title
+        slug_title = extract_title_from_url_slug(url)
+        if slug_title:
+            details["title"] = slug_title
+        elif last_status > 0:
+            details["title"] = f"Annonce ({url[:40]}…) - Erreur {last_status}"
         else:
-            details["title"] = f"Annonce ({url[:40]}…) - Erreur {resp.status_code}"
-    except Exception as e:
-        print(f"[Services] Error fetching basic metadata for {url}: {e}")
-        details["title"] = f"Annonce ({url[:40]}…)"
+            details["title"] = f"Annonce ({url[:40]}…)"
     
     if is_search_page_title(details.get("title", "")):
         print(f"[Services] fetch_basic_metadata detected search page title: {details['title']}")
@@ -466,8 +813,11 @@ async def create_listing_from_details(
             listing.city = std_city
             listing.location = std_city
     
-    if details.get("photo_urls"):
-        listing.original_photo_urls = json.dumps(details.get("photo_urls"))
+    if "photo_urls" in details:
+        urls = details.get("photo_urls") or []
+        listing.original_photo_urls = json.dumps(urls)
+        if not urls and listing.photos_local is None:
+            listing.photos_local = json.dumps([])
 
     # Store source and update timestamp
     listing.source = source
@@ -501,8 +851,8 @@ async def create_listing_from_details(
         except Exception as e:
             print(f"[Services] Error downloading photos for listing {listing.id}: {e}")
 
-    # Fallback photo recovery if listing still has no valid photos
-    if not has_valid_local_photos(listing):
+    # Fallback photo recovery if listing still has missing/corrupted photos
+    if is_missing_or_corrupt_photos(listing):
         try:
             await repair_listing_photos(listing, db)
         except Exception as e:
@@ -867,6 +1217,10 @@ async def refresh_listing_status(listing: Listing, db: Session, force_update: bo
             # Re-download / repair photos if needed
             if not photo_ok or force_update:
                 await repair_listing_photos(listing, db)
+            
+            # Repair title if it is generic or error
+            if is_error_or_generic_title(listing.title):
+                await repair_listing_title(listing, db)
             
             if was_disappeared:
                 print(f"[Services] Listing {listing.id} is BACK ONLINE")

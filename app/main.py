@@ -3480,7 +3480,9 @@ async def rescrape_listing(
         fetch_basic_metadata,
         is_error_or_generic_title,
         has_valid_local_photos,
+        is_missing_or_corrupt_photos,
         repair_listing_photos,
+        repair_listing_title,
         create_listing_from_details
     )
 
@@ -3548,8 +3550,13 @@ async def rescrape_listing(
     # ── Update via service ──
     updated_listing, _ = await create_listing_from_details(db, details, source, url)
 
+    # Ensure title is repaired if error or generic title
+    title_repaired = False
+    if is_error_or_generic_title(updated_listing.title):
+        title_repaired, _ = await repair_listing_title(updated_listing, db)
+
     # Ensure photos are repaired if missing
-    if not has_valid_local_photos(updated_listing):
+    if is_missing_or_corrupt_photos(updated_listing):
         try:
             await repair_listing_photos(updated_listing, db)
         except Exception as e:
@@ -3557,8 +3564,12 @@ async def rescrape_listing(
 
     photos = json_to_photos(updated_listing.photos_local)
     photos_count = len(photos)
-    if scraping_success:
-        msg = "Annonce actualisée avec succès."
+    if scraping_success or title_repaired:
+        if title_repaired:
+            msg = f"Titre et informations réparés avec succès : {updated_listing.title}"
+        else:
+            msg = "Annonce actualisée avec succès."
+        scraping_success = True
     elif photos_count > 0:
         msg = f"Photos disponibles ({photos_count}). Données existantes préservées (le site source a restreint l'accès direct)."
     else:
