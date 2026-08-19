@@ -1346,6 +1346,25 @@ def listings_table_page(
     })
 
 
+@app.get("/listings/repair")
+def listings_repair_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """User-facing repair view — non-destructive repairs only."""
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="listings_repair.html", context={
+        "queries": queries,
+        "listings": listings,
+        "title": "Réparation des annonces — Immo-Boussole",
+    })
+
+
 @app.get("/listings/{listing_id}")
 def listing_detail_page(
     request: Request,
@@ -2496,26 +2515,7 @@ def get_db_repair_status(_auth = Depends(admin_required)):
     return db_maintenance.get_repair_status()
 
 
-# ─── Listings: Repair View (all authenticated users) ───────────────────────────
-
-@app.get("/listings/repair")
-def listings_repair_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    _auth = Depends(login_required)
-):
-    """User-facing repair view — non-destructive repairs only."""
-    queries = db.query(SearchQuery).all()
-    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
-    viewed_ids = _get_viewed_listing_ids(request, db)
-    _enrich_listings(listings, viewed_ids)
-
-    return templates.TemplateResponse(request=request, name="listings_repair.html", context={
-        "queries": queries,
-        "listings": listings,
-        "title": "Réparation des annonces — Immo-Boussole",
-    })
-
+# ─── Listings: Repair API (all authenticated users) ────────────────────────────
 
 @app.get("/api/db/problems")
 def get_db_problems_user(
