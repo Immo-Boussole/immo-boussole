@@ -132,6 +132,8 @@ def identify_problems(db: Session):
 
     forbidden_zone_listings = []
     for l in active_listings_all:
+        if l.to_visit:
+            continue
         zone_match = False
         if l.city and is_city_in_forbidden_set(l.city, forbidden_cities):
             zone_match = True
@@ -319,8 +321,9 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                 listing.status = ListingStatus.REJECTED
                                 db.commit()
                             elif problem_type == FORBIDDEN_ZONE:
-                                listing.status = ListingStatus.REJECTED
-                                db.commit()
+                                if not listing.to_visit:
+                                    listing.status = ListingStatus.REJECTED
+                                    db.commit()
                             elif problem_type == INCORRECT_PRICE_PER_SQM:
                                 listing.update_price_per_sqm()
                                 db.commit()

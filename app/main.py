@@ -1449,8 +1449,8 @@ def listing_detail_page(
     station1_rule = station_rules.get((listing.nearest_sncf_station or "").strip().lower())
     station2_rule = station_rules.get((listing.second_sncf_station or "").strip().lower())
 
-    # Auto-reject listing if located in a forbidden zone
-    if (city_rule == "forbidden" or station1_rule == "forbidden" or station2_rule == "forbidden") and listing.status != ListingStatus.REJECTED:
+    # Auto-reject listing if located in a forbidden zone (unless marked as to_visit)
+    if (city_rule == "forbidden" or station1_rule == "forbidden" or station2_rule == "forbidden") and listing.status != ListingStatus.REJECTED and not listing.to_visit:
         listing.status = ListingStatus.REJECTED
         db.commit()
         db.refresh(listing)
@@ -1876,10 +1876,13 @@ def create_zone_rule(
     db.commit()
     db.refresh(rule)
 
-    # If the new rule is 'forbidden', retroactively reject all matching active/new listings
+    # If the new rule is 'forbidden', retroactively reject all matching active/new listings (excluding to_visit)
     if body.rule == "forbidden":
         from app.geo import is_city_in_forbidden_set
-        active_listings = db.query(Listing).filter(Listing.status != ListingStatus.REJECTED).all()
+        active_listings = db.query(Listing).filter(
+            Listing.status != ListingStatus.REJECTED,
+            Listing.to_visit.isnot(True)
+        ).all()
         rejected_count = 0
         if body.zone_type == "city":
             forbidden_set = {normalized_name.lower()}
@@ -3492,7 +3495,7 @@ async def rescrape_listing(
         any(fs in s2 or fs == s2 for fs in forbidden_stations_rescrape)
     ))
 
-    if in_forbidden_city or in_forbidden_station:
+    if (in_forbidden_city or in_forbidden_station) and not updated_listing.to_visit:
         updated_listing.status = ListingStatus.REJECTED
         db.commit()
         rescrape_response["forbidden_zone_warning"] = {
@@ -3585,7 +3588,7 @@ async def submit_listing_url(
         city_to_check = listing.city or listing.location
         in_forbidden_city = city_to_check and is_city_in_forbidden_set(city_to_check, forbidden_cities_fast)
             
-        if in_forbidden_city:
+        if in_forbidden_city and not listing.to_visit:
             listing.status = ListingStatus.REJECTED
             db.commit()
 
@@ -3694,7 +3697,7 @@ async def submit_listing_url(
         any(fs in s2 or fs == s2 for fs in forbidden_stations)
     ))
 
-    if in_forbidden_city or in_forbidden_station:
+    if (in_forbidden_city or in_forbidden_station) and not listing.to_visit:
         listing.status = ListingStatus.REJECTED
         db.commit()
         response["forbidden_zone_warning"] = {

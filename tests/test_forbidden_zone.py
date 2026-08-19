@@ -149,3 +149,89 @@ def test_db_maintenance_forbidden_zone_detection():
     assert l1.id in forbidden_problems["ids"]
     assert l2.id in forbidden_problems["ids"]
     assert l3.id not in forbidden_problems["ids"]
+
+
+def test_create_zone_rule_preserves_to_visit():
+    db = get_test_db()
+    
+    # l1 is in forbidden city with to_visit=True
+    l1 = Listing(title="Maison Saint-Malo à visiter", city="Saint-Malo (35400)", location="Saint-Malo (35400)", status=ListingStatus.ACTIVE, to_visit=True, url="https://example.com/tv1")
+    # l2 is in forbidden city without to_visit
+    l2 = Listing(title="Maison Saint-Malo standard", city="Saint-Malo (35400)", location="Saint-Malo (35400)", status=ListingStatus.ACTIVE, to_visit=False, url="https://example.com/tv2")
+    # l3 is near forbidden station with to_visit=True
+    l3 = Listing(title="Maison Brest à visiter", city="Brest", location="Brest", nearest_sncf_station="Gare de Brest", status=ListingStatus.NEW, to_visit=True, url="https://example.com/tv3")
+    
+    db.add_all([l1, l2, l3])
+    db.commit()
+
+    scope = {
+        "type": "http",
+        "session": {"username": "admin", "role": "admin"},
+        "headers": []
+    }
+    req = Request(scope)
+
+    # Add forbidden city
+    body_city = ZoneRuleRequest(zone_type="city", name="Saint-Malo", rule="forbidden")
+    create_zone_rule(request=req, body=body_city, db=db, _auth=True)
+
+    db.refresh(l1)
+    db.refresh(l2)
+    assert l1.status == ListingStatus.ACTIVE  # Preserved because to_visit=True
+    assert l2.status == ListingStatus.REJECTED  # Rejected because to_visit=False
+
+    # Add forbidden station
+    body_station = ZoneRuleRequest(zone_type="station", name="Gare de Brest", rule="forbidden")
+    create_zone_rule(request=req, body=body_station, db=db, _auth=True)
+
+    db.refresh(l3)
+    assert l3.status == ListingStatus.NEW  # Preserved because to_visit=True
+
+
+def test_listing_detail_preserves_to_visit():
+    db = get_test_db()
+    
+    rule = ZoneRule(zone_type="city", name="Fougères", rule="forbidden", created_by="admin")
+    db.add(rule)
+    db.commit()
+
+    listing = Listing(title="Maison Fougères à visiter", city="Fougères (35300)", location="Fougères (35300)", status=ListingStatus.ACTIVE, to_visit=True, url="https://example.com/tv116")
+    user = User(username="testuser", password_hash=b"hash", salt=b"salt", role="user")
+    db.add_all([listing, user])
+    db.commit()
+
+    assert listing.status == ListingStatus.ACTIVE
+
+    scope = {
+        "type": "http",
+        "path": f"/listings/{listing.id}",
+        "session": {"username": "testuser", "role": "user"},
+        "headers": []
+    }
+    req = Request(scope)
+
+    # Call listing_detail route
+    response = listing_detail_page(request=req, listing_id=listing.id, db=db)
+    
+    db.refresh(listing)
+    assert listing.status == ListingStatus.ACTIVE  # Preserved because to_visit=True
+
+
+def test_db_maintenance_ignores_to_visit_in_forbidden_zone():
+    db = get_test_db()
+
+    rule_city = ZoneRule(zone_type="city", name="Dinan", rule="forbidden", created_by="admin")
+    db.add(rule_city)
+    db.commit()
+
+    l1 = Listing(title="Maison Dinan standard", city="Dinan (22100)", location="Dinan", status=ListingStatus.ACTIVE, to_visit=False, url="https://example.com/m1")
+    l2 = Listing(title="Maison Dinan à visiter", city="Dinan (22100)", location="Dinan", status=ListingStatus.ACTIVE, to_visit=True, url="https://example.com/m2")
+    db.add_all([l1, l2])
+    db.commit()
+
+    problems = identify_problems(db)
+    forbidden_problems = problems[FORBIDDEN_ZONE]
+    
+    assert forbidden_problems["count"] == 1
+    assert l1.id in forbidden_problems["ids"]
+    assert l2.id not in forbidden_problems["ids"]

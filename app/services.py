@@ -693,7 +693,7 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             # Case: Already exists (active, new, or disappeared)
             if existing.status == ListingStatus.DISAPPEARED:
                 city_to_check_existing = existing.city or existing.location
-                if city_to_check_existing and is_city_in_forbidden_set(city_to_check_existing, forbidden_cities):
+                if city_to_check_existing and is_city_in_forbidden_set(city_to_check_existing, forbidden_cities) and not existing.to_visit:
                     existing.status = ListingStatus.REJECTED
                 else:
                     existing.status = ListingStatus.NEW
