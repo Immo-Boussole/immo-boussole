@@ -956,18 +956,18 @@
                                 </div>
                                 {% endif %}
 
-                                <!-- Address Precision Badge (Bottom-Right) -->
+                                <!-- Address Precision Badge (Bottom-Left) -->
                                 {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
                                 {% if prec == 'exact' %}
-                                <div class="address-precision-badge precision-exact" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}">
+                                <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}">
                                     <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
                                 </div>
                                 {% elif prec == 'street' %}
-                                <div class="address-precision-badge precision-street" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }}">
+                                <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }}">
                                     <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
                                 </div>
                                 {% else %}
-                                <div class="address-precision-badge precision-city" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }}">
+                                <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }}">
                                     <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
                                 </div>
                                 {% endif %}
@@ -1192,18 +1192,18 @@
                                     {% endif %}
 
                                     {% if l %}
-                                    <!-- Address Precision Badge (Bottom-Right) -->
+                                    <!-- Address Precision Badge (Bottom-Left) -->
                                     {% set prec = l.address_precision or ('exact' if l.address else 'city') %}
                                     {% if prec == 'exact' %}
-                                    <div class="address-precision-badge precision-exact" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ l.address or l.location or l.city or '' }}">
+                                    <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ l.address or l.location or l.city or '' }}">
                                         <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
                                     </div>
                                     {% elif prec == 'street' %}
-                                    <div class="address-precision-badge precision-street" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ l.address or l.location or l.city or '' }}">
+                                    <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ l.address or l.location or l.city or '' }}">
                                         <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
                                     </div>
                                     {% else %}
-                                    <div class="address-precision-badge precision-city" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ l.city or l.location or 'Non précisée' }}">
+                                    <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ l.city or l.location or 'Non précisée' }}">
                                         <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
                                     </div>
                                     {% endif %}
