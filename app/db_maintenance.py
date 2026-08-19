@@ -461,7 +461,33 @@ async def repair_all_sequential_task():
         repair_progress["is_running"] = False
         db.close()
 
+async def repair_selected_sequential_task(problem_types: list[str]):
+    """
+    Repairs the selected problem types sequentially one after another.
+    """
+    global repair_progress
+    
+    db = SessionLocal()
+    try:
+        if not problem_types:
+            repair_progress["is_running"] = False
+            return
+            
+        print(f"[DB Maintenance] Starting sequential repair of selected: {problem_types}")
+        
+        repair_progress["is_running"] = True
+        
+        for p_type in problem_types:
+            await repair_listings_batch_task(p_type, is_part_of_sequence=True)
+            await asyncio.sleep(1)
+            
+    finally:
+        repair_progress["is_running"] = False
+        db.close()
+
+
 def get_repair_status():
     global repair_progress
     return repair_progress
+
 

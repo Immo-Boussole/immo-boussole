@@ -2633,9 +2633,40 @@ async def repair_db_problems_user(
     return {"status": "started", "problem_type": problem_type}
 
 
+class RepairBatchPayload(BaseModel):
+    problem_types: list[str]
+
+
+@app.post("/api/db/repair-batch")
+async def repair_db_problems_batch(
+    request: Request,
+    payload: RepairBatchPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Launches batch repair for a list of problem types. Dangerous types are blocked unless admin."""
+    is_admin = (request.session.get("role") == "admin")
+    all_safe = db_maintenance.SAFE_PROBLEM_TYPES + db_maintenance.DANGEROUS_PROBLEM_TYPES
+
+    for p_type in payload.problem_types:
+        if p_type in db_maintenance.DANGEROUS_PROBLEM_TYPES and not is_admin:
+            raise HTTPException(status_code=403, detail=f"L'action '{p_type}' est réservée aux administrateurs.")
+        if p_type not in all_safe:
+            raise HTTPException(status_code=400, detail=f"Type de problème inconnu : '{p_type}'.")
+
+    status = db_maintenance.get_repair_status()
+    if status["is_running"]:
+        raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
+
+    background_tasks.add_task(db_maintenance.repair_selected_sequential_task, payload.problem_types)
+    return {"status": "started", "problem_types": payload.problem_types}
+
+
 @app.get("/api/db/repair/status")
 def get_db_repair_status_user(_auth = Depends(login_required)):
     return db_maintenance.get_repair_status()
+
 
 
 

@@ -435,10 +435,39 @@
                         </span>
                     </div>
 
-                    <div id="problems_grid" style="display: flex; flex-direction: column; gap: 0.1rem;">
-                        <div id="loading_state" style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;">
-                            <i class="fas fa-spinner fa-spin"></i>&nbsp;Chargement des vérifications…
+                    <div id="loading_state" style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;">
+                        <i class="fas fa-spinner fa-spin"></i>&nbsp;Chargement des vérifications…
+                    </div>
+
+                    <!-- ── Section 1: Vérifications avec erreurs ── -->
+                    <div id="error_section" style="display: none; margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--red); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                Vérifications avec erreurs (<span id="error_section_count">0</span>)
+                            </h3>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.83rem; color: var(--text-2); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="select_all_errors" onchange="toggleSelectAllErrors(this.checked)"> Tout sélectionner
+                                </label>
+                                <button class="btn secondary" id="btn_repair_selected" onclick="repairSelected()" disabled>
+                                    <i class="fas fa-wrench"></i> Corriger celles sélectionnées (<span id="selected_count">0</span>)
+                                </button>
+                                <button class="btn accent" id="btn_repair_all_errors" onclick="repairAllErrors()">
+                                    <i class="fas fa-tools"></i> Tout corriger
+                                </button>
+                            </div>
                         </div>
+                        <div id="error_problems_list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                    </div>
+
+                    <!-- ── Section 2: Vérifications sans erreur ── -->
+                    <div id="clean_section" style="display: none;">
+                        <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.75rem 0;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Vérifications sans erreur (<span id="clean_section_count">0</span>)
+                        </h3>
+                        <div id="clean_problems_list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
                     </div>
 
                     <!-- Progress bar -->
@@ -532,9 +561,72 @@
 
         const DANGEROUS_TYPES = ['forbidden_department', 'forbidden_zone'];
 
-        let pendingRepairType = null;
+        let pendingRepairTypes = [];
         let problemsData = {};
         let repairInterval = null;
+
+        // ── Selection functions ──────────────────────────────────────────────
+        function toggleSelectAllErrors(checked) {
+            const checkboxes = document.querySelectorAll('.error-item-checkbox');
+            checkboxes.forEach(cb => cb.checked = checked);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checked = document.querySelectorAll('.error-item-checkbox:checked');
+            const count = checked.length;
+            const total = document.querySelectorAll('.error-item-checkbox').length;
+            
+            const countSpan = document.getElementById('selected_count');
+            if (countSpan) countSpan.textContent = count;
+            
+            const btnSel = document.getElementById('btn_repair_selected');
+            if (btnSel) btnSel.disabled = (count === 0);
+
+            const selectAllCb = document.getElementById('select_all_errors');
+            if (selectAllCb) {
+                selectAllCb.checked = (total > 0 && count === total);
+                selectAllCb.indeterminate = (count > 0 && count < total);
+            }
+        }
+
+        function getSelectedTypes() {
+            const checked = document.querySelectorAll('.error-item-checkbox:checked');
+            return Array.from(checked).map(cb => cb.getAttribute('data-type'));
+        }
+
+        function getAllErrorTypes() {
+            const checkboxes = document.querySelectorAll('.error-item-checkbox');
+            return Array.from(checkboxes).map(cb => cb.getAttribute('data-type'));
+        }
+
+        function repairSelected() {
+            const selected = getSelectedTypes();
+            if (selected.length === 0) {
+                showAlert('Veuillez cocher au moins une vérification à corriger.', 'error');
+                return;
+            }
+            const hasDanger = selected.some(t => DANGEROUS_TYPES.includes(t));
+            if (hasDanger) {
+                openDangerModal(selected);
+            } else {
+                openConfirmModal(selected);
+            }
+        }
+
+        function repairAllErrors() {
+            const allErrors = getAllErrorTypes();
+            if (allErrors.length === 0) {
+                showAlert('Aucune erreur à corriger.', 'success');
+                return;
+            }
+            const hasDanger = allErrors.some(t => DANGEROUS_TYPES.includes(t));
+            if (hasDanger) {
+                openDangerModal(allErrors);
+            } else {
+                openConfirmModal(allErrors);
+            }
+        }
 
         // ── Alert ─────────────────────────────────────────────────────────────
         function showAlert(msg, type) {
@@ -557,7 +649,7 @@
         }
 
         // ── Build problem row DOM ─────────────────────────────────────────────
-        function buildProblemRow(type, data, lastChecks, lastRepairs) {
+        function buildProblemRow(type, data, lastChecks, lastRepairs, isErrorSection = false) {
             const meta = PROBLEM_META[type] || { label: type, desc: '' };
             const count = data.count || 0;
             const listings = data.listings || [];
@@ -572,11 +664,29 @@
 
             const metaDiv = document.createElement('div');
             metaDiv.className = 'problem-meta';
+
+            let checkboxHTML = '';
+            if (isErrorSection) {
+                checkboxHTML = `<input type="checkbox" class="error-item-checkbox" data-type="${type}" onchange="updateSelectedCount()" style="cursor:pointer; width:17px; height:17px; accent-color:var(--accent); flex-shrink:0;">`;
+            } else {
+                checkboxHTML = `<i class="fa-solid fa-circle-check" style="color:var(--green); font-size:1.1rem; flex-shrink:0;"></i>`;
+            }
+
+            let dangerBadgeHTML = '';
+            if (isDanger) {
+                dangerBadgeHTML = ` <span style="font-size:0.7rem; background:rgba(242,92,105,0.18); color:var(--red); border:1px solid rgba(242,92,105,0.35); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.4rem; font-weight:600; vertical-align:middle;"><i class="fa-solid fa-triangle-exclamation"></i> Action dangereuse</span>`;
+            }
+
             metaDiv.innerHTML = `
-                <div class="problem-name">${meta.label}</div>
-                <div class="problem-count" title="${meta.desc}">
-                    <span class="count-val" id="count_${type}">${count}</span>
-                    annonce${count !== 1 ? 's' : ''} concern\u00e9e${count !== 1 ? 's' : ''}
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                    ${checkboxHTML}
+                    <div>
+                        <div class="problem-name" style="display:inline-block;">${meta.label}</div>${dangerBadgeHTML}
+                        <div class="problem-count" title="${meta.desc}">
+                            <span class="count-val" id="count_${type}">${count}</span>
+                            annonce${count !== 1 ? 's' : ''} concern\u00e9e${count !== 1 ? 's' : ''}
+                        </div>
+                    </div>
                 </div>`;
 
             const ts = document.createElement('div');
@@ -600,7 +710,7 @@
             repairBtn.className = isDanger ? 'btn danger' : 'btn secondary';
             repairBtn.id = 'btn_repair_' + type;
             repairBtn.innerHTML = '<i class="fas fa-wrench"></i> R\u00e9parer';
-            repairBtn.onclick = () => isDanger ? openDangerModal(type) : openConfirmModal(type);
+            repairBtn.onclick = () => isDanger ? openDangerModal([type]) : openConfirmModal([type]);
 
             actions.appendChild(expandBtn);
             actions.appendChild(repairBtn);
@@ -662,35 +772,75 @@
 
             document.getElementById('last_check_time').textContent = formatDT(data.last_global_check);
 
-            const grid = document.getElementById('problems_grid');
             const loading = document.getElementById('loading_state');
-            if (loading) loading.remove();
-            grid.innerHTML = '';
+            if (loading) loading.style.display = 'none';
 
-            const safeTypes = Object.keys(problems).filter(t => !DANGEROUS_TYPES.includes(t));
-            const dangerTypes = Object.keys(problems).filter(t => DANGEROUS_TYPES.includes(t));
+            const errorSection = document.getElementById('error_section');
+            const cleanSection = document.getElementById('clean_section');
+            const errorList = document.getElementById('error_problems_list');
+            const cleanList = document.getElementById('clean_problems_list');
 
-            if (safeTypes.length === 0) {
-                grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;font-style:italic;">
-                    <i class="fa-solid fa-circle-check" style="color:var(--green);margin-right:0.4rem;"></i>
-                    Aucun probl\u00e8me d\u00e9tect\u00e9\u00a0! La base de donn\u00e9es est saine.
-                </div>`;
+            errorList.innerHTML = '';
+            cleanList.innerHTML = '';
+
+            const allTypes = Object.keys(problems);
+            
+            // Separate into error (count > 0) and clean (count === 0)
+            const errorTypes = allTypes.filter(t => (problems[t].count || 0) > 0);
+            const cleanTypes = allTypes.filter(t => (problems[t].count || 0) === 0);
+
+            // Sort error list: primary count DESC, secondary label ASC
+            errorTypes.sort((a, b) => {
+                const countDiff = (problems[b].count || 0) - (problems[a].count || 0);
+                if (countDiff !== 0) return countDiff;
+                const labelA = (PROBLEM_META[a] || {}).label || a;
+                const labelB = (PROBLEM_META[b] || {}).label || b;
+                return labelA.localeCompare(labelB, 'fr');
+            });
+
+            // Sort clean list: label ASC
+            cleanTypes.sort((a, b) => {
+                const labelA = (PROBLEM_META[a] || {}).label || a;
+                const labelB = (PROBLEM_META[b] || {}).label || b;
+                return labelA.localeCompare(labelB, 'fr');
+            });
+
+            // Populate error list
+            document.getElementById('error_section_count').textContent = errorTypes.length;
+            if (errorTypes.length > 0) {
+                errorTypes.forEach(t => errorList.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs, true)));
+                errorSection.style.display = 'block';
             } else {
-                safeTypes.forEach(t => grid.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs)));
+                errorList.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-2);font-size:0.9rem;font-style:italic;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);">
+                    <i class="fa-solid fa-circle-check" style="color:var(--green);margin-right:0.4rem;"></i>
+                    Aucune erreur décelée ! Toutes les vérifications sont au vert.
+                </div>`;
+                errorSection.style.display = 'block';
             }
 
-            // Danger zone population (admin)
+            // Populate clean list
+            document.getElementById('clean_section_count').textContent = cleanTypes.length;
+            if (cleanTypes.length > 0) {
+                cleanTypes.forEach(t => cleanList.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs, false)));
+                cleanSection.style.display = 'block';
+            } else {
+                cleanSection.style.display = 'none';
+            }
+
+            updateSelectedCount();
+
+            // Populate danger zone if admin
             if (isAdmin) {
+                const dangerTypes = allTypes.filter(t => DANGEROUS_TYPES.includes(t));
                 const dangerGrid = document.getElementById('danger_problems_grid');
                 const placeholder = document.getElementById('danger_placeholder');
                 if (dangerGrid) {
                     if (dangerTypes.length > 0) {
                         if (placeholder) placeholder.style.display = 'none';
-                        // Remove old rows (not the placeholder)
                         Array.from(dangerGrid.children).forEach(c => {
                             if (c.id !== 'danger_placeholder') c.remove();
                         });
-                        dangerTypes.forEach(t => dangerGrid.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs)));
+                        dangerTypes.forEach(t => dangerGrid.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs, false)));
                     } else if (placeholder) {
                         placeholder.style.display = '';
                     }
@@ -728,11 +878,20 @@
             finally { btn.disabled = false; btn.innerHTML = orig; }
         }
 
-        async function doRepair(type) {
+        async function doRepairBatch(types) {
             try {
-                const res = await fetch('/api/db/repair?problem_type=' + type, { method: 'POST' });
+                let res;
+                if (types.length === 1) {
+                    res = await fetch('/api/db/repair?problem_type=' + types[0], { method: 'POST' });
+                } else {
+                    res = await fetch('/api/db/repair-batch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ problem_types: types })
+                    });
+                }
                 if (res.ok) {
-                    showAlert('R\u00e9paration lanc\u00e9e en arri\u00e8re-plan.', 'success');
+                    showAlert('Réparation lancée en arrière-plan.', 'success');
                     pollRepairStatus();
                 } else {
                     const err = await res.json();
@@ -741,46 +900,77 @@
             } catch { showAlert('Erreur de connexion.', 'error'); }
         }
 
-        // ── Confirm modal (safe repairs) ──────────────────────────────────────
-        function openConfirmModal(type) {
-            pendingRepairType = type;
-            const meta = PROBLEM_META[type] || {};
-            const count = (problemsData[type] || {}).count || 0;
-            document.getElementById('confirm_modal_title').textContent = 'R\u00e9parer\u00a0: ' + (meta.label || type);
-            document.getElementById('confirm_modal_desc').textContent =
-                count + ' annonce' + (count !== 1 ? 's' : '') + ' sera' + (count !== 1 ? 'ont' : '') +
-                ' trait\u00e9e' + (count !== 1 ? 's' : '') + '. ' + (meta.desc || '') + ' Confirmer\u00a0?';
+        // ── Confirm modal ─────────────────────────────────────────────────────
+        function openConfirmModal(types) {
+            const typesArray = Array.isArray(types) ? types : [types];
+            pendingRepairTypes = typesArray;
+
+            let titleText = '';
+            let descText = '';
+
+            if (typesArray.length === 1) {
+                const t = typesArray[0];
+                const meta = PROBLEM_META[t] || {};
+                const count = (problemsData[t] || {}).count || 0;
+                titleText = 'Réparer\u00a0: ' + (meta.label || t);
+                descText = count + ' annonce' + (count !== 1 ? 's' : '') + ' sera' + (count !== 1 ? 'ont' : '') +
+                           ' traitée' + (count !== 1 ? 's' : '') + '. ' + (meta.desc || '') + ' Confirmer\u00a0?';
+            } else {
+                let totalCount = 0;
+                typesArray.forEach(t => { totalCount += ((problemsData[t] || {}).count || 0); });
+                titleText = 'Réparer ' + typesArray.length + ' vérifications';
+                descText = totalCount + ' annonce' + (totalCount !== 1 ? 's' : '') + ' au total (réparties sur ' +
+                           typesArray.length + ' vérifications) seront traitées. Confirmer le lancement des réparations\u00a0?';
+            }
+
+            document.getElementById('confirm_modal_title').textContent = titleText;
+            document.getElementById('confirm_modal_desc').textContent = descText;
             document.getElementById('confirm_modal').classList.add('show');
         }
 
         function closeConfirmModal() {
             document.getElementById('confirm_modal').classList.remove('show');
-            pendingRepairType = null;
+            pendingRepairTypes = [];
         }
 
         function confirmRepair() {
-            const t = pendingRepairType;
+            const types = [...pendingRepairTypes];
             closeConfirmModal();
-            if (t) doRepair(t);
+            if (types.length > 0) doRepairBatch(types);
         }
 
         // ── Danger modal with iOS slider ──────────────────────────────────────
-        function openDangerModal(type) {
-            pendingRepairType = type;
-            const meta = PROBLEM_META[type] || {};
-            const count = (problemsData[type] || {}).count || 0;
-            document.getElementById('danger_modal_title').innerHTML =
-                '<i class="fa-solid fa-triangle-exclamation"></i> Action dangereuse\u00a0: ' + (meta.label || type);
-            document.getElementById('danger_modal_desc').textContent =
-                count + ' annonce' + (count !== 1 ? 's' : '') + ' concern\u00e9e' + (count !== 1 ? 's' : '') +
-                '. ' + (meta.desc || '') + ' Faites glisser le curseur pour confirmer.';
+        function openDangerModal(types) {
+            const typesArray = Array.isArray(types) ? types : [types];
+            pendingRepairTypes = typesArray;
+
+            let titleText = '';
+            let descText = '';
+
+            if (typesArray.length === 1) {
+                const t = typesArray[0];
+                const meta = PROBLEM_META[t] || {};
+                const count = (problemsData[t] || {}).count || 0;
+                titleText = '<i class="fa-solid fa-triangle-exclamation"></i> Action dangereuse\u00a0: ' + (meta.label || t);
+                descText = count + ' annonce' + (count !== 1 ? 's' : '') + ' concernée' + (count !== 1 ? 's' : '') +
+                           '. ' + (meta.desc || '') + ' Faites glisser le curseur pour confirmer.';
+            } else {
+                let totalCount = 0;
+                typesArray.forEach(t => { totalCount += ((problemsData[t] || {}).count || 0); });
+                titleText = '<i class="fa-solid fa-triangle-exclamation"></i> Actions dangereuses (' + typesArray.length + ')';
+                descText = totalCount + ' annonce' + (totalCount !== 1 ? 's' : '') + ' concernée' + (totalCount !== 1 ? 's' : '') +
+                           ' au total sur ' + typesArray.length + ' vérifications. Faites glisser le curseur pour confirmer.';
+            }
+
+            document.getElementById('danger_modal_title').innerHTML = titleText;
+            document.getElementById('danger_modal_desc').textContent = descText;
             resetSlider();
             document.getElementById('danger_modal').classList.add('show');
         }
 
         function closeDangerModal() {
             document.getElementById('danger_modal').classList.remove('show');
-            pendingRepairType = null;
+            pendingRepairTypes = [];
             resetSlider();
         }
 
@@ -850,9 +1040,9 @@
                 document.getElementById('ios_label').textContent = '\u2713 Confirm\u00e9';
                 document.getElementById('ios_label').style.opacity = '1';
                 setTimeout(() => {
-                    const t = pendingRepairType;
+                    const types = [...pendingRepairTypes];
                     closeDangerModal();
-                    if (t) doRepair(t);
+                    if (types.length > 0) doRepairBatch(types);
                 }, 600);
             } else {
                 resetSlider();
