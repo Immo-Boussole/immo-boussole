@@ -926,13 +926,16 @@
                         <span class="calc-card-title point-b">
                             <i class="fa-solid fa-location-dot"></i> {{ t(request, 'distance_temps.point_b', 'Point d\'arrivée B') }}
                         </span>
-                        <!-- Tab Switcher (Listing vs Custom) -->
+                        <!-- Tab Switcher (Listing vs Custom vs Favori) -->
                         <div class="tab-switcher">
                             <button type="button" class="tab-btn active" id="tabBtnListing" onclick="switchPointBTab('listing')">
                                 <i class="fa-solid fa-house"></i> {{ t(request, 'distance_temps.tab_listing', 'Bien immo') }}
                             </button>
                             <button type="button" class="tab-btn" id="tabBtnCustom" onclick="switchPointBTab('custom')">
                                 <i class="fa-solid fa-map-pin"></i> {{ t(request, 'distance_temps.tab_custom', 'Adresse libre') }}
+                            </button>
+                            <button type="button" class="tab-btn" id="tabBtnFavoriB" onclick="switchPointBTab('favori')">
+                                <i class="fa-solid fa-star" style="color: var(--orange);"></i> Favoris
                             </button>
                         </div>
                     </div>
@@ -981,6 +984,25 @@
                             </div>
                             <div class="autocomplete-dropdown" id="dropdownB"></div>
                         </div>
+                    </div>
+
+                    <!-- Subview 3: Favoris / Repères enregistrés -->
+                    <div id="pointBFavoriView" style="display: none;">
+                        {% if user_points %}
+                        <div class="quick-actions">
+                            {% for pt in user_points %}
+                            <span class="action-chip" onclick='selectFavoritePointB({{ pt|tojson }})' title="{{ pt.address }}">
+                                <i class="fa-solid {{ pt.icon or 'fa-location-dot' }}" style="color: var(--accent);"></i> {{ pt.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div style="padding: 1rem; text-align: center; color: var(--text-3); font-size: 0.82rem;">
+                            <i class="fa-solid fa-star" style="color: var(--orange); margin-bottom: 0.4rem; font-size: 1.2rem; display: block;"></i>
+                            Aucun favori enregistré.<br>
+                            Utilisez le bouton <strong>+ Favori</strong> du Point A pour en créer.
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -1289,19 +1311,44 @@
             activePointBTab = tab;
             const tabBtnListing = document.getElementById('tabBtnListing');
             const tabBtnCustom = document.getElementById('tabBtnCustom');
+            const tabBtnFavoriB = document.getElementById('tabBtnFavoriB');
             const viewListing = document.getElementById('pointBListingView');
             const viewCustom = document.getElementById('pointBCustomView');
+            const viewFavori = document.getElementById('pointBFavoriView');
+
+            // Reset all
+            tabBtnListing.classList.remove('active');
+            tabBtnCustom.classList.remove('active');
+            tabBtnFavoriB.classList.remove('active');
+            viewListing.style.display = 'none';
+            viewCustom.style.display = 'none';
+            viewFavori.style.display = 'none';
 
             if (tab === 'listing') {
                 tabBtnListing.classList.add('active');
-                tabBtnCustom.classList.remove('active');
                 viewListing.style.display = 'block';
-                viewCustom.style.display = 'none';
-            } else {
+            } else if (tab === 'custom') {
                 tabBtnCustom.classList.add('active');
-                tabBtnListing.classList.remove('active');
                 viewCustom.style.display = 'block';
-                viewListing.style.display = 'none';
+            } else if (tab === 'favori') {
+                tabBtnFavoriB.classList.add('active');
+                viewFavori.style.display = 'block';
+            }
+        }
+
+        // ── Selection of Favorite Landmark as Point B ──
+        function selectFavoritePointB(pt) {
+            currentPointB = {
+                name: pt.name,
+                label: pt.address || pt.name,
+                address: pt.address,
+                lat: parseFloat(pt.lat),
+                lon: parseFloat(pt.lon)
+            };
+            updateMarkerB();
+
+            if (currentPointA && currentPointB) {
+                calculateRoute();
             }
         }
 
