@@ -43,3 +43,10 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 - **Security & Integrity**: Inspect console and DOM for CSP violations, security warnings, and sensitive data leakage. Ensure proper XSS sanitization.
 - **Quality & Accessibility Audits**: Run `lighthouse_audit` on modified pages to check accessibility, performance, and best practices.
 - **Detailed Reference**: See [.agents/rules/chrome_devtools_qa.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/chrome_devtools_qa.md).
+
+---
+
+## 5. Agent Autonomy & Deployment Policy
+
+- **Full Automation on Dev & Local**: The agent is authorized to execute all tasks autonomously without prompting for user confirmation (running tests, modifying files, creating commits, pushing to remote, and deploying to the **Dev** environment).
+- **Manual Confirmation for Production**: Once local tests, GitHub Actions CI, and the Dev deployment are all **OK**, the agent must **never auto-deploy to Production**. Instead, propose and prompt the user to trigger or approve the Production deployment.
