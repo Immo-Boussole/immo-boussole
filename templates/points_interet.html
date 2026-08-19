@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#1a1e29">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>{{ title }}</title>
+    
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="/static/css/leaflet.css">
+    
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --surface: #131929;
+            --surface-2: #1a2236;
+            --surface-3: #222c44;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text: #e2e8f0;
+            --text-2: #94a3b8;
+            --text-3: #64748b;
+            --accent: #4f8ef7;
+            --accent-2: #6366f1;
+            --accent-glow: rgba(79, 142, 247, 0.25);
+            --green: #10d9a4;
+            --orange: #f8a84b;
+            --red: #f25c69;
+            --purple: #a855f7;
+            --cyan: #06b6d4;
+            --yellow: #eab308;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --trans: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        /* ── Main App Layout ── */
+        .app-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Topbar */
+        .topbar {
+            height: 60px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            flex-shrink: 0;
+            z-index: 20;
+            gap: 0.75rem;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .topbar-title-block {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .topbar-title-block h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .topbar-title-block h1 i {
+            color: var(--green);
+        }
+
+        .topbar-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-2);
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Content Area: Split View */
+        .split-view {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Left Side POI Control Panel */
+        .poi-panel {
+            width: 460px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            flex-shrink: 0;
+            z-index: 10;
+            padding: 1.25rem;
+            gap: 1.25rem;
+        }
+
+        .poi-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        .poi-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .poi-panel::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background: #111;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Card blocks */
+        .poi-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            position: relative;
+        }
+
+        .poi-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .poi-card-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--green);
+        }
+
+        /* Search input with autocomplete */
+        .search-field-wrapper {
+            position: relative;
+        }
+
+        .search-input-box {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.75rem;
+            gap: 0.5rem;
+            transition: var(--trans);
+        }
+
+        .search-input-box:focus-within {
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(16, 217, 164, 0.25);
+        }
+
+        .search-input-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 0.88rem;
+            font-family: inherit;
+        }
+
+        .search-input-box input::placeholder {
+            color: var(--text-3);
+        }
+
+        .search-input-box .btn-clear {
+            background: transparent;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            display: none;
+        }
+        .search-input-box .btn-clear:hover {
+            color: var(--text);
+        }
+
+        /* Autocomplete dropdown */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: var(--surface-3);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            z-index: 100;
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 0.6rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: var(--trans);
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover, .autocomplete-item.active {
+            background: rgba(16, 217, 164, 0.12);
+        }
+
+        .item-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.2rem 0.45rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .item-badge.city { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .item-badge.address { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .item-badge.station { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+
+        .item-details {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-sub {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Chips & Quick Action buttons */
+        .quick-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-2);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: var(--trans);
+            user-select: none;
+            min-height: 32px;
+        }
+
+        .action-chip:hover {
+            color: var(--text);
+            border-color: var(--green);
+            background: rgba(16, 217, 164, 0.08);
+        }
+
+        .action-chip.gps {
+            color: var(--green);
+            border-color: rgba(16, 217, 164, 0.3);
+        }
+        .action-chip.gps:hover {
+            background: rgba(16, 217, 164, 0.15);
+        }
+
+        /* Tabs */
+        .tab-switcher {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-2);
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            background: var(--surface-2);
+            color: var(--green);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Listing Selector Box */
+        .listing-select-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .listing-select-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.45rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--trans);
+            border: 1px solid transparent;
+        }
+
+        .listing-select-item:hover {
+            background: var(--surface-2);
+        }
+
+        .listing-select-item.selected {
+            background: rgba(16, 217, 164, 0.12);
+            border-color: rgba(16, 217, 164, 0.3);
+        }
+
+        .listing-thumb {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            background: var(--surface-2);
+            object-fit: cover;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-3);
+            font-size: 0.9rem;
+        }
+
+        .listing-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .listing-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .listing-meta {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Radius selector chips */
+        .radius-selector {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .radius-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            min-height: 34px;
+        }
+
+        .radius-chip:hover {
+            color: var(--text);
+            border-color: var(--green);
+        }
+
+        .radius-chip.active {
+            background: var(--green);
+            color: #0b0f1a;
+            border-color: var(--green);
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(16, 217, 164, 0.3);
+        }
+
+        /* Category toggle chips grid */
+        .category-toggles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.45rem;
+        }
+
+        .cat-toggle-chip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.45rem 0.6rem;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            user-select: none;
+            min-height: 36px;
+        }
+
+        .cat-toggle-chip:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+        }
+
+        .cat-toggle-chip.active {
+            background: var(--cat-bg, rgba(79, 142, 247, 0.15));
+            border-color: var(--cat-color, var(--accent));
+            color: var(--text);
+        }
+
+        .cat-toggle-chip .cat-icon {
+            font-size: 0.85rem;
+            color: var(--cat-color, var(--accent));
+        }
+
+        .cat-toggle-chip .cat-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cat-toggle-chip .cat-badge-count {
+            font-size: 0.65rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.1rem 0.35rem;
+            border-radius: 10px;
+            color: var(--text);
+            display: none;
+        }
+
+        /* Action Buttons */
+        .btn-search-pois {
+            background: linear-gradient(135deg, var(--green), #059669);
+            color: #0b0f1a;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: var(--trans);
+            box-shadow: 0 4px 14px rgba(16, 217, 164, 0.25);
+            min-height: 44px;
+        }
+
+        .btn-search-pois:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        /* Results section */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .results-header-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .results-count-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: rgba(16, 217, 164, 0.15);
+            color: var(--green);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+        }
+
+        /* Result category filter pills */
+        .result-cat-filters {
+            display: flex;
+            gap: 0.35rem;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+        }
+        .result-cat-filters::-webkit-scrollbar { display: none; }
+
+        .result-cat-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.25rem 0.55rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--trans);
+            min-height: 28px;
+        }
+
+        .result-cat-pill:hover, .result-cat-pill.active {
+            background: var(--surface-3);
+            color: var(--text);
+            border-color: var(--green);
+        }
+
+        /* POI items list */
+        .poi-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 380px;
+            overflow-y: auto;
+        }
+
+        .poi-item-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.65rem 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.65rem;
+            transition: var(--trans);
+            cursor: pointer;
+        }
+
+        .poi-item-card:hover {
+            border-color: var(--border-hover);
+            transform: translateX(2px);
+            background: var(--surface-3);
+        }
+
+        .poi-item-left {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .poi-item-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+        }
+
+        .poi-item-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .poi-item-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .poi-item-meta {
+            font-size: 0.68rem;
+            color: var(--text-2);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .poi-item-meta .badge-dist {
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        .poi-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex-shrink: 0;
+        }
+
+        .btn-poi-action {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.35rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: var(--trans);
+            min-height: 32px;
+        }
+
+        .btn-poi-action:hover {
+            background: var(--surface-3);
+            color: var(--text);
+            border-color: var(--green);
+        }
+
+        /* Marker icons & Map styling */
+        .poi-map-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 0.8rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+            transition: transform 0.2s ease;
+        }
+
+        .poi-map-pin:hover {
+            transform: scale(1.2);
+            z-index: 1000 !important;
+        }
+
+        .anchor-map-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1rem;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+            border: 2px solid #fff;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+        .leaflet-popup-tip {
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            font-family: 'Inter', sans-serif;
+            min-width: 200px;
+        }
+
+        /* ── Responsive adjustments ── */
+        @media (max-width: 900px) {
+            .topbar {
+                height: 56px !important;
+                padding: 0 0.85rem !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 0.5rem !important;
+            }
+            .topbar-subtitle {
+                display: none !important;
+            }
+            .topbar-title-block h1 {
+                font-size: 1rem !important;
+            }
+            .topbar-right {
+                width: auto !important;
+                display: flex !important;
+                align-items: center !important;
+                overflow: visible !important;
+            }
+            .topbar-right .btn-gmaps {
+                padding: 0.35rem 0.6rem !important;
+                height: 36px !important;
+                width: auto !important;
+                min-width: 36px !important;
+                flex: 0 0 auto !important;
+            }
+            .btn-poi-text-desktop {
+                display: none !important;
+            }
+            .split-view {
+                flex-direction: column !important;
+            }
+            .poi-panel {
+                width: 100% !important;
+                height: 52% !important;
+                max-height: 52% !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--border) !important;
+                padding: 0.75rem !important;
+                gap: 0.75rem !important;
+            }
+            .map-container {
+                height: 48% !important;
+                width: 100% !important;
+            }
+            .mobile-menu-btn {
+                display: flex !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Universal Sidebar -->
+    {% include 'components/sidebar.html' %}
+
+    <div class="app-main">
+        <!-- Top Header -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button type="button" class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu" aria-label="Menu">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="topbar-title-block">
+                    <h1><i class="fa-solid fa-location-crosshairs"></i> {{ t(request, 'pois.title', 'Points d\'Intérêt') }}</h1>
+                    <div class="topbar-subtitle">{{ t(request, 'pois.subtitle', 'Exploration des commodités, équipements et infrastructures autour de vos biens et adresses') }}</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <a href="/distance-temps" class="btn-poi-action" title="Calculateur Distance & Temps" style="min-height: 36px; padding: 0.35rem 0.6rem; font-size: 0.8rem; color: var(--accent); border-color: rgba(79,142,247,0.3); background: rgba(79,142,247,0.08);">
+                    <i class="fa-solid fa-route"></i> <span class="btn-poi-text-desktop">Distance & Temps</span>
+                </a>
+                <a href="/carte" class="btn-poi-action" title="{{ t(request, 'nav.map', 'Voir sur la carte globale') }}" style="min-height: 36px; padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+                    <i class="fa-solid fa-map-location-dot"></i> <span class="btn-poi-text-desktop">{{ t(request, 'nav.map', 'Carte') }}</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Split View: Left Controls + Right Map -->
+        <div class="split-view">
+            <!-- Left Side Panel -->
+            <aside class="poi-panel">
+                
+                <!-- ── Card 1: Point de référence (Ancre) ── -->
+                <div class="poi-card">
+                    <div class="poi-card-header">
+                        <span class="poi-card-title">
+                            <i class="fa-solid fa-crosshairs"></i> {{ t(request, 'pois.anchor_point', 'Point de référence') }}
+                        </span>
+                        <!-- Tab Switcher (Listing vs Custom) -->
+                        <div class="tab-switcher">
+                            <button type="button" class="tab-btn active" id="tabBtnListing" onclick="switchAnchorTab('listing')">
+                                <i class="fa-solid fa-house"></i> {{ t(request, 'pois.tab_listing', 'Bien immo') }}
+                            </button>
+                            <button type="button" class="tab-btn" id="tabBtnCustom" onclick="switchAnchorTab('custom')">
+                                <i class="fa-solid fa-map-pin"></i> {{ t(request, 'pois.tab_custom', 'Adresse libre') }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Subview 1: Listing Picker -->
+                    <div id="anchorListingView">
+                        <div class="search-input-box" style="margin-bottom: 0.5rem;">
+                            <i class="fa-solid fa-filter" style="color: var(--text-3);"></i>
+                            <input type="text" id="inputFilterListings" aria-label="Filtrer les annonces immobilières" placeholder="Filtrer parmi les annonces..." oninput="filterListingChoices()" />
+                        </div>
+                        <div class="listing-select-box" id="listingChoicesContainer">
+                            {% for l in listings %}
+                            {% set photos = l._photos if l._photos is defined else [] %}
+                            {% set photo = photos[0] if photos and photos|length > 0 else '' %}
+                            <div class="listing-select-item {% if selected_listing and selected_listing.id == l.id %}selected{% endif %}" 
+                                 id="listingItem_{{ l.id }}"
+                                 onclick='selectListingAnchor({{ l.id }}, {{ l.title|tojson }}, {{ (l.location or l.city)|tojson }}, {{ l.latitude or 0 }}, {{ l.longitude or 0 }}, {{ l.price or 0 }})'
+                                 data-title="{{ l.title|lower }}"
+                                 data-city="{{ (l.city or l.location or '')|lower }}">
+                                {% if photo %}
+                                <img src="/{{ photo.lstrip('/') }}" class="listing-thumb" alt="Photo" />
+                                {% else %}
+                                <div class="listing-thumb"><i class="fa-solid fa-image"></i></div>
+                                {% endif %}
+                                <div class="listing-info">
+                                    <div class="listing-title">{{ l.title }}</div>
+                                    <div class="listing-meta">
+                                        <span><i class="fa-solid fa-location-dot"></i> {{ l.city or l.location }}</span>
+                                        <span><strong>{{ l.price|int if l.price else 'N/C' }} €</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Subview 2: Free Address / Station / City Autocomplete -->
+                    <div id="anchorCustomView" style="display: none;">
+                        <div class="search-field-wrapper">
+                            <div class="search-input-box">
+                                <i class="fa-solid fa-magnifying-glass" style="color: var(--green);"></i>
+                                <input type="text" id="inputAnchor" aria-label="{{ t(request, 'pois.anchor_point', 'Point de référence') }}" placeholder="{{ t(request, 'pois.placeholder_anchor', 'Saisir une adresse, ville ou gare SNCF...') }}" autocomplete="off" oninput="handleSearchInput()" onfocus="showAutocomplete()" />
+                                <button type="button" class="btn-clear" id="btnClearAnchor" onclick="clearAnchor()" aria-label="Effacer">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="autocomplete-dropdown" id="dropdownAnchor"></div>
+                        </div>
+
+                        <!-- Favorite Presets & GPS -->
+                        <div class="quick-actions" style="margin-top: 0.5rem;">
+                            <button type="button" class="action-chip gps" onclick="locateUserPosition()" title="{{ t(request, 'pois.my_position', 'Utiliser ma position GPS') }}">
+                                <i class="fa-solid fa-crosshairs"></i> {{ t(request, 'pois.my_position', 'Ma position') }}
+                            </button>
+                            {% for pt in user_points %}
+                            <span class="action-chip" onclick='selectFavoriteAnchor({{ pt|tojson }})' title="{{ pt.address }}">
+                                <i class="fa-solid {{ pt.icon or 'fa-location-dot' }}" style="color: var(--accent);"></i> {{ pt.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Card 2: Rayon de recherche (Radius) ── -->
+                <div class="poi-card">
+                    <div class="poi-card-header">
+                        <span class="poi-card-title" style="color: var(--accent);">
+                            <i class="fa-solid fa-circle-notch"></i> {{ t(request, 'pois.radius', 'Rayon de recherche') }}
+                        </span>
+                        <span id="radiusLabel" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">5 km</span>
+                    </div>
+                    <div class="radius-selector" id="radiusSelectorContainer">
+                        <button type="button" class="radius-chip" onclick="setRadius(1000, this)">1 km</button>
+                        <button type="button" class="radius-chip" onclick="setRadius(3000, this)">3 km</button>
+                        <button type="button" class="radius-chip active" onclick="setRadius(5000, this)">5 km</button>
+                        <button type="button" class="radius-chip" onclick="setRadius(10000, this)">10 km</button>
+                        <button type="button" class="radius-chip" onclick="setRadius(15000, this)">15 km</button>
+                        <button type="button" class="radius-chip" onclick="setRadius(20000, this)">20 km</button>
+                    </div>
+                </div>
+
+                <!-- ── Card 3: Catégories d'équipements ── -->
+                <div class="poi-card">
+                    <div class="poi-card-header">
+                        <span class="poi-card-title" style="color: var(--yellow);">
+                            <i class="fa-solid fa-layer-group"></i> {{ t(request, 'pois.categories', 'Catégories d\'équipements') }}
+                        </span>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <button type="button" class="action-chip" style="padding: 0.15rem 0.45rem; font-size: 0.68rem; min-height: 24px;" onclick="toggleAllCategories(true)">Tout cocher</button>
+                            <button type="button" class="action-chip" style="padding: 0.15rem 0.45rem; font-size: 0.68rem; min-height: 24px;" onclick="toggleAllCategories(false)">Décocher</button>
+                        </div>
+                    </div>
+                    
+                    <div class="category-toggles-grid" id="categoryTogglesContainer">
+                        {% for cat_key, cat in categories_meta.items() %}
+                        <div class="cat-toggle-chip active" 
+                             data-cat="{{ cat_key }}" 
+                             style="--cat-color: {{ cat.color }}; --cat-bg: {{ cat.bg_color }};"
+                             onclick="toggleCategory('{{ cat_key }}', this)">
+                            <i class="fa-solid {{ cat.icon }} cat-icon"></i>
+                            <span class="cat-text">{{ cat.name }}</span>
+                            <span class="cat-badge-count" id="count_badge_{{ cat_key }}">0</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Search Action Button -->
+                <button type="button" class="btn-search-pois" id="btnSearchPois" onclick="searchPois()">
+                    <i class="fa-solid fa-magnifying-glass-location"></i>
+                    <span>{{ t(request, 'pois.search_pois_btn', 'Explorer les points d\'intérêt') }}</span>
+                </button>
+
+                <!-- ── Results Section ── -->
+                <div class="results-section" id="resultsSection" style="display: none;">
+                    <div class="results-header">
+                        <div class="results-header-title">
+                            <i class="fa-solid fa-list-check" style="color: var(--green);"></i>
+                            <span>{{ t(request, 'pois.results_title', 'Points d\'intérêt à proximité') }}</span>
+                        </div>
+                        <span class="results-count-tag" id="totalPoisCountTag">0 trouvés</span>
+                    </div>
+
+                    <!-- Category Filter Pills -->
+                    <div class="result-cat-filters" id="resultCatFilters">
+                        <button type="button" class="result-cat-pill active" onclick="filterResultCategory('all', this)">
+                            <i class="fa-solid fa-globe"></i> {{ t(request, 'pois.filter_all', 'Tous') }} (<span id="count_all">0</span>)
+                        </button>
+                        {% for cat_key, cat in categories_meta.items() %}
+                        <button type="button" class="result-cat-pill" id="pill_{{ cat_key }}" style="display: none;" onclick="filterResultCategory('{{ cat_key }}', this)">
+                            <i class="fa-solid {{ cat.icon }}" style="color: {{ cat.color }};"></i> {{ cat.name }} (<span id="pill_count_{{ cat_key }}">0</span>)
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Quick search input inside results -->
+                    <div class="search-input-box" style="padding: 0.4rem 0.6rem;">
+                        <i class="fa-solid fa-filter" style="color: var(--text-3); font-size: 0.8rem;"></i>
+                        <input type="text" id="inputFilterPoisList" placeholder="Filtrer par nom ou adresse..." oninput="filterPoisList()" style="font-size: 0.8rem;" />
+                    </div>
+
+                    <!-- POI Items Scroll List -->
+                    <div class="poi-items-list" id="poiItemsListContainer">
+                        <!-- Rendered via JS -->
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- Right Side Map -->
+            <main class="map-container">
+                <div id="map"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="/static/js/leaflet.js"></script>
+
+    <script>
+        // ── State Variables ──
+        let currentAnchor = null; // { name, label, address, lat, lon, listingId }
+        let currentRadiusMeters = 5000;
+        let selectedCategories = new Set([
+            'highway', 'cinema', 'swimming', 'mall', 'bakery', 
+            'school', 'health', 'station', 'park', 'charging'
+        ]);
+        let activeAnchorTab = 'listing';
+        let searchDebounceTimer = null;
+        let map = null;
+        let anchorMarker = null;
+        let radiusCircleLayer = null;
+        let poiMarkersLayerGroup = null;
+        let allPoisData = [];
+        let activeResultFilterCat = 'all';
+
+        // Category Metadata injected from backend
+        const categoriesMeta = {{ categories_meta|tojson }};
+
+        // ── Map Initialization ──
+        function initMap() {
+            map = L.map('map', {
+                center: [46.603354, 1.888334], // Center of France
+                zoom: 6,
+                zoomControl: true
+            });
+
+            // CartoDB Dark Matter tiles
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            poiMarkersLayerGroup = L.layerGroup().addTo(map);
+
+            // Auto resize handler
+            window.addEventListener('resize', () => {
+                if (map) map.invalidateSize();
+            });
+        }
+
+        // ── Anchor Selection Handlers ──
+        function switchAnchorTab(tab) {
+            activeAnchorTab = tab;
+            const tabBtnListing = document.getElementById('tabBtnListing');
+            const tabBtnCustom = document.getElementById('tabBtnCustom');
+            const viewListing = document.getElementById('anchorListingView');
+            const viewCustom = document.getElementById('anchorCustomView');
+
+            if (tab === 'listing') {
+                tabBtnListing.classList.add('active');
+                tabBtnCustom.classList.remove('active');
+                viewListing.style.display = 'block';
+                viewCustom.style.display = 'none';
+            } else {
+                tabBtnCustom.classList.add('active');
+                tabBtnListing.classList.remove('active');
+                viewCustom.style.display = 'block';
+                viewListing.style.display = 'none';
+            }
+        }
+
+        async function selectListingAnchor(id, title, city, lat, lon, price) {
+            document.querySelectorAll('.listing-select-item').forEach(el => el.classList.remove('selected'));
+            const selectedItem = document.getElementById(`listingItem_${id}`);
+            if (selectedItem) selectedItem.classList.add('selected');
+
+            let finalLat = parseFloat(lat);
+            let finalLon = parseFloat(lon);
+
+            // Dynamic Geocoding fallback if listing coords are missing
+            if (!finalLat || !finalLon || isNaN(finalLat) || isNaN(finalLon)) {
+                if (city) {
+                    try {
+                        const geoRes = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(city)}&limit=1`);
+                        const geoData = await geoRes.json();
+                        if (geoData.results && geoData.results.length > 0) {
+                            finalLat = geoData.results[0].lat;
+                            finalLon = geoData.results[0].lon;
+                        }
+                    } catch (e) {
+                        console.warn("Geocoding fallback failed for listing city:", city, e);
+                    }
+                }
+            }
+
+            if (!finalLat || !finalLon) {
+                alert("Impossible de localiser ce bien automatiquement. Veuillez saisir une adresse dans 'Adresse libre'.");
+                return;
+            }
+
+            currentAnchor = {
+                name: title,
+                label: `${title} (${city || 'Bien'})`,
+                address: city || '',
+                lat: finalLat,
+                lon: finalLon,
+                listingId: id,
+                price: price
+            };
+
+            updateAnchorMarker();
+            searchPois();
+        }
+
+        function selectFavoriteAnchor(pt) {
+            currentAnchor = {
+                name: pt.name,
+                label: pt.address || pt.name,
+                address: pt.address,
+                lat: parseFloat(pt.lat),
+                lon: parseFloat(pt.lon)
+            };
+            document.getElementById('inputAnchor').value = pt.name + (pt.address ? ` (${pt.address})` : '');
+            document.getElementById('btnClearAnchor').style.display = 'block';
+            updateAnchorMarker();
+            searchPois();
+        }
+
+        function clearAnchor() {
+            currentAnchor = null;
+            document.getElementById('inputAnchor').value = '';
+            document.getElementById('btnClearAnchor').style.display = 'none';
+            if (anchorMarker) {
+                map.removeLayer(anchorMarker);
+                anchorMarker = null;
+            }
+            if (radiusCircleLayer) {
+                map.removeLayer(radiusCircleLayer);
+                radiusCircleLayer = null;
+            }
+            poiMarkersLayerGroup.clearLayers();
+            document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        function locateUserPosition() {
+            if (!navigator.geolocation) {
+                alert("La géolocalisation n'est pas supportée par votre navigateur.");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    currentAnchor = {
+                        name: "Ma position GPS",
+                        label: `Position GPS (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`,
+                        address: "Position actuelle",
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude
+                    };
+                    document.getElementById('inputAnchor').value = "Ma position actuelle";
+                    document.getElementById('btnClearAnchor').style.display = 'block';
+                    switchAnchorTab('custom');
+                    updateAnchorMarker();
+                    searchPois();
+                },
+                err => {
+                    console.error("GPS error:", err);
+                    alert("Impossible d'accéder à votre position GPS. Veuillez autoriser la localisation.");
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        // ── Autocomplete for Free Address Input ──
+        function handleSearchInput() {
+            const query = document.getElementById('inputAnchor').value.trim();
+            const btnClear = document.getElementById('btnClearAnchor');
+            const dropdown = document.getElementById('dropdownAnchor');
+
+            btnClear.style.display = query ? 'block' : 'none';
+
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+
+            if (query.length < 2) {
+                dropdown.style.display = 'none';
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            searchDebounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(query)}&limit=7`);
+                    const data = await res.json();
+                    renderAutocomplete(data.results || []);
+                } catch (err) {
+                    console.error("Autocomplete error:", err);
+                }
+            }, 250);
+        }
+
+        function showAutocomplete() {
+            const query = document.getElementById('inputAnchor').value.trim();
+            if (query.length >= 2) {
+                handleSearchInput();
+            }
+        }
+
+        function renderAutocomplete(results) {
+            const dropdown = document.getElementById('dropdownAnchor');
+            if (!results || results.length === 0) {
+                dropdown.innerHTML = `<div class="autocomplete-item" style="color: var(--text-3); cursor: default;">Aucun résultat</div>`;
+                dropdown.style.display = 'block';
+                return;
+            }
+
+            dropdown.innerHTML = results.map((item, idx) => {
+                let badgeClass = 'address';
+                let badgeIcon = 'fa-location-dot';
+                let badgeText = 'Adresse';
+                if (item.category === 'city') {
+                    badgeClass = 'city';
+                    badgeIcon = 'fa-city';
+                    badgeText = 'Ville';
+                } else if (item.category === 'station') {
+                    badgeClass = 'station';
+                    badgeIcon = 'fa-train';
+                    badgeText = 'Gare SNCF';
+                }
+
+                return `
+                    <div class="autocomplete-item" onclick="selectAutocompleteItem(${idx})">
+                        <span class="item-badge ${badgeClass}"><i class="fa-solid ${badgeIcon}"></i> ${badgeText}</span>
+                        <div class="item-details">
+                            <span class="item-name">${escapeHtml(item.name)}</span>
+                            <span class="item-sub">${escapeHtml(item.label || item.address || '')}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            dropdown._results = results;
+            dropdown.style.display = 'block';
+        }
+
+        function selectAutocompleteItem(idx) {
+            const dropdown = document.getElementById('dropdownAnchor');
+            const item = dropdown._results ? dropdown._results[idx] : null;
+            if (!item) return;
+
+            currentAnchor = {
+                name: item.name,
+                label: item.label,
+                address: item.address,
+                lat: item.lat,
+                lon: item.lon
+            };
+
+            document.getElementById('inputAnchor').value = item.name + (item.label && item.label !== item.name ? ` (${item.label})` : '');
+            dropdown.style.display = 'none';
+
+            updateAnchorMarker();
+            searchPois();
+        }
+
+        // Close dropdown on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-field-wrapper')) {
+                const dropdown = document.getElementById('dropdownAnchor');
+                if (dropdown) dropdown.style.display = 'none';
+            }
+        });
+
+        function filterListingChoices() {
+            const query = document.getElementById('inputFilterListings').value.toLowerCase().trim();
+            const items = document.querySelectorAll('.listing-select-item');
+            items.forEach(el => {
+                const title = el.getAttribute('data-title') || '';
+                const city = el.getAttribute('data-city') || '';
+                if (title.includes(query) || city.includes(query)) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = 'none';
+                }
+            });
+        }
+
+        // ── Radius & Category Controls ──
+        function setRadius(meters, btn) {
+            currentRadiusMeters = meters;
+            document.querySelectorAll('.radius-chip').forEach(el => el.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            
+            const km = meters >= 1000 ? (meters / 1000) + " km" : meters + " m";
+            document.getElementById('radiusLabel').textContent = km;
+
+            if (currentAnchor) {
+                updateAnchorMarker();
+                searchPois();
+            }
+        }
+
+        function toggleCategory(catKey, chip) {
+            if (selectedCategories.has(catKey)) {
+                selectedCategories.delete(catKey);
+                chip.classList.remove('active');
+            } else {
+                selectedCategories.add(catKey);
+                chip.classList.add('active');
+            }
+        }
+
+        function toggleAllCategories(selectAll) {
+            const chips = document.querySelectorAll('.cat-toggle-chip');
+            if (selectAll) {
+                Object.keys(categoriesMeta).forEach(k => selectedCategories.add(k));
+                chips.forEach(c => c.classList.add('active'));
+            } else {
+                selectedCategories.clear();
+                chips.forEach(c => c.classList.remove('active'));
+            }
+        }
+
+        // ── Marker & Radius Circle Updates ──
+        function updateAnchorMarker() {
+            if (!currentAnchor || !map) return;
+
+            if (anchorMarker) map.removeLayer(anchorMarker);
+            if (radiusCircleLayer) map.removeLayer(radiusCircleLayer);
+
+            const anchorIcon = L.divIcon({
+                className: 'anchor-custom-icon',
+                html: `<div class="anchor-map-pin"><i class="fa-solid fa-house"></i></div>`,
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
+
+            anchorMarker = L.marker([currentAnchor.lat, currentAnchor.lon], { icon: anchorIcon })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="font-weight: 700; color: #ef4444; font-size: 0.9rem; margin-bottom: 2px;">
+                        <i class="fa-solid fa-crosshairs"></i> ${escapeHtml(currentAnchor.name)}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-2);">${escapeHtml(currentAnchor.address || '')}</div>
+                `);
+
+            // Draw Radius Circle
+            radiusCircleLayer = L.circle([currentAnchor.lat, currentAnchor.lon], {
+                radius: currentRadiusMeters,
+                color: '#4f8ef7',
+                fillColor: '#4f8ef7',
+                fillOpacity: 0.08,
+                weight: 2,
+                dashArray: '5, 8'
+            }).addTo(map);
+
+            map.fitBounds(radiusCircleLayer.getBounds(), { padding: [30, 30] });
+        }
+
+        // ── Fetch & Display POIs ──
+        async function searchPois() {
+            if (!currentAnchor) {
+                alert("Veuillez sélectionner un bien immobilier ou une adresse de référence.");
+                return;
+            }
+
+            if (selectedCategories.size === 0) {
+                alert("Veuillez cocher au moins une catégorie d'équipements.");
+                return;
+            }
+
+            const btn = document.getElementById('btnSearchPois');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Recherche des commodités...`;
+            btn.disabled = true;
+
+            const catsParam = Array.from(selectedCategories).join(',');
+            const url = `/api/geo/pois?lat=${currentAnchor.lat}&lon=${currentAnchor.lon}&radius=${currentRadiusMeters}&categories=${encodeURIComponent(catsParam)}&limit=25`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.success) {
+                    allPoisData = data.pois || [];
+                    renderPoisResults(data);
+                } else {
+                    alert("Erreur lors de la récupération des points d'intérêt.");
+                }
+            } catch (err) {
+                console.error("POI fetch failed:", err);
+                alert("Impossible de contacter le service de points d'intérêt.");
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        }
+
+        function renderPoisResults(data) {
+            const resultsSection = document.getElementById('resultsSection');
+            const totalCountTag = document.getElementById('totalPoisCountTag');
+            const countAll = document.getElementById('count_all');
+            
+            resultsSection.style.display = 'flex';
+            totalCountTag.textContent = `${data.total_count} trouvés`;
+            countAll.textContent = data.total_count;
+
+            // Update badge counts in category toggles and filter pills
+            Object.keys(categoriesMeta).forEach(catKey => {
+                const count = data.category_counts[catKey] || 0;
+                
+                // Toggle badge
+                const badge = document.getElementById(`count_badge_${catKey}`);
+                if (badge) {
+                    badge.textContent = count;
+                    badge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+
+                // Filter pill
+                const pill = document.getElementById(`pill_${catKey}`);
+                const pillCount = document.getElementById(`pill_count_${catKey}`);
+                if (pill && pillCount) {
+                    pillCount.textContent = count;
+                    pill.style.display = count > 0 ? 'inline-flex' : 'none';
+                }
+            });
+
+            // Clear map POI markers
+            poiMarkersLayerGroup.clearLayers();
+
+            // Add markers for all POIs
+            data.pois.forEach((poi, idx) => {
+                const poiIcon = L.divIcon({
+                    className: 'poi-custom-icon',
+                    html: `<div class="poi-map-pin" style="background: ${poi.color};"><i class="fa-solid ${poi.icon}"></i></div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                });
+
+                const listingParam = currentAnchor.listingId ? `&listing_id=${currentAnchor.listingId}` : '';
+                const routeUrl = `/distance-temps?lat=${poi.lat}&lon=${poi.lon}&name=${encodeURIComponent(poi.name)}${listingParam}`;
+
+                const marker = L.marker([poi.lat, poi.lon], { icon: poiIcon })
+                    .bindPopup(`
+                        <div style="font-weight: 700; color: ${poi.color}; font-size: 0.85rem; margin-bottom: 2px;">
+                            <i class="fa-solid ${poi.icon}"></i> ${escapeHtml(poi.name)}
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-2); margin-bottom: 6px;">
+                            <span>${escapeHtml(poi.category_name)}</span> • <strong style="color: var(--green);">${poi.distance_km} km</strong>
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-3); margin-bottom: 8px;">
+                            🚗 ~${poi.car_time_str} • 🚲 ~${poi.bike_time_str} • 🚶 ~${poi.walk_time_str}
+                        </div>
+                        <div style="display: flex; gap: 4px;">
+                            <a href="${routeUrl}" class="btn-poi-action" style="color: var(--accent); border-color: rgba(79,142,247,0.3); padding: 2px 6px; font-size: 0.7rem;">
+                                <i class="fa-solid fa-route"></i> Itinéraire
+                            </a>
+                            <a href="${poi.gmaps_url}" target="_blank" rel="noopener noreferrer" class="btn-poi-action" style="padding: 2px 6px; font-size: 0.7rem;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Google Maps
+                            </a>
+                        </div>
+                    `);
+
+                poiMarkersLayerGroup.addLayer(marker);
+                poi._marker = marker;
+            });
+
+            // Render list
+            renderPoisListItems();
+        }
+
+        function filterResultCategory(catKey, pillBtn) {
+            activeResultFilterCat = catKey;
+            document.querySelectorAll('.result-cat-pill').forEach(el => el.classList.remove('active'));
+            if (pillBtn) pillBtn.classList.add('active');
+            renderPoisListItems();
+        }
+
+        function filterPoisList() {
+            renderPoisListItems();
+        }
+
+        function renderPoisListItems() {
+            const container = document.getElementById('poiItemsListContainer');
+            const searchKeyword = document.getElementById('inputFilterPoisList').value.toLowerCase().trim();
+
+            let filtered = allPoisData;
+            if (activeResultFilterCat !== 'all') {
+                filtered = filtered.filter(p => p.category === activeResultFilterCat);
+            }
+            if (searchKeyword) {
+                filtered = filtered.filter(p => p.name.toLowerCase().includes(searchKeyword) || (p.address && p.address.toLowerCase().includes(searchKeyword)));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--text-3); padding: 1rem; font-size: 0.8rem;">Aucun point d'intérêt correspondant</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(poi => {
+                const listingParam = currentAnchor.listingId ? `&listing_id=${currentAnchor.listingId}` : '';
+                const routeUrl = `/distance-temps?lat=${poi.lat}&lon=${poi.lon}&name=${encodeURIComponent(poi.name)}${listingParam}`;
+
+                return `
+                    <div class="poi-item-card" onclick="focusPoiOnMap(${poi.lat}, ${poi.lon})">
+                        <div class="poi-item-left">
+                            <div class="poi-item-icon" style="background: ${poi.bg_color}; color: ${poi.color};">
+                                <i class="fa-solid ${poi.icon}"></i>
+                            </div>
+                            <div class="poi-item-info">
+                                <div class="poi-item-name" title="${escapeHtml(poi.name)}">${escapeHtml(poi.name)}</div>
+                                <div class="poi-item-meta">
+                                    <span class="badge-dist">${poi.distance_km} km</span>
+                                    <span>• 🚗 ${poi.car_time_str}</span>
+                                    <span>• 🚲 ${poi.bike_time_str}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="poi-item-actions" onclick="event.stopPropagation()">
+                            <a href="${routeUrl}" class="btn-poi-action" title="Calculer l'itinéraire complet">
+                                <i class="fa-solid fa-route" style="color: var(--accent);"></i>
+                            </a>
+                            <a href="${poi.gmaps_url}" target="_blank" rel="noopener noreferrer" class="btn-poi-action" title="Ouvrir dans Google Maps">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function focusPoiOnMap(lat, lon) {
+            if (!map) return;
+            map.flyTo([lat, lon], 15, { animate: true, duration: 0.8 });
+            // Find and open marker popup
+            poiMarkersLayerGroup.eachLayer(layer => {
+                const pos = layer.getLatLng();
+                if (Math.abs(pos.lat - lat) < 0.0001 && Math.abs(pos.lng - lon) < 0.0001) {
+                    layer.openPopup();
+                }
+            });
+        }
+
+        // HTML Escaper
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        // ── Initialization on Page Load ──
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+
+            // Check if pre-selected listing was passed
+            {% if selected_listing and selected_listing.latitude and selected_listing.longitude %}
+            selectListingAnchor(
+                {{ selected_listing.id }},
+                {{ selected_listing.title|tojson }},
+                {{ (selected_listing.location or selected_listing.city)|tojson }},
+                {{ selected_listing.latitude }},
+                {{ selected_listing.longitude }},
+                {{ selected_listing.price or 0 }}
+            );
+            {% elif selected_listing %}
+            selectListingAnchor(
+                {{ selected_listing.id }},
+                {{ selected_listing.title|tojson }},
+                {{ (selected_listing.location or selected_listing.city)|tojson }},
+                0,
+                0,
+                {{ selected_listing.price or 0 }}
+            );
+            {% endif %}
+
+            // Check if initial coords passed
+            {% if init_lat and init_lon %}
+            currentAnchor = {
+                name: {{ (init_name or 'Point de référence')|tojson }},
+                label: {{ (init_name or 'Point de référence')|tojson }},
+                address: {{ (init_name or '')|tojson }},
+                lat: {{ init_lat }},
+                lon: {{ init_lon }}
+            };
+            document.getElementById('inputAnchor').value = currentAnchor.name;
+            document.getElementById('btnClearAnchor').style.display = 'block';
+            switchAnchorTab('custom');
+            updateAnchorMarker();
+            searchPois();
+            {% endif %}
+
+            // Default to first listing if no anchor passed
+            {% if not selected_listing and not init_lat and listings and listings|length > 0 %}
+            selectListingAnchor(
+                {{ listings[0].id }},
+                {{ listings[0].title|tojson }},
+                {{ (listings[0].location or listings[0].city)|tojson }},
+                {{ listings[0].latitude or 0 }},
+                {{ listings[0].longitude or 0 }},
+                {{ listings[0].price or 0 }}
+            );
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

@@ -49,7 +49,9 @@ from app.geo import (
     get_coordinates,
     get_postal_code,
     search_places_unified,
-    calculate_multi_route
+    calculate_multi_route,
+    fetch_pois_around,
+    POI_CATEGORIES
 )
 from app.media import json_to_photos, photos_to_json
 from app.config import settings
@@ -2059,6 +2061,79 @@ def distance_temps_page(
     })
 
 
+@app.get("/points-interet")
+def points_interet_page(
+    request: Request,
+    listing_id: Optional[int] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    name: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE])
+    ).order_by(Listing.date_added.desc()).limit(300).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+    
+    # User Reference Points
+    username = request.session.get("username")
+    user = db.query(models.User).filter(models.User.username == username).first()
+    
+    user_points = []
+    if user:
+        if user.work_address and user.work_lat and user.work_lon:
+            user_points.append({
+                "id": "work",
+                "name": "Mon travail",
+                "address": user.work_address,
+                "lat": user.work_lat,
+                "lon": user.work_lon,
+                "icon": "fa-briefcase",
+                "is_work": True
+            })
+        if user.poi_json:
+            try:
+                pois = json.loads(user.poi_json)
+                for idx, poi in enumerate(pois):
+                    poi_id = poi.get("id") or f"poi_{idx}"
+                    user_points.append({
+                        "id": str(poi_id),
+                        "name": poi.get("name", "Point d'intérêt"),
+                        "address": poi.get("address", ""),
+                        "lat": poi.get("lat"),
+                        "lon": poi.get("lon"),
+                        "icon": poi.get("icon", "fa-location-dot"),
+                        "is_work": False
+                    })
+            except Exception as e:
+                print(f"[PointsInteret] Error loading poi_json: {e}")
+
+    # Shared Map Pins
+    map_pins = db.query(MapPin).filter(MapPin.lat.isnot(None), MapPin.lon.isnot(None)).all()
+
+    selected_listing = None
+    if listing_id:
+        selected_listing = db.query(Listing).filter(Listing.id == listing_id).first()
+        if selected_listing:
+            _enrich_listings([selected_listing], viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="points_interet.html", context={
+        "title": "Points d'Intérêt — Immo-Boussole",
+        "queries": queries,
+        "listings": listings,
+        "user_points": user_points,
+        "map_pins": map_pins,
+        "selected_listing": selected_listing,
+        "init_lat": lat,
+        "init_lon": lon,
+        "init_name": name,
+        "categories_meta": POI_CATEGORIES
+    })
+
+
 
 @app.get("/chat")
 def chat_page(
@@ -2751,6 +2826,27 @@ def api_geo_route_calc(
         end_lon=body.end_lon,
         start_name=body.start_name or "Point A",
         end_name=body.end_name or "Point B"
+    )
+    return data
+
+
+@app.get("/api/geo/pois")
+def api_geo_pois(
+    lat: float,
+    lon: float,
+    radius: int = 5000,
+    categories: Optional[str] = None,
+    limit: int = 25,
+    _auth = Depends(login_required)
+):
+    """Fetches Points of Interest around coordinates within radius (meters)."""
+    cat_list = [c.strip() for c in categories.split(",") if c.strip()] if categories else None
+    data = fetch_pois_around(
+        lat=lat,
+        lon=lon,
+        radius_meters=radius,
+        categories=cat_list,
+        limit_per_category=limit
     )
     return data
 

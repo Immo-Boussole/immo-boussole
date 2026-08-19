@@ -918,6 +918,9 @@
                 <a href="/distance-temps?listing_id={{ listing.id }}" class="btn btn-route-nav" title="Calculer Distance & Temps" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); text-decoration: none;">
                     <i class="fa-solid fa-route"></i> <span class="btn-text">Itinéraire</span>
                 </a>
+                <a href="/points-interet?listing_id={{ listing.id }}" class="btn btn-poi-nav" title="Explorer les points d'intérêt" style="color: var(--green); border-color: rgba(16, 217, 164, 0.3); background: rgba(16, 217, 164, 0.08); text-decoration: none;">
+                    <i class="fa-solid fa-location-crosshairs"></i> <span class="btn-text">Points d'intérêt</span>
+                </a>
 
                 <button class="btn btn-refresh-nav" onclick="rescrapeListing({{ listing.id }}, this)" title="{{ t(request, 'listing.refresh') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-arrows-rotate"></i> <span class="btn-text">{{ t(request, 'listing.refresh') }}</span>
@@ -1195,6 +1198,9 @@
                     <div style="display: flex; gap: 0.4rem; align-items: center;">
                         <a href="/distance-temps?listing_id={{ listing.id }}" class="btn" style="text-decoration: none; padding: 0.25rem 0.6rem; font-size: 0.72rem; height: auto; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08);">
                             <i class="fa-solid fa-route"></i> Distance & Temps
+                        </a>
+                        <a href="/points-interet?listing_id={{ listing.id }}" class="btn" style="text-decoration: none; padding: 0.25rem 0.6rem; font-size: 0.72rem; height: auto; display: inline-flex; align-items: center; gap: 0.35rem; color: var(--green); border-color: rgba(16, 217, 164, 0.3); background: rgba(16, 217, 164, 0.08);">
+                            <i class="fa-solid fa-location-crosshairs"></i> Points d'intérêt
                         </a>
                         <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; height: auto;" onclick="openStationModal()">
                             <i class="fa-solid fa-pen-to-square"></i> {{ t(request, 'listing.edit_stations') }}

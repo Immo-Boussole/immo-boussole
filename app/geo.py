@@ -1012,3 +1012,353 @@ def calculate_multi_route(
         "polyline": polyline
     }
 
+
+# ── Points of Interest (POI) Engine ──
+
+POI_CATEGORIES = {
+    "highway": {
+        "id": "highway",
+        "name": "Sorties d'autoroute",
+        "icon": "fa-road",
+        "color": "#f87171",
+        "bg_color": "rgba(248, 113, 113, 0.15)",
+        "osm_query": """
+            nwr["highway"="motorway_junction"](around:{radius},{lat},{lon});
+            nwr["highway"="junction"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Sortie d'autoroute"
+    },
+    "cinema": {
+        "id": "cinema",
+        "name": "Cinémas & Théâtres",
+        "icon": "fa-film",
+        "color": "#c084fc",
+        "bg_color": "rgba(192, 132, 252, 0.15)",
+        "osm_query": """
+            nwr["amenity"~"cinema|theatre"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Cinéma / Théâtre"
+    },
+    "swimming": {
+        "id": "swimming",
+        "name": "Piscines & Loisirs",
+        "icon": "fa-person-swimming",
+        "color": "#38bdf8",
+        "bg_color": "rgba(56, 189, 248, 0.15)",
+        "osm_query": """
+            nwr["leisure"~"swimming_pool|water_park|sports_centre"](around:{radius},{lat},{lon});
+            nwr["sport"="swimming"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Piscine / Centre sportif"
+    },
+    "mall": {
+        "id": "mall",
+        "name": "Centres commerciaux & Supermarchés",
+        "icon": "fa-cart-shopping",
+        "color": "#fbbf24",
+        "bg_color": "rgba(251, 191, 36, 0.15)",
+        "osm_query": """
+            nwr["shop"~"mall|supermarket|department_store"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Commerce / Supermarché"
+    },
+    "bakery": {
+        "id": "bakery",
+        "name": "Boulangeries",
+        "icon": "fa-bread-slice",
+        "color": "#fb923c",
+        "bg_color": "rgba(251, 146, 60, 0.15)",
+        "osm_query": """
+            nwr["shop"="bakery"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Boulangerie"
+    },
+    "school": {
+        "id": "school",
+        "name": "Écoles & Éducation",
+        "icon": "fa-graduation-cap",
+        "color": "#60a5fa",
+        "bg_color": "rgba(96, 165, 250, 0.15)",
+        "osm_query": """
+            nwr["amenity"~"school|college|kindergarten"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Établissement scolaire"
+    },
+    "health": {
+        "id": "health",
+        "name": "Santé & Pharmacies",
+        "icon": "fa-kit-medical",
+        "color": "#34d399",
+        "bg_color": "rgba(52, 211, 153, 0.15)",
+        "osm_query": """
+            nwr["amenity"~"pharmacy|hospital|clinic|doctors"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Professionnel de santé"
+    },
+    "station": {
+        "id": "station",
+        "name": "Gares SNCF & Transports",
+        "icon": "fa-train",
+        "color": "#a78bfa",
+        "bg_color": "rgba(167, 139, 250, 0.15)",
+        "osm_query": """
+            nwr["railway"~"station|halt"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Gare / Halte ferroviaire"
+    },
+    "park": {
+        "id": "park",
+        "name": "Parcs & Espaces verts",
+        "icon": "fa-tree",
+        "color": "#4ade80",
+        "bg_color": "rgba(74, 222, 128, 0.15)",
+        "osm_query": """
+            nwr["leisure"~"park|garden"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Parc / Jardin public"
+    },
+    "charging": {
+        "id": "charging",
+        "name": "Bornes de recharge & Carburant",
+        "icon": "fa-charging-station",
+        "color": "#2dd4bf",
+        "bg_color": "rgba(45, 212, 191, 0.15)",
+        "osm_query": """
+            nwr["amenity"~"charging_station|fuel"](around:{radius},{lat},{lon});
+        """,
+        "default_name": "Station recharge / carburant"
+    }
+}
+
+_poi_cache: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+POI_CACHE_TTL_SECONDS = 600.0  # 10 minutes cache
+
+OVERPASS_ENDPOINTS = [
+    "https://lz4.overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter"
+]
+
+
+def fetch_pois_around(
+    lat: float,
+    lon: float,
+    radius_meters: int = 5000,
+    categories: Optional[List[str]] = None,
+    limit_per_category: int = 20
+) -> Dict[str, Any]:
+    """
+    Fetches Points of Interest around (lat, lon) within radius_meters using Overpass API.
+    Returns grouped and sorted POIs with metadata, distances, and category counts.
+    """
+    import time
+    
+    # Cap radius between 500m and 30,000m
+    radius_meters = max(500, min(30000, int(radius_meters)))
+    
+    # Filter requested categories
+    if not categories:
+        active_cats = list(POI_CATEGORIES.keys())
+    else:
+        active_cats = [c for c in categories if c in POI_CATEGORIES]
+        if not active_cats:
+            active_cats = list(POI_CATEGORIES.keys())
+
+    # Check cache
+    cache_key = f"{round(lat, 4)}_{round(lon, 4)}_{radius_meters}_{','.join(sorted(active_cats))}"
+    now = time.time()
+    if cache_key in _poi_cache:
+        cached_time, cached_data = _poi_cache[cache_key]
+        if now - cached_time < POI_CACHE_TTL_SECONDS:
+            return cached_data
+
+    # Build Bounding Box for fast spatial query
+    import math
+    d_lat = radius_meters / 111320.0
+    d_lon = radius_meters / max(1e-5, (111320.0 * math.cos(math.radians(lat))))
+    s, w, n, e = round(lat - d_lat, 5), round(lon - d_lon, 5), round(lat + d_lat, 5), round(lon + d_lon, 5)
+
+    full_query = f"""
+    [out:json][timeout:20];
+    (
+      node["highway"="motorway_junction"]({s},{w},{n},{e});
+      node["highway"="junction"]({s},{w},{n},{e});
+      node["shop"~"bakery|supermarket|mall|department_store"]({s},{w},{n},{e});
+      node["amenity"~"cinema|theatre|school|college|kindergarten|hospital|clinic|doctors|pharmacy|fuel|charging_station"]({s},{w},{n},{e});
+      node["railway"~"station|halt"]({s},{w},{n},{e});
+      node["leisure"~"swimming_pool|sports_centre|water_park|park|garden"]({s},{w},{n},{e});
+      way["amenity"~"cinema|theatre|school|hospital"]({s},{w},{n},{e});
+      way["shop"~"mall|supermarket"]({s},{w},{n},{e});
+      way["railway"="station"]({s},{w},{n},{e});
+      way["leisure"~"swimming_pool|park"]({s},{w},{n},{e});
+    );
+    out center 200 qt;
+    """
+
+    headers = {"User-Agent": "Immo-Boussole/1.0 (POI Engine)"}
+    elements = []
+    
+    for endpoint in OVERPASS_ENDPOINTS:
+        try:
+            res = httpx.post(
+                endpoint,
+                data={"data": full_query},
+                headers=headers,
+                timeout=18.0
+            )
+            if res.status_code == 200:
+                data = res.json()
+                elements = data.get("elements", [])
+                if len(elements) > 0:
+                    break
+        except Exception as e:
+            print(f"[GeoPOI] Endpoint {endpoint} failed: {e}")
+
+    # Process and classify elements
+    pois_by_category: Dict[str, List[Dict[str, Any]]] = {c: [] for c in active_cats}
+    all_pois: List[Dict[str, Any]] = []
+    seen_coords = set()
+
+    for el in elements:
+        p_lat = el.get("lat") or el.get("center", {}).get("lat")
+        p_lon = el.get("lon") or el.get("center", {}).get("lon")
+        if not p_lat or not p_lon:
+            continue
+
+        coord_key = (round(p_lat, 5), round(p_lon, 5))
+        if coord_key in seen_coords:
+            continue
+        seen_coords.add(coord_key)
+
+        tags = el.get("tags", {})
+        
+        # Determine category matching
+        matched_cat = None
+        for cat_id in active_cats:
+            if cat_id == "highway" and (tags.get("highway") in ["motorway_junction", "junction"]):
+                matched_cat = "highway"
+                break
+            elif cat_id == "cinema" and (tags.get("amenity") in ["cinema", "theatre"]):
+                matched_cat = "cinema"
+                break
+            elif cat_id == "swimming" and (tags.get("leisure") in ["swimming_pool", "sports_centre", "water_park"] or tags.get("sport") == "swimming"):
+                matched_cat = "swimming"
+                break
+            elif cat_id == "mall" and (tags.get("shop") in ["mall", "supermarket", "department_store"]):
+                matched_cat = "mall"
+                break
+            elif cat_id == "bakery" and tags.get("shop") == "bakery":
+                matched_cat = "bakery"
+                break
+            elif cat_id == "school" and (tags.get("amenity") in ["school", "college", "kindergarten"]):
+                matched_cat = "school"
+                break
+            elif cat_id == "health" and (tags.get("amenity") in ["pharmacy", "hospital", "clinic", "doctors"]):
+                matched_cat = "health"
+                break
+            elif cat_id == "station" and (tags.get("railway") in ["station", "halt"]):
+                matched_cat = "station"
+                break
+            elif cat_id == "park" and (tags.get("leisure") in ["park", "garden"]):
+                matched_cat = "park"
+                break
+            elif cat_id == "charging" and (tags.get("amenity") in ["charging_station", "fuel"]):
+                matched_cat = "charging"
+                break
+
+        if not matched_cat:
+            continue
+
+        cat_meta = POI_CATEGORIES[matched_cat]
+
+        # Extract best name
+        raw_name = tags.get("name")
+        if not raw_name:
+            if matched_cat == "highway":
+                ref = tags.get("ref")
+                name_fr = tags.get("name:fr") or tags.get("description")
+                if ref:
+                    raw_name = f"Sortie {ref}" + (f" - {name_fr}" if name_fr else "")
+                elif name_fr:
+                    raw_name = name_fr
+                else:
+                    raw_name = cat_meta["default_name"]
+            elif matched_cat == "station":
+                raw_name = tags.get("name") or "Gare SNCF"
+            elif matched_cat == "charging":
+                operator = tags.get("operator") or tags.get("brand")
+                raw_name = f"Borne {operator}" if operator else cat_meta["default_name"]
+            else:
+                brand = tags.get("brand") or tags.get("operator")
+                raw_name = brand or cat_meta["default_name"]
+
+        # Calculate distance
+        dist_km = round(haversine_km(lat, lon, p_lat, p_lon), 2)
+        
+        # Approximate durations
+        car_mins = max(1, int(round((dist_km * 1.3) / 50.0 * 60)))  # ~50 km/h average local driving
+        bike_mins = max(1, int(round((dist_km * 1.2) / 15.0 * 60))) # ~15 km/h cycling
+        walk_mins = max(1, int(round((dist_km * 1.1) / 5.0 * 60)))  # ~5 km/h walking
+
+        poi_item = {
+            "id": f"poi_{el.get('type', 'node')}_{el.get('id', len(all_pois))}",
+            "name": raw_name,
+            "category": matched_cat,
+            "category_name": cat_meta["name"],
+            "icon": cat_meta["icon"],
+            "color": cat_meta["color"],
+            "bg_color": cat_meta["bg_color"],
+            "lat": float(p_lat),
+            "lon": float(p_lon),
+            "distance_km": dist_km,
+            "car_mins": car_mins,
+            "car_time_str": format_duration(car_mins),
+            "bike_mins": bike_mins,
+            "bike_time_str": format_duration(bike_mins),
+            "walk_mins": walk_mins,
+            "walk_time_str": format_duration(walk_mins),
+            "address": tags.get("addr:street") or tags.get("addr:city") or "",
+            "gmaps_url": f"https://www.google.com/maps/dir/?api=1&origin={lat},{lon}&destination={p_lat},{p_lon}&travelmode=driving"
+        }
+
+        pois_by_category[matched_cat].append(poi_item)
+        all_pois.append(poi_item)
+
+    # Sort items by distance and limit per category
+    final_pois: List[Dict[str, Any]] = []
+    category_counts: Dict[str, int] = {}
+    
+    for cat_id in active_cats:
+        sorted_cat_pois = sorted(pois_by_category[cat_id], key=lambda x: x["distance_km"])
+        category_counts[cat_id] = len(sorted_cat_pois)
+        limited_cat_pois = sorted_cat_pois[:limit_per_category]
+        final_pois.extend(limited_cat_pois)
+
+    # Sort overall results by distance
+    final_pois.sort(key=lambda x: x["distance_km"])
+
+    response_data = {
+        "success": True,
+        "center": {"lat": lat, "lon": lon},
+        "radius_meters": radius_meters,
+        "total_count": len(final_pois),
+        "category_counts": category_counts,
+        "categories_meta": {
+            c: {
+                "id": POI_CATEGORIES[c]["id"],
+                "name": POI_CATEGORIES[c]["name"],
+                "icon": POI_CATEGORIES[c]["icon"],
+                "color": POI_CATEGORIES[c]["color"],
+                "bg_color": POI_CATEGORIES[c]["bg_color"],
+                "count": category_counts.get(c, 0)
+            } for c in active_cats
+        },
+        "pois": final_pois
+    }
+
+    # Store in cache only if results were found
+    if len(final_pois) > 0:
+        _poi_cache[cache_key] = (now, response_data)
+    return response_data
+
+
