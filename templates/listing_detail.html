@@ -12,6 +12,8 @@
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
+    <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
+    <script src="/static/js/address-autocomplete.js?v=20260819a"></script>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1076,6 +1078,28 @@
                 <button class="carousel-btn carousel-prev" onclick="slide(-1)"><i class="fa-solid fa-chevron-left"></i></button>
                 <button class="carousel-btn carousel-next" onclick="slide(1)"><i class="fa-solid fa-chevron-right"></i></button>
                 {% endif %}
+
+                <!-- Address Precision Badge (Bottom-Right of Carousel) -->
+                {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
+                {% if prec == 'exact' %}
+                <div class="address-precision-badge precision-exact" onclick="openEditModal();" title="Adresse exacte : {{ listing.address or listing.location or listing.city or '' }} (Cliquer pour modifier)">
+                    <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
+                    <span class="badge-label">Exact</span>
+                    <div class="address-precision-tooltip">🎯 Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}</div>
+                </div>
+                {% elif prec == 'street' %}
+                <div class="address-precision-badge precision-street" onclick="openEditModal();" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }} (Cliquer pour modifier)">
+                    <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
+                    <span class="badge-label">Rue</span>
+                    <div class="address-precision-tooltip">📍 Rue : {{ listing.address or listing.location or listing.city or '' }}</div>
+                </div>
+                {% else %}
+                <div class="address-precision-badge precision-city" onclick="openEditModal();" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }} (Cliquer pour préciser l'adresse)">
+                    <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
+                    <span class="badge-label">{{ listing.city or 'Ville' }}</span>
+                    <div class="address-precision-tooltip">🏙️ Commune seule : {{ listing.city or listing.location or 'Non précisée' }}</div>
+                </div>
+                {% endif %}
             </div>
             {% if photos|length > 1 %}
             <div class="carousel-dots" id="dots">
@@ -1088,11 +1112,21 @@
             <!-- Main Info -->
             <div class="info-card">
                 <div class="listing-title">{{ listing.title }}</div>
-                <div class="listing-location">
-                    <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i>
-                    <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
-                        {{ listing.location or "Localisation non disponible" }}
-                    </a>
+                <div class="listing-location" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i>
+                        <a href="/carte?city={{ listing.city or listing.location or '' }}" class="city-link" title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                            {{ listing.address or listing.location or "Localisation non disponible" }}
+                        </a>
+                    </div>
+                    <div class="address-precision-badge precision-{{ prec }}" style="position: static; cursor: pointer;" onclick="openEditModal()" title="Précision de l'adresse : {{ prec }} (Cliquer pour modifier)">
+                        <span class="badge-icon">
+                            {% if prec == 'exact' %}<i class="fa-solid fa-bullseye"></i>
+                            {% elif prec == 'street' %}<i class="fa-solid fa-location-dot"></i>
+                            {% else %}<i class="fa-solid fa-city"></i>{% endif %}
+                        </span>
+                        <span class="badge-label">{{ 'Adresse exacte' if prec == 'exact' else ('Rue' if prec == 'street' else (listing.city or 'Commune')) }}</span>
+                    </div>
                 </div>
 
                 <div class="price-block">
@@ -1649,9 +1683,33 @@
                     <input type="number" id="edit-bedrooms" value="{{ listing.bedrooms or '' }}">
                 </div>
                 
-                <div class="form-row" style="margin-bottom: 0;">
-                    <label>{{ t(request, 'listing.edit_location') }}</label>
-                    <input type="text" id="edit-location" value="{{ listing.location or '' }}">
+                <!-- Precise Address with Autocomplete (Full Width) -->
+                <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <label style="margin-bottom: 0;"><i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> Adresse précise (supplante la localisation de l'annonce)</label>
+                        <span id="editAddressPrecisionBadge" class="address-precision-badge precision-{{ listing.address_precision or ('exact' if listing.address else 'city') }}" style="position: static; min-height: 22px; padding: 0.15rem 0.5rem; font-size: 0.68rem;">
+                            <span class="badge-icon">
+                                {% if (listing.address_precision == 'exact' or (not listing.address_precision and listing.address)) %}<i class="fa-solid fa-bullseye"></i>
+                                {% elif listing.address_precision == 'street' %}<i class="fa-solid fa-location-dot"></i>
+                                {% else %}<i class="fa-solid fa-city"></i>{% endif %}
+                            </span>
+                            <span class="badge-label">{{ 'Exact' if (listing.address_precision == 'exact' or (not listing.address_precision and listing.address)) else ('Rue' if listing.address_precision == 'street' else (listing.city or 'Ville')) }}</span>
+                        </span>
+                    </div>
+                    <div class="address-autocomplete-container">
+                        <div class="address-autocomplete-input-wrapper">
+                            <input type="text" id="edit-address" value="{{ listing.address or listing.location or '' }}" placeholder="Saisir ou rechercher l'adresse exacte (numéro, rue, commune)..." autocomplete="off">
+                            <i class="fa-solid fa-map-pin address-autocomplete-icon"></i>
+                            <i class="fa-solid fa-circle-notch fa-spin address-autocomplete-spinner" id="editAddressSpinner"></i>
+                            <button type="button" class="address-autocomplete-clear" id="editAddressClear" title="Effacer"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <ul class="address-suggestions-dropdown" id="editAddressDropdown"></ul>
+                    </div>
+                    <input type="hidden" id="edit-city" value="{{ listing.city or '' }}">
+                    <input type="hidden" id="edit-postal-code" value="{{ listing.postal_code or '' }}">
+                    <input type="hidden" id="edit-address-precision" value="{{ listing.address_precision or '' }}">
+                    <input type="hidden" id="edit-latitude" value="{{ listing.latitude or '' }}">
+                    <input type="hidden" id="edit-longitude" value="{{ listing.longitude or '' }}">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                     <label>{{ t(request, 'listing.edit_condition') }}</label>
@@ -1770,6 +1828,35 @@
                 <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;">Bien immobilier</label>
                 <input type="text" value="{{ listing.title }}" readonly style="background: var(--surface-2); color: var(--text-2); cursor: not-allowed; font-size: 0.85rem; padding: 0.6rem 0.8rem; border-radius: 9px; border: 1px solid var(--border); width: 100%;">
                 <input type="hidden" id="visitListingId" value="{{ listing.id }}">
+            </div>
+
+            <!-- ── Adresse exacte du bien (Autocomplétion BAN) ── -->
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <label for="visitAddressInput" style="font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0;">
+                        <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> Adresse précise du bien (supplante l'annonce)
+                    </label>
+                    <span id="visitAddressPrecisionBadge" class="address-precision-badge precision-{{ listing.address_precision or ('exact' if listing.address else 'city') }}" style="position: static; min-height: 22px; padding: 0.15rem 0.5rem; font-size: 0.68rem;">
+                        <span class="badge-icon">
+                            {% if (listing.address_precision == 'exact' or (not listing.address_precision and listing.address)) %}<i class="fa-solid fa-bullseye"></i>
+                            {% elif listing.address_precision == 'street' %}<i class="fa-solid fa-location-dot"></i>
+                            {% else %}<i class="fa-solid fa-city"></i>{% endif %}
+                        </span>
+                        <span class="badge-label">{{ 'Exact' if (listing.address_precision == 'exact' or (not listing.address_precision and listing.address)) else ('Rue' if listing.address_precision == 'street' else (listing.city or 'Ville')) }}</span>
+                    </span>
+                </div>
+                <div class="address-autocomplete-container">
+                    <div class="address-autocomplete-input-wrapper">
+                        <input type="text" id="visitAddressInput" value="{{ listing.address or listing.location or '' }}" placeholder="Saisir ou rechercher l'adresse exacte (numéro, rue, commune)..." autocomplete="off" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 2.2rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        <i class="fa-solid fa-map-pin address-autocomplete-icon" style="top: 50%; transform: translateY(-50%); left: 0.75rem;"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin address-autocomplete-spinner" id="visitAddressSpinner" style="top: 50%; transform: translateY(-50%); right: 2rem;"></i>
+                        <button type="button" class="address-autocomplete-clear" id="visitAddressClear" title="Effacer" style="top: 50%; transform: translateY(-50%); right: 0.6rem;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <ul class="address-suggestions-dropdown" id="visitAddressDropdown"></ul>
+                </div>
+                <input type="hidden" id="visitListingCity" value="{{ listing.city or '' }}">
+                <input type="hidden" id="visitListingPostalCode" value="{{ listing.postal_code or '' }}">
+                <input type="hidden" id="visitListingPrecision" value="{{ listing.address_precision or '' }}">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
@@ -2708,6 +2795,74 @@
         }
     }
     // ── Édition Logic ────────────────────────────────────────────────────────
+    let editAddressAutocomplete = null;
+    let visitAddressAutocomplete = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        editAddressAutocomplete = initAddressAutocomplete({
+            inputId: 'edit-address',
+            dropdownId: 'editAddressDropdown',
+            spinnerId: 'editAddressSpinner',
+            clearBtnId: 'editAddressClear',
+            onSelect: (item) => {
+                document.getElementById('edit-city').value = item.city || '';
+                document.getElementById('edit-postal-code').value = item.postcode || '';
+                document.getElementById('edit-address-precision').value = item.precision || 'exact';
+                document.getElementById('edit-latitude').value = item.lat || '';
+                document.getElementById('edit-longitude').value = item.lon || '';
+                updateBadgeUI('editAddressPrecisionBadge', item.precision, item.label || item.name);
+            },
+            onClear: () => {
+                document.getElementById('edit-city').value = '';
+                document.getElementById('edit-postal-code').value = '';
+                document.getElementById('edit-address-precision').value = '';
+                document.getElementById('edit-latitude').value = '';
+                document.getElementById('edit-longitude').value = '';
+                updateBadgeUI('editAddressPrecisionBadge', null);
+            }
+        });
+
+        visitAddressAutocomplete = initAddressAutocomplete({
+            inputId: 'visitAddressInput',
+            dropdownId: 'visitAddressDropdown',
+            spinnerId: 'visitAddressSpinner',
+            clearBtnId: 'visitAddressClear',
+            onSelect: (item) => {
+                document.getElementById('visitListingCity').value = item.city || '';
+                document.getElementById('visitListingPostalCode').value = item.postcode || '';
+                document.getElementById('visitListingPrecision').value = item.precision || 'exact';
+                updateBadgeUI('visitAddressPrecisionBadge', item.precision, item.label || item.name);
+            },
+            onClear: () => {
+                document.getElementById('visitListingCity').value = '';
+                document.getElementById('visitListingPostalCode').value = '';
+                document.getElementById('visitListingPrecision').value = '';
+                updateBadgeUI('visitAddressPrecisionBadge', null);
+            }
+        });
+    });
+
+    function updateBadgeUI(badgeId, precision, label = '') {
+        const badge = document.getElementById(badgeId);
+        if (!badge) return;
+        if (!precision) {
+            badge.style.display = 'none';
+            return;
+        }
+        badge.className = `address-precision-badge precision-${precision}`;
+        badge.style.display = 'inline-flex';
+        if (precision === 'exact') {
+            badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> <span class="badge-label">Exact</span>`;
+            badge.title = `Adresse exacte : ${label}`;
+        } else if (precision === 'street') {
+            badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span> <span class="badge-label">Rue</span>`;
+            badge.title = `Rue : ${label}`;
+        } else {
+            badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-city"></i></span> <span class="badge-label">Ville</span>`;
+            badge.title = `Commune seule : ${label}`;
+        }
+    }
+
     function openEditModal() {
         document.getElementById('editModal').classList.add('open');
     }
@@ -2720,9 +2875,14 @@
         e.preventDefault();
         
         // Parse values safely
-        const valStr = id => document.getElementById(id).value.trim() || null;
+        const valStr = id => {
+            const el = document.getElementById(id);
+            return el ? (el.value.trim() || null) : null;
+        };
         const valNum = id => {
-            let v = document.getElementById(id).value.trim();
+            const el = document.getElementById(id);
+            if (!el) return null;
+            let v = el.value.trim();
             return v ? parseFloat(v) : null;
         };
         
@@ -2732,7 +2892,12 @@
             area: valNum('edit-area'),
             rooms: valNum('edit-rooms'),
             bedrooms: valNum('edit-bedrooms'),
-            location: valStr('edit-location'),
+            address: valStr('edit-address'),
+            city: valStr('edit-city'),
+            postal_code: valStr('edit-postal-code'),
+            address_precision: valStr('edit-address-precision'),
+            latitude: valNum('edit-latitude'),
+            longitude: valNum('edit-longitude'),
             condition: valStr('edit-condition'),
             dpe_rating: valStr('edit-dpe') ? valStr('edit-dpe').toUpperCase() : null,
             ges_rating: valStr('edit-ges') ? valStr('edit-ges').toUpperCase() : null,
@@ -3733,6 +3898,19 @@
             setVisitorUI(currentUser);
             initListingContactDefault();
 
+            // Populate address
+            const currentAddr = {{ (listing.address or listing.location or '')|tojson }};
+            const currentCity = {{ (listing.city or '')|tojson }};
+            const currentCp = {{ (listing.postal_code or '')|tojson }};
+            const currentPrec = {{ (listing.address_precision or ('exact' if listing.address else 'city'))|tojson }};
+            if (visitAddressAutocomplete) {
+                visitAddressAutocomplete.setValue(currentAddr);
+            }
+            document.getElementById('visitListingCity').value = currentCity;
+            document.getElementById('visitListingPostalCode').value = currentCp;
+            document.getElementById('visitListingPrecision').value = currentPrec;
+            updateBadgeUI('visitAddressPrecisionBadge', currentPrec, currentAddr);
+
             const btnDel = document.getElementById('btnDeleteVisitInModal');
             if (btnDel) btnDel.style.display = 'none';
 
@@ -3754,6 +3932,19 @@
             }
             setVisitorUI(visitor || '');
             document.getElementById('visitNotes').value = notes || '';
+
+            // Populate address
+            const currentAddr = {{ (listing.address or listing.location or '')|tojson }};
+            const currentCity = {{ (listing.city or '')|tojson }};
+            const currentCp = {{ (listing.postal_code or '')|tojson }};
+            const currentPrec = {{ (listing.address_precision or ('exact' if listing.address else 'city'))|tojson }};
+            if (visitAddressAutocomplete) {
+                visitAddressAutocomplete.setValue(currentAddr);
+            }
+            document.getElementById('visitListingCity').value = currentCity;
+            document.getElementById('visitListingPostalCode').value = currentCp;
+            document.getElementById('visitListingPrecision').value = currentPrec;
+            updateBadgeUI('visitAddressPrecisionBadge', currentPrec, currentAddr);
 
             // Handle contact pre-population
             clearVisitContactSelection();
@@ -3850,6 +4041,11 @@
             const contactInputVal = document.getElementById('visitContactInput').value.trim();
             const chkUpdateListing = document.getElementById('chkUpdateListingContact').checked;
 
+            const addressVal = document.getElementById('visitAddressInput').value.trim();
+            const cityVal = document.getElementById('visitListingCity').value.trim();
+            const postalCodeVal = document.getElementById('visitListingPostalCode').value.trim();
+            const precisionVal = document.getElementById('visitListingPrecision').value.trim();
+
             if (!listing_id || !scheduled_at) return;
 
             const payload = { 
@@ -3862,7 +4058,11 @@
                 notes,
                 agent_ids: (cType === 'agent' && cId) ? [parseInt(cId)] : [],
                 agency_ids: (cType === 'agency' && cId) ? [parseInt(cId)] : [],
-                update_listing_contact: chkUpdateListing
+                update_listing_contact: chkUpdateListing,
+                listing_address: addressVal || null,
+                listing_city: cityVal || null,
+                listing_postal_code: postalCodeVal || null,
+                listing_address_precision: precisionVal || null
             };
 
             try {

@@ -774,6 +774,11 @@ async def create_listing_from_details(
                 if existing and existing.price and existing.price > 0 and (value is None or value <= 0):
                     continue
 
+            # Location & City protection: do not overwrite user-specified / verified address and city
+            if key in ("city", "location", "address", "postal_code", "address_precision", "latitude", "longitude"):
+                if existing and existing.manual_address_override:
+                    continue
+
             if key in ("city", "location"):
                 from app.geo import standardize_and_enrich_city
                 std_city, _, _ = standardize_and_enrich_city(value)
@@ -781,8 +786,8 @@ async def create_listing_from_details(
                     value = std_city
             setattr(listing, key, value)
 
-    # Ensure both listing.city and listing.location are standardized and synchronized
-    if listing.city or listing.location:
+    # Ensure both listing.city and listing.location are standardized and synchronized (only if not manually overridden)
+    if not (existing and existing.manual_address_override) and (listing.city or listing.location):
         from app.geo import standardize_and_enrich_city
         src_val = listing.city or listing.location
         std_city, _, _ = standardize_and_enrich_city(src_val)
@@ -1627,4 +1632,98 @@ def extract_contact_info_from_text(text: str) -> dict:
         "last_name": last_name,
         "agency_name": detected_agency
     }
+
+
+def update_listing_address(
+    db: Session,
+    listing: Listing,
+    address: str,
+    city: Optional[str] = None,
+    postal_code: Optional[str] = None,
+    precision: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None
+) -> Listing:
+    """
+    Updates a listing's exact address, city, postal code, precision, and coordinates.
+    Sets manual_address_override = True and recalculates SNCF travel times.
+    """
+    from app.geo import resolve_address_details, calculate_station_times, find_nearby_stations, standardize_and_enrich_city
+    from app.models import ZoneRule
+
+    address_clean = address.strip() if address else ""
+    if not address_clean:
+        listing.address = None
+        listing.postal_code = None
+        listing.address_precision = "city"
+        listing.manual_address_override = False
+        db.commit()
+        db.refresh(listing)
+        return listing
+
+    # If coordinates/city are missing, attempt resolution via BAN
+    if lat is None or lon is None or not city or not precision:
+        details = resolve_address_details(address_clean)
+        if details:
+            if lat is None or lon is None:
+                lat = details.get("lat")
+                lon = details.get("lon")
+            if not city and details.get("city"):
+                city = details.get("city")
+            if not postal_code and details.get("postcode"):
+                postal_code = details.get("postcode")
+            if not precision and details.get("precision"):
+                precision = details.get("precision")
+
+    listing.address = address_clean
+    if postal_code:
+        listing.postal_code = postal_code
+
+    if city:
+        std_city, _, _ = standardize_and_enrich_city(city)
+        final_city = std_city or city
+        listing.city = final_city
+        listing.location = f"{address_clean}, {final_city}"
+    elif not listing.city:
+        listing.location = address_clean
+
+    listing.address_precision = precision or "exact"
+    listing.manual_address_override = True
+
+    if lat is not None and lon is not None:
+        listing.latitude = lat
+        listing.longitude = lon
+
+        # Recalculate SNCF station times
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        stations = find_nearby_stations(lat, lon)
+        allowed_stations = [s for s in stations if s.get('name', '').strip().lower() not in forbidden_stations]
+        if allowed_stations:
+            st1 = allowed_stations[0]
+            times1 = calculate_station_times(lat, lon, st1['lat'], st1['lon'])
+            listing.nearest_sncf_station = st1.get('name')
+            listing.walk_time_sncf = times1.get('walk')
+            listing.bike_time_sncf = times1.get('bike')
+            listing.car_time_sncf = times1.get('car')
+            if len(allowed_stations) > 1:
+                st2 = allowed_stations[1]
+                times2 = calculate_station_times(lat, lon, st2['lat'], st2['lon'])
+                listing.second_sncf_station = st2.get('name')
+                listing.walk_time_sncf_2 = times2.get('walk')
+                listing.bike_time_sncf_2 = times2.get('bike')
+                listing.car_time_sncf_2 = times2.get('car')
+            else:
+                listing.second_sncf_station = None
+                listing.walk_time_sncf_2 = None
+                listing.bike_time_sncf_2 = None
+                listing.car_time_sncf_2 = None
+        else:
+            listing.nearest_sncf_station = "NOT_FOUND"
+
+    db.commit()
+    db.refresh(listing)
+    return listing
+
 

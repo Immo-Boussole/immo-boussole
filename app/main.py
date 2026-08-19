@@ -165,6 +165,11 @@ class ListingUpdateRequest(BaseModel):
     rooms: Optional[int] = None
     bedrooms: Optional[int] = None
     location: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    address_precision: Optional[str] = None
+    manual_address_override: Optional[bool] = None
     description_text: Optional[str] = None
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
@@ -3283,6 +3288,20 @@ def delete_map_pin(
     return {"status": "deleted"}
 
 
+@app.get("/api/geo/address-autocomplete")
+def address_autocomplete(
+    request: Request,
+    q: str = "",
+    limit: int = 6,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns BAN address autocomplete suggestions."""
+    from app.geo import search_ban_addresses
+    results = search_ban_addresses(q, limit=limit)
+    return {"query": q, "results": results}
+
+
 @app.get("/api/city-info")
 async def get_city_info(
     city: str,
@@ -4103,6 +4122,23 @@ def update_listing(
 
     update_data = body.model_dump(exclude_unset=True)
     
+    # Handle address update specifically
+    if "address" in update_data:
+        addr = update_data.pop("address")
+        from app.services import update_listing_address
+        update_listing_address(
+            db=db,
+            listing=listing,
+            address=addr,
+            city=update_data.pop("city", None),
+            postal_code=update_data.pop("postal_code", None),
+            precision=update_data.pop("address_precision", None),
+            lat=update_data.pop("latitude", None),
+            lon=update_data.pop("longitude", None)
+        )
+        update_data.pop("manual_address_override", None)
+        update_data.pop("location", None)
+    
     # Standardize city and location if either is being updated
     if ("city" in update_data and update_data["city"]) or ("location" in update_data and update_data["location"]):
         from app.geo import standardize_and_enrich_city
@@ -4113,7 +4149,7 @@ def update_listing(
                 update_data["city"] = std_city
                 update_data["location"] = std_city
     
-    # If location or city is changed, we need to re-geocode
+    # If location or city is changed without address, we need to re-geocode
     re_geocode = False
     if "location" in update_data and update_data["location"] != listing.location:
         re_geocode = True
@@ -4366,7 +4402,20 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
             db.add(VisitContact(visit_id=visit.id, agency_id=agid))
         if listing and not body.agent_ids and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
             listing.agency_id = body.agency_ids[0]
-    if body.agent_ids or body.agency_ids:
+    
+    # Update listing address if specified during visit creation
+    if body.listing_address and listing:
+        from app.services import update_listing_address
+        update_listing_address(
+            db=db,
+            listing=listing,
+            address=body.listing_address,
+            city=body.listing_city,
+            postal_code=body.listing_postal_code,
+            precision=body.listing_address_precision
+        )
+
+    if body.agent_ids or body.agency_ids or body.listing_address:
         db.commit()
         db.refresh(visit)
 
@@ -4418,6 +4467,9 @@ def list_visites(
             "listing_title": l.title if l else "Non disponible",
             "listing_price": l.price if l else None,
             "listing_city": l.city or l.location if l else None,
+            "listing_address": l.address if l else None,
+            "listing_postal_code": l.postal_code if l else None,
+            "listing_address_precision": l.address_precision if l else "city",
             "listing_url": l.url if l else None,
             "visit_type": v.visit_type,
             "step_family": v.step_family or "visite",
@@ -4481,6 +4533,18 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
                 db.add(VisitContact(visit_id=visit.id, agency_id=agid))
             if listing and not body.agent_ids and (body.update_listing_contact or (not listing.main_agent_id and not listing.agency_id)):
                 listing.agency_id = body.agency_ids[0]
+
+    # Update listing address if provided in visit update
+    if body.listing_address is not None and listing:
+        from app.services import update_listing_address
+        update_listing_address(
+            db=db,
+            listing=listing,
+            address=body.listing_address,
+            city=body.listing_city,
+            postal_code=body.listing_postal_code,
+            precision=body.listing_address_precision
+        )
 
     db.commit()
     db.refresh(visit)

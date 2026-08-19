@@ -21,6 +21,11 @@ class ListingUpdateRequest(BaseModel):
     rooms: Optional[int] = None
     bedrooms: Optional[int] = None
     location: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    address_precision: Optional[str] = None
+    manual_address_override: Optional[bool] = None
     description_text: Optional[str] = None
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
@@ -201,6 +206,10 @@ class ListingResponse(BaseModel):
     price_per_sqm: Optional[float] = None
     location: Optional[str] = None
     city: Optional[str] = None
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    address_precision: Optional[str] = "city"
+    manual_address_override: bool = False
     area: Optional[float] = None
     land_area: Optional[float] = None
     rooms: Optional[int] = None
@@ -334,6 +343,10 @@ class VisitCreateRequest(BaseModel):
     agent_ids: List[int] = []
     agency_ids: List[int] = []
     update_listing_contact: Optional[bool] = None
+    listing_address: Optional[str] = None
+    listing_city: Optional[str] = None
+    listing_postal_code: Optional[str] = None
+    listing_address_precision: Optional[str] = None
 
 class VisitUpdateRequest(BaseModel):
     visit_type: Optional[str] = None
@@ -346,6 +359,10 @@ class VisitUpdateRequest(BaseModel):
     agent_ids: Optional[List[int]] = None
     agency_ids: Optional[List[int]] = None
     update_listing_contact: Optional[bool] = None
+    listing_address: Optional[str] = None
+    listing_city: Optional[str] = None
+    listing_postal_code: Optional[str] = None
+    listing_address_precision: Optional[str] = None
 
 class VisitContactSchema(BaseModel):
     agent_id: Optional[int] = None
@@ -377,6 +394,8 @@ class AttachedListingSummary(BaseModel):
     title: Optional[str] = None
     price: Optional[float] = None
     city: Optional[str] = None
+    address: Optional[str] = None
+    address_precision: Optional[str] = "city"
     area: Optional[float] = None
     rooms: Optional[int] = None
     photo_thumbnail: Optional[str] = None

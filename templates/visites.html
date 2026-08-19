@@ -13,6 +13,8 @@
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
+    <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
+    <script src="/static/js/address-autocomplete.js?v=20260819a"></script>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -953,6 +955,22 @@
                                     </div>
                                 </div>
                                 {% endif %}
+
+                                <!-- Address Precision Badge (Bottom-Right) -->
+                                {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
+                                {% if prec == 'exact' %}
+                                <div class="address-precision-badge precision-exact" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}">
+                                    <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
+                                </div>
+                                {% elif prec == 'street' %}
+                                <div class="address-precision-badge precision-street" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }}">
+                                    <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
+                                </div>
+                                {% else %}
+                                <div class="address-precision-badge precision-city" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }}">
+                                    <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
+                                </div>
+                                {% endif %}
                             </div>
                             <div class="prop-info">
                                 <div class="prop-title" title="{{ listing.title }}">{{ listing.title }}</div>
@@ -1172,6 +1190,24 @@
                                         </div>
                                     </div>
                                     {% endif %}
+
+                                    {% if l %}
+                                    <!-- Address Precision Badge (Bottom-Right) -->
+                                    {% set prec = l.address_precision or ('exact' if l.address else 'city') %}
+                                    {% if prec == 'exact' %}
+                                    <div class="address-precision-badge precision-exact" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ l.address or l.location or l.city or '' }}">
+                                        <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
+                                    </div>
+                                    {% elif prec == 'street' %}
+                                    <div class="address-precision-badge precision-street" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ l.address or l.location or l.city or '' }}">
+                                        <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
+                                    </div>
+                                    {% else %}
+                                    <div class="address-precision-badge precision-city" style="bottom: 4px; right: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ l.city or l.location or 'Non précisée' }}">
+                                        <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
                                 </div>
                                 <div class="prop-info">
                                     {% if l %}
@@ -1282,6 +1318,28 @@
                         {% endif %}
                         {% endfor %}
                     </select>
+                </div>
+
+                <!-- ── Adresse exacte du bien (Autocomplétion BAN) ── -->
+                <div class="form-group" id="visitAddressGroup">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <label for="visitAddressInput" style="font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0;">
+                            <i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> Adresse précise du bien (supplante l'annonce)
+                        </label>
+                        <span id="visitAddressPrecisionBadge" class="address-precision-badge precision-city" style="position: static; min-height: 22px; padding: 0.15rem 0.5rem; font-size: 0.68rem; display: none;"></span>
+                    </div>
+                    <div class="address-autocomplete-container">
+                        <div class="address-autocomplete-input-wrapper">
+                            <input type="text" id="visitAddressInput" placeholder="Saisir ou chercher l'adresse exacte (numéro, rue, commune)..." autocomplete="off">
+                            <i class="fa-solid fa-map-pin address-autocomplete-icon"></i>
+                            <i class="fa-solid fa-circle-notch fa-spin address-autocomplete-spinner" id="visitAddressSpinner"></i>
+                            <button type="button" class="address-autocomplete-clear" id="visitAddressClear" title="Effacer"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <ul class="address-suggestions-dropdown" id="visitAddressDropdown"></ul>
+                    </div>
+                    <input type="hidden" id="visitListingCity" value="">
+                    <input type="hidden" id="visitListingPostalCode" value="">
+                    <input type="hidden" id="visitListingPrecision" value="">
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -1576,14 +1634,21 @@
             {% endfor %}
         ];
 
-        const LISTING_CONTACTS = {
+        const LISTINGS_DATA_MAP = {
             {% for l in listings %}
             {{ l.id }}: {
+                id: {{ l.id }},
                 main_agent_id: {{ l.main_agent_id or 'null' }},
-                agency_id: {{ l.agency_id or 'null' }}
+                agency_id: {{ l.agency_id or 'null' }},
+                address: {{ (l.address or "")|tojson }},
+                city: {{ (l.city or "")|tojson }},
+                postal_code: {{ (l.postal_code or "")|tojson }},
+                location: {{ (l.location or "")|tojson }},
+                address_precision: {{ (l.address_precision or ("exact" if l.address else "city"))|tojson }}
             },
             {% endfor %}
         };
+        const LISTING_CONTACTS = LISTINGS_DATA_MAP;
 
         const ALL_AGENTS_MAP = {
             {% for ag in all_agents %}
@@ -1616,6 +1681,7 @@
 
         let currentYear = new Date().getFullYear();
         let currentMonth = new Date().getMonth();
+        let visitAddressAutocomplete = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             renderCalendar(currentYear, currentMonth);
@@ -1623,7 +1689,47 @@
             populateTimelineLabels();
             populateTableBadges();
             onModalFamilyChange();
+
+            visitAddressAutocomplete = initAddressAutocomplete({
+                inputId: 'visitAddressInput',
+                dropdownId: 'visitAddressDropdown',
+                spinnerId: 'visitAddressSpinner',
+                clearBtnId: 'visitAddressClear',
+                onSelect: (item) => {
+                    document.getElementById('visitListingCity').value = item.city || '';
+                    document.getElementById('visitListingPostalCode').value = item.postcode || '';
+                    document.getElementById('visitListingPrecision').value = item.precision || 'exact';
+                    updateVisitAddressBadge(item.precision, item.label || item.name);
+                },
+                onClear: () => {
+                    document.getElementById('visitListingCity').value = '';
+                    document.getElementById('visitListingPostalCode').value = '';
+                    document.getElementById('visitListingPrecision').value = '';
+                    updateVisitAddressBadge(null);
+                }
+            });
         });
+
+        function updateVisitAddressBadge(precision, label = '') {
+            const badge = document.getElementById('visitAddressPrecisionBadge');
+            if (!badge) return;
+            if (!precision) {
+                badge.style.display = 'none';
+                return;
+            }
+            badge.className = `address-precision-badge precision-${precision}`;
+            badge.style.display = 'inline-flex';
+            if (precision === 'exact') {
+                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> <span class="badge-label">Exact</span>`;
+                badge.title = `Adresse exacte : ${label}`;
+            } else if (precision === 'street') {
+                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span> <span class="badge-label">Rue</span>`;
+                badge.title = `Rue : ${label}`;
+            } else {
+                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-city"></i></span> <span class="badge-label">Ville</span>`;
+                badge.title = `Commune seule : ${label}`;
+            }
+        }
 
         function getStepLabel(family, stepKey) {
             if (STEP_FAMILIES[family] && STEP_FAMILIES[family].steps[stepKey]) {
@@ -2090,7 +2196,21 @@
 
         function onVisitListingChanged() {
             const listingId = document.getElementById('visitListingId').value;
-            if (!listingId) return;
+            if (!listingId) {
+                if (visitAddressAutocomplete) visitAddressAutocomplete.clear();
+                updateVisitAddressBadge(null);
+                return;
+            }
+
+            const lData = LISTINGS_DATA_MAP[listingId];
+            if (lData && visitAddressAutocomplete) {
+                const addr = lData.address || lData.location || '';
+                visitAddressAutocomplete.setValue(addr);
+                document.getElementById('visitListingCity').value = lData.city || '';
+                document.getElementById('visitListingPostalCode').value = lData.postal_code || '';
+                document.getElementById('visitListingPrecision').value = lData.address_precision || (lData.address ? 'exact' : 'city');
+                updateVisitAddressBadge(lData.address_precision || (lData.address ? 'exact' : 'city'), addr);
+            }
 
             const lc = LISTING_CONTACTS[listingId];
             const currentContactId = document.getElementById('visitContactId').value;
@@ -2112,6 +2232,8 @@
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Enregistrer une activité / visite';
             document.getElementById('visitForm').reset();
             clearVisitContactSelection();
+            if (visitAddressAutocomplete) visitAddressAutocomplete.clear();
+            updateVisitAddressBadge(null);
 
             if (listingId) {
                 document.getElementById('visitListingId').value = listingId;
@@ -2180,6 +2302,17 @@
                 onVisitListingChanged();
             }
 
+            // Populate address
+            const lData = LISTINGS_DATA_MAP[listingId];
+            if (lData && visitAddressAutocomplete) {
+                const addr = lData.address || lData.location || '';
+                visitAddressAutocomplete.setValue(addr);
+                document.getElementById('visitListingCity').value = lData.city || '';
+                document.getElementById('visitListingPostalCode').value = lData.postal_code || '';
+                document.getElementById('visitListingPrecision').value = lData.address_precision || (lData.address ? 'exact' : 'city');
+                updateVisitAddressBadge(lData.address_precision || (lData.address ? 'exact' : 'city'), addr);
+            }
+
             const btnDel = document.getElementById('btnDeleteVisitInModal');
             if (btnDel) btnDel.style.display = 'inline-flex';
 
@@ -2209,6 +2342,11 @@
             const contactInputVal = document.getElementById('visitContactInput').value.trim();
             const chkUpdateListing = document.getElementById('chkUpdateListingContact').checked;
 
+            const addressVal = document.getElementById('visitAddressInput').value.trim();
+            const cityVal = document.getElementById('visitListingCity').value.trim();
+            const postalCodeVal = document.getElementById('visitListingPostalCode').value.trim();
+            const precisionVal = document.getElementById('visitListingPrecision').value.trim();
+
             if (!listing_id || !scheduled_at) return;
 
             const payload = { 
@@ -2221,7 +2359,11 @@
                 notes,
                 agent_ids: (cType === 'agent' && cId) ? [parseInt(cId)] : [],
                 agency_ids: (cType === 'agency' && cId) ? [parseInt(cId)] : [],
-                update_listing_contact: chkUpdateListing
+                update_listing_contact: chkUpdateListing,
+                listing_address: addressVal || null,
+                listing_city: cityVal || null,
+                listing_postal_code: postalCodeVal || null,
+                listing_address_precision: precisionVal || null
             };
 
             try {

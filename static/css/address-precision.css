@@ -1,0 +1,312 @@
+/* ── Address Precision Badges & Autocomplete Styles ── */
+
+.address-precision-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    z-index: 25;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    min-height: 28px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+}
+
+.address-precision-badge:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+/* Exact Precision (Green) */
+.address-precision-badge.precision-exact {
+    background: rgba(16, 217, 164, 0.22);
+    color: #10d9a4;
+    border: 1px solid rgba(16, 217, 164, 0.5);
+}
+
+.address-precision-badge.precision-exact:hover {
+    background: rgba(16, 217, 164, 0.35);
+    border-color: rgba(16, 217, 164, 0.8);
+}
+
+/* Street Precision (Blue) */
+.address-precision-badge.precision-street {
+    background: rgba(79, 142, 247, 0.22);
+    color: #4f8ef7;
+    border: 1px solid rgba(79, 142, 247, 0.5);
+}
+
+.address-precision-badge.precision-street:hover {
+    background: rgba(79, 142, 247, 0.35);
+    border-color: rgba(79, 142, 247, 0.8);
+}
+
+/* City / Municipality Precision (Orange / Subtle) */
+.address-precision-badge.precision-city {
+    background: rgba(248, 168, 75, 0.2);
+    color: #f8a84b;
+    border: 1px solid rgba(248, 168, 75, 0.45);
+}
+
+.address-precision-badge.precision-city:hover {
+    background: rgba(248, 168, 75, 0.32);
+    border-color: rgba(248, 168, 75, 0.75);
+}
+
+.address-precision-badge .badge-icon {
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.address-precision-badge .badge-label {
+    white-space: nowrap;
+}
+
+/* Tooltip container for cards */
+.address-precision-tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    background: #0f1523;
+    color: #eef2ff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+}
+
+.address-precision-badge:hover .address-precision-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ── BAN Address Autocomplete UI ── */
+.address-autocomplete-container {
+    position: relative;
+    width: 100%;
+}
+
+.address-autocomplete-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.address-autocomplete-input-wrapper input {
+    width: 100%;
+    padding-left: 2.3rem !important;
+    padding-right: 2.2rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    background: var(--surface-2, #1a2236) !important;
+    color: var(--text, #eef2ff) !important;
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.12)) !important;
+    border-radius: 9px !important;
+    font-size: 0.85rem !important;
+    font-family: inherit !important;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.address-autocomplete-input-wrapper input:focus {
+    border-color: var(--accent, #4f8ef7) !important;
+    box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.2) !important;
+}
+
+.address-autocomplete-icon {
+    position: absolute;
+    left: 0.8rem;
+    color: var(--accent, #4f8ef7);
+    pointer-events: none;
+    font-size: 0.9rem;
+}
+
+.address-autocomplete-spinner {
+    position: absolute;
+    right: 0.8rem;
+    color: var(--text-2, #8b9cc8);
+    font-size: 0.85rem;
+    display: none;
+}
+
+.address-autocomplete-clear {
+    position: absolute;
+    right: 0.6rem;
+    background: transparent;
+    border: none;
+    color: var(--text-2, #8b9cc8);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.address-autocomplete-clear:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.address-suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--surface, #131929);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    border-radius: 10px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 10000;
+    display: none;
+    list-style: none;
+    margin: 0;
+    padding: 0.35rem;
+}
+
+.address-suggestions-dropdown.open {
+    display: block;
+}
+
+.address-suggestion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.8rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    gap: 0.75rem;
+}
+
+.address-suggestion-item:hover,
+.address-suggestion-item.highlighted {
+    background: rgba(79, 142, 247, 0.12);
+}
+
+.address-suggestion-left {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.address-suggestion-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+}
+
+.address-suggestion-icon.exact {
+    color: #10d9a4;
+    background: rgba(16, 217, 164, 0.12);
+}
+
+.address-suggestion-icon.street {
+    color: #4f8ef7;
+    background: rgba(79, 142, 247, 0.12);
+}
+
+.address-suggestion-icon.city {
+    color: #f8a84b;
+    background: rgba(248, 168, 75, 0.12);
+}
+
+.address-suggestion-texts {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.address-suggestion-title {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text, #eef2ff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.address-suggestion-subtitle {
+    font-size: 0.74rem;
+    color: var(--text-2, #8b9cc8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.address-suggestion-type-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.address-suggestion-type-badge.exact {
+    background: rgba(16, 217, 164, 0.15);
+    color: #10d9a4;
+}
+
+.address-suggestion-type-badge.street {
+    background: rgba(79, 142, 247, 0.15);
+    color: #4f8ef7;
+}
+
+.address-suggestion-type-badge.city {
+    background: rgba(248, 168, 75, 0.15);
+    color: #f8a84b;
+}
+
+/* Detail page header address box */
+.listing-address-box {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.listing-address-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text, #eef2ff);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}

@@ -75,6 +75,10 @@ class Listing(Base):
     price_per_sqm = Column(Float, nullable=True)  # Prix au m²
 
     # Location & physical
+    address = Column(String, nullable=True)        # Exact street address (e.g., "14 Rue Victor Hugo")
+    postal_code = Column(String(10), nullable=True)# Postal code (e.g., "69002")
+    address_precision = Column(String(20), default="city") # "exact", "street", "city", "unknown"
+    manual_address_override = Column(Boolean, default=False) # True if address was set manually by user
     location = Column(String, nullable=True)
     city = Column(String, nullable=True)           # Normalized city for duplicate detection
     area = Column(Float, nullable=True)            # Surface habitable en m²

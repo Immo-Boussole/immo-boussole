@@ -206,6 +206,12 @@ _MIGRATIONS = [
 
     # listings — last visit status v28
     ("listings", "last_visit_status",                   "TEXT"),
+
+    # listings — address precision & override v29
+    ("listings", "address",                             "TEXT"),
+    ("listings", "postal_code",                         "TEXT"),
+    ("listings", "address_precision",                   "TEXT DEFAULT 'city'"),
+    ("listings", "manual_address_override",             "BOOLEAN DEFAULT 0"),
 ]
 
 

@@ -14,6 +14,7 @@
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
+    <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -768,10 +769,22 @@
                             <td class="col-title" title="{{ listing.title }}">{{ listing.title }}</td>
                             <td class="col-source">{{ listing.source.value|upper }}</td>
                             <td>
-                                <a href="/carte?city={{ listing.location or listing.city or '' }}" class="city-link"
-                                    title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
-                                    {{ listing.location or listing.city or '-' }}
-                                </a>
+                                <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                    <a href="/carte?city={{ listing.location or listing.city or '' }}" class="city-link"
+                                        title="{{ t(request, 'map.highlight_city', 'Voir sur la carte') }}">
+                                        {{ listing.address or listing.location or listing.city or '-' }}
+                                    </a>
+                                    {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
+                                    {% if prec == 'exact' %}
+                                    <span class="address-precision-badge precision-exact" style="position: static; font-size: 0.62rem; padding: 0.1rem 0.4rem;" title="🎯 Adresse exacte : {{ listing.address }}">
+                                        <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> Exact
+                                    </span>
+                                    {% elif prec == 'street' %}
+                                    <span class="address-precision-badge precision-street" style="position: static; font-size: 0.62rem; padding: 0.1rem 0.4rem;" title="📍 Rue : {{ listing.address }}">
+                                        <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span> Rue
+                                    </span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td class="col-price" data-raw="{{ listing.price or 0 }}">{{
                                 "{:,.0f}".format(listing.price).replace(',', ' ') if listing.price else t(request,

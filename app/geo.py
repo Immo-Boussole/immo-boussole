@@ -1362,3 +1362,90 @@ def fetch_pois_around(
     return response_data
 
 
+def search_ban_addresses(q: str, limit: int = 6) -> List[Dict[str, Any]]:
+    """
+    Queries French Base Adresse Nationale (BAN) for address autocomplete suggestions.
+    Returns structured results with precision type, clean label, street, city, postcode, lat, lon.
+    """
+    if not q or len(q.strip()) < 2:
+        return []
+    
+    q_clean = q.strip()
+    ban_url = "https://api-adresse.data.gouv.fr/search/"
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+    try:
+        res = httpx.get(ban_url, params={"q": q_clean, "limit": limit}, headers=headers, timeout=5.0)
+        if res.status_code != 200:
+            return []
+        
+        data = res.json()
+        features = data.get("features", [])
+        results = []
+        for feat in features:
+            props = feat.get("properties", {})
+            geom = feat.get("geometry", {})
+            coords = geom.get("coordinates", [])
+            if len(coords) < 2:
+                continue
+            lon, lat = float(coords[0]), float(coords[1])
+            ptype = props.get("type", "address")
+            
+            # Determine precision level
+            if ptype == "housenumber":
+                precision = "exact"
+                type_label = "Numéro exact"
+                icon = "fa-bullseye"
+            elif ptype in ("street", "locality"):
+                precision = "street"
+                type_label = "Rue / Quartier"
+                icon = "fa-location-dot"
+            elif ptype == "municipality":
+                precision = "city"
+                type_label = "Commune"
+                icon = "fa-city"
+            else:
+                precision = "unknown"
+                type_label = "Lieu"
+                icon = "fa-map-pin"
+                
+            label = props.get("label") or props.get("name") or q_clean
+            name = props.get("name") or label
+            street = props.get("street") or name
+            housenumber = props.get("housenumber") or ""
+            city = props.get("city") or ""
+            postcode = props.get("postcode") or ""
+            context = props.get("context") or ""
+            
+            results.append({
+                "label": label,
+                "name": name,
+                "street": street,
+                "housenumber": housenumber,
+                "city": city,
+                "postcode": postcode,
+                "context": context,
+                "precision": precision,
+                "type_label": type_label,
+                "icon": icon,
+                "lat": lat,
+                "lon": lon
+            })
+        return results
+    except Exception as e:
+        print(f"[Geo BAN] search_ban_addresses failed for '{q_clean}': {e}")
+        return []
+
+
+def resolve_address_details(address_str: str) -> Optional[Dict[str, Any]]:
+    """
+    Resolves an address string against BAN (or fallback) to retrieve exact lat/lon, city, postal code, and precision.
+    """
+    if not address_str or not address_str.strip():
+        return None
+    suggestions = search_ban_addresses(address_str.strip(), limit=1)
+    if suggestions:
+        return suggestions[0]
+    return None
+
+
+

@@ -14,6 +14,7 @@
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
+    <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1516,6 +1517,28 @@
                                         style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span>
                                 </div>
                             </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Address Precision Badge (Bottom-Right) -->
+                        {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
+                        {% if prec == 'exact' %}
+                        <div class="address-precision-badge precision-exact" onclick="event.stopPropagation(); window.open('/listings/{{ listing.id }}', '_blank');" title="Adresse exacte vérifiée : {{ listing.address or listing.location or listing.city or '' }}">
+                            <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
+                            <span class="badge-label">Exact</span>
+                            <div class="address-precision-tooltip">🎯 Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}</div>
+                        </div>
+                        {% elif prec == 'street' %}
+                        <div class="address-precision-badge precision-street" onclick="event.stopPropagation(); window.open('/listings/{{ listing.id }}', '_blank');" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }}">
+                            <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
+                            <span class="badge-label">Rue</span>
+                            <div class="address-precision-tooltip">📍 Rue : {{ listing.address or listing.location or listing.city or '' }}</div>
+                        </div>
+                        {% else %}
+                        <div class="address-precision-badge precision-city" onclick="event.stopPropagation(); window.open('/listings/{{ listing.id }}', '_blank');" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }}">
+                            <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
+                            <span class="badge-label">{{ listing.city or 'Ville' }}</span>
+                            <div class="address-precision-tooltip">🏙️ Commune seule : {{ listing.city or listing.location or 'Non précisée' }}</div>
                         </div>
                         {% endif %}
                     </div>
