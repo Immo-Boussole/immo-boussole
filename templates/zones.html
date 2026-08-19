@@ -910,7 +910,10 @@
                 }
                 
                 const pinCount = (data.pins || []).length;
-                document.getElementById('stats').textContent = `${markerCount} annonces · ${pinCount} adresses`;
+                const statsEl = document.getElementById('stats');
+                if (statsEl) {
+                    statsEl.textContent = `${markerCount} annonces · ${pinCount} adresses`;
+                }
 
                 // 5. Train Lines
                 loadTrainLines();
@@ -920,7 +923,10 @@
 
             } catch (err) {
                 console.error("Error loading map data:", err);
-                document.getElementById('stats').textContent = "Erreur lors du chargement des données";
+                const statsEl = document.getElementById('stats');
+                if (statsEl) {
+                    statsEl.textContent = "Erreur lors du chargement des données";
+                }
             }
         }
 
@@ -1047,6 +1053,7 @@
 
         function updatePinLegend(usersSeen) {
             const section = document.getElementById('legend-pins-section');
+            if (!section) return;
             if (usersSeen.size === 0) {
                 section.innerHTML = '';
                 return;
