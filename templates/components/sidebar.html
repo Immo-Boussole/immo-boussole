@@ -258,6 +258,7 @@
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
         <a href="/duplicates/hunt" class="nav-link{% if request.url.path == '/duplicates/hunt' or request.url.path.startswith('/duplicates') %} active{% endif %}"><i class="fa-solid fa-magnifying-glass-chart"></i> {{ t(request, 'nav.duplicate_hunt', 'Chasse aux duplicats') }}</a>
+        <a href="/listings/repair" class="nav-link{% if request.url.path == '/listings/repair' %} active{% endif %}"><i class="fa-solid fa-screwdriver-wrench"></i> Réparation des annonces</a>
         
         {% if request.session.get('role') == 'admin' %}
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">

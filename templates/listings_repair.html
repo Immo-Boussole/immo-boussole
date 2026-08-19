@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <meta name="description" content="Vérification et réparation non-destructive des annonces immobilières — Immo-Boussole">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
+    <title>{{ title }}</title>
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --surface: #131929;
+            --surface-2: #1a2236;
+            --border: rgba(255, 255, 255, 0.07);
+            --text: #eef2ff;
+            --text-2: #8b9cc8;
+            --accent: #4f8ef7;
+            --accent-2: #6366f1;
+            --green: #10d9a4;
+            --red: #f25c69;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --radius: 12px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            margin: 0;
+            position: fixed;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        .topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 2rem 3rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 0.9rem 1.1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .alert.success { background: rgba(16,217,164,0.1); color: var(--green); border: 1px solid rgba(16,217,164,0.25); }
+        .alert.error   { background: rgba(242,92,105,0.1); color: var(--red);   border: 1px solid rgba(242,92,105,0.25); }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0 0 1.25rem 0;
+        }
+        .card-title i { color: var(--accent); }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.55rem 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            text-decoration: none;
+            transition: var(--trans);
+            font-size: 0.85rem;
+            font-family: inherit;
+            min-height: 44px;
+        }
+        .btn:hover { background: var(--accent-2); transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn.secondary {
+            background: rgba(79,142,247,0.1);
+            color: var(--accent);
+            border: 1px solid rgba(79,142,247,0.2);
+        }
+        .btn.secondary:hover { background: var(--accent); color: white; }
+
+        .btn.danger {
+            background: rgba(242,92,105,0.12);
+            color: var(--red);
+            border: 1px solid rgba(242,92,105,0.3);
+        }
+        .btn.danger:hover { background: var(--red); color: white; }
+
+        /* Problem row */
+        .problem-item {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            transition: var(--trans);
+        }
+        .problem-item:hover { border-color: rgba(79,142,247,0.22); }
+
+        .problem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 1rem;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .problem-meta { flex: 1; min-width: 0; }
+
+        .problem-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.2rem; }
+
+        .problem-count { font-size: 0.8rem; color: var(--text-2); }
+        .problem-count .count-val { font-weight: 700; color: var(--text); }
+
+        .problem-timestamps {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            font-size: 0.7rem;
+            color: var(--text-2);
+            line-height: 1.45;
+        }
+        .problem-timestamps span { font-style: italic; }
+
+        .problem-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .expand-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            border-radius: 6px;
+            padding: 0.4rem 0.55rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: var(--trans);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            min-height: 36px;
+        }
+        .expand-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* Listings detail */
+        .listings-detail {
+            display: none;
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+        .listings-detail.open { display: block; }
+
+        .listing-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            padding: 0.35rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.83rem;
+        }
+        .listing-row:last-child { border-bottom: none; }
+
+        .listing-title {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .listing-title:hover { text-decoration: underline; }
+        .listing-city { color: var(--text-2); font-size: 0.76rem; white-space: nowrap; flex-shrink: 0; }
+        .listings-empty { font-size: 0.82rem; color: var(--text-2); font-style: italic; padding: 0.5rem 0; }
+
+        /* Progress */
+        .progress-container {
+            display: none;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+        .progress-top { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.85rem; }
+        .progress-bar-wrap { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            width: 0%;
+            transition: width 0.35s ease;
+            border-radius: 4px;
+        }
+
+        /* Danger zone */
+        .danger-zone {
+            background: rgba(242,92,105,0.05);
+            border: 2px solid rgba(242,92,105,0.4);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .danger-zone-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--red);
+            margin: 0 0 0.75rem 0;
+        }
+        .danger-placeholder {
+            font-size: 0.88rem;
+            color: rgba(242,92,105,0.7);
+            font-style: italic;
+            padding: 0.75rem 1rem;
+            background: rgba(242,92,105,0.04);
+            border: 1px dashed rgba(242,92,105,0.28);
+            border-radius: 8px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: var(--shadow);
+            animation: modalIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .modal-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+        .modal-desc { font-size: 0.88rem; color: var(--text-2); margin: 0 0 1.5rem 0; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+        /* iOS Slider */
+        .ios-slider-wrap {
+            position: relative;
+            background: rgba(242,92,105,0.1);
+            border: 1px solid rgba(242,92,105,0.28);
+            border-radius: 50px;
+            height: 52px;
+            overflow: hidden;
+            user-select: none;
+            touch-action: pan-y;
+            cursor: grab;
+        }
+        .ios-slider-track {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ios-slider-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: rgba(242,92,105,0.65);
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        }
+        .ios-slider-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(242,92,105,0.22), rgba(242,92,105,0.06));
+            width: 52px;
+            border-radius: 50px;
+            pointer-events: none;
+        }
+        .ios-slider-thumb {
+            position: absolute;
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            background: var(--red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(242,92,105,0.5);
+            cursor: grab;
+            transition: box-shadow 0.2s;
+        }
+        .ios-slider-thumb.dragging { cursor: grabbing; box-shadow: 0 4px 18px rgba(242,92,105,0.7); }
+        .ios-slider-thumb.confirmed { background: var(--green); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .topbar { padding: 1rem 1.25rem; }
+            .content { padding: 1rem 1rem 2rem; }
+            .problem-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .problem-timestamps { align-items: flex-start; }
+            .problem-actions { width: 100%; justify-content: flex-end; }
+        }
+        @media (max-width: 480px) {
+            .modal { padding: 1.5rem 1.25rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
+
+    {% include 'components/sidebar.html' %}
+
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>
+                    <i class="fa-solid fa-screwdriver-wrench" style="color: var(--accent);"></i>
+                    Réparation des annonces
+                </h1>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="container">
+
+                <div id="alert" class="alert"></div>
+
+                <!-- ── Repair Card ── -->
+                <div class="card">
+                    <h2 class="card-title">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                        Vérifications &amp; Réparations
+                    </h2>
+
+                    <div class="toolbar">
+                        <button class="btn" id="btn_check" onclick="runCheck()">
+                            <i class="fas fa-search"></i> Relancer les vérifications
+                        </button>
+                        <span style="font-size: 0.83rem; color: var(--text-2); font-style: italic;">
+                            Dernière vérification&nbsp;: <span id="last_check_time">—</span>
+                        </span>
+                    </div>
+
+                    <div id="problems_grid" style="display: flex; flex-direction: column; gap: 0.1rem;">
+                        <div id="loading_state" style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;">
+                            <i class="fas fa-spinner fa-spin"></i>&nbsp;Chargement des vérifications…
+                        </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="progress-container" id="progress_container">
+                        <div class="progress-top">
+                            <span id="progress_label" style="font-weight:600;">Réparation en cours…</span>
+                            <span id="progress_count" style="color:var(--text-2);">0 / 0</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar" id="progress_bar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Danger Zone (admin only) ── -->
+                {% if request.session.get('role') == 'admin' %}
+                <div class="danger-zone" id="danger_zone">
+                    <div class="danger-zone-title">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        Actions dangereuses
+                    </div>
+                    <p style="font-size:0.84rem;color:rgba(242,92,105,0.8);margin:0 0 1rem;line-height:1.5;">
+                        Ces actions peuvent modifier ou supprimer des données de manière irréversible. Un glissement de confirmation est requis avant toute exécution.
+                    </p>
+                    <div id="danger_problems_grid" style="display:flex;flex-direction:column;gap:0.75rem;">
+                        <div class="danger-placeholder" id="danger_placeholder">
+                            <i class="fa-solid fa-circle-info" style="margin-right:0.4rem;"></i>
+                            Aucune action dangereuse n'est définie pour le moment.
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ── Confirmation Modal (non-destructive) ── -->
+    <div class="modal-overlay" id="confirm_modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm_modal_title">
+            <div class="modal-title" id="confirm_modal_title">Confirmer la réparation</div>
+            <p class="modal-desc" id="confirm_modal_desc"></p>
+            <div class="modal-actions">
+                <button class="btn secondary" onclick="closeConfirmModal()">Annuler</button>
+                <button class="btn" id="confirm_modal_ok" onclick="confirmRepair()">
+                    <i class="fas fa-check"></i> Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Danger Slider Modal (admin) ── -->
+    <div class="modal-overlay" id="danger_modal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="danger_modal_title">
+            <div class="modal-title" style="color:var(--red);" id="danger_modal_title">
+                <i class="fa-solid fa-triangle-exclamation"></i> Action dangereuse
+            </div>
+            <p class="modal-desc" id="danger_modal_desc"></p>
+            <!-- iOS slider -->
+            <div class="ios-slider-wrap" id="ios_slider">
+                <div class="ios-slider-fill" id="ios_fill"></div>
+                <div class="ios-slider-track">
+                    <span class="ios-slider-label" id="ios_label">Glissez pour confirmer →</span>
+                </div>
+                <div class="ios-slider-thumb" id="ios_thumb">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:1.25rem;">
+                <button class="btn secondary" onclick="closeDangerModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Problem metadata ──────────────────────────────────────────────────
+        const PROBLEM_META = {
+            empty_description:       { label: 'Descriptions vides',                 desc: 'Annonces actives sans texte de description.' },
+            generic_title_figaro:    { label: 'Titres génériques Le Figaro',        desc: 'Annonces avec un titre non informatif (ex\u00a0: «\u00a0Annonce Le Figaro\u00a0»).' },
+            duplicate_city_zip:      { label: 'Codes postaux doublés',              desc: 'Localisation contenant le département en double.' },
+            anomalous_price:         { label: 'Prix anormaux\u00a0(>\u00a010\u00a0M€)',  desc: 'Annonces avec un prix manifestement erroné (souvent un numéro de téléphone).' },
+            linked_ads_none:         { label: 'Doublons orphelins',                 desc: 'Annonces marquées comme doublon mais sans annonce parente.' },
+            missing_city_pins:       { label: 'Villes non visibles sur la carte',   desc: 'Villes d\'annonces actives sans épingle géolocalisée.' },
+            unstandardized_city:     { label: 'Villes non standardisées',           desc: 'Annonces dont la ville ne suit pas le format «\u00a0Ville (code postal)\u00a0».' },
+            incorrect_price_per_sqm: { label: 'Prix au m² incorrects',             desc: 'Prix au m² absent ou incohérent avec le prix et la surface.' },
+            missing_photos:          { label: 'Images manquantes ou corrompues',    desc: 'Annonces dont les photos locales sont absentes ou invalides.' },
+            // Dangerous (admin only — future)
+            forbidden_department:    { label: 'Annonces hors département autorisé', desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
+            forbidden_zone:          { label: 'Annonces en zone interdite',         desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
+        };
+
+        const DANGEROUS_TYPES = ['forbidden_department', 'forbidden_zone'];
+
+        let pendingRepairType = null;
+        let problemsData = {};
+        let repairInterval = null;
+
+        // ── Alert ─────────────────────────────────────────────────────────────
+        function showAlert(msg, type) {
+            const el = document.getElementById('alert');
+            el.textContent = msg;
+            el.className = 'alert ' + type;
+            el.style.display = 'block';
+            clearTimeout(el._t);
+            el._t = setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        // ── Date formatting ───────────────────────────────────────────────────
+        function formatDT(iso) {
+            if (!iso) return '—';
+            try {
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return '—';
+                return d.toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            } catch { return '—'; }
+        }
+
+        // ── Build problem row DOM ─────────────────────────────────────────────
+        function buildProblemRow(type, data, lastChecks, lastRepairs) {
+            const meta = PROBLEM_META[type] || { label: type, desc: '' };
+            const count = data.count || 0;
+            const listings = data.listings || [];
+            const isDanger = DANGEROUS_TYPES.includes(type);
+
+            const item = document.createElement('div');
+            item.className = 'problem-item';
+            item.id = 'row_' + type;
+
+            const header = document.createElement('div');
+            header.className = 'problem-header';
+
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'problem-meta';
+            metaDiv.innerHTML = `
+                <div class="problem-name">${meta.label}</div>
+                <div class="problem-count" title="${meta.desc}">
+                    <span class="count-val" id="count_${type}">${count}</span>
+                    annonce${count !== 1 ? 's' : ''} concern\u00e9e${count !== 1 ? 's' : ''}
+                </div>`;
+
+            const ts = document.createElement('div');
+            ts.className = 'problem-timestamps';
+            ts.innerHTML = `
+                <span>V\u00e9rifi\u00e9\u00a0: <span id="chk_${type}">${formatDT(lastChecks[type])}</span></span>
+                <span>R\u00e9par\u00e9\u00a0: <span id="rep_${type}">${formatDT(lastRepairs[type])}</span></span>`;
+
+            const actions = document.createElement('div');
+            actions.className = 'problem-actions';
+
+            const expandBtn = document.createElement('button');
+            expandBtn.className = 'expand-btn';
+            expandBtn.id = 'expand_' + type;
+            expandBtn.title = 'Voir les annonces concern\u00e9es';
+            expandBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+            expandBtn.setAttribute('aria-expanded', 'false');
+            expandBtn.onclick = () => toggleListings(type);
+
+            const repairBtn = document.createElement('button');
+            repairBtn.className = isDanger ? 'btn danger' : 'btn secondary';
+            repairBtn.id = 'btn_repair_' + type;
+            repairBtn.innerHTML = '<i class="fas fa-wrench"></i> R\u00e9parer';
+            repairBtn.onclick = () => isDanger ? openDangerModal(type) : openConfirmModal(type);
+
+            actions.appendChild(expandBtn);
+            actions.appendChild(repairBtn);
+
+            header.appendChild(metaDiv);
+            header.appendChild(ts);
+            header.appendChild(actions);
+            item.appendChild(header);
+
+            // Collapsible listing detail
+            const detail = document.createElement('div');
+            detail.className = 'listings-detail';
+            detail.id = 'detail_' + type;
+            renderListings(detail, listings, type);
+            item.appendChild(detail);
+
+            return item;
+        }
+
+        function renderListings(container, listings, type) {
+            container.innerHTML = '';
+            if (!listings || listings.length === 0) {
+                container.innerHTML = '<div class="listings-empty">Aucune annonce concern\u00e9e.</div>';
+                return;
+            }
+            listings.forEach(l => {
+                const row = document.createElement('div');
+                row.className = 'listing-row';
+                if (l.url) {
+                    row.innerHTML = `<a href="${l.url}" class="listing-title" title="${l.title.replace(/"/g,'&quot;')}" target="_blank">${l.title}</a><span class="listing-city">${l.city || ''}</span>`;
+                } else {
+                    row.innerHTML = `<span class="listing-title" style="color:var(--text);cursor:default;">${l.title}</span><span class="listing-city">${l.city || ''}</span>`;
+                }
+                container.appendChild(row);
+            });
+        }
+
+        function toggleListings(type) {
+            const detail = document.getElementById('detail_' + type);
+            const btn = document.getElementById('expand_' + type);
+            const open = detail.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.innerHTML = open
+                ? '<i class="fa-solid fa-chevron-up"></i>'
+                : '<i class="fa-solid fa-chevron-down"></i>';
+        }
+
+        // ── Render full problem grid ──────────────────────────────────────────
+        function renderProblems(data) {
+            const problems = data.problems || {};
+            const lastChecks = data.last_checks || {};
+            const lastRepairs = data.last_repairs || {};
+            const isAdmin = data.is_admin || false;
+
+            problemsData = {};
+            for (const [k, v] of Object.entries(problems)) {
+                problemsData[k] = v;
+            }
+
+            document.getElementById('last_check_time').textContent = formatDT(data.last_global_check);
+
+            const grid = document.getElementById('problems_grid');
+            const loading = document.getElementById('loading_state');
+            if (loading) loading.remove();
+            grid.innerHTML = '';
+
+            const safeTypes = Object.keys(problems).filter(t => !DANGEROUS_TYPES.includes(t));
+            const dangerTypes = Object.keys(problems).filter(t => DANGEROUS_TYPES.includes(t));
+
+            if (safeTypes.length === 0) {
+                grid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;font-style:italic;">
+                    <i class="fa-solid fa-circle-check" style="color:var(--green);margin-right:0.4rem;"></i>
+                    Aucun probl\u00e8me d\u00e9tect\u00e9\u00a0! La base de donn\u00e9es est saine.
+                </div>`;
+            } else {
+                safeTypes.forEach(t => grid.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs)));
+            }
+
+            // Danger zone population (admin)
+            if (isAdmin) {
+                const dangerGrid = document.getElementById('danger_problems_grid');
+                const placeholder = document.getElementById('danger_placeholder');
+                if (dangerGrid) {
+                    if (dangerTypes.length > 0) {
+                        if (placeholder) placeholder.style.display = 'none';
+                        // Remove old rows (not the placeholder)
+                        Array.from(dangerGrid.children).forEach(c => {
+                            if (c.id !== 'danger_placeholder') c.remove();
+                        });
+                        dangerTypes.forEach(t => dangerGrid.appendChild(buildProblemRow(t, problems[t], lastChecks, lastRepairs)));
+                    } else if (placeholder) {
+                        placeholder.style.display = '';
+                    }
+                }
+            }
+        }
+
+        // ── API calls ─────────────────────────────────────────────────────────
+        async function loadProblems() {
+            try {
+                const res = await fetch('/api/db/problems');
+                if (res.ok) {
+                    renderProblems(await res.json());
+                } else {
+                    const el = document.getElementById('loading_state');
+                    if (el) el.innerHTML = '<span style="color:var(--red)"><i class="fas fa-exclamation-circle"></i> Erreur de chargement.</span>';
+                }
+            } catch (e) { console.error('loadProblems', e); }
+        }
+
+        async function runCheck() {
+            const btn = document.getElementById('btn_check');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> V\u00e9rification\u2026';
+            try {
+                const res = await fetch('/api/db/check', { method: 'POST' });
+                if (res.ok) {
+                    await loadProblems();
+                    showAlert('V\u00e9rification termin\u00e9e.', 'success');
+                } else {
+                    showAlert('Erreur lors de la v\u00e9rification.', 'error');
+                }
+            } catch { showAlert('Erreur de connexion.', 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = orig; }
+        }
+
+        async function doRepair(type) {
+            try {
+                const res = await fetch('/api/db/repair?problem_type=' + type, { method: 'POST' });
+                if (res.ok) {
+                    showAlert('R\u00e9paration lanc\u00e9e en arri\u00e8re-plan.', 'success');
+                    pollRepairStatus();
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur\u00a0: ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch { showAlert('Erreur de connexion.', 'error'); }
+        }
+
+        // ── Confirm modal (safe repairs) ──────────────────────────────────────
+        function openConfirmModal(type) {
+            pendingRepairType = type;
+            const meta = PROBLEM_META[type] || {};
+            const count = (problemsData[type] || {}).count || 0;
+            document.getElementById('confirm_modal_title').textContent = 'R\u00e9parer\u00a0: ' + (meta.label || type);
+            document.getElementById('confirm_modal_desc').textContent =
+                count + ' annonce' + (count !== 1 ? 's' : '') + ' sera' + (count !== 1 ? 'ont' : '') +
+                ' trait\u00e9e' + (count !== 1 ? 's' : '') + '. ' + (meta.desc || '') + ' Confirmer\u00a0?';
+            document.getElementById('confirm_modal').classList.add('show');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm_modal').classList.remove('show');
+            pendingRepairType = null;
+        }
+
+        function confirmRepair() {
+            const t = pendingRepairType;
+            closeConfirmModal();
+            if (t) doRepair(t);
+        }
+
+        // ── Danger modal with iOS slider ──────────────────────────────────────
+        function openDangerModal(type) {
+            pendingRepairType = type;
+            const meta = PROBLEM_META[type] || {};
+            const count = (problemsData[type] || {}).count || 0;
+            document.getElementById('danger_modal_title').innerHTML =
+                '<i class="fa-solid fa-triangle-exclamation"></i> Action dangereuse\u00a0: ' + (meta.label || type);
+            document.getElementById('danger_modal_desc').textContent =
+                count + ' annonce' + (count !== 1 ? 's' : '') + ' concern\u00e9e' + (count !== 1 ? 's' : '') +
+                '. ' + (meta.desc || '') + ' Faites glisser le curseur pour confirmer.';
+            resetSlider();
+            document.getElementById('danger_modal').classList.add('show');
+        }
+
+        function closeDangerModal() {
+            document.getElementById('danger_modal').classList.remove('show');
+            pendingRepairType = null;
+            resetSlider();
+        }
+
+        // ── iOS Slider ────────────────────────────────────────────────────────
+        let sliderDragging = false, sliderStartX = 0, sliderCurrentX = 0;
+
+        function resetSlider() {
+            const thumb = document.getElementById('ios_thumb');
+            const fill = document.getElementById('ios_fill');
+            const label = document.getElementById('ios_label');
+            if (!thumb) return;
+            thumb.style.transition = 'left 0.3s ease, background 0.2s';
+            thumb.style.left = '4px';
+            fill.style.width = '52px';
+            label.style.opacity = '1';
+            label.textContent = 'Glissez pour confirmer \u2192';
+            thumb.classList.remove('dragging', 'confirmed');
+            thumb.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
+            setTimeout(() => { if (thumb) thumb.style.transition = 'none'; }, 320);
+        }
+
+        function sliderOnStart(e) {
+            const slider = document.getElementById('ios_slider');
+            if (!slider) return;
+            sliderDragging = true;
+            sliderStartX = e.touches ? e.touches[0].clientX : e.clientX;
+            sliderCurrentX = sliderStartX;
+            document.getElementById('ios_thumb').classList.add('dragging');
+            e.preventDefault();
+        }
+
+        function sliderOnMove(e) {
+            if (!sliderDragging) return;
+            sliderCurrentX = e.touches ? e.touches[0].clientX : e.clientX;
+            const slider = document.getElementById('ios_slider');
+            const thumb = document.getElementById('ios_thumb');
+            const fill = document.getElementById('ios_fill');
+            const label = document.getElementById('ios_label');
+            if (!slider || !thumb) return;
+            const maxDelta = slider.offsetWidth - thumb.offsetWidth - 8;
+            const delta = Math.max(0, Math.min(sliderCurrentX - sliderStartX, maxDelta));
+            const pct = delta / maxDelta;
+            thumb.style.left = (4 + delta) + 'px';
+            fill.style.width = (52 + delta) + 'px';
+            label.style.opacity = Math.max(0, 1 - pct * 2.2);
+            e.preventDefault();
+        }
+
+        function sliderOnEnd() {
+            if (!sliderDragging) return;
+            sliderDragging = false;
+            const slider = document.getElementById('ios_slider');
+            const thumb = document.getElementById('ios_thumb');
+            if (!slider || !thumb) return;
+            const maxDelta = slider.offsetWidth - thumb.offsetWidth - 8;
+            const delta = Math.max(0, Math.min(sliderCurrentX - sliderStartX, maxDelta));
+            const pct = delta / maxDelta;
+
+            thumb.classList.remove('dragging');
+
+            if (pct >= 0.8) {
+                // Confirmed
+                thumb.classList.add('confirmed');
+                thumb.style.transition = 'left 0.2s ease, background 0.2s';
+                thumb.style.left = (slider.offsetWidth - thumb.offsetWidth - 4) + 'px';
+                thumb.innerHTML = '<i class="fa-solid fa-check"></i>';
+                document.getElementById('ios_label').textContent = '\u2713 Confirm\u00e9';
+                document.getElementById('ios_label').style.opacity = '1';
+                setTimeout(() => {
+                    const t = pendingRepairType;
+                    closeDangerModal();
+                    if (t) doRepair(t);
+                }, 600);
+            } else {
+                resetSlider();
+            }
+        }
+
+        // Attach slider events
+        document.addEventListener('DOMContentLoaded', function() {
+            const thumb = document.getElementById('ios_thumb');
+            if (thumb) {
+                thumb.addEventListener('mousedown', sliderOnStart);
+                thumb.addEventListener('touchstart', sliderOnStart, { passive: false });
+            }
+            document.addEventListener('mousemove', sliderOnMove);
+            document.addEventListener('touchmove', sliderOnMove, { passive: false });
+            document.addEventListener('mouseup', sliderOnEnd);
+            document.addEventListener('touchend', sliderOnEnd);
+        });
+
+        // Close modals on overlay click
+        document.getElementById('confirm_modal').addEventListener('click', function(e) {
+            if (e.target === this) closeConfirmModal();
+        });
+        document.getElementById('danger_modal').addEventListener('click', function(e) {
+            if (e.target === this) closeDangerModal();
+        });
+
+        // ── Progress polling ──────────────────────────────────────────────────
+        const REPAIR_LABELS = {
+            empty_description: 'R\u00e9paration\u00a0: Descriptions\u2026',
+            generic_title_figaro: 'R\u00e9paration\u00a0: Titres Le Figaro\u2026',
+            duplicate_city_zip: 'R\u00e9paration\u00a0: Codes postaux\u2026',
+            anomalous_price: 'R\u00e9paration\u00a0: Prix anormaux\u2026',
+            linked_ads_none: 'R\u00e9paration\u00a0: Doublons orphelins\u2026',
+            missing_city_pins: 'R\u00e9paration\u00a0: Villes non visibles\u2026',
+            unstandardized_city: 'R\u00e9paration\u00a0: Villes non standardis\u00e9es\u2026',
+            forbidden_department: 'R\u00e9paration\u00a0: D\u00e9partements interdits\u2026',
+            forbidden_zone: 'R\u00e9paration\u00a0: Zones interdites\u2026',
+            incorrect_price_per_sqm: 'R\u00e9paration\u00a0: Prix au m\u00b2\u2026',
+            missing_photos: 'R\u00e9paration\u00a0: Images manquantes\u2026',
+        };
+
+        async function pollRepairStatus(initialCheck = false) {
+            if (repairInterval) return;
+            const container = document.getElementById('progress_container');
+            const label = document.getElementById('progress_label');
+            const countEl = document.getElementById('progress_count');
+            const bar = document.getElementById('progress_bar');
+
+            const check = async () => {
+                try {
+                    const res = await fetch('/api/db/repair/status');
+                    if (!res.ok) return false;
+                    const st = await res.json();
+                    if (st.is_running) {
+                        container.style.display = 'block';
+                        const pct = st.total > 0 ? Math.round((st.processed / st.total) * 100) : 0;
+                        label.textContent = REPAIR_LABELS[st.problem_type] || 'R\u00e9paration en cours\u2026';
+                        countEl.textContent = st.processed + ' / ' + st.total;
+                        bar.style.width = pct + '%';
+                        return true;
+                    } else {
+                        if (!initialCheck && container.style.display === 'block') {
+                            showAlert('R\u00e9paration termin\u00e9e.', 'success');
+                            await loadProblems();
+                        }
+                        container.style.display = 'none';
+                        bar.style.width = '0%';
+                        return false;
+                    }
+                } catch { return false; }
+            };
+
+            const running = await check();
+            if (running) {
+                repairInterval = setInterval(async () => {
+                    const still = await check();
+                    if (!still) { clearInterval(repairInterval); repairInterval = null; }
+                }, 2500);
+            }
+        }
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        loadProblems().then(() => pollRepairStatus(true));
+    </script>
+</body>
+</html>

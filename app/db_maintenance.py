@@ -219,6 +219,77 @@ def identify_problems(db: Session):
     }
 
 
+# Problem types that are safe for all authenticated users (non-destructive repairs)
+SAFE_PROBLEM_TYPES = [
+    EMPTY_DESCRIPTION,
+    GENERIC_TITLE_FIGARO,
+    DUPLICATE_CITY_ZIP,
+    ANOMALOUS_PRICE,
+    LINKED_ADS_NONE,
+    MISSING_CITY_PINS,
+    UNSTANDARDIZED_CITY,
+    INCORRECT_PRICE_PER_SQM,
+    MISSING_PHOTOS,
+]
+
+# Problem types reserved for admins only (potentially destructive)
+DANGEROUS_PROBLEM_TYPES = [
+    FORBIDDEN_DEPARTMENT,
+    FORBIDDEN_ZONE,
+]
+
+
+def _listing_summary(listing) -> dict:
+    """Return a minimal dict with listing info for display in repair views."""
+    return {
+        "id": listing.id,
+        "title": listing.title or "Sans titre",
+        "city": listing.city or listing.location or "",
+        "url": f"/listing/{listing.id}",
+    }
+
+
+def identify_problems_with_details(db: Session) -> dict:
+    """
+    Like identify_problems() but enriches each problem type with listing details
+    (title, city, url) suitable for display in the user-facing repair view.
+    MISSING_CITY_PINS is special: ids are city name strings, not listing IDs.
+    """
+    raw = identify_problems(db)
+    result = {}
+
+    for problem_type, data in raw.items():
+        count = data["count"]
+        ids = data["ids"]
+
+        if problem_type == MISSING_CITY_PINS:
+            # ids are city name strings
+            listings_info = [
+                {"id": None, "title": city, "city": city, "url": None}
+                for city in ids
+            ]
+        else:
+            # ids are listing IDs — fetch details in one query
+            if ids:
+                listings = db.query(Listing).filter(Listing.id.in_(ids)).all()
+                id_to_listing = {l.id: l for l in listings}
+                listings_info = [
+                    _listing_summary(id_to_listing[lid])
+                    for lid in ids
+                    if lid in id_to_listing
+                ]
+            else:
+                listings_info = []
+
+        result[problem_type] = {
+            "count": count,
+            "ids": ids,
+            "listings": listings_info,
+        }
+
+    return result
+
+
 # Global state to track repair progress
 repair_progress = {
     "total": 0,

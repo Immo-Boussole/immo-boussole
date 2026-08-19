@@ -2496,6 +2496,144 @@ def get_db_repair_status(_auth = Depends(admin_required)):
     return db_maintenance.get_repair_status()
 
 
+# ─── Listings: Repair View (all authenticated users) ───────────────────────────
+
+@app.get("/listings/repair")
+def listings_repair_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """User-facing repair view — non-destructive repairs only."""
+    queries = db.query(SearchQuery).all()
+    listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
+    viewed_ids = _get_viewed_listing_ids(request, db)
+    _enrich_listings(listings, viewed_ids)
+
+    return templates.TemplateResponse(request=request, name="listings_repair.html", context={
+        "queries": queries,
+        "listings": listings,
+        "title": "Réparation des annonces — Immo-Boussole",
+    })
+
+
+@app.get("/api/db/problems")
+def get_db_problems_user(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns problem counts + listing details for the user-facing repair view."""
+    problems = db_maintenance.identify_problems_with_details(db)
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+
+    import json
+    try:
+        checks = json.loads(settings.last_checks_json or "{}")
+    except Exception:
+        checks = {}
+
+    try:
+        repairs = json.loads(settings.last_repairs_json or "{}")
+    except Exception:
+        repairs = {}
+
+    is_admin = (request.session.get("role") == "admin")
+    # Filter problem types based on role
+    visible_types = (
+        list(problems.keys())
+        if is_admin
+        else db_maintenance.SAFE_PROBLEM_TYPES
+    )
+    filtered = {k: v for k, v in problems.items() if k in visible_types}
+
+    return {
+        "problems": {k: {"count": v["count"], "listings": v["listings"]} for k, v in filtered.items()},
+        "last_global_check": settings.last_global_check,
+        "last_checks": checks,
+        "last_repairs": repairs,
+        "is_admin": is_admin,
+    }
+
+
+@app.post("/api/db/check")
+def check_db_problems_user(
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Runs a full check and updates timestamps — accessible to all users."""
+    problems = db_maintenance.identify_problems(db)
+    settings = db.query(models.GlobalSettings).first()
+    if not settings:
+        settings = models.GlobalSettings()
+        db.add(settings)
+
+    import json
+    from datetime import datetime, timezone
+    now_str = datetime.now(timezone.utc).isoformat()
+    settings.last_global_check = now_str
+
+    try:
+        checks = json.loads(settings.last_checks_json or "{}")
+    except Exception:
+        checks = {}
+
+    for key in problems.keys():
+        checks[key] = now_str
+
+    settings.last_checks_json = json.dumps(checks)
+    db.commit()
+    db.refresh(settings)
+
+    try:
+        repairs = json.loads(settings.last_repairs_json or "{}")
+    except Exception:
+        repairs = {}
+
+    return {
+        "problems": {k: v["count"] for k, v in problems.items()},
+        "last_global_check": settings.last_global_check,
+        "last_checks": checks,
+        "last_repairs": repairs,
+    }
+
+
+@app.post("/api/db/repair")
+async def repair_db_problems_user(
+    request: Request,
+    problem_type: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Launches a non-destructive repair. Dangerous types are blocked unless admin."""
+    is_admin = (request.session.get("role") == "admin")
+    if problem_type in db_maintenance.DANGEROUS_PROBLEM_TYPES and not is_admin:
+        raise HTTPException(status_code=403, detail="Cette action est réservée aux administrateurs.")
+
+    all_safe = db_maintenance.SAFE_PROBLEM_TYPES + db_maintenance.DANGEROUS_PROBLEM_TYPES
+    if problem_type not in all_safe:
+        raise HTTPException(status_code=400, detail="Type de problème inconnu.")
+
+    status = db_maintenance.get_repair_status()
+    if status["is_running"]:
+        raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
+
+    background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type)
+    return {"status": "started", "problem_type": problem_type}
+
+
+@app.get("/api/db/repair/status")
+def get_db_repair_status_user(_auth = Depends(login_required)):
+    return db_maintenance.get_repair_status()
+
+
+
 @app.get("/api/listings")
 def get_listings(
     db: Session = Depends(get_db),
