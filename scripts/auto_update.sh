@@ -18,6 +18,13 @@
 # Default variables
 PROJECT_DIR="${1:-/opt/immo-boussole/dev}"
 COMPOSE_FILE="${2:-docker-compose.yml}"
+FORCE=false
+
+for arg in "$@"; do
+    if [ "$arg" = "--force" ] || [ "$arg" = "-f" ]; then
+        FORCE=true
+    fi
+done
 
 # Navigate to the project directory
 if ! cd "$PROJECT_DIR"; then
@@ -33,13 +40,13 @@ git fetch
 
 # Compare the local commit with the remote commit of the tracked branch
 LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse @{u})
+REMOTE=$(git rev-parse @{u} 2>/dev/null || git rev-parse HEAD)
 
-if [ "$LOCAL" != "$REMOTE" ]; then
-    echo "$(date) - New code detected in $PROJECT_DIR. Updating..."
+if [ "$LOCAL" != "$REMOTE" ] || [ "$FORCE" = "true" ]; then
+    echo "$(date) - Updating $PROJECT_DIR (force=$FORCE)..."
     
     # 1. Update the code (reset local branch to match the remote tracking branch exactly)
-    git reset --hard @{u}
+    git reset --hard @{u} 2>/dev/null || git reset --hard HEAD
     
     # 2. Extract pinned APP_VERSION tag from DOCKER_IMAGE.txt if present
     if [ -f "DOCKER_IMAGE.txt" ]; then
