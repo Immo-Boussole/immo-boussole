@@ -2755,11 +2755,20 @@
     }
 </script>
     <script>
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.style.borderColor = isSuccess ? 'var(--green)' : 'var(--red, #ff4757)';
+            toast.style.color = isSuccess ? 'var(--green)' : 'var(--red, #ff4757)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3500);
+        }
+
         async function rescrapeListing(listingId, btn) {
             if (btn.classList.contains('loading')) return;
             
             btn.classList.add('loading');
-            const icon = btn.querySelector('i');
             const originalText = btn.innerHTML;
             
             if (btn.classList.contains('btn-refresh-nav')) {
@@ -2773,15 +2782,17 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    if (result.scraping_success === false) {
-                        alert("Erreur de scraping, importation sans scraping en cours. La page va s'actualiser.");
-                    }
                     if (result.forbidden_zone_warning) {
                         alert(result.forbidden_zone_warning.message);
                     }
-                    window.location.reload();
+                    if (result.message) {
+                        showToast(result.message, result.scraping_success !== false);
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
-                    alert("Erreur lors du scraping: " + (result.detail || "Inconnue"));
+                    alert("Erreur lors de l'actualisation: " + (result.detail || "Inconnue"));
                     btn.innerHTML = originalText;
                 }
             } catch (error) {

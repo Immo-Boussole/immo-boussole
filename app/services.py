@@ -119,6 +119,113 @@ def is_search_page_title(title: str) -> bool:
     return False
 
 
+def is_error_or_generic_title(title: Optional[str]) -> bool:
+    """
+    Returns True if title is an error string, placeholder, or generic title
+    (e.g., 'Annonce (https://...) - Erreur 403', 'Annonce (http...)', 'Annonce Le Figaro', 'leboncoin.fr', etc.).
+    """
+    if not title:
+        return True
+    t = title.strip()
+    t_lower = t.lower()
+    
+    if t_lower in ("", "none", "null", "leboncoin.fr", "annonce le figaro"):
+        return True
+    if re.search(r'\berreur\s*\d{3}\b', t_lower):
+        return True
+    if re.search(r'\berror\s*\d{3}\b', t_lower):
+        return True
+    if re.search(r'^annonce\s*\([^\)]*https?://', t_lower):
+        return True
+    if t.startswith("Annonce (http") or t.startswith("Annonce (https"):
+        return True
+    if is_search_page_title(t):
+        return True
+    return False
+
+
+def has_valid_local_photos(listing: Listing) -> bool:
+    """
+    Checks if a listing has valid, non-empty local photos on disk.
+    """
+    if not listing:
+        return False
+    photos = json_to_photos(listing.photos_local)
+    if not photos:
+        return False
+    for p in photos:
+        if p and os.path.exists(p) and os.path.getsize(p) > 0:
+            return True
+    return False
+
+
+async def repair_listing_photos(listing: Listing, db: Session) -> bool:
+    """
+    Attempts to repair/recover photos for a listing:
+    1. Check original_photo_urls from database and try to download them.
+    2. If missing or failed, trigger page extraction (scraper or fetch_basic_metadata) to get fresh photo URLs and download them.
+    Returns True if valid photos are available.
+    """
+    if has_valid_local_photos(listing):
+        return True
+
+    # 1. Try from original_photo_urls if present
+    photo_urls = []
+    if listing.original_photo_urls:
+        try:
+            parsed = json.loads(listing.original_photo_urls)
+            if isinstance(parsed, list):
+                photo_urls = [u for u in parsed if isinstance(u, str) and u.startswith("http")]
+            elif isinstance(parsed, str) and parsed.startswith("http"):
+                photo_urls = [parsed]
+        except Exception:
+            photo_urls = []
+            
+    if photo_urls:
+        try:
+            downloaded = await download_listing_photos(listing.id, photo_urls)
+            if downloaded:
+                listing.photos_local = photos_to_json(downloaded)
+                db.commit()
+                if has_valid_local_photos(listing):
+                    print(f"[Services] Successfully repaired photos for listing {listing.id} from original_photo_urls ({len(downloaded)} photos)")
+                    return True
+        except Exception as e:
+            print(f"[Services] Repair from original_photo_urls failed for listing {listing.id}: {e}")
+
+    # 2. Try re-extracting from URL
+    from app.main import _resolve_scraper
+    source, scraper = _resolve_scraper(listing.url)
+    details = {}
+    if scraper:
+        try:
+            details = await scraper.get_listing_details(listing.url)
+        except Exception as e:
+            print(f"[Services] Scraper failed during photo repair for listing {listing.id}: {e}")
+            
+    if not details or not details.get("photo_urls"):
+        try:
+            details = await fetch_basic_metadata(listing.url)
+        except Exception as e:
+            print(f"[Services] Fallback metadata failed during photo repair for listing {listing.id}: {e}")
+
+    fresh_urls = details.get("photo_urls", []) if details else []
+    if fresh_urls:
+        listing.original_photo_urls = json.dumps(fresh_urls)
+        try:
+            downloaded = await download_listing_photos(listing.id, fresh_urls)
+            if downloaded:
+                listing.photos_local = photos_to_json(downloaded)
+                db.commit()
+                if has_valid_local_photos(listing):
+                    print(f"[Services] Successfully repaired photos for listing {listing.id} from fresh scrape ({len(downloaded)} photos)")
+                    return True
+        except Exception as e:
+            print(f"[Services] Photo download failed during fresh repair for listing {listing.id}: {e}")
+
+    return has_valid_local_photos(listing)
+
+
 # ─── Basic Metadata Extraction ────────────────────────────────────────────────
 
 async def fetch_basic_metadata(url: str) -> dict:
@@ -325,6 +432,24 @@ async def create_listing_from_details(
             # Skip fields handled specially or problematic
             if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
                 continue
+
+            # Title protection: do not overwrite valid existing title with an error or generic placeholder
+            if key == "title":
+                if existing and existing.title and not is_error_or_generic_title(existing.title):
+                    if is_error_or_generic_title(value):
+                        print(f"[Services] Preserved existing valid title {existing.title!r} instead of error title {value!r}")
+                        continue
+
+            # Description protection: do not overwrite valid existing description with empty string
+            if key == "description_text":
+                if existing and existing.description_text and not value:
+                    continue
+
+            # Price protection: do not overwrite valid price with 0 or None when error occurs
+            if key == "price":
+                if existing and existing.price and existing.price > 0 and (value is None or value <= 0):
+                    continue
+
             if key in ("city", "location"):
                 from app.geo import standardize_and_enrich_city
                 std_city, _, _ = standardize_and_enrich_city(value)
@@ -375,6 +500,13 @@ async def create_listing_from_details(
                 db.commit()
         except Exception as e:
             print(f"[Services] Error downloading photos for listing {listing.id}: {e}")
+
+    # Fallback photo recovery if listing still has no valid photos
+    if not has_valid_local_photos(listing):
+        try:
+            await repair_listing_photos(listing, db)
+        except Exception as e:
+            print(f"[Services] Fallback repair_listing_photos failed for listing {listing.id}: {e}")
 
     # ── Geocoding ──
     if (listing.location or listing.city) and listing.latitude is None:
@@ -667,9 +799,9 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
 async def refresh_listing_status(listing: Listing, db: Session, force_update: bool = False):
     """
     Checks if a listing is still online by visiting its URL.
-    Updates status to DISAPPEARED if not found.
-    Also ensures the presentation image is valid; if not, refreshes the listing.
-    If force_update is True, always updates listing fields from scraper.
+    Updates status to DISAPPEARED if confirmed not found.
+    Also ensures photos are valid; if not, repairs photos.
+    If force_update is True, updates listing fields from scraper while preserving valid data.
     """
     from app.main import _resolve_scraper
     source, scraper = _resolve_scraper(listing.url)
@@ -677,61 +809,64 @@ async def refresh_listing_status(listing: Listing, db: Session, force_update: bo
     print(f"[Services] Refreshing status for listing {listing.id} ({listing.url})")
     
     is_online = True
+    is_explicitly_gone = False
     details = {}
     try:
         if scraper:
             details = await scraper.get_listing_details(listing.url)
-            # If scraper returns empty or a title indicating an error/removed page
-            if not details or not details.get("external_id") or "Erreur" in details.get("title", ""):
+            if details and details.get("is_disappeared"):
+                is_explicitly_gone = True
                 is_online = False
+            elif not details or not details.get("external_id"):
+                # Check fallback before concluding
+                fb = await fetch_basic_metadata(listing.url)
+                if fb and not is_error_or_generic_title(fb.get("title")):
+                    details = fb
+                elif fb and ("404" in fb.get("title", "") or "410" in fb.get("title", "")):
+                    is_explicitly_gone = True
+                    is_online = False
         else:
-            # Fallback for manual or unknown sources
             details = await fetch_basic_metadata(listing.url)
-            if not details or "Erreur" in details.get("title", ""):
+            if details and ("404" in details.get("title", "") or "410" in details.get("title", "")):
+                is_explicitly_gone = True
                 is_online = False
     except Exception as e:
         print(f"[Services] Error checking status for {listing.id}: {e}")
-        # In case of network error, we don't assume it's disappeared
+        # In case of network error, do not assume it's disappeared
         return
 
-    # Check if presentation photo (the first one) is valid on disk
-    photo_ok = False
-    photos = json_to_photos(listing.photos_local)
-    if photos:
-        first_photo_path = photos[0]
-        if os.path.exists(first_photo_path) and os.path.getsize(first_photo_path) > 0:
-            photo_ok = True
+    photo_ok = has_valid_local_photos(listing)
 
-    if not is_online:
+    if is_explicitly_gone:
         if listing.status != ListingStatus.DISAPPEARED:
             print(f"[Services] Listing {listing.id} has DISAPPEARED")
             listing.status = ListingStatus.DISAPPEARED
             db.commit()
     else:
-        # If it was disappeared but now it's back, OR if the photo is broken
         was_disappeared = (listing.status == ListingStatus.DISAPPEARED)
         
         if was_disappeared or not photo_ok or force_update:
             reason = "BACK ONLINE" if was_disappeared else ("PHOTO BROKEN/MISSING" if not photo_ok else "MANUAL REPAIR")
-            print(f"[Services] Listing {listing.id} is {reason}, performing full refresh...")
+            print(f"[Services] Listing {listing.id} is {reason}, performing update/repair...")
             
-            # Update fields from details
-            for key, value in details.items():
-                if hasattr(listing, key) and value is not None:
-                    # Skip fields handled specially or problematic
-                    if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
-                        continue
-                    setattr(listing, key, value)
+            # Update fields from details safely
+            if details:
+                for key, value in details.items():
+                    if hasattr(listing, key) and value is not None:
+                        if key in ("id", "external_id", "url", "source", "status", "scraped_at", "photo_urls"):
+                            continue
+                        if key == "title":
+                            if listing.title and not is_error_or_generic_title(listing.title) and is_error_or_generic_title(value):
+                                continue
+                        if key == "description_text" and listing.description_text and not value:
+                            continue
+                        if key == "price" and listing.price and listing.price > 0 and (value is None or value <= 0):
+                            continue
+                        setattr(listing, key, value)
             
-            # Re-download photos
-            photo_urls = details.get("photo_urls", [])
-            if photo_urls:
-                try:
-                    downloaded = await download_listing_photos(listing.id, photo_urls)
-                    if downloaded:
-                        listing.photos_local = photos_to_json(downloaded)
-                except Exception as e:
-                    print(f"[Services] Error re-downloading photos for listing {listing.id}: {e}")
+            # Re-download / repair photos if needed
+            if not photo_ok or force_update:
+                await repair_listing_photos(listing, db)
             
             if was_disappeared:
                 print(f"[Services] Listing {listing.id} is BACK ONLINE")

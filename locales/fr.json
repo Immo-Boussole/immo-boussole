@@ -307,7 +307,9 @@
     },
     "admin_maintenance": {
         "title": "Maintenance & Système",
-        "email_title": "Configuration Email (Resend.com)"
+        "email_title": "Configuration Email (Resend.com)",
+        "missing_photos_title": "Images manquantes ou corrompues",
+        "missing_photos_desc": "annonces concernées"
     },
     "auth": {
         "login_title": "Connexion — Immo-Boussole",

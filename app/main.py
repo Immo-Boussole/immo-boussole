@@ -3157,7 +3157,15 @@ async def rescrape_listing(
     # ── Determine source ──
     source, scraper = _resolve_scraper(url)
 
-    from app.services import is_search_page_title, is_valid_listing_url, fetch_basic_metadata
+    from app.services import (
+        is_search_page_title,
+        is_valid_listing_url,
+        fetch_basic_metadata,
+        is_error_or_generic_title,
+        has_valid_local_photos,
+        repair_listing_photos,
+        create_listing_from_details
+    )
 
     # ── Scrape ──
     details = {}
@@ -3178,6 +3186,8 @@ async def rescrape_listing(
                         "message": "Cette annonce a été rejetée car elle a été identifiée comme une page de recherche."
                     }
                 }
+            if not details or is_error_or_generic_title(details.get("title")):
+                scraping_success = False
         except Exception as e:
             print(f"[API] Re-scrape error for {url}: {e}")
             scraping_success = False
@@ -3190,12 +3200,13 @@ async def rescrape_listing(
             "status": "updated",
             "listing_id": listing.id,
             "title": listing.title,
-            "scraping_success": True
+            "scraping_success": True,
+            "message": "L'annonce est indiquée comme n'étant plus en ligne."
         }
 
-    if not details or not details.get("title"):
-        details = await fetch_basic_metadata(url)
-        if details.get("is_invalid_search_page"):
+    if not details or not details.get("title") or is_error_or_generic_title(details.get("title")):
+        fb_details = await fetch_basic_metadata(url)
+        if fb_details.get("is_invalid_search_page"):
             listing.status = ListingStatus.REJECTED
             listing.scraped_at = datetime.now(timezone.utc)
             db.commit()
@@ -3208,16 +3219,41 @@ async def rescrape_listing(
                     "message": "Cette annonce a été rejetée car elle a été identifiée comme une page de recherche."
                 }
             }
-        scraping_success = False
+        if fb_details and not is_error_or_generic_title(fb_details.get("title")):
+            details = fb_details
+            scraping_success = True
+        else:
+            scraping_success = False
+            # Merge any extracted photos from fallback
+            if fb_details and fb_details.get("photo_urls") and not details.get("photo_urls"):
+                details["photo_urls"] = fb_details["photo_urls"]
 
     # ── Update via service ──
     updated_listing, _ = await create_listing_from_details(db, details, source, url)
+
+    # Ensure photos are repaired if missing
+    if not has_valid_local_photos(updated_listing):
+        try:
+            await repair_listing_photos(updated_listing, db)
+        except Exception as e:
+            print(f"[API] Error in repair_listing_photos for {updated_listing.id}: {e}")
+
+    photos = json_to_photos(updated_listing.photos_local)
+    photos_count = len(photos)
+    if scraping_success:
+        msg = "Annonce actualisée avec succès."
+    elif photos_count > 0:
+        msg = f"Photos disponibles ({photos_count}). Données existantes préservées (le site source a restreint l'accès direct)."
+    else:
+        msg = "Données existantes préservées (le site source a renvoyé une erreur ou est temporairement inaccessible)."
 
     rescrape_response = {
         "status": "updated",
         "listing_id": updated_listing.id,
         "title": updated_listing.title,
-        "scraping_success": scraping_success
+        "scraping_success": scraping_success,
+        "photos_count": photos_count,
+        "message": msg
     }
 
     # ── Forbidden Zone Warning ──

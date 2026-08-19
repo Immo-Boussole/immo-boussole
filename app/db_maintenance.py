@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models import Listing, ListingStatus, MapPin
-from app.services import refresh_listing_status
+from app.services import refresh_listing_status, has_valid_local_photos, repair_listing_photos
 from app.database import SessionLocal
 import asyncio
 import re
@@ -17,6 +17,7 @@ UNSTANDARDIZED_CITY = "unstandardized_city"
 FORBIDDEN_DEPARTMENT = "forbidden_department"
 FORBIDDEN_ZONE = "forbidden_zone"
 INCORRECT_PRICE_PER_SQM = "incorrect_price_per_sqm"
+MISSING_PHOTOS = "missing_photos"
 
 
 
@@ -153,6 +154,12 @@ def identify_problems(db: Session):
             if l.price_per_sqm is None or l.price_per_sqm <= 0 or abs(l.price_per_sqm - expected) > 0.02:
                 incorrect_price_sqm_listings.append(l)
 
+    # Missing or corrupted photos
+    missing_photos_listings = []
+    for l in active_listings_all:
+        if not has_valid_local_photos(l):
+            missing_photos_listings.append(l)
+
     return {
         EMPTY_DESCRIPTION: {
             "count": len(empty_desc_listings),
@@ -193,6 +200,10 @@ def identify_problems(db: Session):
         INCORRECT_PRICE_PER_SQM: {
             "count": len(incorrect_price_sqm_listings),
             "ids": [l.id for l in incorrect_price_sqm_listings]
+        },
+        MISSING_PHOTOS: {
+            "count": len(missing_photos_listings),
+            "ids": [l.id for l in missing_photos_listings]
         }
     }
 
@@ -313,6 +324,8 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                             elif problem_type == INCORRECT_PRICE_PER_SQM:
                                 listing.update_price_per_sqm()
                                 db.commit()
+                            elif problem_type == MISSING_PHOTOS:
+                                await repair_listing_photos(listing, db)
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)
                         except Exception as e:
