@@ -54,7 +54,12 @@ def test_standardize_and_enrich_city():
         assert zip_code is not None and re.match(r'^\d{5}$', zip_code), f"Postal code should be 5 digits, got '{zip_code}'"
         assert re.match(r'^.+\s\(\d{5}\)$', std_name), f"Standardized name should match Name (Zip) format, got '{std_name}'"
 
-async def test_listing_creation_and_maintenance():
+def test_listing_creation_and_maintenance():
+    import asyncio
+    asyncio.run(_async_test_listing_creation_and_maintenance())
+
+
+async def _async_test_listing_creation_and_maintenance():
     print("\nTesting listing creation with automatic standardization...")
     db = TestingSessionLocal()
     db.query(Listing).delete()

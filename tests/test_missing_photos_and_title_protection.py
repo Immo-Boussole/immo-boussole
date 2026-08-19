@@ -108,15 +108,15 @@ def test_is_missing_or_corrupt_photos(tmp_path):
     l_none = Listing(photos_local=None)
     assert is_missing_or_corrupt_photos(l_none) is True
 
-    # "[]" with no original URLs -> confirmed 0 photos, NOT missing/corrupt
-    l_confirmed_no_photos = Listing(photos_local="[]", original_photo_urls="[]")
-    assert is_missing_or_corrupt_photos(l_confirmed_no_photos) is False
+    # "[]" with no local files -> missing (needs repair/photos)
+    l_empty_no_photos = Listing(photos_local="[]", original_photo_urls="[]")
+    assert is_missing_or_corrupt_photos(l_empty_no_photos) is True
 
     # "[]" with original URLs present -> missing/corrupt (needs download)
     l_pending_download = Listing(photos_local="[]", original_photo_urls=json.dumps(["http://example.com/1.jpg"]))
     assert is_missing_or_corrupt_photos(l_pending_download) is True
 
-    # Nonexistent photo path -> corrupt
+    # Nonexistent photo path -> corrupt/missing
     l_corrupt = Listing(photos_local=json.dumps(["/non/existent/path.webp"]))
     assert is_missing_or_corrupt_photos(l_corrupt) is True
 
@@ -146,7 +146,7 @@ def test_identify_problems_missing_photos(db_session, tmp_path):
     l_no_photos = Listing(
         external_id="ext_no_photos",
         url="https://example.com/3",
-        title="Confirmed no photos listing",
+        title="No photos listing with empty list",
         status=ListingStatus.ACTIVE,
         photos_local="[]",
         original_photo_urls="[]"
@@ -156,10 +156,10 @@ def test_identify_problems_missing_photos(db_session, tmp_path):
 
     problems = identify_problems(db_session)
     assert MISSING_PHOTOS in problems
-    assert problems[MISSING_PHOTOS]["count"] == 1
+    assert problems[MISSING_PHOTOS]["count"] == 2
     assert l_missing.id in problems[MISSING_PHOTOS]["ids"]
+    assert l_no_photos.id in problems[MISSING_PHOTOS]["ids"]
     assert l_good.id not in problems[MISSING_PHOTOS]["ids"]
-    assert l_no_photos.id not in problems[MISSING_PHOTOS]["ids"]
 
 
 def test_repair_listing_photos_from_original_urls(db_session, tmp_path):
@@ -186,7 +186,7 @@ def test_repair_listing_photos_from_original_urls(db_session, tmp_path):
         assert json.loads(listing.photos_local) == [str(local_photo)]
 
 
-def test_repair_listing_photos_marks_no_photos_when_unavailable(db_session):
+def test_repair_listing_photos_keeps_flagged_when_unavailable(db_session):
     import asyncio
 
     listing = Listing(
@@ -206,11 +206,10 @@ def test_repair_listing_photos_marks_no_photos_when_unavailable(db_session):
         mock_meta.return_value = {"title": "No Photos Available Listing", "photo_urls": []}
         
         success = asyncio.run(repair_listing_photos(listing, db_session))
-        assert success is True
-        assert listing.photos_local == "[]"
-        assert listing.original_photo_urls == "[]"
+        assert success is False
 
-        # Verify that identify_problems no longer flags this listing
+        # Verify that identify_problems still flags this listing so it can be repaired
         problems = identify_problems(db_session)
-        assert listing.id not in problems[MISSING_PHOTOS]["ids"]
+        assert listing.id in problems[MISSING_PHOTOS]["ids"]
+
 

@@ -307,48 +307,32 @@ def has_valid_local_photos(listing: Listing) -> bool:
     if not listing:
         return False
     photos = json_to_photos(listing.photos_local)
-    if not photos:
+    if not photos or not isinstance(photos, list):
         return False
     for p in photos:
-        if p and os.path.exists(p) and os.path.getsize(p) > 0:
-            return True
+        if not p or not isinstance(p, str):
+            continue
+        clean_p = p.lstrip("/\\")
+        candidates = [p, clean_p, os.path.join("static", clean_p)]
+        for candidate in candidates:
+            if os.path.exists(candidate) and os.path.isfile(candidate):
+                try:
+                    if os.path.getsize(candidate) > 0:
+                        return True
+                except Exception:
+                    pass
     return False
 
 
 def is_missing_or_corrupt_photos(listing: Listing) -> bool:
     """
     Returns True if a listing has missing or corrupted photos that require repair.
-    Returns False if valid local photo files exist on disk OR if photo processing
-    was completed and confirmed that 0 photos exist for this listing.
+    Returns False if valid local photo files exist on disk.
     """
     if not listing:
         return False
 
-    if has_valid_local_photos(listing):
-        return False
-
-    # Check if photos_local is explicitly "[]" and no original URLs exist to download
-    if listing.photos_local is not None:
-        try:
-            local_list = json_to_photos(listing.photos_local)
-            if isinstance(local_list, list) and len(local_list) == 0:
-                orig_list = []
-                if listing.original_photo_urls:
-                    try:
-                        parsed = json.loads(listing.original_photo_urls)
-                        if isinstance(parsed, list):
-                            orig_list = [u for u in parsed if isinstance(u, str) and u.startswith("http")]
-                        elif isinstance(parsed, str) and parsed.startswith("http"):
-                            orig_list = [parsed]
-                    except Exception:
-                        orig_list = []
-                if not orig_list:
-                    # Explicitly 0 photos locally and remotely: not a missing/corrupt photo issue
-                    return False
-        except Exception:
-            pass
-
-    return True
+    return not has_valid_local_photos(listing)
 
 
 async def repair_listing_photos(listing: Listing, db: Session) -> bool:
@@ -415,15 +399,8 @@ async def repair_listing_photos(listing: Listing, db: Session) -> bool:
         except Exception as e:
             print(f"[Services] Photo download failed during fresh repair for listing {listing.id}: {e}")
 
-    # If no valid photos could be fetched/downloaded, mark as confirmed 0 photos
-    # so maintenance doesn't continuously flag it as missing photos
-    if not has_valid_local_photos(listing):
-        listing.photos_local = json.dumps([])
-        listing.original_photo_urls = json.dumps([])
-        db.commit()
-        print(f"[Services] Repair processed for listing {listing.id}: confirmed 0 photos available.")
-
-    return not is_missing_or_corrupt_photos(listing)
+    db.commit()
+    return has_valid_local_photos(listing)
 
 
 async def repair_listing_title(listing: Listing, db: Session, force: bool = False) -> Tuple[bool, str]:
@@ -852,7 +829,7 @@ async def create_listing_from_details(
             print(f"[Services] Error downloading photos for listing {listing.id}: {e}")
 
     # Fallback photo recovery if listing still has missing/corrupted photos
-    if is_missing_or_corrupt_photos(listing):
+    if download_photos and is_missing_or_corrupt_photos(listing):
         try:
             await repair_listing_photos(listing, db)
         except Exception as e:
