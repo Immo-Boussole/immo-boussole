@@ -1,6 +1,6 @@
 import httpx
 import math
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from functools import lru_cache
 from app.config import settings
 
