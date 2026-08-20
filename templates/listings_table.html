@@ -777,7 +777,7 @@
                                     {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
                                     {% if prec == 'exact' %}
                                     <span class="address-precision-badge precision-exact" style="position: static; font-size: 0.62rem; padding: 0.1rem 0.4rem;" title="🎯 Adresse exacte : {{ listing.address }}">
-                                        <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> Exact
+                                        <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> {{ listing.city or 'Ville' }}
                                     </span>
                                     {% elif prec == 'street' %}
                                     <span class="address-precision-badge precision-street" style="position: static; font-size: 0.62rem; padding: 0.1rem 0.4rem;" title="📍 Rue : {{ listing.address }}">

@@ -1710,7 +1710,7 @@
             });
         });
 
-        function updateVisitAddressBadge(precision, label = '') {
+        function updateVisitAddressBadge(precision, label = '', city = '') {
             const badge = document.getElementById('visitAddressPrecisionBadge');
             if (!badge) return;
             if (!precision) {
@@ -1719,14 +1719,15 @@
             }
             badge.className = `address-precision-badge precision-${precision}`;
             badge.style.display = 'inline-flex';
+            const displayCity = city || 'Ville';
             if (precision === 'exact') {
-                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> <span class="badge-label">Exact</span>`;
+                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span> <span class="badge-label">${displayCity}</span>`;
                 badge.title = `Adresse exacte : ${label}`;
             } else if (precision === 'street') {
                 badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span> <span class="badge-label">Rue</span>`;
                 badge.title = `Rue : ${label}`;
             } else {
-                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-city"></i></span> <span class="badge-label">Ville</span>`;
+                badge.innerHTML = `<span class="badge-icon"><i class="fa-solid fa-city"></i></span> <span class="badge-label">${displayCity}</span>`;
                 badge.title = `Commune seule : ${label}`;
             }
         }

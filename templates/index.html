@@ -1525,7 +1525,7 @@
                         {% if prec == 'exact' %}
                         <div class="address-precision-badge precision-exact" onclick="event.stopPropagation(); window.open('/listings/{{ listing.id }}', '_blank');" title="Adresse exacte vérifiée : {{ listing.address or listing.location or listing.city or '' }}">
                             <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
-                            <span class="badge-label">Exact</span>
+                            <span class="badge-label">{{ listing.city or 'Ville' }}</span>
                             <div class="address-precision-tooltip">🎯 Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}</div>
                         </div>
                         {% elif prec == 'street' %}

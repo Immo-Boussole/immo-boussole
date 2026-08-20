@@ -108,7 +108,7 @@ function initAddressAutocomplete(options) {
 
             if (prec === 'exact') {
                 iconClass = 'fa-bullseye';
-                precLabel = 'Exact';
+                precLabel = item.city || 'Exact';
             } else if (prec === 'street') {
                 iconClass = 'fa-location-dot';
                 precLabel = 'Rue';
