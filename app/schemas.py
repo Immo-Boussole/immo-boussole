@@ -14,6 +14,29 @@ class SubmitUrlRequest(BaseModel):
         return v.strip()
 
 
+class ExternalListingSubmitRequest(BaseModel):
+    url: str
+    title: Optional[str] = None
+    price: Optional[float] = None
+    area: Optional[float] = None
+    rooms: Optional[int] = None
+    bedrooms: Optional[int] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    photos: Optional[List[str]] = None
+    source: Optional[str] = None
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v):
+        if not v.startswith("http"):
+            raise ValueError("URL must start with http:// or https://")
+        return v.strip()
+
+
+
 class ListingUpdateRequest(BaseModel):
     title: Optional[str] = None
     price: Optional[float] = None
