@@ -20,6 +20,7 @@ class TestSearchPageValidation(unittest.TestCase):
             "https://www.leboncoin.fr/ventes_immobilieres/2347289347.htm",
             # SeLoger
             "https://www.seloger.com/annonces/achat/maison/gradignan-33/213566141.htm",
+            "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/saint-clair-du-rhone-38370/26H129BK5GHE?serp_view=list&search=classifiedBusiness%3DProfessional%26distributionTypes%3DBuy%2CBuy_Auction%26estateTypes%3DHouse%26locations%3DAD08FR15167%26projectTypes%3DProjected%2CResale#ln=classified_search_results&m=classified_search_results_classified_classified_detail_L",
             # Le Figaro
             "https://immobilier.lefigaro.fr/annonces/annonce-166299101.html",
             # LogicImmo

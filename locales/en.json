@@ -463,7 +463,21 @@
         "network_error": "Network error",
         "auto_refresh_label": "Auto Refresh",
         "auto_refresh_value": "Every 30 min (6am-10:30pm)",
-        "last_sync_label": "Last sync"
+        "last_sync_label": "Last sync",
+        "filter_all": "All",
+        "filter_duplicates": "Potential duplicates",
+        "filter_unique": "Unique",
+        "duplicate_alert_badge": "Potential duplicate",
+        "duplicate_alert_desc": "Similarity with",
+        "compare_duplicate_btn": "Compare duplicate",
+        "modal_compare_title": "Potential Duplicate Comparison",
+        "incoming_listing": "New listing (auto search)",
+        "existing_listing": "Existing listing in DB",
+        "merge_as_duplicate": "Merge as duplicate",
+        "ignore_duplicate": "Not a duplicate",
+        "view_existing_listing": "View in database",
+        "merge_success": "Listing merged successfully!",
+        "ignore_success": "Duplicate alert dismissed."
     },
     "duplicates": {
         "title": "Duplicate Hunt",

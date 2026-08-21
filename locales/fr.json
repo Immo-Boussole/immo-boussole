@@ -463,7 +463,21 @@
         "network_error": "Erreur de réseau",
         "auto_refresh_label": "Rafraîchissement auto",
         "auto_refresh_value": "Toutes les 30 min (06h-22h30)",
-        "last_sync_label": "Dernière synchro"
+        "last_sync_label": "Dernière synchro",
+        "filter_all": "Toutes",
+        "filter_duplicates": "Duplicats potentiels",
+        "filter_unique": "Sans duplicat",
+        "duplicate_alert_badge": "Duplicat potentiel",
+        "duplicate_alert_desc": "Similitude avec",
+        "compare_duplicate_btn": "Comparer le duplicat",
+        "modal_compare_title": "Comparaison de duplicat potentiel",
+        "incoming_listing": "Nouvelle annonce (recherche auto)",
+        "existing_listing": "Annonce existante en base",
+        "merge_as_duplicate": "Fusionner comme duplicat",
+        "ignore_duplicate": "Ce n'est pas un duplicat",
+        "view_existing_listing": "Consulter la fiche",
+        "merge_success": "Annonce fusionnée avec succès !",
+        "ignore_success": "Alerte de duplicat ignorée."
     },
     "duplicates": {
         "title": "Chasse aux duplicats",

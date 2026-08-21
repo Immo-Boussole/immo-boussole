@@ -1613,15 +1613,58 @@ def auto_searches_page(
     db: Session = Depends(get_db), 
     _auth = Depends(login_required)
 ):
+    from app.services import normalize_listing_url, enrich_auto_search_duplicates
+
     # Fetch NEW listings that come from a ReadySearch (automatic results)
-    new_listings = db.query(Listing).filter(
+    new_listings_raw = db.query(Listing).filter(
         Listing.status == ListingStatus.NEW,
+        Listing.is_duplicate == False,
         Listing.source_ready_search_id.isnot(None)
     ).order_by(Listing.date_added.desc()).all()
+
+    # Build set of normalized URLs already in the DB with status != NEW
+    existing_db_urls = set()
+    for row in db.query(Listing.url, Listing.original_url).filter(Listing.status != ListingStatus.NEW).all():
+        if row.url:
+            norm_u = normalize_listing_url(row.url)
+            if norm_u:
+                existing_db_urls.add(norm_u)
+        if row.original_url:
+            norm_ou = normalize_listing_url(row.original_url)
+            if norm_ou:
+                existing_db_urls.add(norm_ou)
+
+    # Filter out listings whose URL is already in DB or duplicated in this batch
+    new_listings = []
+    seen_new_urls = set()
+    for l in new_listings_raw:
+        norm_u = normalize_listing_url(l.url)
+        norm_orig = normalize_listing_url(l.original_url) if l.original_url else ""
+
+        if norm_u in existing_db_urls or (norm_orig and norm_orig in existing_db_urls):
+            continue
+        if norm_u in seen_new_urls or (norm_orig and norm_orig in seen_new_urls):
+            continue
+
+        if norm_u:
+            seen_new_urls.add(norm_u)
+        if norm_orig:
+            seen_new_urls.add(norm_orig)
+
+        new_listings.append(l)
+
     queries = db.query(SearchQuery).all()
     all_listings = db.query(Listing).order_by(Listing.date_added.desc()).limit(100).all()
     viewed_ids = _get_viewed_listing_ids(request, db)
     _enrich_listings(new_listings + all_listings, viewed_ids)
+
+    # Enrich new listings with potential duplicates (> 50%)
+    enrich_auto_search_duplicates(new_listings, db)
+
+    # Calculate counts for quick filter pills
+    count_total = len(new_listings)
+    count_duplicates = sum(1 for l in new_listings if getattr(l, "_duplicate", None) is not None)
+    count_unique = count_total - count_duplicates
 
     # Build a lookup map of ReadySearch by ID for fast access
     ready_search_map = {rs.id: rs for rs in db.query(ReadySearch).all()}
@@ -1651,6 +1694,9 @@ def auto_searches_page(
 
     return templates.TemplateResponse(request=request, name="auto_searches.html", context={
         "grouped_listings": grouped,
+        "count_total": count_total,
+        "count_duplicates": count_duplicates,
+        "count_unique": count_unique,
         "queries": queries,
         "listings": all_listings,
         "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),
@@ -2851,6 +2897,8 @@ def merge_duplicate(
     root_id = l_b.duplicate_of_id or l_b.id
     l_a.is_duplicate = True
     l_a.duplicate_of_id = root_id
+    if l_a.status == ListingStatus.NEW:
+        l_a.status = ListingStatus.ACTIVE
     db.commit()
     
     # Sync data across the cluster

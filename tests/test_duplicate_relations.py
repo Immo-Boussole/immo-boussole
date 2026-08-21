@@ -36,10 +36,19 @@ def override_get_db():
     finally:
         db.close()
 
+import pytest
+from app.main import login_required, user_required
+
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[login_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
+app.dependency_overrides[user_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
 def setup_test_data():
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[login_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
+    app.dependency_overrides[user_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
     db = TestingSessionLocal()
     # Clean database
     db.query(Listing).delete()
@@ -148,16 +157,6 @@ def test_duplicate_queries():
 def test_ui_rendering():
     print("Testing template duplicate UI rendering...")
     
-    # First GET the login page to retrieve the CSRF token
-    login_page = client.get("/login")
-    import re
-    match = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_page.text)
-    csrf_token = match.group(1) if match else ""
-    
-    # Force login by posting to /login endpoint with the CSRF token
-    response = client.post("/login", data={"username": "Jean-Marc", "password": "test_password", "csrf_token": csrf_token})
-    assert response.status_code in [200, 303], "Login should succeed"
-        
     # 1. Render Listing 142 (Not a duplicate)
     response = client.get("/listings/142")
     assert response.status_code == 200, "Should load listing detail page for #142"

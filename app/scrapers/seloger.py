@@ -71,7 +71,7 @@ class SelogerScraper(BaseScraper):
         elif text_content:
             print("[SeLoger] Fallback texte regex (données incomplètes)")
             matches = re.findall(
-                r'(https://www\.seloger\.com/annonces/[^\s"\'<>]+)',
+                r'(https://www\.seloger\.com/annonces?/[^\s"\'<>]+)',
                 text_content
             )
             for m in set(matches):

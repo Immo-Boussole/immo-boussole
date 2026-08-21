@@ -24,8 +24,61 @@ from bs4 import BeautifulSoup
 
 
 
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import re
 from typing import Tuple
+
+
+def normalize_listing_url(url: str) -> str:
+    """
+    Normalizes a listing URL by stripping tracking parameters, normalizing scheme/host,
+    and trimming trailing slashes to allow consistent deduplication.
+    """
+    if not url or not isinstance(url, str):
+        return ""
+    url = url.strip()
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            if not url.startswith("http://") and not url.startswith("https://"):
+                parsed = urlparse("https://" + url)
+
+        scheme = parsed.scheme.lower()
+        netloc = parsed.netloc.lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+
+        # Remove standard ports if present
+        if netloc.endswith(":80") and scheme == "http":
+            netloc = netloc[:-3]
+        elif netloc.endswith(":443") and scheme == "https":
+            netloc = netloc[:-4]
+
+        # Path: strip trailing slash unless it's just "/"
+        path = parsed.path
+        if len(path) > 1 and path.endswith("/"):
+            path = path.rstrip("/")
+
+        # Filter tracking query params
+        tracking_params = {
+            "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+            "fbclid", "gclid", "gbraid", "wbraid", "msclkid", "twclid", "dclid",
+            "ref", "referrer", "source", "origin", "xtor", "xtref", "cmp", "at_medium",
+            "at_campaign", "at_custom1", "at_custom2", "at_custom3", "at_custom4",
+            "_gl", "_ga", "mc_cid", "mc_eid"
+        }
+        query_dict = parse_qs(parsed.query, keep_blank_values=False)
+        filtered_query = {k: v for k, v in query_dict.items() if k.lower() not in tracking_params}
+
+        query_str = urlencode(filtered_query, doseq=True)
+        normalized_scheme = "https" if scheme in ("http", "https") else scheme
+
+        return urlunparse((normalized_scheme, netloc, path, parsed.params, query_str, ""))
+    except Exception:
+        return url.strip().rstrip("/")
+
 
 def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
     """
@@ -51,8 +104,8 @@ def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
             return False, "Les URLs LeBonCoin d'annonces valides doivent contenir '/ad/' ou une catégorie d'annonce."
 
     elif "seloger.com" in url_lower:
-        if "/annonces/" not in url_lower:
-            return False, "Les URLs SeLoger d'annonces valides doivent contenir '/annonces/'."
+        if "/annonces/" not in url_lower and "/annonce/" not in url_lower:
+            return False, "Les URLs SeLoger d'annonces valides doivent contenir '/annonce/' ou '/annonces/'."
 
     elif "lefigaro.fr" in url_lower:
         if "/annonces/" not in url_lower or "/annonce-" not in url_lower:
@@ -1015,14 +1068,20 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
             if not _is_city_in_allowed_departments(city_to_check, db):
                 continue
         
-        # Check if listing already exists by external_id OR URL
-        # We check globally, not just in existing_active, to avoid UNIQUE constraint violations
+        # Check if listing already exists by external_id OR URL (exact or normalized)
+        norm_item_url = normalize_listing_url(item_url)
         existing = db.query(Listing).filter(
-            (Listing.external_id == ext_id) | (Listing.url == item_url)
+            (Listing.external_id == ext_id) | (Listing.url == item_url) | (Listing.original_url == item_url)
         ).first()
 
+        if not existing and norm_item_url:
+            for l in db.query(Listing).filter(Listing.url.isnot(None)).all():
+                if normalize_listing_url(l.url) == norm_item_url or (l.original_url and normalize_listing_url(l.original_url) == norm_item_url):
+                    existing = l
+                    break
+
         if existing:
-            # Case: Already exists (active, new, or disappeared)
+            # Case: Already exists (active, new, rejected, archived, or disappeared)
             if existing.status == ListingStatus.DISAPPEARED:
                 city_to_check_existing = existing.city or existing.location
                 if city_to_check_existing and is_city_in_forbidden_set(city_to_check_existing, forbidden_cities) and not existing.to_visit:
@@ -1532,6 +1591,70 @@ def find_potential_duplicates(db: Session, limit_listings: int = 200) -> list:
     # Sort by score descending
     potential_pairs.sort(key=lambda x: x["score"], reverse=True)
     return potential_pairs
+
+
+def enrich_auto_search_duplicates(new_listings: list, db: Session) -> list:
+    """
+    For each listing in new_listings, finds the best potential duplicate match
+    (similarity score >= 50%) among existing ACTIVE listings in DB.
+    Excludes pairs already rejected in rejected_duplicates.
+    Attaches `_duplicate` dict to each listing if a match >= 50% is found.
+    """
+    if not new_listings:
+        return new_listings
+
+    from app.models import RejectedDuplicate, ListingStatus
+    
+    # Candidate pool: active listings in the DB
+    active_listings = db.query(Listing).filter(
+        Listing.status == ListingStatus.ACTIVE,
+        Listing.is_duplicate == False
+    ).order_by(Listing.date_added.desc()).limit(300).all()
+
+    # Rejected pairs
+    rejected = db.query(RejectedDuplicate).all()
+    rejected_pairs = {tuple(sorted((r.listing_a_id, r.listing_b_id))) for r in rejected}
+
+    hash_cache = {}
+
+    for new_l in new_listings:
+        best_match = None
+        best_score = 0
+        best_common = []
+
+        for cand in active_listings:
+            if cand.id == new_l.id:
+                continue
+            if tuple(sorted((new_l.id, cand.id))) in rejected_pairs:
+                continue
+
+            score, common = calculate_listing_similarity(new_l, cand, hash_cache=hash_cache)
+            if score >= 50 and score > best_score:
+                best_score = score
+                best_match = cand
+                best_common = common
+
+        if best_match and best_score >= 50:
+            cand_photos = json_to_photos(best_match.photos_local) if best_match.photos_local else []
+            cand_photo = cand_photos[0] if cand_photos else None
+            new_l._duplicate = {
+                "score": best_score,
+                "common": best_common,
+                "target_id": best_match.id,
+                "target_title": best_match.title or "Annonce sans titre",
+                "target_price": best_match.price,
+                "target_price_per_sqm": best_match.price_per_sqm,
+                "target_area": best_match.area,
+                "target_rooms": best_match.rooms,
+                "target_location": best_match.location or best_match.city,
+                "target_photo": cand_photo,
+                "target_url": best_match.url,
+                "target_source": best_match.source.value.upper() if best_match.source else "MANUEL"
+            }
+        else:
+            new_l._duplicate = None
+
+    return new_listings
 
 
 def extract_contact_info_from_text(text: str) -> dict:
