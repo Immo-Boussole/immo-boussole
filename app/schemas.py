@@ -36,6 +36,20 @@ class ExternalListingSubmitRequest(BaseModel):
         return v.strip()
 
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    api_key: str
+    token_type: str = "bearer"
+    username: str
+    role: str
+    message: str = "Authentication successful"
+
+
+
 
 class ListingUpdateRequest(BaseModel):
     title: Optional[str] = None
