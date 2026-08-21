@@ -109,7 +109,7 @@ def detect_client_language(request: Request) -> str:
                 if primary_lang in available_codes:
                     return primary_lang
 
-    return "fr"
+    return "en"
 
 
 def get_text(request: Request, key: str, default: str = None, **kwargs) -> str:
