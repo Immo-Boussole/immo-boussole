@@ -26,7 +26,8 @@
         "administration": "Administration",
         "duplicate_hunt": "Duplicate Hunt",
         "visites": "Visits Manager",
-        "contacts": "Contacts Manager"
+        "contacts": "Contacts Manager",
+        "repairs": "Repairs"
     },
     "pois": {
         "title": "Points of Interest",

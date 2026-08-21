@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models import Listing, ListingStatus, MapPin
+from app.models import Listing, ListingStatus, MapPin, Visit
 from app.services import (
     refresh_listing_status,
     has_valid_local_photos,
@@ -11,6 +11,15 @@ from app.services import (
 from app.database import SessionLocal
 import asyncio
 import re
+from datetime import datetime, timezone
+
+
+def _is_past_date(dt) -> bool:
+    if not dt:
+        return False
+    if dt.tzinfo is not None:
+        return dt < datetime.now(timezone.utc)
+    return dt < datetime.now()
 
 
 # Problem types
@@ -25,6 +34,7 @@ FORBIDDEN_DEPARTMENT = "forbidden_department"
 FORBIDDEN_ZONE = "forbidden_zone"
 INCORRECT_PRICE_PER_SQM = "incorrect_price_per_sqm"
 MISSING_PHOTOS = "missing_photos"
+PAST_FIRST_VISIT_NOT_DONE = "past_first_visit_not_done"
 
 
 
@@ -171,6 +181,17 @@ def identify_problems(db: Session):
         if is_missing_or_corrupt_photos(l):
             missing_photos_listings.append(l)
 
+    # Past 1st visits not marked as done / validated
+    all_visits = db.query(Visit).all()
+    past_first_visits = [
+        v for v in all_visits
+        if (v.step in ("1ere_visite", "1ère visite effectuée", "1ère Visite effectuée") or
+            (v.step_family == "visite" and v.step in ("1ere_visite", None, "")))
+        and v.status != "effectuee"
+        and _is_past_date(v.scheduled_at)
+    ]
+    past_first_visit_listing_ids = list(dict.fromkeys(v.listing_id for v in past_first_visits if v.listing_id))
+
     return {
         EMPTY_DESCRIPTION: {
             "count": len(empty_desc_listings),
@@ -215,6 +236,10 @@ def identify_problems(db: Session):
         MISSING_PHOTOS: {
             "count": len(missing_photos_listings),
             "ids": [l.id for l in missing_photos_listings]
+        },
+        PAST_FIRST_VISIT_NOT_DONE: {
+            "count": len(past_first_visits),
+            "ids": past_first_visit_listing_ids
         }
     }
 
@@ -230,6 +255,7 @@ SAFE_PROBLEM_TYPES = [
     UNSTANDARDIZED_CITY,
     INCORRECT_PRICE_PER_SQM,
     MISSING_PHOTOS,
+    PAST_FIRST_VISIT_NOT_DONE,
 ]
 
 # Problem types reserved for admins only (potentially destructive)
@@ -409,6 +435,30 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                 db.commit()
                             elif problem_type == MISSING_PHOTOS:
                                 await repair_listing_photos(listing, db)
+                            elif problem_type == PAST_FIRST_VISIT_NOT_DONE:
+                                visits_for_listing = db.query(Visit).filter(
+                                    Visit.listing_id == lid,
+                                    Visit.status != "effectuee"
+                                ).all()
+                                repaired_any = False
+                                for v in visits_for_listing:
+                                    if (v.step in ("1ere_visite", "1ère visite effectuée", "1ère Visite effectuée") or
+                                        (v.step_family == "visite" and v.step in ("1ere_visite", None, ""))) and _is_past_date(v.scheduled_at):
+                                        v.status = "effectuee"
+                                        repaired_any = True
+                                        try:
+                                            from app import google_service
+                                            google_service.sync_visit_to_google_calendar(db, v)
+                                        except Exception as e:
+                                            print(f"[DB Maintenance] Error syncing visit {v.id} to Google Calendar: {e}")
+                                if repaired_any:
+                                    from app.main import _derive_visit_status_from_visit
+                                    latest_visit = db.query(Visit).filter(Visit.listing_id == lid).order_by(Visit.scheduled_at.desc()).first()
+                                    if latest_visit:
+                                        derived = _derive_visit_status_from_visit(latest_visit)
+                                        if derived:
+                                            listing.last_visit_status = derived
+                                    db.commit()
                             elif problem_type == GENERIC_TITLE_FIGARO:
                                 await repair_listing_title(listing, db)
                                 await refresh_listing_status(listing, db, force_update=True)

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b0f1a">
-    <meta name="description" content="Vérification et réparation non-destructive des annonces immobilières — Immo-Boussole">
+    <meta name="description" content="Vérification et réparation non-destructive des données et annonces — Immo-Boussole">
     <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ title }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
@@ -409,7 +409,7 @@
                 </button>
                 <h1>
                     <i class="fa-solid fa-screwdriver-wrench" style="color: var(--accent);"></i>
-                    Réparation des annonces
+                    Réparations
                 </h1>
             </div>
         </header>
@@ -556,6 +556,7 @@
             unstandardized_city:     { label: 'Villes non standardisées',           desc: 'Annonces dont la ville ne suit pas le format «\u00a0Ville (code postal)\u00a0».' },
             incorrect_price_per_sqm: { label: 'Prix au m² incorrects',             desc: 'Prix au m² absent ou incohérent avec le prix et la surface.' },
             missing_photos:          { label: 'Images manquantes ou corrompues',    desc: 'Annonces dont les photos locales sont absentes ou invalides.' },
+            past_first_visit_not_done: { label: '1ères visites passées non validées', desc: 'Activités «\u00a01ère Visite effectuée\u00a0» à date passée dont le statut n\'est pas «\u00a0Effectuée / Validée\u00a0».' },
             // Dangerous (admin only — future)
             forbidden_department:    { label: 'Annonces hors département autorisé', desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
             forbidden_zone:          { label: 'Annonces en zone interdite',         desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
@@ -1085,6 +1086,7 @@
             forbidden_zone: 'R\u00e9paration\u00a0: Zones interdites\u2026',
             incorrect_price_per_sqm: 'R\u00e9paration\u00a0: Prix au m\u00b2\u2026',
             missing_photos: 'R\u00e9paration\u00a0: Images manquantes\u2026',
+            past_first_visit_not_done: 'R\u00e9paration\u00a0: 1\u00e8res visites pass\u00e9es\u2026',
         };
 
         async function pollRepairStatus(initialCheck = false) {

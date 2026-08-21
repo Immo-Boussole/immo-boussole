@@ -89,23 +89,27 @@ def detect_client_language(request: Request) -> str:
     Detects the best matching language for the user:
     1. Session preference if explicitly set.
     2. Accept-Language HTTP header from browser.
-    3. Defaults to 'en'.
+    3. Defaults to 'fr' / 'en'.
     """
-    if hasattr(request, "session") and request.session.get("lang"):
+    if request is None:
+        return "fr"
+
+    if hasattr(request, "session") and request.session and request.session.get("lang"):
         return request.session.get("lang")
 
-    accept_header = request.headers.get("accept-language", "").lower()
-    if accept_header:
-        # Check available languages against Accept-Language
-        available_codes = list(translations.keys()) or ["en", "fr"]
-        # Extract quality weights or split by comma
-        for part in accept_header.split(","):
-            raw_lang = part.split(";")[0].strip()
-            primary_lang = raw_lang.split("-")[0]
-            if primary_lang in available_codes:
-                return primary_lang
+    if hasattr(request, "headers") and request.headers:
+        accept_header = request.headers.get("accept-language", "").lower()
+        if accept_header:
+            # Check available languages against Accept-Language
+            available_codes = list(translations.keys()) or ["fr", "en"]
+            # Extract quality weights or split by comma
+            for part in accept_header.split(","):
+                raw_lang = part.split(";")[0].strip()
+                primary_lang = raw_lang.split("-")[0]
+                if primary_lang in available_codes:
+                    return primary_lang
 
-    return "en"
+    return "fr"
 
 
 def get_text(request: Request, key: str, default: str = None, **kwargs) -> str:

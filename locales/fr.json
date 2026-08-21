@@ -26,7 +26,8 @@
         "administration": "Administration",
         "duplicate_hunt": "Chasse aux duplicats",
         "visites": "Gestionnaire de visites",
-        "contacts": "Gestionnaire de contacts"
+        "contacts": "Gestionnaire de contacts",
+        "repairs": "Réparations"
     },
     "pois": {
         "title": "Points d'Intérêt",

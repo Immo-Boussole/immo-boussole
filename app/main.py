@@ -1366,7 +1366,7 @@ def listings_repair_page(
     return templates.TemplateResponse(request=request, name="listings_repair.html", context={
         "queries": queries,
         "listings": listings,
-        "title": "Réparation des annonces — Immo-Boussole",
+        "title": "Réparations — Immo-Boussole",
     })
 
 
