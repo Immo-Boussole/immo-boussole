@@ -1288,10 +1288,21 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
     all_agencies = db.query(Agency).order_by(Agency.commercial_name.asc(), Agency.legal_name.asc()).all()
     local_hash = get_local_commit_hash()
 
+    # Split counters: Rendez-vous (total visit activities) vs Biens visités (unique listings with non-cancelled visit steps)
+    rdv_cnt = sum(1 for item in visits_with_listings if (item["visit"].step_family or "visite") == "visite")
+    biens_visites_ids = {
+        item["visit"].listing_id
+        for item in visits_with_listings
+        if (item["visit"].step_family or "visite") == "visite" and item["visit"].step != "visite_annulee"
+    }
+    biens_visites_cnt = len(biens_visites_ids)
+
     return templates.TemplateResponse(request=request, name="visites.html", context={
         "listings": all_listings,
         "target_listings": target_listings,
         "visits_with_listings": visits_with_listings,
+        "rdv_cnt": rdv_cnt,
+        "biens_visites_cnt": biens_visites_cnt,
         "queries": queries,
         "users": users,
         "all_agents": all_agents,

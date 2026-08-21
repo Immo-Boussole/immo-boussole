@@ -183,15 +183,15 @@
         /* ── Summary Stats ── */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            grid-template-columns: repeat(7, minmax(0, 1fr));
             gap: 0.75rem;
             margin-bottom: 1.25rem;
             width: 100%;
         }
 
-        @media (max-width: 1100px) {
+        @media (max-width: 1200px) {
             .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             }
         }
 
@@ -231,6 +231,7 @@
         }
 
         .stat-icon.blue { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .stat-icon.indigo { background: rgba(129, 140, 248, 0.15); color: #818cf8; }
         .stat-icon.green { background: rgba(16, 217, 164, 0.15); color: var(--green); }
         .stat-icon.purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
         .stat-icon.orange { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
@@ -797,7 +798,7 @@
             <!-- ── Stats Summary (Compteurs par Famille & par Étape) ── -->
             {% set total_targets = target_listings|length %}
             {% set contact_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "contact")|list|length %}
-            {% set visite_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "visite")|list|length %}
+            {% set rdv_cnt = rdv_cnt if rdv_cnt is defined else (visits_with_listings|selectattr("visit.step_family", "equalto", "visite")|list|length) %}
             {% set reflexion_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "reflexion")|list|length %}
             {% set offre_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "offre")|list|length %}
             {% set cloture_cnt = visits_with_listings|selectattr("visit.step_family", "equalto", "cloture")|list|length %}
@@ -826,11 +827,18 @@
                         <div class="lbl">Prise de contact</div>
                     </div>
                 </div>
-                <div class="stat-card orange">
-                    <div class="stat-icon orange"><i class="fa-solid fa-calendar-day"></i></div>
+                <div class="stat-card indigo">
+                    <div class="stat-icon indigo"><i class="fa-solid fa-calendar-day"></i></div>
                     <div class="stat-info">
-                        <div class="val" id="statFamilyVisiteCnt">{{ visite_cnt }}</div>
-                        <div class="lbl">Rendez-vous & Visites</div>
+                        <div class="val" id="statFamilyVisiteCnt">{{ rdv_cnt }}</div>
+                        <div class="lbl">Rendez-vous</div>
+                    </div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-icon orange"><i class="fa-solid fa-house-circle-check"></i></div>
+                    <div class="stat-info">
+                        <div class="val" id="statBiensVisitesCnt">{{ biens_visites_cnt }}</div>
+                        <div class="lbl">Biens visités</div>
                     </div>
                 </div>
                 <div class="stat-card yellow">

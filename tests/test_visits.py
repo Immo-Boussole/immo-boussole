@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal, run_migrations
 from fastapi.testclient import TestClient
-from app.main import app, user_required
+from app.main import app, user_required, login_required
 from app.models import Listing, Visit, VisitContact, Agent, Agency, Source, ListingStatus
 from app import schemas
 from app.mcp_server import (
@@ -26,6 +26,7 @@ def test_visits_flow():
     run_migrations()
     db = SessionLocal()
     app.dependency_overrides[user_required] = lambda: {"username": "admin", "role": "admin"}
+    app.dependency_overrides[login_required] = lambda: {"username": "admin", "role": "admin"}
     client = TestClient(app)
 
     try:
@@ -128,11 +129,18 @@ def test_visits_flow():
         db.refresh(test_listing)
         assert test_listing.agency_id == test_agency.id
 
-        # 8. Check stats tool includes visits
+        # 8. Check stats tool and GET /visites route split counters
         stats_json = tool_get_stats()
         print("Stats res:", stats_json)
         assert "annonces_a_visiter" in stats_json
         assert "total_visites" in stats_json
+
+        # Test GET /visites page counter split
+        visites_html_resp = client.get("/visites")
+        assert visites_html_resp.status_code == 200
+        assert "Rendez-vous" in visites_html_resp.text
+        assert "Biens visités" in visites_html_resp.text
+        assert 'id="statBiensVisitesCnt"' in visites_html_resp.text
 
         # 9. Clean up test data
         tool_delete_visit(visit_id)
