@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
+from app.translations import get_text
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ def login_api(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Identifiants invalides"
+            detail=get_text(request, "api.invalid_credentials", default="Identifiants incorrects")
         )
 
     pwd_hash_600k = hashlib.pbkdf2_hmac('sha256', credentials.password.encode('utf-8'), user.salt, 600000)
@@ -31,7 +32,7 @@ def login_api(
     if user.password_hash not in (pwd_hash_600k, pwd_hash_100k):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Identifiants invalides"
+            detail=get_text(request, "api.invalid_credentials", default="Identifiants incorrects")
         )
 
     # Generate or refresh API key for the user
@@ -47,5 +48,5 @@ def login_api(
         token_type="bearer",
         username=user.username,
         role=user.role,
-        message="Connexion réussie"
+        message=get_text(request, "api.login_success", default="Connexion réussie")
     )

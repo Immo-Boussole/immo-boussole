@@ -443,11 +443,17 @@
     "api": {
         "unauthenticated": "Non authentifié",
         "invalid_credentials": "Identifiants incorrects",
+        "login_success": "Connexion réussie",
+        "admin_required": "Droits d'administrateur requis",
         "listing_not_found": "Annonce introuvable",
         "review_not_found": "Avis introuvable",
         "search_not_found": "Recherche introuvable",
         "already_exists": "Cette annonce est déjà dans la base.",
         "added_without_scraping": "Annonce ajoutée avec informations de base (sans plein scraping).",
+        "scraping_task_started": "Tâche de récupération lancée en arrière-plan.",
+        "listing_added_manually": "Annonce ajoutée manuellement sans scraping.",
+        "listing_added_success": "Annonce '{title}' ajoutée avec succès.",
+        "listing_updated_success": "Annonce '{title}' mise à jour avec succès.",
         "duplicate_warning": "⚠️ Un bien similaire (même prix, surface et ville) existe déjà !",
         "unknown_source": "Source inconnue:"
     },

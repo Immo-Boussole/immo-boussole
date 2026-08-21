@@ -443,11 +443,17 @@
     "api": {
         "unauthenticated": "Unauthenticated",
         "invalid_credentials": "Incorrect credentials",
+        "login_success": "Authentication successful",
+        "admin_required": "Admin privileges required",
         "listing_not_found": "Listing not found",
         "review_not_found": "Review not found",
         "search_not_found": "Search not found",
         "already_exists": "This listing is already in the database.",
         "added_without_scraping": "Listing added with basic information (without full scraping).",
+        "scraping_task_started": "Scraping task started in background.",
+        "listing_added_manually": "Listing added manually without scraping.",
+        "listing_added_success": "Listing '{title}' added successfully.",
+        "listing_updated_success": "Listing '{title}' updated successfully.",
         "duplicate_warning": "⚠️ A similar property (same price, area, and city) already exists!",
         "unknown_source": "Unknown source:"
     },

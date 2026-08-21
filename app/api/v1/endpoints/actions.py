@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.database import get_db
 from app.api.deps import get_current_user_api
 from app.services import create_listing_from_details
+from app.translations import get_text
 
 router = APIRouter()
 
@@ -12,6 +13,7 @@ router = APIRouter()
 async def submit_url_api(
     request: schemas.SubmitUrlRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
     current_user: models.User = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
@@ -21,10 +23,16 @@ async def submit_url_api(
     """
     if request.skip_scraping:
         create_listing_from_details(request.url, db)
-        return schemas.ActionResponse(status="success", message="Listing added manually without scraping.")
+        return schemas.ActionResponse(
+            status="success",
+            message=get_text(req, "api.listing_added_manually", default="Listing added manually without scraping.")
+        )
     
     background_tasks.add_task(create_listing_from_details, request.url, db)
-    return schemas.ActionResponse(status="accepted", message="Scraping task started in background.")
+    return schemas.ActionResponse(
+        status="accepted",
+        message=get_text(req, "api.scraping_task_started", default="Scraping task started in background.")
+    )
 
 
 async def _enrich_external_listing(url: str, db: Session):
@@ -38,6 +46,7 @@ async def _enrich_external_listing(url: str, db: Session):
 async def submit_external_listing_api(
     request: schemas.ExternalListingSubmitRequest,
     background_tasks: BackgroundTasks,
+    req: Request,
     current_user: models.User = Depends(get_current_user_api),
     db: Session = Depends(get_db)
 ):
@@ -92,7 +101,12 @@ async def submit_external_listing_api(
         db.add(listing)
         db.commit()
         db.refresh(listing)
-        msg = f"Annonce '{listing.title}' ajoutée avec succès."
+        msg = get_text(
+            req,
+            "api.listing_added_success",
+            default=f"Annonce '{listing.title}' ajoutée avec succès.",
+            title=listing.title
+        )
     else:
         # Update fields if provided
         if request.title:
@@ -107,12 +121,14 @@ async def submit_external_listing_api(
             import json
             existing.photos_json = json.dumps(request.photos)
         db.commit()
-        msg = f"Annonce '{existing.title}' mise à jour avec succès."
+        msg = get_text(
+            req,
+            "api.listing_updated_success",
+            default=f"Annonce '{existing.title}' mise à jour avec succès.",
+            title=existing.title
+        )
 
     # Launch background scrape for full enrichment if possible
     background_tasks.add_task(_enrich_external_listing, request.url, db)
 
     return schemas.ActionResponse(status="success", message=msg)
-
-
-
