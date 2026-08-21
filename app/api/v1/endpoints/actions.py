@@ -101,6 +101,7 @@ async def submit_external_listing_api(
         db.add(listing)
         db.commit()
         db.refresh(listing)
+        target_listing = listing
         msg = get_text(
             req,
             "api.listing_added_success",
@@ -121,6 +122,8 @@ async def submit_external_listing_api(
             import json
             existing.photos_json = json.dumps(request.photos)
         db.commit()
+        db.refresh(existing)
+        target_listing = existing
         msg = get_text(
             req,
             "api.listing_updated_success",
@@ -131,4 +134,12 @@ async def submit_external_listing_api(
     # Launch background scrape for full enrichment if possible
     background_tasks.add_task(_enrich_external_listing, request.url, db)
 
-    return schemas.ActionResponse(status="success", message=msg)
+    return schemas.ActionResponse(
+        status="success",
+        message=msg,
+        data={
+            "listing_id": target_listing.id,
+            "immo_boussole_url": f"/listing/{target_listing.id}",
+            "status": "nouvelle"
+        }
+    )

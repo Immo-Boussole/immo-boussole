@@ -63,6 +63,8 @@ def test_submit_external_listing():
     assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
     data = res.json()
     assert data["status"] == "success"
+    assert "data" in data
+    assert "listing_id" in data["data"]
 
     # Verify DB insertion
     db2 = SessionLocal()
@@ -72,4 +74,6 @@ def test_submit_external_listing():
     assert listing.price == 350000.0
     assert listing.price_per_sqm == 4666.67
     assert listing.source == Source.LEBONCOIN.value
+    from app.models import ListingStatus
+    assert listing.status == ListingStatus.NEW
     db2.close()
