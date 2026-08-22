@@ -90,4 +90,39 @@ def test_submit_external_listing():
     assert res_unauth.status_code == 307
     assert "next=" in res_unauth.headers.get("location", "")
 
+    # Test SeLoger canonical matching (short vs long URL with params and hash)
+    seloger_short = "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/saint-clair-du-rhone-38370/269W7APVLTZA"
+    seloger_long = "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/saint-clair-du-rhone-38370/269W7APVLTZA?serp_view=list&search=classifiedBusiness%3DProfessional%26distributionTypes%3DBuy#ln=classified_search_results"
+    
+    # 1. Insert short URL
+    res_sl1 = client.post("/api/v1/actions/submit-external-listing", json={
+        "url": seloger_short,
+        "title": "Maison 5 pièces 140 m² Saint-Clair-du-Rhône",
+        "price": 320000.0,
+        "area": 140.0,
+        "rooms": 5,
+        "city": "Saint-Clair-du-Rhône",
+        "source": "seloger"
+    }, headers=headers)
+    assert res_sl1.status_code == 200
+    sl_id = res_sl1.json()["data"]["listing_id"]
+
+    # 2. Check existence using the long URL with query params & hash
+    res_check = client.get(f"/api/v1/actions/check-listing?url={seloger_long}", headers=headers)
+    assert res_check.status_code == 200
+    check_data = res_check.json()
+    assert check_data["exists"] is True
+    assert check_data["listing_id"] == sl_id
+
+    # 3. Submit long URL directly -> should detect already_exists
+    res_sl2 = client.post("/api/v1/actions/submit-external-listing", json={
+        "url": seloger_long,
+        "title": "Maison 5 pièces 140 m² Saint-Clair-du-Rhône",
+        "price": 320000.0,
+        "area": 140.0
+    }, headers=headers)
+    assert res_sl2.status_code == 200
+    assert res_sl2.json()["data"]["already_exists"] is True
+    assert res_sl2.json()["data"]["listing_id"] == sl_id
+
     db2.close()

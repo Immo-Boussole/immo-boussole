@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -12,24 +13,59 @@ from app.translations import get_text
 router = APIRouter()
 
 def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
-    """Find a listing by URL with normalization and platform-specific ID matching."""
+    """Find a listing by URL with canonical prefix normalization and platform-specific ID matching."""
     if not url:
         return None
         
     norm_url = normalize_listing_url(url)
+    clean_base_url = url.split('?')[0].split('#')[0].rstrip('/')
     
     # 1. Exact or normalized URL match
     existing = db.query(models.Listing).filter(
         (models.Listing.url == url) | 
         (models.Listing.original_url == url) |
         (models.Listing.url == norm_url) |
-        (models.Listing.original_url == norm_url)
+        (models.Listing.original_url == norm_url) |
+        (models.Listing.url == clean_base_url) |
+        (models.Listing.original_url == clean_base_url)
     ).first()
     
     if existing:
         return existing
 
-    # 2. LeBonCoin numeric ad ID match (e.g. 3224009953)
+    # 2. Canonical prefix match (if DB has clean short URL and incoming is long with query params, or vice-versa)
+    if len(clean_base_url) > 15:
+        existing = db.query(models.Listing).filter(
+            (models.Listing.url.like(f"{clean_base_url}%")) |
+            (models.Listing.original_url.like(f"{clean_base_url}%"))
+        ).first()
+        if existing:
+            return existing
+
+    # 3. SeLoger matching: token ID (e.g. 269W7APVLTZA or 12345678.htm)
+    if "seloger.com" in url:
+        # Match alphanumeric listing token at end of path (e.g. /269W7APVLTZA)
+        match_token = re.search(r'/([A-Za-z0-9]{8,})(?:[/?#]|$)', url)
+        if match_token:
+            token = match_token.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{token}%")) | 
+                (models.Listing.original_url.like(f"%{token}%"))
+            ).first()
+            if existing:
+                return existing
+        # Match legacy numeric ID (e.g. /12345678.htm)
+        match_legacy = re.search(r'/(\d{6,})\.htm', url)
+        if match_legacy:
+            legacy_id = match_legacy.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{legacy_id}%")) | 
+                (models.Listing.original_url.like(f"%{legacy_id}%"))
+            ).first()
+            if existing:
+                return existing
+
+    # 4. LeBonCoin numeric ad ID match (e.g. 3224009953)
     if "leboncoin.fr" in url:
         match_id = re.search(r'/(\d{6,})', url)
         if match_id:
@@ -41,9 +77,33 @@ def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
             if existing:
                 return existing
 
-    # 3. Figaro Immobilier ad ID match
+    # 5. Figaro Immobilier ad ID match
     if "lefigaro.fr" in url:
         match_id = re.search(r'annonces/[^/]+-(\d+)\.html', url) or re.search(r'/(\d{6,})', url)
+        if match_id:
+            ad_id = match_id.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{ad_id}%")) | 
+                (models.Listing.original_url.like(f"%{ad_id}%"))
+            ).first()
+            if existing:
+                return existing
+
+    # 6. BienIci ID match (e.g. bienici-123 or UUID)
+    if "bienici.com" in url:
+        match_id = re.search(r'/annonce/(?:vente/[^/]+/)?([a-zA-Z0-9_-]+)', url)
+        if match_id:
+            ad_id = match_id.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{ad_id}%")) | 
+                (models.Listing.original_url.like(f"%{ad_id}%"))
+            ).first()
+            if existing:
+                return existing
+
+    # 7. PAP ad reference match (e.g. -r12345678)
+    if "pap.fr" in url:
+        match_id = re.search(r'-r(\d+)', url)
         if match_id:
             ad_id = match_id.group(1)
             existing = db.query(models.Listing).filter(
