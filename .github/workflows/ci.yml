@@ -33,7 +33,7 @@ jobs:
 
     - name: Install development dependencies
       run: |
-        pip install httpx jinja2 fastapi sqlalchemy
+        pip install httpx jinja2 fastapi sqlalchemy pytest
         # Add any other dependencies if they are missing from requirements.txt
 
     - name: Run tests (CI mode)

@@ -18,6 +18,15 @@ def test_submit_external_listing():
     run_migrations()
     db = SessionLocal()
     
+    test_urls = [
+        "https://www.leboncoin.fr/ad/ventes_immobilieres/999999999",
+        "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/saint-clair-du-rhone-38370/269W7APVLTZA",
+        "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/saint-clair-du-rhone-38370/269W7APVLTZA?serp_view=list&search=classifiedBusiness%3DProfessional%26distributionTypes%3DBuy#ln=classified_search_results",
+        "https://www.leboncoin.fr/ad/ventes_immobilieres/888888888"
+    ]
+    db.query(Listing).filter(Listing.url.in_(test_urls) | Listing.original_url.in_(test_urls)).delete(synchronize_session=False)
+    db.commit()
+    
     # Ensure test user with API key exists
     import hashlib
     raw_key = "test_browser_extension_api_key"
@@ -150,4 +159,7 @@ def test_submit_external_listing():
     assert res_new_lbc.json()["data"]["already_exists"] is False
     assert res_new_lbc.json()["data"]["listing_id"] != listing.id
 
+    # Cleanup test data
+    db2.query(Listing).filter(Listing.url.in_(test_urls) | Listing.original_url.in_(test_urls)).delete(synchronize_session=False)
+    db2.commit()
     db2.close()

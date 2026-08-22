@@ -36,7 +36,11 @@ def override_get_db():
     finally:
         db.close()
 
-import pytest
+try:
+    import pytest
+except ImportError:
+    pytest = None
+
 from app.main import login_required, user_required
 
 app.dependency_overrides[get_db] = override_get_db
@@ -44,8 +48,7 @@ app.dependency_overrides[login_required] = lambda: {"username": "Jean-Marc", "ro
 app.dependency_overrides[user_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
 client = TestClient(app)
 
-@pytest.fixture(autouse=True)
-def setup_test_data():
+def init_test_data():
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[login_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
     app.dependency_overrides[user_required] = lambda: {"username": "Jean-Marc", "role": "admin"}
@@ -120,6 +123,11 @@ def setup_test_data():
     db.commit()
     db.close()
 
+if pytest is not None:
+    @pytest.fixture(autouse=True)
+    def setup_test_data():
+        init_test_data()
+
 def test_duplicate_queries():
     print("Testing backend duplicate query logic...")
     db = TestingSessionLocal()
@@ -188,7 +196,7 @@ def test_ui_rendering():
 
 if __name__ == "__main__":
     try:
-        setup_test_data()
+        init_test_data()
         test_duplicate_queries()
         test_ui_rendering()
         print("All tests passed successfully!")
