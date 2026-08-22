@@ -2,18 +2,19 @@ import re
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional
 
 from app import models, schemas
 from app.database import get_db
 from app.api.deps import get_current_user_api
-from app.services import create_listing_from_details, normalize_listing_url
+from app.services import normalize_listing_url, fetch_basic_metadata
 from app.translations import get_text
 
 router = APIRouter()
 
 def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
-    """Find a listing by URL with canonical prefix normalization and platform-specific ID matching."""
+    """Find a listing by URL with canonical prefix normalization and universal token/ID matching."""
     if not url:
         return None
         
@@ -33,85 +34,34 @@ def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
     if existing:
         return existing
 
-    # 2. Canonical prefix match (if DB has clean short URL and incoming is long with query params, or vice-versa)
+    # 2. Canonical prefix match
     if len(clean_base_url) > 15:
         existing = db.query(models.Listing).filter(
             (models.Listing.url.like(f"{clean_base_url}%")) |
-            (models.Listing.original_url.like(f"{clean_base_url}%"))
+            (models.Listing.original_url.like(f"{clean_base_url}%")) |
+            (func.lower(models.Listing.url).like(f"{clean_base_url.lower()}%")) |
+            (func.lower(models.Listing.original_url).like(f"{clean_base_url.lower()}%"))
         ).first()
         if existing:
             return existing
 
-    # 3. SeLoger matching: token ID (e.g. 269W7APVLTZA or 12345678.htm)
-    if "seloger.com" in url:
-        # Match alphanumeric listing token at end of path (e.g. /269W7APVLTZA)
-        match_token = re.search(r'/([A-Za-z0-9]{8,})(?:[/?#]|$)', url)
-        if match_token:
-            token = match_token.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{token}%")) | 
-                (models.Listing.original_url.like(f"%{token}%"))
-            ).first()
-            if existing:
-                return existing
-        # Match legacy numeric ID (e.g. /12345678.htm)
-        match_legacy = re.search(r'/(\d{6,})\.htm', url)
-        if match_legacy:
-            legacy_id = match_legacy.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{legacy_id}%")) | 
-                (models.Listing.original_url.like(f"%{legacy_id}%"))
-            ).first()
-            if existing:
-                return existing
-
-    # 4. LeBonCoin numeric ad ID match (e.g. 3224009953)
-    if "leboncoin.fr" in url:
-        match_id = re.search(r'/(\d{6,})', url)
-        if match_id:
-            ad_id = match_id.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{ad_id}%")) | 
-                (models.Listing.original_url.like(f"%{ad_id}%"))
-            ).first()
-            if existing:
-                return existing
-
-    # 5. Figaro Immobilier ad ID match
-    if "lefigaro.fr" in url:
-        match_id = re.search(r'annonces/[^/]+-(\d+)\.html', url) or re.search(r'/(\d{6,})', url)
-        if match_id:
-            ad_id = match_id.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{ad_id}%")) | 
-                (models.Listing.original_url.like(f"%{ad_id}%"))
-            ).first()
-            if existing:
-                return existing
-
-    # 6. BienIci ID match (e.g. bienici-123 or UUID)
-    if "bienici.com" in url:
-        match_id = re.search(r'/annonce/(?:vente/[^/]+/)?([a-zA-Z0-9_-]+)', url)
-        if match_id:
-            ad_id = match_id.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{ad_id}%")) | 
-                (models.Listing.original_url.like(f"%{ad_id}%"))
-            ).first()
-            if existing:
-                return existing
-
-    # 7. PAP ad reference match (e.g. -r12345678)
-    if "pap.fr" in url:
-        match_id = re.search(r'-r(\d+)', url)
-        if match_id:
-            ad_id = match_id.group(1)
-            existing = db.query(models.Listing).filter(
-                (models.Listing.url.like(f"%{ad_id}%")) | 
-                (models.Listing.original_url.like(f"%{ad_id}%"))
-            ).first()
-            if existing:
-                return existing
+    # 3. Universal token / ID extraction (e.g. 26H129BK5GHE, 3224009953, 12345678)
+    # Extract path tokens of length >= 8 alphanumeric, or digits >= 6
+    tokens = re.findall(r'[A-Za-z0-9]{8,}|\d{6,}', clean_base_url)
+    ignored_words = {
+        "immobilieres", "ventes_immobilieres", "immobilier", "annonces", "location", 
+        "locations", "auvergne", "rhone-alpes", "rhone_alpes", "saint-clair", "saint_clair"
+    }
+    for token in tokens:
+        if token.lower() in ignored_words:
+            continue
+        token_lower = token.lower()
+        existing = db.query(models.Listing).filter(
+            (func.lower(models.Listing.url).like(f"%{token_lower}%")) | 
+            (func.lower(models.Listing.original_url).like(f"%{token_lower}%"))
+        ).first()
+        if existing:
+            return existing
 
     return None
 
@@ -139,6 +89,14 @@ def check_listing_api(
         "listing_id": None,
         "immo_boussole_url": None
     }
+
+
+async def _run_background_scrape(url: str, db: Session):
+    try:
+        from app.services import fetch_basic_metadata
+        await fetch_basic_metadata(url)
+    except Exception as e:
+        print(f"[API] Background scrape error for {url}: {e}")
 
 
 @router.post("/submit-url", response_model=schemas.ActionResponse)
@@ -183,7 +141,6 @@ async def submit_url_api(
         is_already_exists = True
 
     if request.skip_scraping:
-        create_listing_from_details(request.url, db)
         return schemas.ActionResponse(
             status="success",
             message=get_text(req, "api.listing_added_manually", default="Listing added manually without scraping."),
@@ -195,7 +152,7 @@ async def submit_url_api(
             }
         )
     
-    background_tasks.add_task(create_listing_from_details, request.url, db)
+    background_tasks.add_task(_run_background_scrape, request.url, db)
     return schemas.ActionResponse(
         status="accepted",
         message=get_text(req, "api.scraping_task_started", default="Scraping task started in background."),
