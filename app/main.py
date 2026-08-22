@@ -508,6 +508,12 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """
     if exc.status_code == 307:
         if exc.detail == "Redirect to login":
+            req_path = request.url.path
+            if request.url.query:
+                req_path = f"{req_path}?{request.url.query}"
+            import urllib.parse
+            if req_path and req_path != "/" and not req_path.startswith("/login"):
+                return RedirectResponse(url=f"/login?next={urllib.parse.quote(req_path, safe='')}")
             return RedirectResponse(url="/login")
         elif exc.detail == "Redirect to setup-admin":
             return RedirectResponse(url="/setup-admin")
@@ -572,10 +578,17 @@ def setup_admin(
 def login_page(request: Request, db: Session = Depends(get_db)):
     if db.query(models.User).count() == 0:
         return RedirectResponse(url="/setup-admin")
+    next_url = request.query_params.get("next")
     if is_authenticated(request):
+        if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+            return RedirectResponse(url=next_url)
         return RedirectResponse(url="/")
     csrf_token = generate_csrf_token(request)
-    return templates.TemplateResponse(request=request, name="login.html", context={"csrf_token": csrf_token})
+    return templates.TemplateResponse(
+        request=request, 
+        name="login.html", 
+        context={"csrf_token": csrf_token, "next_url": next_url or ""}
+    )
 
 
 @app.post("/login", dependencies=[Depends(verify_csrf)])
@@ -583,12 +596,15 @@ def login(
     request: Request, 
     username: str = Form(...),
     password: str = Form(...),
+    next: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
+    next_url = next or request.query_params.get("next")
     if not check_rate_limit(request):
         return templates.TemplateResponse(request=request, name="login.html", context={
             "error": "Trop de tentatives de connexion. Veuillez réessayer plus tard.",
-            "csrf_token": generate_csrf_token(request)
+            "csrf_token": generate_csrf_token(request),
+            "next_url": next_url or ""
         }, status_code=429)
 
     user = db.query(models.User).filter(models.User.username == username).first()
@@ -600,12 +616,16 @@ def login(
             request.session["authenticated"] = True
             request.session["username"] = username
             request.session["role"] = user.role
-            return RedirectResponse(url="/", status_code=303)
+            target_url = "/"
+            if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+                target_url = next_url
+            return RedirectResponse(url=target_url, status_code=303)
             
     record_failed_login(request)
     return templates.TemplateResponse(request=request, name="login.html", context={
         "error": get_text(request, "api.invalid_credentials"),
-        "csrf_token": generate_csrf_token(request)
+        "csrf_token": generate_csrf_token(request),
+        "next_url": next_url or ""
     }, status_code=401)
 
 

@@ -163,10 +163,11 @@ async def submit_external_listing_api(
         db.commit()
         db.refresh(existing)
         target_listing = existing
+        is_already_exists = True
         msg = get_text(
             req,
-            "api.listing_updated_success",
-            default=f"Annonce '{existing.title}' mise à jour avec succès.",
+            "api.listing_already_exists_updated",
+            default=f"Annonce '{existing.title}' déjà présente dans la base (mise à jour avec succès).",
             title=existing.title
         )
 
@@ -179,6 +180,7 @@ async def submit_external_listing_api(
         data={
             "listing_id": target_listing.id,
             "immo_boussole_url": f"/listings/{target_listing.id}",
+            "already_exists": is_already_exists,
             "status": "nouvelle"
         }
     )

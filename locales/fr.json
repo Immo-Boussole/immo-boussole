@@ -454,6 +454,7 @@
         "listing_added_manually": "Annonce ajoutée manuellement sans scraping.",
         "listing_added_success": "Annonce '{title}' ajoutée avec succès.",
         "listing_updated_success": "Annonce '{title}' mise à jour avec succès.",
+        "listing_already_exists_updated": "Annonce '{title}' déjà présente dans la base (mise à jour avec succès).",
         "duplicate_warning": "⚠️ Un bien similaire (même prix, surface et ville) existe déjà !",
         "unknown_source": "Source inconnue:"
     },

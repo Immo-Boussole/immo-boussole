@@ -77,13 +77,17 @@ def test_submit_external_listing():
     from app.models import ListingStatus
     assert listing.status == ListingStatus.NEW
 
-    # Verify both /listings/{id} and /listing/{id} routes return 200 with session auth
-    with client as c:
-        # Simulate authenticated session
-        res_plural = c.get(f"/listings/{listing.id}", cookies={"session": "dummy"})
-        res_singular = c.get(f"/listing/{listing.id}", cookies={"session": "dummy"})
-        # Even if redirected to login due to session auth, both routes exist (not 404)
-        assert res_plural.status_code in (200, 303, 307)
-        assert res_singular.status_code in (200, 303, 307)
+    # Test re-submitting the same listing (already exists)
+    res2 = client.post("/api/v1/actions/submit-external-listing", json=payload, headers=headers)
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert data2["status"] == "success"
+    assert data2["data"]["already_exists"] is True
+    assert data2["data"]["listing_id"] == listing.id
+
+    # Test unauthenticated access to /listings/{id} redirects with ?next=
+    res_unauth = client.get(f"/listings/{listing.id}", follow_redirects=False)
+    assert res_unauth.status_code == 307
+    assert "next=" in res_unauth.headers.get("location", "")
 
     db2.close()
