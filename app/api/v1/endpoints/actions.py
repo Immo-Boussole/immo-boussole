@@ -1,13 +1,85 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from app import models, schemas
 from app.database import get_db
 from app.api.deps import get_current_user_api
-from app.services import create_listing_from_details
+from app.services import create_listing_from_details, normalize_listing_url
 from app.translations import get_text
 
 router = APIRouter()
+
+def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
+    """Find a listing by URL with normalization and platform-specific ID matching."""
+    if not url:
+        return None
+        
+    norm_url = normalize_listing_url(url)
+    
+    # 1. Exact or normalized URL match
+    existing = db.query(models.Listing).filter(
+        (models.Listing.url == url) | 
+        (models.Listing.original_url == url) |
+        (models.Listing.url == norm_url) |
+        (models.Listing.original_url == norm_url)
+    ).first()
+    
+    if existing:
+        return existing
+
+    # 2. LeBonCoin numeric ad ID match (e.g. 3224009953)
+    if "leboncoin.fr" in url:
+        match_id = re.search(r'/(\d{6,})', url)
+        if match_id:
+            ad_id = match_id.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{ad_id}%")) | 
+                (models.Listing.original_url.like(f"%{ad_id}%"))
+            ).first()
+            if existing:
+                return existing
+
+    # 3. Figaro Immobilier ad ID match
+    if "lefigaro.fr" in url:
+        match_id = re.search(r'annonces/[^/]+-(\d+)\.html', url) or re.search(r'/(\d{6,})', url)
+        if match_id:
+            ad_id = match_id.group(1)
+            existing = db.query(models.Listing).filter(
+                (models.Listing.url.like(f"%{ad_id}%")) | 
+                (models.Listing.original_url.like(f"%{ad_id}%"))
+            ).first()
+            if existing:
+                return existing
+
+    return None
+
+
+@router.get("/check-listing")
+def check_listing_api(
+    url: str,
+    current_user: models.User = Depends(get_current_user_api),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if a listing already exists in Immo-Boussole database.
+    """
+    existing = find_existing_listing(url, db)
+    if existing:
+        return {
+            "exists": True,
+            "listing_id": existing.id,
+            "immo_boussole_url": f"/listings/{existing.id}",
+            "title": existing.title,
+            "status": existing.status.value if hasattr(existing.status, 'value') else existing.status
+        }
+    return {
+        "exists": False,
+        "listing_id": None,
+        "immo_boussole_url": None
+    }
+
 
 @router.post("/submit-url", response_model=schemas.ActionResponse)
 async def submit_url_api(
@@ -21,9 +93,8 @@ async def submit_url_api(
     Trigger scraping for a given URL.
     Returns immediately, task runs in background.
     """
-    existing = db.query(models.Listing).filter(
-        (models.Listing.url == request.url) | (models.Listing.original_url == request.url)
-    ).first()
+    existing = find_existing_listing(request.url, db)
+    is_already_exists = False
 
     if not existing:
         source_val = models.Source.MANUAL.value
@@ -49,6 +120,7 @@ async def submit_url_api(
         target_listing = listing
     else:
         target_listing = existing
+        is_already_exists = True
 
     if request.skip_scraping:
         create_listing_from_details(request.url, db)
@@ -58,6 +130,7 @@ async def submit_url_api(
             data={
                 "listing_id": target_listing.id,
                 "immo_boussole_url": f"/listings/{target_listing.id}",
+                "already_exists": is_already_exists,
                 "status": "nouvelle"
             }
         )
@@ -69,6 +142,7 @@ async def submit_url_api(
         data={
             "listing_id": target_listing.id,
             "immo_boussole_url": f"/listings/{target_listing.id}",
+            "already_exists": is_already_exists,
             "status": "nouvelle"
         }
     )
@@ -93,10 +167,8 @@ async def submit_external_listing_api(
     Add or update a listing with pre-extracted data from the browser extension.
     Also queues a background scraping job to enrich full details if possible.
     """
-    # Check if listing already exists by URL
-    existing = db.query(models.Listing).filter(
-        (models.Listing.url == request.url) | (models.Listing.original_url == request.url)
-    ).first()
+    existing = find_existing_listing(request.url, db)
+    is_already_exists = False
 
     if not existing:
         # Determine source
