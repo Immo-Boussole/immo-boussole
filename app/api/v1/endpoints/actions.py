@@ -2,19 +2,72 @@ import re
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from typing import Optional
 
 from app import models, schemas
 from app.database import get_db
 from app.api.deps import get_current_user_api
-from app.services import normalize_listing_url, fetch_basic_metadata
+from app.services import normalize_listing_url
 from app.translations import get_text
 
 router = APIRouter()
 
+def extract_platform_id(url: str) -> Optional[str]:
+    """
+    Extract unique listing identifier from supported property portal URLs.
+    Extracts strictly from path segments (ignoring domain names and schemes).
+    """
+    if not url:
+        return None
+    try:
+        parsed = urlparse(url)
+        netloc = parsed.netloc.lower()
+        path = parsed.path.rstrip('/')
+        last_seg = path.split('/')[-1] if path else ""
+        
+        # 1. LeBonCoin (e.g. /ad/ventes_immobilieres/3224009953)
+        if "leboncoin.fr" in netloc:
+            m = re.search(r'/(\d{6,})(?:[/?#]|$)', path)
+            if m:
+                return m.group(1)
+
+        # 2. SeLoger (e.g. /annonce/.../26H129BK5GHE or /annonces/.../12345678.htm)
+        if "seloger.com" in netloc:
+            clean_last = re.sub(r'\.htm.*$', '', last_seg)
+            if re.match(r'^[A-Za-z0-9]{8,}$', clean_last) or re.match(r'^\d{6,}$', clean_last):
+                return clean_last
+
+        # 3. Figaro Immobilier (e.g. /annonces/annonce-59483021.html or /59483021/)
+        if "lefigaro.fr" in netloc:
+            m = re.search(r'annonce-(\d+)\.html', path) or re.search(r'/(\d{6,})(?:[/?#]|$)', path)
+            if m:
+                return m.group(1)
+
+        # 4. BienIci (e.g. /annonce/vente/.../bienici-123 or /annonce/123)
+        if "bienici.com" in netloc:
+            m = re.search(r'/annonce/(?:vente/[^/]+/)?([a-zA-Z0-9_-]+)', path)
+            if m and m.group(1) not in ("vente", "location", "neuf", "terrain"):
+                return m.group(1)
+
+        # 5. PAP (e.g. /annonces/...-r12345678)
+        if "pap.fr" in netloc:
+            m = re.search(r'-r(\d+)', path)
+            if m:
+                return m.group(1)
+
+        # 6. Logic-Immo (e.g. /detail-vente/.../12345678.htm)
+        if "logic-immo.com" in netloc:
+            m = re.search(r'/detail-[^/]+/(\d+)\.htm', path)
+            if m:
+                return m.group(1)
+
+    except Exception:
+        pass
+    return None
+
+
 def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
-    """Find a listing by URL with canonical prefix normalization and universal token/ID matching."""
+    """Find a listing by URL with canonical prefix normalization and platform-specific ID matching."""
     if not url:
         return None
         
@@ -34,31 +87,21 @@ def find_existing_listing(url: str, db: Session) -> Optional[models.Listing]:
     if existing:
         return existing
 
-    # 2. Canonical prefix match
-    if len(clean_base_url) > 15:
+    # 2. Exact Canonical URL prefix match (path must match)
+    if len(clean_base_url) > 20:
         existing = db.query(models.Listing).filter(
             (models.Listing.url.like(f"{clean_base_url}%")) |
-            (models.Listing.original_url.like(f"{clean_base_url}%")) |
-            (func.lower(models.Listing.url).like(f"{clean_base_url.lower()}%")) |
-            (func.lower(models.Listing.original_url).like(f"{clean_base_url.lower()}%"))
+            (models.Listing.original_url.like(f"{clean_base_url}%"))
         ).first()
         if existing:
             return existing
 
-    # 3. Universal token / ID extraction (e.g. 26H129BK5GHE, 3224009953, 12345678)
-    # Extract path tokens of length >= 8 alphanumeric, or digits >= 6
-    tokens = re.findall(r'[A-Za-z0-9]{8,}|\d{6,}', clean_base_url)
-    ignored_words = {
-        "immobilieres", "ventes_immobilieres", "immobilier", "annonces", "location", 
-        "locations", "auvergne", "rhone-alpes", "rhone_alpes", "saint-clair", "saint_clair"
-    }
-    for token in tokens:
-        if token.lower() in ignored_words:
-            continue
-        token_lower = token.lower()
+    # 3. Platform ID extraction (strictly from portal path identifier)
+    platform_id = extract_platform_id(url)
+    if platform_id and len(platform_id) >= 6:
         existing = db.query(models.Listing).filter(
-            (func.lower(models.Listing.url).like(f"%{token_lower}%")) | 
-            (func.lower(models.Listing.original_url).like(f"%{token_lower}%"))
+            (models.Listing.url.like(f"%{platform_id}%")) | 
+            (models.Listing.original_url.like(f"%{platform_id}%"))
         ).first()
         if existing:
             return existing
@@ -91,7 +134,7 @@ def check_listing_api(
     }
 
 
-async def _run_background_scrape(url: str, db: Session):
+async def _run_background_scrape(url: str):
     try:
         from app.services import fetch_basic_metadata
         await fetch_basic_metadata(url)
@@ -152,7 +195,7 @@ async def submit_url_api(
             }
         )
     
-    background_tasks.add_task(_run_background_scrape, request.url, db)
+    background_tasks.add_task(_run_background_scrape, request.url)
     return schemas.ActionResponse(
         status="accepted",
         message=get_text(req, "api.scraping_task_started", default="Scraping task started in background."),
@@ -165,7 +208,7 @@ async def submit_url_api(
     )
 
 
-async def _enrich_external_listing(url: str, db: Session):
+async def _enrich_external_listing(url: str):
     try:
         from app.services import fetch_basic_metadata
         await fetch_basic_metadata(url)
@@ -261,7 +304,7 @@ async def submit_external_listing_api(
         )
 
     # Launch background scrape for full enrichment if possible
-    background_tasks.add_task(_enrich_external_listing, request.url, db)
+    background_tasks.add_task(_enrich_external_listing, request.url)
 
     return schemas.ActionResponse(
         status="success",

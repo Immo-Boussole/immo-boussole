@@ -125,4 +125,29 @@ def test_submit_external_listing():
     assert res_sl2.json()["data"]["already_exists"] is True
     assert res_sl2.json()["data"]["listing_id"] == sl_id
 
+    # 4. Check that a DISTINCT new SeLoger ad is NOT reported as existing
+    seloger_distinct = "https://www.seloger.com/annonce/achat/auvergne-rhone-alpes/isere-38/vienne-38200/99ZZZUNIQUEID"
+    res_distinct = client.get(f"/api/v1/actions/check-listing?url={seloger_distinct}", headers=headers)
+    assert res_distinct.status_code == 200
+    assert res_distinct.json()["exists"] is False
+    assert res_distinct.json()["listing_id"] is None
+
+    # 5. Check that a DISTINCT new LeBonCoin ad is NOT reported as existing
+    lbc_distinct = "https://www.leboncoin.fr/ad/ventes_immobilieres/888888888"
+    res_lbc_distinct = client.get(f"/api/v1/actions/check-listing?url={lbc_distinct}", headers=headers)
+    assert res_lbc_distinct.status_code == 200
+    assert res_lbc_distinct.json()["exists"] is False
+    assert res_lbc_distinct.json()["listing_id"] is None
+
+    # 6. Submit the distinct ad -> creates a new listing successfully
+    res_new_lbc = client.post("/api/v1/actions/submit-external-listing", json={
+        "url": lbc_distinct,
+        "title": "Nouvel appartement distinct",
+        "price": 200000.0,
+        "area": 50.0
+    }, headers=headers)
+    assert res_new_lbc.status_code == 200
+    assert res_new_lbc.json()["data"]["already_exists"] is False
+    assert res_new_lbc.json()["data"]["listing_id"] != listing.id
+
     db2.close()
