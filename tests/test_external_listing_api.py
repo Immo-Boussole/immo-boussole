@@ -76,4 +76,14 @@ def test_submit_external_listing():
     assert listing.source == Source.LEBONCOIN.value
     from app.models import ListingStatus
     assert listing.status == ListingStatus.NEW
+
+    # Verify both /listings/{id} and /listing/{id} routes return 200 with session auth
+    with client as c:
+        # Simulate authenticated session
+        res_plural = c.get(f"/listings/{listing.id}", cookies={"session": "dummy"})
+        res_singular = c.get(f"/listing/{listing.id}", cookies={"session": "dummy"})
+        # Even if redirected to login due to session auth, both routes exist (not 404)
+        assert res_plural.status_code in (200, 303, 307)
+        assert res_singular.status_code in (200, 303, 307)
+
     db2.close()

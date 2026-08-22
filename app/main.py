@@ -1381,6 +1381,7 @@ def listings_repair_page(
     })
 
 
+@app.get("/listing/{listing_id}")
 @app.get("/listings/{listing_id}")
 def listing_detail_page(
     request: Request,

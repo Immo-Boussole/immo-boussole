@@ -21,17 +21,56 @@ async def submit_url_api(
     Trigger scraping for a given URL.
     Returns immediately, task runs in background.
     """
+    existing = db.query(models.Listing).filter(
+        (models.Listing.url == request.url) | (models.Listing.original_url == request.url)
+    ).first()
+
+    if not existing:
+        source_val = models.Source.MANUAL.value
+        if "leboncoin.fr" in request.url:
+            source_val = models.Source.LEBONCOIN.value
+        elif "lefigaro.fr" in request.url:
+            source_val = models.Source.LEFIGARO.value
+        elif "seloger.com" in request.url:
+            source_val = models.Source.SELOGER.value
+        elif "bienici.com" in request.url:
+            source_val = models.Source.BIENICI.value
+
+        listing = models.Listing(
+            url=request.url,
+            original_url=request.url,
+            title="Annonce en cours d'analyse...",
+            source=source_val,
+            status=models.ListingStatus.NEW,
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+        target_listing = listing
+    else:
+        target_listing = existing
+
     if request.skip_scraping:
         create_listing_from_details(request.url, db)
         return schemas.ActionResponse(
             status="success",
-            message=get_text(req, "api.listing_added_manually", default="Listing added manually without scraping.")
+            message=get_text(req, "api.listing_added_manually", default="Listing added manually without scraping."),
+            data={
+                "listing_id": target_listing.id,
+                "immo_boussole_url": f"/listings/{target_listing.id}",
+                "status": "nouvelle"
+            }
         )
     
     background_tasks.add_task(create_listing_from_details, request.url, db)
     return schemas.ActionResponse(
         status="accepted",
-        message=get_text(req, "api.scraping_task_started", default="Scraping task started in background.")
+        message=get_text(req, "api.scraping_task_started", default="Scraping task started in background."),
+        data={
+            "listing_id": target_listing.id,
+            "immo_boussole_url": f"/listings/{target_listing.id}",
+            "status": "nouvelle"
+        }
     )
 
 
@@ -90,7 +129,7 @@ async def submit_external_listing_api(
             location=request.location or request.city or "Inconnu",
             description_text=request.description,
             source=source_val,
-            status=models.ListingStatus.NEW.value,
+            status=models.ListingStatus.NEW,
             price_per_sqm=price_per_sqm
         )
 
@@ -139,7 +178,7 @@ async def submit_external_listing_api(
         message=msg,
         data={
             "listing_id": target_listing.id,
-            "immo_boussole_url": f"/listing/{target_listing.id}",
+            "immo_boussole_url": f"/listings/{target_listing.id}",
             "status": "nouvelle"
         }
     )
