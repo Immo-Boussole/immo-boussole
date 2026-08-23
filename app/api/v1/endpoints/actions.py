@@ -2,7 +2,7 @@ import re
 from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 
 from app import models, schemas
 from app.database import get_db
