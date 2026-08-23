@@ -269,9 +269,12 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, f
                     except Exception as e:
                         print(f"[API] SNCF enrichment error for listing {listing.id}: {e}")
 
-            # 4. Optional fallback metadata fetch if needed
-            if url:
-                await fetch_basic_metadata(url)
+            # 4. Optional fallback metadata fetch only if listing data is incomplete
+            if url and (not listing or not listing.title or listing.title == "Annonce sans titre" or not listing.description_text):
+                try:
+                    await fetch_basic_metadata(url)
+                except Exception as e:
+                    print(f"[API] Fallback metadata fetch error: {e}")
         finally:
             db.close()
     except Exception as e:
