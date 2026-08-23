@@ -1121,10 +1121,9 @@
                     <i class="fa-solid fa-building"></i>
                     <span class="btn-text">{{ agency.commercial_name or agency.legal_name }}</span>
                 </button>
-                {% else %}
-                <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="{% if detected_contact and detected_contact.has_detected %}Coordonnées détectées dans l'annonce - Créer ou lier un contact{% else %}Gérer ou créer le contact{% endif %}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); position: relative;">
-                    <i class="fa-regular fa-address-card"></i>
-                    <span class="btn-text">Contact</span>
+                <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="{% if detected_contact and detected_contact.has_detected %}Coordonnées détectées dans l'annonce - Créer ou lier un contact & agence{% else %}Créer/Assigner Contact & Agence{% endif %}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); position: relative;">
+                    <i class="fa-solid fa-user"></i>/<i class="fa-solid fa-building"></i>
+                    <span class="btn-text">Contact & Agence</span>
                     {% if detected_contact and detected_contact.has_detected %}
                     <span style="position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; background: var(--orange); border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 6px var(--orange);" title="Coordonnées détectées par regex"></span>
                     {% endif %}
@@ -1837,14 +1836,14 @@
                         <i class="fa-solid fa-sparkles"></i> Coordonnées détectées dans l'annonce
                     </div>
                     <button class="btn primary sm" onclick="openListingContactModal()" style="width: 100%; justify-content: center; font-size: 0.75rem; gap: 0.35rem;">
-                        <i class="fa-solid fa-user"></i><i class="fa-solid fa-building"></i> Créer/Assigner Contact & Agence
+                        <i class="fa-solid fa-user"></i>/<i class="fa-solid fa-building"></i> Créer/Assigner Contact & Agence
                     </button>
                     {% else %}
                     <div style="font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.5rem;">
                         Aucun contact ou agence rattaché.
                     </div>
                     <button class="btn sm" onclick="openListingContactModal()" style="width: 100%; justify-content: center; font-size: 0.75rem; gap: 0.35rem;">
-                        <i class="fa-solid fa-user"></i><i class="fa-solid fa-building"></i> Créer/Assigner Contact & Agence
+                        <i class="fa-solid fa-user"></i>/<i class="fa-solid fa-building"></i> Créer/Assigner Contact & Agence
                     </button>
                     {% endif %}
                 </div>
@@ -2432,7 +2431,7 @@
         </div>
         <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
             <button type="button" class="btn" onclick="skipCreateContactPostSave()" style="flex: 1;">Plus tard / Non merci</button>
-            <button type="button" class="btn primary" onclick="openQuickContactModalFromPrompt()" style="flex: 1;"><i class="fa-solid fa-user-check"></i> Créer la fiche</button>
+            <button type="button" class="btn primary" onclick="openQuickContactModalFromPrompt()" style="flex: 1;"><i class="fa-solid fa-user"></i>/<i class="fa-solid fa-building"></i> Créer/Assigner Contact & Agence</button>
         </div>
     </div>
 </div>
@@ -2666,32 +2665,45 @@
 
                     <!-- Mode B: New contact -->
                     <div id="lcBlockContactNew">
+                        <!-- Suggestion Banner for Contact -->
+                        <div id="lcAgentSuggestionBanner" class="contact-suggestion-alert" style="display: none; background: rgba(79, 142, 247, 0.12); border: 1px solid rgba(79, 142, 247, 0.35); border-radius: 9px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.8rem; color: var(--text);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <i class="fa-solid fa-lightbulb" style="color: var(--accent); font-size: 0.9rem;"></i>
+                                    <span>Contact existant détecté : <strong id="lcAgentSuggestionName" style="color: var(--text);"></strong></span>
+                                </div>
+                                <button type="button" class="btn sm primary" id="lcBtnApplyAgentSuggestion" onclick="applyAgentSuggestion()" style="font-size: 0.72rem; padding: 0.2rem 0.55rem;">
+                                    <i class="fa-solid fa-link"></i> Utiliser ce contact
+                                </button>
+                            </div>
+                        </div>
+
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
                             <div class="form-group">
                                 <label for="lcAgentFirstName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Prénom *</label>
-                                <input type="text" id="lcAgentFirstName" value="{{ detected_contact.first_name or '' }}" placeholder="ex: Jean" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="text" id="lcAgentFirstName" value="{{ detected_contact.first_name or '' }}" oninput="checkAgentSuggestions()" placeholder="ex: Jean" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                             <div class="form-group">
                                 <label for="lcAgentLastName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Nom *</label>
-                                <input type="text" id="lcAgentLastName" value="{{ detected_contact.last_name or '' }}" placeholder="ex: DUPONT" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="text" id="lcAgentLastName" value="{{ detected_contact.last_name or '' }}" oninput="checkAgentSuggestions()" placeholder="ex: DUPONT" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
                             <div class="form-group">
                                 <label for="lcAgentPhoneMobile" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Tél. Mobile</label>
-                                <input type="tel" id="lcAgentPhoneMobile" value="{{ detected_contact.phones[0] if (detected_contact and detected_contact.phones) else '' }}" placeholder="06 12 34 56 78" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="tel" id="lcAgentPhoneMobile" value="{{ detected_contact.phones[0] if (detected_contact and detected_contact.phones) else '' }}" oninput="checkAgentSuggestions()" placeholder="06 12 34 56 78" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                             <div class="form-group">
                                 <label for="lcAgentPhoneLandline" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Tél. Fixe</label>
-                                <input type="tel" id="lcAgentPhoneLandline" value="{{ detected_contact.phones[1] if (detected_contact and detected_contact.phones and detected_contact.phones|length > 1) else '' }}" placeholder="04 76 00 00 00" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="tel" id="lcAgentPhoneLandline" value="{{ detected_contact.phones[1] if (detected_contact and detected_contact.phones and detected_contact.phones|length > 1) else '' }}" oninput="checkAgentSuggestions()" placeholder="04 76 00 00 00" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.75rem; margin-bottom: 0.75rem;">
                             <div class="form-group">
                                 <label for="lcAgentEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Email</label>
-                                <input type="email" id="lcAgentEmail" value="{{ detected_contact.emails[0] if (detected_contact and detected_contact.emails) else '' }}" placeholder="contact@agence.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="email" id="lcAgentEmail" value="{{ detected_contact.emails[0] if (detected_contact and detected_contact.emails) else '' }}" oninput="checkAgentSuggestions()" placeholder="contact@agence.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                             <div class="form-group">
                                 <label for="lcAgentTitle" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Fonction / Rôle</label>
@@ -2741,15 +2753,28 @@
 
                     <!-- Mode B: New agency -->
                     <div id="lcBlockAgencyNew">
+                        <!-- Suggestion Banner for Agency -->
+                        <div id="lcAgencySuggestionBanner" class="agency-suggestion-alert" style="display: none; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 9px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.8rem; color: var(--text);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                    <i class="fa-solid fa-lightbulb" style="color: var(--purple); font-size: 0.9rem;"></i>
+                                    <span>Agence existante détectée : <strong id="lcAgencySuggestionName" style="color: var(--text);"></strong></span>
+                                </div>
+                                <button type="button" class="btn sm primary" id="lcBtnApplyAgencySuggestion" onclick="applyAgencySuggestion()" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; background: var(--purple); border-color: var(--purple);">
+                                    <i class="fa-solid fa-link"></i> Utiliser cette agence
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="form-group" style="margin-bottom: 0.75rem;">
                             <label for="lcAgencyName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Nom commercial / Enseigne *</label>
-                            <input type="text" id="lcAgencyName" value="{{ detected_contact.agency_name or '' }}" placeholder="ex: iad France, Century 21..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            <input type="text" id="lcAgencyName" value="{{ detected_contact.agency_name or '' }}" oninput="checkAgencySuggestions()" placeholder="ex: iad France, Century 21..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
                             <div class="form-group">
                                 <label for="lcAgencyCity" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Ville</label>
-                                <input type="text" id="lcAgencyCity" value="{{ listing.city or '' }}" placeholder="ex: Grenoble" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="text" id="lcAgencyCity" value="{{ listing.city or '' }}" oninput="checkAgencySuggestions()" placeholder="ex: Grenoble" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                             <div class="form-group">
                                 <label for="lcAgencyPostalCode" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Code Postal</label>
@@ -2760,11 +2785,11 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                             <div class="form-group">
                                 <label for="lcAgencyPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Téléphone agence</label>
-                                <input type="tel" id="lcAgencyPhone" placeholder="04 76..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="tel" id="lcAgencyPhone" oninput="checkAgencySuggestions()" placeholder="04 76..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                             <div class="form-group">
                                 <label for="lcAgencyEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Email agence</label>
-                                <input type="email" id="lcAgencyEmail" placeholder="agence@domaine.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <input type="email" id="lcAgencyEmail" oninput="checkAgencySuggestions()" placeholder="agence@domaine.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
                             </div>
                         </div>
                     </div>
@@ -4778,6 +4803,228 @@
         // ── Contact & Agency Modal Logic (Unified Single Step) ───────────────────
         let contactMode = 'new'; // 'new' | 'link' | 'none'
         let agencyMode = 'new';  // 'new' | 'link' | 'none'
+        let currentAgentSuggestion = null;
+        let currentAgencySuggestion = null;
+
+        const DB_AGENTS = [
+            {% for ag in all_agents %}
+            {
+                id: {{ ag.id }},
+                firstName: {{ ag.first_name|tojson }},
+                lastName: {{ ag.last_name|tojson }},
+                fullName: {{ (ag.first_name ~ ' ' ~ ag.last_name)|tojson }},
+                phoneMobile: {{ (ag.phone_mobile or '')|tojson }},
+                phoneLandline: {{ (ag.phone_landline or '')|tojson }},
+                email: {{ (ag.email or '')|tojson }},
+                agencyId: {{ ag.agency_id if ag.agency_id else 'null' }},
+                agencyName: {{ (ag.agency.commercial_name or ag.agency.legal_name if ag.agency else '')|tojson }}
+            },
+            {% endfor %}
+        ];
+
+        const DB_AGENCIES = [
+            {% for ac in all_agencies %}
+            {
+                id: {{ ac.id }},
+                legalName: {{ ac.legal_name|tojson }},
+                commercialName: {{ (ac.commercial_name or '')|tojson }},
+                displayName: {{ (ac.commercial_name or ac.legal_name)|tojson }},
+                city: {{ (ac.city or '')|tojson }},
+                postalCode: {{ (ac.postal_code or '')|tojson }},
+                phone: {{ (ac.phone or '')|tojson }},
+                email: {{ (ac.email or '')|tojson }}
+            },
+            {% endfor %}
+        ];
+
+        function normalizeString(str) {
+            if (!str) return '';
+            return str.toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]/g, '');
+        }
+
+        function normalizePhone(phone) {
+            if (!phone) return '';
+            return phone.replace(/\D/g, '').replace(/^33/, '0');
+        }
+
+        function checkAgentSuggestions() {
+            if (contactMode !== 'new') {
+                hideAgentSuggestion();
+                return;
+            }
+
+            const fName = document.getElementById('lcAgentFirstName')?.value.trim() || '';
+            const lName = document.getElementById('lcAgentLastName')?.value.trim() || '';
+            const phoneMob = document.getElementById('lcAgentPhoneMobile')?.value.trim() || '';
+            const phoneLand = document.getElementById('lcAgentPhoneLandline')?.value.trim() || '';
+            const email = document.getElementById('lcAgentEmail')?.value.trim().toLowerCase() || '';
+
+            const normFName = normalizeString(fName);
+            const normLName = normalizeString(lName);
+            const normFull = normalizeString(fName + ' ' + lName);
+            const normMob = normalizePhone(phoneMob);
+            const normLand = normalizePhone(phoneLand);
+
+            if (!normFull && !normMob && !normLand && !email) {
+                hideAgentSuggestion();
+                return;
+            }
+
+            let bestMatch = null;
+            for (const ag of DB_AGENTS) {
+                // 1. Phone match
+                if (normMob && (normalizePhone(ag.phoneMobile) === normMob || normalizePhone(ag.phoneLandline) === normMob)) {
+                    bestMatch = ag;
+                    break;
+                }
+                if (normLand && (normalizePhone(ag.phoneMobile) === normLand || normalizePhone(ag.phoneLandline) === normLand)) {
+                    bestMatch = ag;
+                    break;
+                }
+                // 2. Email match
+                if (email && ag.email && ag.email.toLowerCase() === email) {
+                    bestMatch = ag;
+                    break;
+                }
+                // 3. Name match
+                const agNormFull = normalizeString(ag.fullName);
+                const agNormLast = normalizeString(ag.lastName);
+                const agNormFirst = normalizeString(ag.firstName);
+
+                if (normFName && normLName) {
+                    if (agNormFirst === normFName && agNormLast === normLName) {
+                        bestMatch = ag;
+                        break;
+                    }
+                    if (agNormFull === normFull || (agNormLast === normLName && agNormFirst.startsWith(normFName[0]))) {
+                        bestMatch = ag;
+                        break;
+                    }
+                } else if (normLName.length >= 3 && agNormLast === normLName) {
+                    bestMatch = ag;
+                }
+            }
+
+            if (bestMatch) {
+                showAgentSuggestion(bestMatch);
+            } else {
+                hideAgentSuggestion();
+            }
+        }
+
+        function showAgentSuggestion(agent) {
+            currentAgentSuggestion = agent;
+            const banner = document.getElementById('lcAgentSuggestionBanner');
+            const nameEl = document.getElementById('lcAgentSuggestionName');
+            if (banner && nameEl) {
+                const agencyPart = agent.agencyName ? ` (${agent.agencyName})` : '';
+                nameEl.textContent = `${agent.fullName}${agencyPart}`;
+                banner.style.display = 'block';
+            }
+        }
+
+        function hideAgentSuggestion() {
+            currentAgentSuggestion = null;
+            const banner = document.getElementById('lcAgentSuggestionBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        function applyAgentSuggestion() {
+            if (!currentAgentSuggestion) return;
+            switchContactMode('link');
+            const select = document.getElementById('lcSelectExistingAgent');
+            if (select) {
+                select.value = currentAgentSuggestion.id;
+                onExistingAgentChange();
+            }
+            hideAgentSuggestion();
+        }
+
+        function checkAgencySuggestions() {
+            if (agencyMode !== 'new') {
+                hideAgencySuggestion();
+                return;
+            }
+
+            const agName = document.getElementById('lcAgencyName')?.value.trim() || '';
+            const agPhone = document.getElementById('lcAgencyPhone')?.value.trim() || '';
+            const agEmail = document.getElementById('lcAgencyEmail')?.value.trim().toLowerCase() || '';
+
+            const normName = normalizeString(agName);
+            const normPhone = normalizePhone(agPhone);
+
+            if (!normName && !normPhone && !agEmail) {
+                hideAgencySuggestion();
+                return;
+            }
+
+            let bestMatch = null;
+            for (const ac of DB_AGENCIES) {
+                // 1. Phone match
+                if (normPhone && normalizePhone(ac.phone) === normPhone) {
+                    bestMatch = ac;
+                    break;
+                }
+                // 2. Email match
+                if (agEmail && ac.email && ac.email.toLowerCase() === agEmail) {
+                    bestMatch = ac;
+                    break;
+                }
+                // 3. Name match
+                const acNormDisp = normalizeString(ac.displayName);
+                const acNormLegal = normalizeString(ac.legalName);
+                const acNormComm = normalizeString(ac.commercialName);
+
+                if (normName.length >= 3) {
+                    if (acNormDisp === normName || acNormLegal === normName || acNormComm === normName) {
+                        bestMatch = ac;
+                        break;
+                    }
+                    if (acNormDisp.includes(normName) || normName.includes(acNormDisp)) {
+                        bestMatch = ac;
+                        break;
+                    }
+                }
+            }
+
+            if (bestMatch) {
+                showAgencySuggestion(bestMatch);
+            } else {
+                hideAgencySuggestion();
+            }
+        }
+
+        function showAgencySuggestion(agency) {
+            currentAgencySuggestion = agency;
+            const banner = document.getElementById('lcAgencySuggestionBanner');
+            const nameEl = document.getElementById('lcAgencySuggestionName');
+            if (banner && nameEl) {
+                const cityPart = agency.city ? ` (${agency.city})` : '';
+                nameEl.textContent = `${agency.displayName}${cityPart}`;
+                banner.style.display = 'block';
+            }
+        }
+
+        function hideAgencySuggestion() {
+            currentAgencySuggestion = null;
+            const banner = document.getElementById('lcAgencySuggestionBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
+        function applyAgencySuggestion() {
+            if (!currentAgencySuggestion) return;
+            switchAgencyMode('link');
+            const select = document.getElementById('lcSelectExistingAgency');
+            if (select) {
+                select.value = currentAgencySuggestion.id;
+                onExistingAgencyChange();
+            }
+            hideAgencySuggestion();
+        }
 
         function openListingContactModal(step) {
             const hasAssigned = {{ 'true' if (main_agent or agency) else 'false' }};
@@ -4795,11 +5042,17 @@
                 if (title) title.innerHTML = '<i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Contact & Agence';
             }
             modal.classList.add('open');
+            setTimeout(() => {
+                checkAgentSuggestions();
+                checkAgencySuggestions();
+            }, 100);
         }
 
         function closeListingContactModal() {
             const modal = document.getElementById('listingContactModal');
             if (modal) modal.classList.remove('open');
+            hideAgentSuggestion();
+            hideAgencySuggestion();
         }
 
         function openContactUnified(isReassign) {
@@ -4813,6 +5066,11 @@
 
             switchContactMode('new');
             switchAgencyMode('new');
+
+            setTimeout(() => {
+                checkAgentSuggestions();
+                checkAgencySuggestions();
+            }, 100);
         }
 
         function switchContactMode(mode) {
