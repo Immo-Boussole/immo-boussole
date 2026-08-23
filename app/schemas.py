@@ -31,6 +31,11 @@ class ExternalListingSubmitRequest(BaseModel):
     property_type: Optional[str] = None
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
+    floorplans: Optional[List[str]] = None
+    land_area: Optional[float] = None
+    bathroom_count: Optional[int] = None
+    land_tax: Optional[float] = None
+    charges: Optional[float] = None
 
     @field_validator("url")
     @classmethod

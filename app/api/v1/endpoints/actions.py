@@ -208,11 +208,11 @@ async def submit_url_api(
     )
 
 
-async def _enrich_external_listing(url: str, listing_id: Optional[int] = None):
+async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, floorplan_urls: Optional[List[str]] = None):
     try:
         from app.database import SessionLocal
         from app.services import fetch_basic_metadata, repair_listing_photos
-        from app.media import download_listing_photos, photos_to_json
+        from app.media import download_listing_photos, photos_to_json, save_floorplans_as_attachments
         from app.geo import get_coordinates, fetch_sncf_times_for_city
         import json
 
@@ -236,6 +236,13 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None):
                                 db.commit()
                     except Exception as e:
                         print(f"[API] Photo download error for listing {listing.id}: {e}")
+
+                # 1b. Floorplans attachments
+                if floorplan_urls:
+                    try:
+                        await save_floorplans_as_attachments(listing.id, floorplan_urls, db)
+                    except Exception as e:
+                        print(f"[API] Floorplan attachment error for listing {listing.id}: {e}")
 
                 # 2. Geocoding if coordinates are missing
                 if listing.latitude is None and (listing.location or listing.city):
@@ -339,6 +346,12 @@ async def submit_external_listing_api(
     if request.price and request.area and request.area > 0:
         price_per_sqm = round(request.price / request.area, 2)
 
+    photos_to_store = list(request.photos or [])
+    if request.floorplans:
+        for fp in request.floorplans:
+            if fp not in photos_to_store:
+                photos_to_store.append(fp)
+
     if not existing:
         listing = models.Listing(
             url=request.url,
@@ -347,8 +360,10 @@ async def submit_external_listing_api(
             title=request.title or "Annonce sans titre",
             price=request.price,
             area=request.area,
+            land_area=request.land_area,
             rooms=request.rooms,
             bedrooms=request.bedrooms,
+            bathroom_count=request.bathroom_count,
             city=request.city,
             postal_code=request.postal_code,
             location=request.location or request.city or "Inconnu",
@@ -356,13 +371,15 @@ async def submit_external_listing_api(
             property_type=request.property_type,
             dpe_rating=request.dpe_rating,
             ges_rating=request.ges_rating,
+            land_tax=request.land_tax,
+            charges=request.charges,
             source=source_val,
             status=models.ListingStatus.NEW,
             price_per_sqm=price_per_sqm
         )
 
-        if request.photos:
-            listing.original_photo_urls = json.dumps(request.photos)
+        if photos_to_store:
+            listing.original_photo_urls = json.dumps(photos_to_store)
 
         db.add(listing)
         db.commit()
@@ -382,6 +399,8 @@ async def submit_external_listing_api(
             existing.price = request.price
         if request.area is not None:
             existing.area = request.area
+        if request.land_area is not None:
+            existing.land_area = request.land_area
         if price_per_sqm is not None:
             existing.price_per_sqm = price_per_sqm
         if request.city:
@@ -392,6 +411,8 @@ async def submit_external_listing_api(
             existing.rooms = request.rooms
         if request.bedrooms is not None:
             existing.bedrooms = request.bedrooms
+        if request.bathroom_count is not None:
+            existing.bathroom_count = request.bathroom_count
         if request.description and not existing.description_text:
             existing.description_text = request.description
         if request.property_type and not existing.property_type:
@@ -400,8 +421,12 @@ async def submit_external_listing_api(
             existing.dpe_rating = request.dpe_rating
         if request.ges_rating and not existing.ges_rating:
             existing.ges_rating = request.ges_rating
-        if request.photos:
-            existing.original_photo_urls = json.dumps(request.photos)
+        if request.land_tax is not None:
+            existing.land_tax = request.land_tax
+        if request.charges is not None:
+            existing.charges = request.charges
+        if photos_to_store:
+            existing.original_photo_urls = json.dumps(photos_to_store)
 
         db.commit()
         db.refresh(existing)
@@ -415,7 +440,7 @@ async def submit_external_listing_api(
         )
 
     # Launch background enrichment
-    background_tasks.add_task(_enrich_external_listing, request.url, target_listing.id)
+    background_tasks.add_task(_enrich_external_listing, request.url, target_listing.id, request.floorplans)
 
     return schemas.ActionResponse(
         status="success",
@@ -456,6 +481,12 @@ async def submit_external_listings_batch_api(
             if item.price and item.area and item.area > 0:
                 price_per_sqm = round(item.price / item.area, 2)
 
+            item_photos = list(item.photos or [])
+            if item.floorplans:
+                for fp in item.floorplans:
+                    if fp not in item_photos:
+                        item_photos.append(fp)
+
             if not existing:
                 listing = models.Listing(
                     url=item.url,
@@ -464,8 +495,10 @@ async def submit_external_listings_batch_api(
                     title=item.title or "Annonce sans titre",
                     price=item.price,
                     area=item.area,
+                    land_area=item.land_area,
                     rooms=item.rooms,
                     bedrooms=item.bedrooms,
+                    bathroom_count=item.bathroom_count,
                     city=item.city,
                     postal_code=item.postal_code,
                     location=item.location or item.city or "Inconnu",
@@ -473,13 +506,15 @@ async def submit_external_listings_batch_api(
                     property_type=item.property_type,
                     dpe_rating=item.dpe_rating,
                     ges_rating=item.ges_rating,
+                    land_tax=item.land_tax,
+                    charges=item.charges,
                     source=source_val,
                     status=models.ListingStatus.NEW,
                     price_per_sqm=price_per_sqm
                 )
 
-                if item.photos:
-                    listing.original_photo_urls = json.dumps(item.photos)
+                if item_photos:
+                    listing.original_photo_urls = json.dumps(item_photos)
 
                 db.add(listing)
                 db.commit()
@@ -495,14 +530,22 @@ async def submit_external_listings_batch_api(
                     existing.price = item.price
                 if item.area is not None:
                     existing.area = item.area
+                if item.land_area is not None:
+                    existing.land_area = item.land_area
                 if price_per_sqm is not None:
                     existing.price_per_sqm = price_per_sqm
                 if item.city:
                     existing.city = item.city
                 if item.postal_code:
                     existing.postal_code = item.postal_code
-                if item.photos:
-                    existing.original_photo_urls = json.dumps(item.photos)
+                if item.bathroom_count is not None:
+                    existing.bathroom_count = item.bathroom_count
+                if item.land_tax is not None:
+                    existing.land_tax = item.land_tax
+                if item.charges is not None:
+                    existing.charges = item.charges
+                if item_photos:
+                    existing.original_photo_urls = json.dumps(item_photos)
 
                 db.commit()
                 db.refresh(existing)
@@ -515,11 +558,11 @@ async def submit_external_listings_batch_api(
                 status=status_str,
                 listing_id=target_listing.id,
                 title=target_listing.title,
-                error=None
+                message="OK"
             ))
 
             # Queue background enrichment
-            background_tasks.add_task(_enrich_external_listing, item.url, target_listing.id)
+            background_tasks.add_task(_enrich_external_listing, item.url, target_listing.id, item.floorplans)
 
         except Exception as e:
             error_count += 1

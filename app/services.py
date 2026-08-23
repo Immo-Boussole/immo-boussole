@@ -655,8 +655,29 @@ async def fetch_basic_metadata(url: str) -> dict:
                 except Exception as e:
                     print(f"[Services] LBC __NEXT_DATA__ fast extraction failed: {e}")
 
-        # ── 2. JSON-LD schema extraction ──
+        # ── 1b. SeLoger embedded JSON bypass ──
         soup = BeautifulSoup(html_content, "html.parser")
+        if "seloger.com" in url:
+            from app.scrapers.seloger import SelogerScraper
+            sl_scraper = SelogerScraper()
+            for script in soup.find_all("script"):
+                stext = script.string or ""
+                if "app_cldp" in stext or "__UFRN_LIFECYCLE_SERVERREQUEST__" in stext or "__NEXT_DATA__" in stext or "classified" in stext:
+                    try:
+                        start_idx = stext.find('{')
+                        end_idx = stext.rfind('}')
+                        if start_idx != -1 and end_idx != -1:
+                            data = json.loads(stext[start_idx:end_idx+1])
+                            sl_details = sl_scraper._extract_detail_from_json(data)
+                            if sl_details:
+                                details.update(sl_details)
+                                if details.get("photo_urls"):
+                                    print(f"[Services] SeLoger Fast JSON OK: {details.get('title')} ({len(details.get('photo_urls', []))} photos)")
+                                    break
+                    except Exception:
+                        pass
+
+        # ── 2. JSON-LD schema extraction ──
         for script in soup.find_all("script", type="application/ld+json"):
             try:
                 if script.string:
@@ -896,6 +917,15 @@ async def create_listing_from_details(
                 db.commit()
         except Exception as e:
             print(f"[Services] Error downloading photos for listing {listing.id}: {e}")
+
+    # ── Download floorplans as attachments ──
+    floorplans = details.get("floorplans") or details.get("floorplan_urls") or []
+    if floorplans and download_photos:
+        try:
+            from app.media import save_floorplans_as_attachments
+            await save_floorplans_as_attachments(listing.id, floorplans, db)
+        except Exception as e:
+            print(f"[Services] Error saving floorplan attachments for listing {listing.id}: {e}")
 
     # Fallback photo recovery if listing still has missing/corrupted photos
     if download_photos and is_missing_or_corrupt_photos(listing):

@@ -3,7 +3,7 @@
  * Permet l'extraction directe des annonces depuis le navigateur de l'utilisateur
  * (contournement DataDome / Cloudflare) et leur synchronisation avec Immo-Boussole.
  */
-(function() {
+(async function() {
     'use strict';
 
     // 1. Initialisation de la configuration
@@ -187,43 +187,314 @@
             return url.includes('seloger.com');
         }
 
-        static parse() {
+        static async parse() {
             const listings = [];
-            const isAdPage = /\/annonces?\//.test(window.location.pathname);
+            const pathname = window.location.pathname;
+            const isAdPage = (/\/annonce\/|\/annonces?\//.test(pathname)) && !pathname.includes('/resultats') && !pathname.includes('/recherche');
+
+            // 1. Chercher les données structurées JSON
+            let classified = null;
+            let searchAds = [];
+
+            // A. window.__UFRN_LIFECYCLE_SERVERREQUEST__
+            try {
+                if (window.__UFRN_LIFECYCLE_SERVERREQUEST__) {
+                    const ufrn = window.__UFRN_LIFECYCLE_SERVERREQUEST__;
+                    if (ufrn.app_cldp?.data?.classified) {
+                        classified = ufrn.app_cldp.data.classified;
+                    } else if (ufrn.classified) {
+                        classified = ufrn.classified;
+                    }
+                }
+            } catch (e) {}
+
+            // B. __NEXT_DATA__
+            if (!classified) {
+                const nextScript = document.getElementById('__NEXT_DATA__');
+                if (nextScript) {
+                    try {
+                        const data = JSON.parse(nextScript.textContent);
+                        classified = data?.props?.pageProps?.classified || data?.props?.pageProps?.ad;
+                        searchAds = data?.props?.pageProps?.searchData?.ads || data?.props?.pageProps?.initialData?.searchData?.ads || [];
+                    } catch (e) {}
+                }
+            }
+
+            // C. Balises scripts JSON
+            if (!classified) {
+                document.querySelectorAll('script[type="application/json"]').forEach(s => {
+                    if (!classified && (s.textContent.includes('classified') || s.textContent.includes('livingArea') || s.textContent.includes('price'))) {
+                        try {
+                            const d = JSON.parse(s.textContent);
+                            if (d.classified) classified = d.classified;
+                            else if (d.app_cldp?.data?.classified) classified = d.app_cldp.data.classified;
+                        } catch (e) {}
+                    }
+                });
+            }
 
             if (isAdPage) {
-                const title = document.querySelector('h1')?.textContent?.trim() || document.title;
-                const priceText = document.querySelector('[data-test="price"], .price, [class*="Price"]')?.textContent?.replace(/[^\d]/g, '');
+                if (classified) {
+                    const formatted = await this._formatClassified(classified);
+                    listings.push(formatted);
+                    return { type: 'single', listings };
+                }
+
+                // Fallback DOM pour page de détail SeLoger
+                const formattedDom = await this._parseAdFromDom();
+                listings.push(formattedDom);
+                return { type: 'single', listings };
+            }
+
+            // Page de recherche / liste
+            if (searchAds && searchAds.length > 0) {
+                for (const item of searchAds) {
+                    listings.push(this._formatSearchAd(item));
+                }
+                return { type: 'search', listings };
+            }
+
+            // Fallback DOM pour page de recherche
+            const adCards = document.querySelectorAll('div[data-test="sl.cards-container"], [class*="Card__Container"], a[href*="/annonce/"], a[href*="/annonces/"]');
+            const seenUrls = new Set();
+            adCards.forEach(card => {
+                const anchor = card.tagName === 'A' ? card : card.querySelector('a[href*="/annonce/"], a[href*="/annonces/"]');
+                if (!anchor) return;
+                const rawHref = anchor.getAttribute('href');
+                if (!rawHref) return;
+                const fullUrl = rawHref.startsWith('http') ? rawHref.split('?')[0] : `https://www.seloger.com${rawHref.split('?')[0]}`;
+                if (seenUrls.has(fullUrl)) return;
+                seenUrls.add(fullUrl);
+
+                const titleElem = card.querySelector('[class*="Card__Title"], [class*="title"], h2, h3') || anchor;
+                const priceElem = card.querySelector('[class*="Price"], [data-test="price"]');
+                const priceText = priceElem ? priceElem.textContent.replace(/[^\d]/g, '') : null;
                 const price = priceText ? parseFloat(priceText) : null;
-                const photos = [];
-                document.querySelectorAll('img[src*="seloger"]').forEach(img => {
-                    if (img.src && !photos.includes(img.src)) photos.push(img.src);
-                });
+
+                const img = card.querySelector('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]');
+                const photos = img ? [img.src.split('?')[0]] : [];
 
                 listings.push({
-                    url: window.location.href.split('?')[0],
-                    title: title,
+                    url: fullUrl,
+                    title: titleElem?.textContent?.trim() || 'Annonce SeLoger',
                     price: price,
                     photos: photos,
                     source: 'seloger'
                 });
-                return { type: 'single', listings };
-            }
-
-            document.querySelectorAll('a[href*="/annonces/"]').forEach(a => {
-                const href = a.getAttribute('href');
-                if (href && !listings.some(l => l.url === href)) {
-                    const fullUrl = href.startsWith('http') ? href : `https://www.seloger.com${href}`;
-                    listings.push({
-                        url: fullUrl.split('?')[0],
-                        title: a.textContent?.trim() || 'Annonce SeLoger',
-                        photos: [],
-                        source: 'seloger'
-                    });
-                }
             });
 
             return { type: listings.length === 1 ? 'single' : 'search', listings };
+        }
+
+        static async _formatClassified(classified) {
+            const loc = classified.location || {};
+            let city = loc.city || loc.cityName || classified.city || '';
+            let zipcode = loc.zipCode || loc.postalCode || loc.postCode || classified.zipCode || '';
+            
+            if (!city && Array.isArray(loc.tags) && loc.tags.length > 0) {
+                city = loc.tags[0];
+            }
+            if (city && !zipcode) {
+                const cpMatch = String(city).match(/\b(\d{5})\b/);
+                if (cpMatch) {
+                    zipcode = cpMatch[1];
+                    city = String(city).replace(/\(?\d{5}\)?/, '').trim();
+                }
+            }
+
+            const locationStr = [city, zipcode ? `(${zipcode})` : ''].filter(Boolean).join(' ');
+
+            // Pricing
+            const pricing = classified.pricing || {};
+            const priceVal = pricing.amount || pricing.price || classified.price || null;
+            const charges = pricing.charges || classified.charges || null;
+            const landTax = pricing.landTax || pricing.propertyTax || classified.landTax || null;
+
+            // Characteristics
+            const roomsInfo = classified.rooms || {};
+            const rooms = roomsInfo.total || roomsInfo.roomCount || classified.roomCount || classified.rooms || null;
+            const bedrooms = roomsInfo.bedrooms || roomsInfo.bedRooms || classified.bedroomCount || classified.bedrooms || null;
+            const bathrooms = (roomsInfo.bathRooms || 0) + (roomsInfo.showerRooms || 0) || classified.bathroomCount || null;
+
+            const area = classified.livingArea || classified.surface || classified.area || null;
+            const landArea = classified.landSurface || classified.landArea || classified.groundArea || null;
+
+            // DPE / GES
+            const energy = classified.energy || {};
+            const dpeObj = energy.dpe || {};
+            const gesObj = energy.ges || {};
+            const dpe = typeof dpeObj === 'string' ? dpeObj.charAt(0) : (dpeObj.grade || dpeObj.letter || classified.dpeRating || classified.energyRate || null);
+            const ges = typeof gesObj === 'string' ? gesObj.charAt(0) : (gesObj.grade || gesObj.letter || classified.gesRating || classified.gesRate || null);
+
+            // Title: Prioritize custom headline / title
+            const title = classified.customTitle || classified.headline || classified.title || classified.subject || document.querySelector('h1')?.textContent?.trim() || document.title.replace(/\s*[-|]\s*SeLoger.*$/i, '').trim();
+
+            // Description
+            const description = classified.description || classified.body || '';
+
+            // Medias & Floorplans
+            const photos = [];
+            const floorplans = [];
+            const domains = classified.domains || {};
+            const medias = domains.medias || {};
+
+            const images = medias.images || classified.photos || [];
+            if (Array.isArray(images)) {
+                images.forEach(img => {
+                    const u = typeof img === 'object' ? img?.url : img;
+                    if (typeof u === 'string' && !photos.includes(u)) photos.push(u);
+                });
+            }
+
+            const fpList = medias.floorplans || medias.plans || medias.floorPlans || classified.floorplans || classified.floorPlans || classified.plans || [];
+            if (Array.isArray(fpList)) {
+                fpList.forEach(fp => {
+                    const u = typeof fp === 'object' ? fp?.url : fp;
+                    if (typeof u === 'string' && !floorplans.includes(u)) floorplans.push(u);
+                });
+            }
+
+            // Fallback fetch floorplans if subpage exists
+            const cleanUrl = window.location.href.split('?')[0].replace(/\/$/, '');
+            if (floorplans.length === 0) {
+                try {
+                    const fpResp = await fetch(`${cleanUrl}/medias/floorplans`, { credentials: 'same-origin' });
+                    if (fpResp.ok) {
+                        const fpHtml = await fpResp.text();
+                        const domParser = new DOMParser();
+                        const fpDoc = domParser.parseFromString(fpHtml, 'text/html');
+                        fpDoc.querySelectorAll('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]').forEach(img => {
+                            const src = img.src || img.getAttribute('src');
+                            if (src && !floorplans.includes(src) && !photos.includes(src)) {
+                                floorplans.push(src);
+                            }
+                        });
+                    }
+                } catch (e) {}
+            }
+
+            // Append floorplans to photos
+            floorplans.forEach(fpUrl => {
+                if (!photos.includes(fpUrl)) photos.push(fpUrl);
+            });
+
+            return {
+                url: cleanUrl,
+                external_id: classified.id ? `sl_${classified.id}` : undefined,
+                title: title,
+                price: typeof priceVal === 'number' ? priceVal : parseFloat(priceVal) || null,
+                area: area ? parseFloat(area) : null,
+                land_area: landArea ? parseFloat(landArea) : null,
+                rooms: rooms ? parseInt(rooms, 10) : null,
+                bedrooms: bedrooms ? parseInt(bedrooms, 10) : null,
+                bathroom_count: bathrooms ? parseInt(bathrooms, 10) : null,
+                city: city || 'France',
+                postal_code: zipcode || null,
+                location: locationStr || city || 'France',
+                description: description,
+                property_type: classified.propertyType || classified.estateType || null,
+                dpe_rating: dpe ? String(dpe).toUpperCase().charAt(0) : null,
+                ges_rating: ges ? String(ges).toUpperCase().charAt(0) : null,
+                land_tax: landTax ? parseFloat(landTax) : null,
+                charges: charges ? parseFloat(charges) : null,
+                photos: photos,
+                floorplans: floorplans,
+                source: 'seloger'
+            };
+        }
+
+        static async _parseAdFromDom() {
+            const cleanUrl = window.location.href.split('?')[0].replace(/\/$/, '');
+            const title = document.querySelector('h1')?.textContent?.trim() || document.title.replace(/\s*[-|]\s*SeLoger.*$/i, '').trim();
+            const priceText = document.querySelector('[data-test="price"], .price, [class*="Price"]')?.textContent?.replace(/[^\d]/g, '');
+            const price = priceText ? parseFloat(priceText) : null;
+            const descElem = document.querySelector('[data-test="sl.description"], [data-test="description"], [class*="Description"], [class*="ShowMore"] p');
+            const description = descElem ? (descElem.innerText || descElem.textContent).trim() : '';
+
+            // Location
+            const locElem = document.querySelector('[data-test="location"], [class*="Location"], [class*="Address"]');
+            const locText = locElem ? locElem.textContent.trim() : '';
+            let city = locText;
+            let zipcode = '';
+            const cpMatch = locText.match(/\b(\d{5})\b/);
+            if (cpMatch) {
+                zipcode = cpMatch[1];
+                city = locText.replace(/\(?\d{5}\)?/, '').trim();
+            }
+            const locationStr = locText || [city, zipcode ? `(${zipcode})` : ''].filter(Boolean).join(' ');
+
+            // Surface & rooms regex from badges / criteria
+            let area = null;
+            let rooms = null;
+            let bedrooms = null;
+            const bodyText = document.body.innerText || '';
+            const areaMatch = bodyText.match(/(\d+(?:[.,]\d+)?)\s*m²/);
+            if (areaMatch) area = parseFloat(areaMatch[1].replace(',', '.'));
+            const roomsMatch = bodyText.match(/(\d+)\s*pièce/i);
+            if (roomsMatch) rooms = parseInt(roomsMatch[1], 10);
+            const bedsMatch = bodyText.match(/(\d+)\s*chambre/i);
+            if (bedsMatch) bedrooms = parseInt(bedsMatch[1], 10);
+
+            // Photos & Floorplans
+            const photos = [];
+            const floorplans = [];
+            document.querySelectorAll('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]').forEach(img => {
+                const src = (img.src || img.getAttribute('src') || '').split('?')[0];
+                if (src && !photos.includes(src)) photos.push(src);
+            });
+
+            try {
+                const fpResp = await fetch(`${cleanUrl}/medias/floorplans`, { credentials: 'same-origin' });
+                if (fpResp.ok) {
+                    const fpHtml = await fpResp.text();
+                    const domParser = new DOMParser();
+                    const fpDoc = domParser.parseFromString(fpHtml, 'text/html');
+                    fpDoc.querySelectorAll('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]').forEach(img => {
+                        const src = (img.src || img.getAttribute('src') || '').split('?')[0];
+                        if (src && !floorplans.includes(src)) {
+                            floorplans.push(src);
+                            if (!photos.includes(src)) photos.push(src);
+                        }
+                    });
+                }
+            } catch (e) {}
+
+            return {
+                url: cleanUrl,
+                title: title,
+                price: price,
+                area: area,
+                rooms: rooms,
+                bedrooms: bedrooms,
+                city: city || 'France',
+                postal_code: zipcode || null,
+                location: locationStr || city || 'France',
+                description: description,
+                photos: photos,
+                floorplans: floorplans,
+                source: 'seloger'
+            };
+        }
+
+        static _formatSearchAd(ad) {
+            const loc = ad.location || {};
+            const city = loc.city || loc.cityName || '';
+            const zipcode = loc.zipCode || loc.postalCode || '';
+            const locStr = [city, zipcode ? `(${zipcode})` : ''].filter(Boolean).join(' ');
+
+            return {
+                url: ad.url || (ad.permalink ? `https://www.seloger.com${ad.permalink}` : window.location.href),
+                external_id: ad.id ? `sl_${ad.id}` : undefined,
+                title: ad.customTitle || ad.headline || ad.title || ad.subject || 'Annonce SeLoger',
+                price: typeof ad.price === 'number' ? ad.price : parseFloat(ad.price) || null,
+                area: ad.surface || ad.livingArea ? parseFloat(ad.surface || ad.livingArea) : null,
+                rooms: ad.rooms || ad.roomCount ? parseInt(ad.rooms || ad.roomCount, 10) : null,
+                city: city,
+                postal_code: zipcode,
+                location: locStr || city || 'France',
+                photos: Array.isArray(ad.photos) ? ad.photos : [],
+                source: 'seloger'
+            };
         }
     }
 
@@ -249,7 +520,7 @@
     }
 
     // 4. Extraction des données
-    const parseResult = parser.parse();
+    const parseResult = await parser.parse();
     const rawListings = parseResult.listings || [];
 
     if (rawListings.length === 0) {

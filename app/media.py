@@ -378,3 +378,95 @@ def delete_attachment_file(file_path: str) -> bool:
     return False
 
 
+async def save_floorplans_as_attachments(
+    listing_id: int,
+    floorplan_urls: list[str],
+    db,
+    client: Optional[httpx.AsyncClient] = None,
+) -> list:
+    """
+    Downloads floorplan images and creates ListingAttachment records with file_type='plan'.
+    Avoids duplicate attachments if a floorplan with the same URL/title was already imported.
+    """
+    from app.models import ListingAttachment
+
+    if not floorplan_urls:
+        return []
+
+    created = []
+    att_dir = get_listing_attachments_dir(listing_id)
+    
+    # Check existing attachments to prevent duplicates
+    existing_att_titles = {
+        att.title for att in db.query(ListingAttachment).filter(
+            ListingAttachment.listing_id == listing_id,
+            ListingAttachment.file_type == "plan"
+        ).all()
+    }
+
+    close_client = False
+    if client is None:
+        client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
+        close_client = True
+
+    try:
+        for i, url in enumerate(floorplan_urls):
+            title = f"Plan {i + 1}"
+            if title in existing_att_titles:
+                continue
+
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "Referer": "https://www.seloger.com/",
+                }
+                resp = await client.get(url, headers=headers)
+                if resp.status_code != 200:
+                    continue
+
+                content_type = resp.headers.get("content-type", "image/jpeg")
+                if "webp" in content_type:
+                    ext = ".webp"
+                elif "png" in content_type:
+                    ext = ".png"
+                else:
+                    ext = ".jpg"
+
+                unique_suffix = uuid.uuid4().hex[:8]
+                saved_filename = f"plan_{i+1}_{unique_suffix}{ext}"
+                dest_path = att_dir / saved_filename
+                dest_path.write_bytes(resp.content)
+
+                web_path = f"static/media/{listing_id}/attachments/{saved_filename}"
+                file_size = len(resp.content)
+                mime_type = content_type.split(";")[0].strip()
+
+                att = ListingAttachment(
+                    listing_id=listing_id,
+                    filename=saved_filename,
+                    original_filename=f"plan_{i+1}{ext}",
+                    file_path=web_path,
+                    file_type="plan",
+                    title=title,
+                    description="Plan du bien extrait automatiquement",
+                    file_size=file_size,
+                    mime_type=mime_type,
+                    created_by="scraper"
+                )
+                db.add(att)
+                created.append(att)
+                existing_att_titles.add(title)
+            except Exception as e:
+                print(f"[Media] Failed downloading floorplan {url} for listing {listing_id}: {e}")
+
+        if created:
+            db.commit()
+            for att in created:
+                db.refresh(att)
+    finally:
+        if close_client:
+            await client.aclose()
+
+    return created
+
+
