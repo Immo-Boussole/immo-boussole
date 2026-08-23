@@ -604,6 +604,10 @@ class ListingAttachmentUpdateRequest(BaseModel):
     description: Optional[str] = None
 
 
+class BulkDeleteAttachmentsRequest(BaseModel):
+    attachment_ids: list[int]
+
+
 
 
 

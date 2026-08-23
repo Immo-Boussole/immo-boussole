@@ -211,20 +211,38 @@ def test_attachments_api_crud_flow():
         assert "attachments-section" in res_page_fr.text
         assert "DPE et Audit" in res_page_fr.text
         assert "plan_rdc.png" in res_page_fr.text
+        assert "btn-delete-selected-attachments" in res_page_fr.text
+        assert "Supprimer un/des document(s)" in res_page_fr.text
+        assert "attachment-item-checkbox" in res_page_fr.text
 
         client.get("/lang/en")
         res_page_en = client.get(f"/listings/{listing_id}")
         assert res_page_en.status_code == 200
         assert "Attachments" in res_page_en.text
         assert "attachments-section" in res_page_en.text
+        assert "btn-delete-selected-attachments" in res_page_en.text
+        assert "Delete document(s)" in res_page_en.text
 
-        # 8. DELETE attachment
+        # 8. Single DELETE attachment
         res_del = client.delete(f"/api/listings/{listing_id}/attachments/{att1_id}")
         assert res_del.status_code == 200
         assert res_del.json()["status"] == "deleted"
 
         res_list_after_del = client.get(f"/api/listings/{listing_id}/attachments")
         assert len(res_list_after_del.json()) == 2
+
+        # 9. Bulk DELETE attachments
+        remaining_ids = [a["id"] for a in res_list_after_del.json()]
+        res_bulk_del = client.post(
+            f"/api/listings/{listing_id}/attachments/bulk-delete",
+            json={"attachment_ids": remaining_ids}
+        )
+        assert res_bulk_del.status_code == 200
+        assert res_bulk_del.json()["status"] == "deleted"
+        assert res_bulk_del.json()["count"] == 2
+
+        res_list_empty = client.get(f"/api/listings/{listing_id}/attachments")
+        assert len(res_list_empty.json()) == 0
 
     finally:
         # Clean up: Delete listing (tests cascade cleanup)

@@ -1008,6 +1008,75 @@
             transition: var(--trans);
         }
 
+        .attachment-footer-row {
+            display: contents;
+        }
+
+        .attachment-select-col {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-left: 0.25rem;
+            padding-left: 0.5rem;
+            border-left: 1px solid var(--border);
+        }
+
+        .attachment-checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            min-width: 36px;
+            min-height: 36px;
+            border-radius: 8px;
+            transition: var(--trans);
+        }
+
+        .attachment-checkbox-label:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .attachment-item-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent);
+            border-radius: 4px;
+            margin: 0;
+        }
+
+        .attachment-card.is-selected {
+            border-color: rgba(79, 142, 247, 0.5);
+            background: rgba(79, 142, 247, 0.06);
+        }
+
+        .attachment-btn-delete-bulk {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            padding: 0.35rem 0.75rem;
+            color: var(--red);
+            background: rgba(242, 92, 105, 0.08);
+            border: 1px solid rgba(242, 92, 105, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--trans);
+        }
+
+        .attachment-btn-delete-bulk:not(:disabled):hover {
+            background: rgba(242, 92, 105, 0.18);
+            border-color: rgba(242, 92, 105, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .attachment-btn-delete-bulk:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         .attachments-empty {
             text-align: center;
             padding: 2.5rem 1.5rem;
@@ -1044,16 +1113,34 @@
                 align-items: flex-start;
                 gap: 0.75rem;
             }
-            .attachment-actions {
+            .attachment-footer-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
                 width: 100%;
-                justify-content: flex-end;
                 border-top: 1px solid var(--border);
                 padding-top: 0.6rem;
                 margin-top: 0.25rem;
+                gap: 0.5rem;
+            }
+            .attachment-actions {
+                border-top: none;
+                padding-top: 0;
+                margin-top: 0;
+                flex-wrap: wrap;
             }
             .attachment-btn-action {
                 min-width: 44px;
                 min-height: 44px;
+            }
+            .attachment-checkbox-label {
+                min-width: 44px;
+                min-height: 44px;
+            }
+            .attachment-select-col {
+                border-left: 1px solid var(--border);
+                padding-left: 0.5rem;
+                margin-left: 0;
             }
         }
     </style>
@@ -1540,9 +1627,14 @@
                         </span>
                     </div>
                     {% if request.session.get('role') in ['user', 'admin'] %}
-                    <button type="button" class="btn sm primary" onclick="openAddAttachmentModal()" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
-                        <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.add_attachment') }}
-                    </button>
+                    <div class="attachments-header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="button" class="btn sm primary" onclick="openAddAttachmentModal()" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                            <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.add_attachment') }}
+                        </button>
+                        <button type="button" class="btn sm attachment-btn-delete-bulk" id="btn-delete-selected-attachments" onclick="openDeleteSelectedAttachmentsModal()" title="{{ t(request, 'listing.delete_selected_attachments') }}" disabled>
+                            <i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_selected_attachments') }}
+                        </button>
+                    </div>
                     {% endif %}
                 </div>
 
@@ -1626,20 +1718,30 @@
                                 {% endif %}
                             </div>
 
-                            <div class="attachment-actions">
-                                <a href="/{{ att.file_path }}" target="_blank" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.preview') }}" style="color: var(--accent); background: rgba(79, 142, 247, 0.08); border-color: rgba(79, 142, 247, 0.2);">
-                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="btn-text">{{ t(request, 'listing.preview') }}</span>
-                                </a>
-                                <a href="/api/listings/{{ listing.id }}/attachments/{{ att.id }}/download" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.download') }}" style="color: var(--text-2); background: var(--surface); border-color: var(--border);">
-                                    <i class="fa-solid fa-download"></i>
-                                </a>
+                            <div class="attachment-footer-row">
+                                <div class="attachment-actions">
+                                    <a href="/{{ att.file_path }}" target="_blank" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.preview') }}" style="color: var(--accent); background: rgba(79, 142, 247, 0.08); border-color: rgba(79, 142, 247, 0.2);">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="btn-text">{{ t(request, 'listing.preview') }}</span>
+                                    </a>
+                                    <a href="/api/listings/{{ listing.id }}/attachments/{{ att.id }}/download" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.download') }}" style="color: var(--text-2); background: var(--surface); border-color: var(--border);">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                    {% if request.session.get('role') in ['user', 'admin'] %}
+                                    <button type="button" class="btn sm attachment-btn-action" onclick='openEditAttachmentModal({{ att.id }}, {{ (att.title or "")|tojson }}, {{ (att.file_type or "autre")|tojson }}, {{ (att.description or "")|tojson }})' title="{{ t(request, 'listing.edit') }}" style="color: var(--text); background: var(--surface); border-color: var(--border);">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button type="button" class="btn sm attachment-btn-action" onclick='openDeleteAttachmentModal({{ att.id }}, {{ (att.title or att.original_filename)|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); background: rgba(242, 92, 105, 0.08); border-color: rgba(242, 92, 105, 0.2);">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+
                                 {% if request.session.get('role') in ['user', 'admin'] %}
-                                <button type="button" class="btn sm attachment-btn-action" onclick='openEditAttachmentModal({{ att.id }}, {{ (att.title or "")|tojson }}, {{ (att.file_type or "autre")|tojson }}, {{ (att.description or "")|tojson }})' title="{{ t(request, 'listing.edit') }}" style="color: var(--text); background: var(--surface); border-color: var(--border);">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button type="button" class="btn sm attachment-btn-action" onclick='openDeleteAttachmentModal({{ att.id }}, {{ (att.title or att.original_filename)|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); background: rgba(242, 92, 105, 0.08); border-color: rgba(242, 92, 105, 0.2);">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
+                                <div class="attachment-select-col">
+                                    <label class="attachment-checkbox-label" for="att-checkbox-{{ att.id }}" title="Sélectionner ce document">
+                                        <input type="checkbox" id="att-checkbox-{{ att.id }}" class="attachment-item-checkbox" data-id="{{ att.id }}" data-title="{{ (att.title or att.original_filename)|e }}" onchange="updateSelectedAttachmentsState()" aria-label="Sélectionner {{ att.title or att.original_filename }}">
+                                    </label>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -2258,11 +2360,11 @@
 
 <!-- ── Modal: Delete Attachment ── -->
 <div class="modal-backdrop" id="deleteAttachmentModal" onclick="if(event.target===this)closeDeleteAttachmentModal()">
-    <div class="modal delete-modal" style="max-width: 440px; text-align: center; padding: 2rem;">
+    <div class="modal delete-modal" style="max-width: 460px; text-align: center; padding: 2rem;">
         <div class="delete-icon"><i class="fa-solid fa-trash-can"></i></div>
-        <h2 style="color: var(--text); margin-bottom: 0.5rem;">{{ t(request, 'listing.delete_attachment_confirm') }}</h2>
-        <p class="delete-title-preview" id="deleteAttachmentTitlePreview" style="font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; word-break: break-all;"></p>
-        <p class="delete-warning" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.5rem;">{{ t(request, 'listing.delete_attachment_warning') }}</p>
+        <h2 style="color: var(--text); margin-bottom: 0.5rem;" id="deleteAttachmentModalTitle">{{ t(request, 'listing.delete_attachment_confirm') }}</h2>
+        <div class="delete-title-preview" id="deleteAttachmentTitlePreview" style="font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; word-break: break-all; max-height: 160px; overflow-y: auto;"></div>
+        <p class="delete-warning" id="deleteAttachmentWarningText" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.5rem;">{{ t(request, 'listing.delete_attachment_warning') }}</p>
 
         <div style="display: flex; gap: 0.75rem;">
             <button type="button" class="btn" style="flex: 1;" onclick="closeDeleteAttachmentModal()">
@@ -5310,7 +5412,7 @@
 
         // ─── Attachments Management ─────────────────────────────────────────
         let selectedAttachmentFiles = [];
-        let attachmentToDeleteId = null;
+        let attachmentsToDelete = [];
 
         function scrollToAttachments() {
             const el = document.getElementById('attachments-section');
@@ -5473,19 +5575,79 @@
             }
         }
 
+        function updateSelectedAttachmentsState() {
+            const checkboxes = document.querySelectorAll('.attachment-item-checkbox');
+            const checked = document.querySelectorAll('.attachment-item-checkbox:checked');
+            const deleteBtn = document.getElementById('btn-delete-selected-attachments');
+
+            checkboxes.forEach(cb => {
+                const card = cb.closest('.attachment-card');
+                if (card) {
+                    card.classList.toggle('is-selected', cb.checked);
+                }
+            });
+
+            if (deleteBtn) {
+                if (checked.length > 0) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i> Supprimer (${checked.length})`;
+                } else {
+                    deleteBtn.disabled = true;
+                    deleteBtn.innerHTML = `<i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_selected_attachments') }}`;
+                }
+            }
+        }
+
+        function openDeleteSelectedAttachmentsModal() {
+            const checked = Array.from(document.querySelectorAll('.attachment-item-checkbox:checked'));
+            if (checked.length === 0) return;
+
+            attachmentsToDelete = checked.map(cb => ({
+                id: parseInt(cb.dataset.id),
+                title: cb.dataset.title
+            }));
+
+            const modalTitle = document.getElementById('deleteAttachmentModalTitle');
+            const previewEl = document.getElementById('deleteAttachmentTitlePreview');
+            const warningEl = document.getElementById('deleteAttachmentWarningText');
+
+            if (attachmentsToDelete.length === 1) {
+                if (modalTitle) modalTitle.textContent = "{{ t(request, 'listing.delete_attachment_confirm') }}";
+                if (previewEl) previewEl.innerHTML = `<span style="font-weight: 600;">${escapeHtml(attachmentsToDelete[0].title)}</span>`;
+                if (warningEl) warningEl.textContent = "{{ t(request, 'listing.delete_attachment_warning') }}";
+            } else {
+                if (modalTitle) modalTitle.textContent = `Supprimer ces ${attachmentsToDelete.length} documents ?`;
+                if (previewEl) {
+                    previewEl.innerHTML = `<ul style="margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.25rem;">` +
+                        attachmentsToDelete.map(a => `<li>${escapeHtml(a.title)}</li>`).join('') +
+                        `</ul>`;
+                }
+                if (warningEl) warningEl.textContent = "{{ t(request, 'listing.delete_selected_attachments_warning') }}";
+            }
+
+            document.getElementById('deleteAttachmentModal').classList.add('open');
+        }
+
         function openDeleteAttachmentModal(id, title) {
-            attachmentToDeleteId = id;
-            document.getElementById('deleteAttachmentTitlePreview').textContent = title || 'Pièce jointe #' + id;
+            attachmentsToDelete = [{ id: id, title: title }];
+            const modalTitle = document.getElementById('deleteAttachmentModalTitle');
+            const previewEl = document.getElementById('deleteAttachmentTitlePreview');
+            const warningEl = document.getElementById('deleteAttachmentWarningText');
+
+            if (modalTitle) modalTitle.textContent = "{{ t(request, 'listing.delete_attachment_confirm') }}";
+            if (previewEl) previewEl.textContent = title || 'Pièce jointe #' + id;
+            if (warningEl) warningEl.textContent = "{{ t(request, 'listing.delete_attachment_warning') }}";
+
             document.getElementById('deleteAttachmentModal').classList.add('open');
         }
 
         function closeDeleteAttachmentModal() {
-            attachmentToDeleteId = null;
+            attachmentsToDelete = [];
             document.getElementById('deleteAttachmentModal').classList.remove('open');
         }
 
         async function submitDeleteAttachment(listingId) {
-            if (!attachmentToDeleteId) return;
+            if (!attachmentsToDelete || attachmentsToDelete.length === 0) return;
 
             const btn = document.getElementById('btn-confirm-delete-attachment');
             const origHtml = btn.innerHTML;
@@ -5493,9 +5655,20 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Suppression...';
 
             try {
-                const res = await fetch(`/api/listings/${listingId}/attachments/${attachmentToDeleteId}`, {
-                    method: 'DELETE'
-                });
+                let res;
+                if (attachmentsToDelete.length === 1) {
+                    res = await fetch(`/api/listings/${listingId}/attachments/${attachmentsToDelete[0].id}`, {
+                        method: 'DELETE'
+                    });
+                } else {
+                    res = await fetch(`/api/listings/${listingId}/attachments/bulk-delete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            attachment_ids: attachmentsToDelete.map(a => a.id)
+                        })
+                    });
+                }
 
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));

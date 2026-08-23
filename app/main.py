@@ -4897,6 +4897,37 @@ def delete_listing_attachment(
     return {"status": "deleted", "attachment_id": attachment_id, "listing_id": listing_id}
 
 
+@app.post("/api/listings/{listing_id}/attachments/bulk-delete")
+def bulk_delete_listing_attachments(
+    request: Request,
+    listing_id: int,
+    body: schemas.BulkDeleteAttachmentsRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Delete multiple listing attachments and their physical files on disk."""
+    if not body.attachment_ids:
+        raise HTTPException(status_code=400, detail="Aucun identifiant de pièce jointe fourni")
+
+    atts = db.query(ListingAttachment).filter(
+        ListingAttachment.id.in_(body.attachment_ids),
+        ListingAttachment.listing_id == listing_id
+    ).all()
+
+    if not atts:
+        raise HTTPException(status_code=404, detail="Aucune pièce jointe trouvée")
+
+    from app.media import delete_attachment_file
+    deleted_ids = []
+    for att in atts:
+        delete_attachment_file(att.file_path)
+        db.delete(att)
+        deleted_ids.append(att.id)
+
+    db.commit()
+    return {"status": "deleted", "deleted_ids": deleted_ids, "count": len(deleted_ids), "listing_id": listing_id}
+
+
 @app.get("/api/listings/{listing_id}/attachments/{attachment_id}/download")
 def download_listing_attachment(
     request: Request,
