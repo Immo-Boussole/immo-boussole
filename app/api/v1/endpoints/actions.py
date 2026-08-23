@@ -418,7 +418,7 @@ async def submit_external_listing_api(
             existing.bedrooms = request.bedrooms
         if request.bathroom_count is not None:
             existing.bathroom_count = request.bathroom_count
-        if request.description and (not existing.description_text or len(request.description) > len(existing.description_text)):
+        if request.description is not None:
             existing.description_text = request.description
         if request.property_type:
             existing.property_type = request.property_type
