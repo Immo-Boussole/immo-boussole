@@ -200,9 +200,91 @@ def test_contacts_manager_full_flow():
         db.close()
 
 
+def test_link_listing_with_agency_assignment():
+    run_migrations()
+    db = SessionLocal()
+
+    try:
+        # Create 2 agencies
+        agency1 = Agency(legal_name="Agence Alpha", commercial_name="Alpha Immo", city="Grenoble")
+        agency2 = Agency(legal_name="Agence Beta", commercial_name="Beta Immo", city="Grenoble")
+        db.add_all([agency1, agency2])
+        db.commit()
+        db.refresh(agency1)
+        db.refresh(agency2)
+
+        # Create an agent without agency
+        agent = Agent(first_name="Claire", last_name="Morel", email="claire@test.fr")
+        db.add(agent)
+        db.commit()
+        db.refresh(agent)
+        assert agent.agency_id is None
+
+        # Create a listing
+        listing = Listing(
+            title="Appartement T3 Centre",
+            url=f"http://example.com/test-assign-{datetime.datetime.now().timestamp()}",
+            price=200000.0,
+            city="Grenoble",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        # 1. Link agent and assign agency1
+        res1 = link_listing_to_contact(
+            schemas.LinkListingRequest(listing_id=listing.id, agent_id=agent.id, agency_id=agency1.id),
+            db=db
+        )
+        assert res1["status"] == "success"
+        db.refresh(agent)
+        db.refresh(listing)
+        assert agent.agency_id == agency1.id
+        assert listing.main_agent_id == agent.id
+        assert listing.agency_id == agency1.id
+
+        # 2. Reassign to agency2 without page reload / in one step
+        res2 = link_listing_to_contact(
+            schemas.LinkListingRequest(listing_id=listing.id, agent_id=agent.id, agency_id=agency2.id),
+            db=db
+        )
+        assert res2["status"] == "success"
+        db.refresh(agent)
+        db.refresh(listing)
+        assert agent.agency_id == agency2.id
+        assert listing.main_agent_id == agent.id
+        assert listing.agency_id == agency2.id
+
+        # 3. Detach agency by setting agency_id = 0
+        res3 = link_listing_to_contact(
+            schemas.LinkListingRequest(listing_id=listing.id, agent_id=agent.id, agency_id=0),
+            db=db
+        )
+        assert res3["status"] == "success"
+        db.refresh(agent)
+        db.refresh(listing)
+        assert agent.agency_id is None
+        assert listing.main_agent_id == agent.id
+        assert listing.agency_id is None
+
+        # 4. Cleanup
+        db.query(Listing).filter(Listing.id == listing.id).delete(synchronize_session=False)
+        db.delete(agent)
+        db.delete(agency1)
+        db.delete(agency2)
+        db.commit()
+
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     print("Running test_contact_extraction_from_description()...")
     test_contact_extraction_from_description()
     print("Running test_contacts_manager_full_flow()...")
     test_contacts_manager_full_flow()
+    print("Running test_link_listing_with_agency_assignment()...")
+    test_link_listing_with_agency_assignment()
     print("ALL CONTACT MANAGER TESTS PASSED SUCCESSFULLY!")

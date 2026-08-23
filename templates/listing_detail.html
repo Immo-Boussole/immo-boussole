@@ -2618,7 +2618,7 @@
                     <i class="fa-solid fa-link-slash"></i> Détacher de l'annonce
                 </button>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button type="button" class="btn" onclick="openContactStep1(true)">
+                    <button type="button" class="btn" onclick="openContactUnified(true)">
                         <i class="fa-solid fa-user-pen"></i> Modifier / Réassigner
                     </button>
                     <button type="button" class="btn primary" onclick="closeListingContactModal()">Fermer</button>
@@ -2626,161 +2626,158 @@
             </div>
         </div>
 
-        <!-- ── VIEW 2: STEP 1 - Contact / Agent Form ── -->
-        <div id="lcViewStep1" style="{% if main_agent or agency %}display: none;{% endif %}">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem;">
-                <div style="font-size: 0.82rem; font-weight: 700; color: var(--accent); text-transform: uppercase;">
-                    Étape 1 sur 2 : Fiche Contact
-                </div>
-                <div style="display: flex; gap: 0.4rem;">
-                    <button type="button" class="btn sm active" id="lcBtnTabNewContact" onclick="switchContactMode('new')">Créer nouveau</button>
-                    <button type="button" class="btn sm" id="lcBtnTabLinkContact" onclick="switchContactMode('link')">Lier existant</button>
-                </div>
-            </div>
-
-            <!-- Mode A: Link existing agent -->
-            <div id="lcModeLinkAgent" style="display: none; margin-bottom: 1.25rem;">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Sélectionner un contact existant</label>
-                    <select id="lcSelectExistingAgent" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                        <option value="">-- Choisir parmi les contacts enregistrés --</option>
-                        {% for ag in all_agents %}
-                        <option value="{{ ag.id }}" data-agency-id="{{ ag.agency_id or '' }}" {% if main_agent and main_agent.id == ag.id %}selected{% endif %}>
-                            {{ ag.first_name }} {{ ag.last_name }}{% if ag.agency %} ({{ ag.agency.commercial_name or ag.agency.legal_name }}){% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-                    <button type="button" class="btn" onclick="closeListingContactModal()">Annuler</button>
-                    <button type="button" class="btn primary" onclick="submitLinkExistingAgent()"><i class="fa-solid fa-check"></i> Rattacher ce contact</button>
-                </div>
-            </div>
-
-            <!-- Mode B: Create new agent (Pre-filled with regex) -->
-            <form id="lcFormNewAgent" onsubmit="submitContactStep1(event)">
+        <!-- ── VIEW 2: UNIFIED FORM - Contact & Agency (Single Step) ── -->
+        <div id="lcViewUnified" style="{% if main_agent or agency %}display: none;{% endif %}">
+            <form id="lcUnifiedForm" onsubmit="submitUnifiedContactAgency(event)">
                 {% if detected_contact and detected_contact.has_detected %}
-                <div style="background: rgba(248, 168, 75, 0.1); border: 1px solid rgba(248, 168, 75, 0.25); border-radius: 9px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.78rem; color: var(--orange); display: flex; align-items: center; gap: 0.5rem;">
+                <div style="background: rgba(248, 168, 75, 0.1); border: 1px solid rgba(248, 168, 75, 0.25); border-radius: 9px; padding: 0.65rem 0.85rem; margin-bottom: 1.25rem; font-size: 0.78rem; color: var(--orange); display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fa-solid fa-sparkles"></i>
-                    <span>Coordonnées détectées dans l'annonce. Vous pouvez ajuster ou compléter chaque information ci-dessous :</span>
+                    <span>Informations détectées dans l'annonce pré-remplies ci-dessous. Vous pouvez ajuster ou compléter chaque champ.</span>
                 </div>
                 {% endif %}
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
-                    <div class="form-group">
-                        <label for="lcAgentFirstName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Prénom *</label>
-                        <input type="text" id="lcAgentFirstName" required value="{{ detected_contact.first_name or '' }}" placeholder="ex: Jean" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                <!-- ── Section 1: Contact / Agent ── -->
+                <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--accent); text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem;">
+                            <i class="fa-solid fa-user-tie"></i> Contact / Conseiller
+                        </div>
+                        <div style="display: flex; gap: 0.3rem;">
+                            <button type="button" class="btn sm active" id="lcBtnTabContactNew" onclick="switchContactMode('new')">Nouveau</button>
+                            <button type="button" class="btn sm" id="lcBtnTabContactLink" onclick="switchContactMode('link')">Existant</button>
+                            <button type="button" class="btn sm" id="lcBtnTabContactNone" onclick="switchContactMode('none')">Aucun</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="lcAgentLastName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Nom *</label>
-                        <input type="text" id="lcAgentLastName" required value="{{ detected_contact.last_name or '' }}" placeholder="ex: DUPONT" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+
+                    <!-- Mode A: Link existing contact -->
+                    <div id="lcBlockContactLink" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Choisir un contact existant</label>
+                            <select id="lcSelectExistingAgent" onchange="onExistingAgentChange()" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <option value="">-- Choisir parmi les contacts enregistrés --</option>
+                                {% for ag in all_agents %}
+                                <option value="{{ ag.id }}" data-agency-id="{{ ag.agency_id or '' }}" {% if main_agent and main_agent.id == ag.id %}selected{% endif %}>
+                                    {{ ag.first_name }} {{ ag.last_name }}{% if ag.agency %} ({{ ag.agency.commercial_name or ag.agency.legal_name }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Mode B: New contact -->
+                    <div id="lcBlockContactNew">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div class="form-group">
+                                <label for="lcAgentFirstName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Prénom *</label>
+                                <input type="text" id="lcAgentFirstName" value="{{ detected_contact.first_name or '' }}" placeholder="ex: Jean" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="lcAgentLastName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Nom *</label>
+                                <input type="text" id="lcAgentLastName" value="{{ detected_contact.last_name or '' }}" placeholder="ex: DUPONT" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div class="form-group">
+                                <label for="lcAgentPhoneMobile" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Tél. Mobile</label>
+                                <input type="tel" id="lcAgentPhoneMobile" value="{{ detected_contact.phones[0] if (detected_contact and detected_contact.phones) else '' }}" placeholder="06 12 34 56 78" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="lcAgentPhoneLandline" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Tél. Fixe</label>
+                                <input type="tel" id="lcAgentPhoneLandline" value="{{ detected_contact.phones[1] if (detected_contact and detected_contact.phones and detected_contact.phones|length > 1) else '' }}" placeholder="04 76 00 00 00" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div class="form-group">
+                                <label for="lcAgentEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Email</label>
+                                <input type="email" id="lcAgentEmail" value="{{ detected_contact.emails[0] if (detected_contact and detected_contact.emails) else '' }}" placeholder="contact@agence.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="lcAgentTitle" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Fonction / Rôle</label>
+                                <input type="text" id="lcAgentTitle" value="Conseiller immobilier" placeholder="Agent commercial..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lcAgentNotes" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Notes internes</label>
+                            <textarea id="lcAgentNotes" rows="2" placeholder="Disponibilités, interlocuteur..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Mode C: None -->
+                    <div id="lcBlockContactNone" style="display: none; padding: 0.5rem 0; color: var(--text-2); font-size: 0.82rem; font-style: italic;">
+                        <i class="fa-solid fa-info-circle" style="color: var(--accent);"></i> Aucun contact particulier ne sera rattaché à cette annonce.
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
-                    <div class="form-group">
-                        <label for="lcAgentPhoneMobile" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Tél. Mobile</label>
-                        <input type="tel" id="lcAgentPhoneMobile" value="{{ detected_contact.phones[0] if (detected_contact and detected_contact.phones) else '' }}" placeholder="06 12 34 56 78" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                <!-- ── Section 2: Agency ── -->
+                <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--purple); text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem;">
+                            <i class="fa-solid fa-building"></i> Agence Immobilière
+                        </div>
+                        <div style="display: flex; gap: 0.3rem;">
+                            <button type="button" class="btn sm active" id="lcBtnTabAgencyNew" onclick="switchAgencyMode('new')">Nouvelle</button>
+                            <button type="button" class="btn sm" id="lcBtnTabAgencyLink" onclick="switchAgencyMode('link')">Existante</button>
+                            <button type="button" class="btn sm" id="lcBtnTabAgencyNone" onclick="switchAgencyMode('none')">Aucune</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="lcAgentPhoneLandline" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Tél. Fixe</label>
-                        <input type="tel" id="lcAgentPhoneLandline" value="{{ detected_contact.phones[1] if (detected_contact and detected_contact.phones and detected_contact.phones|length > 1) else '' }}" placeholder="04 76 00 00 00" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+
+                    <!-- Mode A: Link existing agency -->
+                    <div id="lcBlockAgencyLink" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Choisir une agence existante</label>
+                            <select id="lcSelectExistingAgency" onchange="onExistingAgencyChange()" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                                <option value="">-- Choisir parmi les agences --</option>
+                                {% for ac in all_agencies %}
+                                <option value="{{ ac.id }}" {% if detected_contact and detected_contact.agency_name and detected_contact.agency_name.lower() in (ac.commercial_name or ac.legal_name).lower() %}selected{% endif %}>
+                                    {{ ac.commercial_name or ac.legal_name }}{% if ac.city %} ({{ ac.city }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Mode B: New agency -->
+                    <div id="lcBlockAgencyNew">
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="lcAgencyName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Nom commercial / Enseigne *</label>
+                            <input type="text" id="lcAgencyName" value="{{ detected_contact.agency_name or '' }}" placeholder="ex: iad France, Century 21..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div class="form-group">
+                                <label for="lcAgencyCity" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Ville</label>
+                                <input type="text" id="lcAgencyCity" value="{{ listing.city or '' }}" placeholder="ex: Grenoble" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="lcAgencyPostalCode" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Code Postal</label>
+                                <input type="text" id="lcAgencyPostalCode" placeholder="38000" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <div class="form-group">
+                                <label for="lcAgencyPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Téléphone agence</label>
+                                <input type="tel" id="lcAgencyPhone" placeholder="04 76..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label for="lcAgencyEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.3rem;">Email agence</label>
+                                <input type="email" id="lcAgencyEmail" placeholder="agence@domaine.fr" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode C: None -->
+                    <div id="lcBlockAgencyNone" style="display: none; padding: 0.5rem 0; color: var(--text-2); font-size: 0.82rem; font-style: italic;">
+                        <i class="fa-solid fa-info-circle" style="color: var(--purple);"></i> Aucune agence rattachée (agent indépendant ou vente directe).
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.85rem; margin-bottom: 0.85rem;">
-                    <div class="form-group">
-                        <label for="lcAgentEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Email</label>
-                        <input type="email" id="lcAgentEmail" value="{{ detected_contact.emails[0] if (detected_contact and detected_contact.emails) else '' }}" placeholder="contact@agence.fr" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                    <div class="form-group">
-                        <label for="lcAgentTitle" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Fonction / Rôle</label>
-                        <input type="text" id="lcAgentTitle" value="Conseiller immobilier" placeholder="Agent commercial..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 1.25rem;">
-                    <label for="lcAgentNotes" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Notes internes</label>
-                    <textarea id="lcAgentNotes" rows="2" placeholder="Disponibilités, interlocuteur principal..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
-                </div>
-
-                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
                     <button type="button" class="btn" onclick="closeListingContactModal()">Annuler</button>
-                    <button type="submit" class="btn primary"><i class="fa-solid fa-arrow-right"></i> Suivant : Agence</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- ── VIEW 3: STEP 2 - Agency Form ── -->
-        <div id="lcViewStep2" style="display: none;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem;">
-                <div style="font-size: 0.82rem; font-weight: 700; color: var(--purple); text-transform: uppercase;">
-                    Étape 2 sur 2 : Fiche Agence
-                </div>
-                <div style="display: flex; gap: 0.4rem;">
-                    <button type="button" class="btn sm active" id="lcBtnTabNewAgency" onclick="switchAgencyMode('new')">Créer agence</button>
-                    <button type="button" class="btn sm" id="lcBtnTabLinkAgency" onclick="switchAgencyMode('link')">Agence existante</button>
-                </div>
-            </div>
-
-            <!-- Mode A: Link existing agency -->
-            <div id="lcModeLinkAgency" style="display: none; margin-bottom: 1.25rem;">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Sélectionner une agence existante</label>
-                    <select id="lcSelectExistingAgency" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                        <option value="">-- Choisir parmi les agences --</option>
-                        {% for ac in all_agencies %}
-                        <option value="{{ ac.id }}" {% if detected_contact and detected_contact.agency_name and detected_contact.agency_name.lower() in (ac.commercial_name or ac.legal_name).lower() %}selected{% endif %}>
-                            {{ ac.commercial_name or ac.legal_name }}{% if ac.city %} ({{ ac.city }}){% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-actions" style="display: flex; justify-content: space-between; gap: 0.75rem;">
-                    <button type="button" class="btn" onclick="submitAgencyStep2(true)">Ignorer (Sans agence)</button>
-                    <button type="button" class="btn primary" onclick="submitLinkExistingAgency()"><i class="fa-solid fa-check"></i> Rattacher & Finaliser</button>
-                </div>
-            </div>
-
-            <!-- Mode B: Create new agency (Pre-filled with regex) -->
-            <form id="lcFormNewAgency" onsubmit="submitAgencyStep2(false, event)">
-                {% if detected_contact and detected_contact.agency_name %}
-                <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 9px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.78rem; color: var(--purple); display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fa-solid fa-building"></i>
-                    <span>Enseigne détectée dans l'annonce : <strong>{{ detected_contact.agency_name }}</strong></span>
-                </div>
-                {% endif %}
-
-                <div class="form-group" style="margin-bottom: 0.85rem;">
-                    <label for="lcAgencyName" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Nom commercial / Enseigne *</label>
-                    <input type="text" id="lcAgencyName" required value="{{ detected_contact.agency_name or '' }}" placeholder="ex: iad France, Century 21..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 0.85rem;">
-                    <div class="form-group">
-                        <label for="lcAgencyCity" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Ville</label>
-                        <input type="text" id="lcAgencyCity" value="{{ listing.city or '' }}" placeholder="ex: Grenoble" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                    <div class="form-group">
-                        <label for="lcAgencyPostalCode" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Code Postal</label>
-                        <input type="text" id="lcAgencyPostalCode" placeholder="38000" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.25rem;">
-                    <div class="form-group">
-                        <label for="lcAgencyPhone" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Téléphone agence</label>
-                        <input type="tel" id="lcAgencyPhone" placeholder="04 76..." style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                    <div class="form-group">
-                        <label for="lcAgencyEmail" style="display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 0.35rem;">Email agence</label>
-                        <input type="email" id="lcAgencyEmail" placeholder="agence@domaine.fr" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem; outline: none; box-sizing: border-box;">
-                    </div>
-                </div>
-
-                <div class="form-actions" style="display: flex; justify-content: space-between; gap: 0.75rem;">
-                    <button type="button" class="btn" onclick="submitAgencyStep2(true)">Ignorer (Sans agence)</button>
-                    <button type="submit" class="btn primary"><i class="fa-solid fa-check"></i> Créer l'agence & Finaliser</button>
+                    <button type="submit" class="btn primary" id="lcBtnSubmitUnified"><i class="fa-solid fa-check"></i> Enregistrer & Rattacher</button>
                 </div>
             </form>
         </div>
@@ -4778,21 +4775,24 @@
             }
         }
 
-        // ── Contact & Agency Modal Logic ─────────────────────────────────────────
-        let currentCreatedAgentId = null;
+        // ── Contact & Agency Modal Logic (Unified Single Step) ───────────────────
+        let contactMode = 'new'; // 'new' | 'link' | 'none'
+        let agencyMode = 'new';  // 'new' | 'link' | 'none'
 
         function openListingContactModal(step) {
             const hasAssigned = {{ 'true' if (main_agent or agency) else 'false' }};
             const modal = document.getElementById('listingContactModal');
             if (!modal) return;
             
-            if (step === 'step1' || !hasAssigned) {
-                openContactStep1(false);
+            if (step === 'edit' || !hasAssigned) {
+                openContactUnified(false);
             } else {
-                document.getElementById('lcViewAssigned').style.display = 'block';
-                document.getElementById('lcViewStep1').style.display = 'none';
-                document.getElementById('lcViewStep2').style.display = 'none';
-                document.getElementById('lcModalTitle').innerHTML = '<i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Fiche Contact & Agence';
+                const vAssigned = document.getElementById('lcViewAssigned');
+                const vUnified = document.getElementById('lcViewUnified');
+                if (vAssigned) vAssigned.style.display = 'block';
+                if (vUnified) vUnified.style.display = 'none';
+                const title = document.getElementById('lcModalTitle');
+                if (title) title.innerHTML = '<i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Contact & Agence';
             }
             modal.classList.add('open');
         }
@@ -4802,226 +4802,231 @@
             if (modal) modal.classList.remove('open');
         }
 
-        function openContactStep1(isReassign) {
-            document.getElementById('lcViewAssigned').style.display = 'none';
-            document.getElementById('lcViewStep1').style.display = 'block';
-            document.getElementById('lcViewStep2').style.display = 'none';
-            document.getElementById('lcModalTitle').innerHTML = '<i class="fa-solid fa-user-plus" style="color: var(--accent);"></i> Étape 1/2 : Fiche Contact';
+        function openContactUnified(isReassign) {
+            const vAssigned = document.getElementById('lcViewAssigned');
+            const vUnified = document.getElementById('lcViewUnified');
+            if (vAssigned) vAssigned.style.display = 'none';
+            if (vUnified) vUnified.style.display = 'block';
+
+            const title = document.getElementById('lcModalTitle');
+            if (title) title.innerHTML = '<i class="fa-solid fa-address-book" style="color: var(--accent);"></i> Contact & Agence';
+
             switchContactMode('new');
+            switchAgencyMode('new');
         }
 
         function switchContactMode(mode) {
-            const btnNew = document.getElementById('lcBtnTabNewContact');
-            const btnLink = document.getElementById('lcBtnTabLinkContact');
-            const formNew = document.getElementById('lcFormNewAgent');
-            const modeLink = document.getElementById('lcModeLinkAgent');
+            contactMode = mode;
+            const btnNew = document.getElementById('lcBtnTabContactNew');
+            const btnLink = document.getElementById('lcBtnTabContactLink');
+            const btnNone = document.getElementById('lcBtnTabContactNone');
 
-            if (mode === 'new') {
-                btnNew.classList.add('active');
-                btnLink.classList.remove('active');
-                formNew.style.display = 'block';
-                modeLink.style.display = 'none';
-            } else {
-                btnLink.classList.add('active');
-                btnNew.classList.remove('active');
-                formNew.style.display = 'none';
-                modeLink.style.display = 'block';
+            const blockNew = document.getElementById('lcBlockContactNew');
+            const blockLink = document.getElementById('lcBlockContactLink');
+            const blockNone = document.getElementById('lcBlockContactNone');
+
+            if (btnNew) btnNew.classList.toggle('active', mode === 'new');
+            if (btnLink) btnLink.classList.toggle('active', mode === 'link');
+            if (btnNone) btnNone.classList.toggle('active', mode === 'none');
+
+            if (blockNew) blockNew.style.display = mode === 'new' ? 'block' : 'none';
+            if (blockLink) blockLink.style.display = mode === 'link' ? 'block' : 'none';
+            if (blockNone) blockNone.style.display = mode === 'none' ? 'block' : 'none';
+
+            if (mode === 'link') {
+                onExistingAgentChange();
             }
         }
 
         function switchAgencyMode(mode) {
-            const btnNew = document.getElementById('lcBtnTabNewAgency');
-            const btnLink = document.getElementById('lcBtnTabLinkAgency');
-            const formNew = document.getElementById('lcFormNewAgency');
-            const modeLink = document.getElementById('lcModeLinkAgency');
+            agencyMode = mode;
+            const btnNew = document.getElementById('lcBtnTabAgencyNew');
+            const btnLink = document.getElementById('lcBtnTabAgencyLink');
+            const btnNone = document.getElementById('lcBtnTabAgencyNone');
 
-            if (mode === 'new') {
-                btnNew.classList.add('active');
-                btnLink.classList.remove('active');
-                formNew.style.display = 'block';
-                modeLink.style.display = 'none';
-            } else {
-                btnLink.classList.add('active');
-                btnNew.classList.remove('active');
-                formNew.style.display = 'none';
-                modeLink.style.display = 'block';
+            const blockNew = document.getElementById('lcBlockAgencyNew');
+            const blockLink = document.getElementById('lcBlockAgencyLink');
+            const blockNone = document.getElementById('lcBlockAgencyNone');
+
+            if (btnNew) btnNew.classList.toggle('active', mode === 'new');
+            if (btnLink) btnLink.classList.toggle('active', mode === 'link');
+            if (btnNone) btnNone.classList.toggle('active', mode === 'none');
+
+            if (blockNew) blockNew.style.display = mode === 'new' ? 'block' : 'none';
+            if (blockLink) blockLink.style.display = mode === 'link' ? 'block' : 'none';
+            if (blockNone) blockNone.style.display = mode === 'none' ? 'block' : 'none';
+        }
+
+        function onExistingAgentChange() {
+            const select = document.getElementById('lcSelectExistingAgent');
+            if (!select) return;
+            const selectedOpt = select.options[select.selectedIndex];
+            if (selectedOpt && selectedOpt.value) {
+                const agencyId = selectedOpt.getAttribute('data-agency-id');
+                if (agencyId) {
+                    const selectAgency = document.getElementById('lcSelectExistingAgency');
+                    if (selectAgency) {
+                        selectAgency.value = agencyId;
+                        switchAgencyMode('link');
+                    }
+                }
             }
         }
 
-        async function submitContactStep1(e) {
+        function onExistingAgencyChange() {
+            // Reactive updates when existing agency changed
+        }
+
+        async function submitUnifiedContactAgency(e) {
             if (e) e.preventDefault();
-            const firstName = document.getElementById('lcAgentFirstName').value.trim();
-            const lastName = document.getElementById('lcAgentLastName').value.trim();
-            if (!firstName || !lastName) {
-                alert('Veuillez renseigner le prénom et le nom du contact.');
+
+            // 1. Validation
+            if (contactMode === 'none' && agencyMode === 'none') {
+                alert('Veuillez sélectionner ou créer au moins un contact ou une agence.');
                 return;
             }
 
-            const payload = {
-                first_name: firstName,
-                last_name: lastName,
-                phone_mobile: document.getElementById('lcAgentPhoneMobile').value.trim() || null,
-                phone_landline: document.getElementById('lcAgentPhoneLandline').value.trim() || null,
-                email: document.getElementById('lcAgentEmail').value.trim() || null,
-                title: document.getElementById('lcAgentTitle').value.trim() || 'Conseiller immobilier',
-                internal_notes: document.getElementById('lcAgentNotes').value.trim() || null
-            };
+            let agentFirstName = '';
+            let agentLastName = '';
+            if (contactMode === 'new') {
+                agentFirstName = document.getElementById('lcAgentFirstName')?.value.trim() || '';
+                agentLastName = document.getElementById('lcAgentLastName')?.value.trim() || '';
+                if (!agentFirstName || !agentLastName) {
+                    alert('Veuillez renseigner le prénom et le nom du contact (ou choisir "Lier existant" ou "Aucun").');
+                    return;
+                }
+            } else if (contactMode === 'link') {
+                const sel = document.getElementById('lcSelectExistingAgent');
+                if (!sel || !sel.value) {
+                    alert('Veuillez sélectionner un contact existant (ou choisir "Nouveau" ou "Aucun").');
+                    return;
+                }
+            }
+
+            let agencyName = '';
+            if (agencyMode === 'new') {
+                agencyName = document.getElementById('lcAgencyName')?.value.trim() || '';
+                if (!agencyName) {
+                    if (contactMode !== 'none') {
+                        alert("Veuillez renseigner le nom de la nouvelle agence (ou choisir l'onglet 'Existante' ou 'Aucune').");
+                        return;
+                    } else {
+                        alert("Veuillez renseigner le nom de l'agence.");
+                        return;
+                    }
+                }
+            } else if (agencyMode === 'link') {
+                const sel = document.getElementById('lcSelectExistingAgency');
+                if (!sel || !sel.value) {
+                    alert('Veuillez sélectionner une agence existante (ou choisir "Nouvelle" ou "Aucune").');
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('lcBtnSubmitUnified');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enregistrement...';
+            }
 
             try {
-                const res = await fetch('/api/v1/agents', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let resolvedAgencyId = null;
 
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.detail || "Erreur lors de la création de l'agent");
-                }
+                // 2. Handle Agency
+                if (agencyMode === 'new' && agencyName) {
+                    const agencyPayload = {
+                        legal_name: agencyName,
+                        commercial_name: agencyName,
+                        city: document.getElementById('lcAgencyCity')?.value.trim() || null,
+                        postal_code: document.getElementById('lcAgencyPostalCode')?.value.trim() || null,
+                        phone: document.getElementById('lcAgencyPhone')?.value.trim() || null,
+                        email: document.getElementById('lcAgencyEmail')?.value.trim() || null
+                    };
 
-                const createdAgent = await res.json();
-                currentCreatedAgentId = createdAgent.id;
-
-                // Move directly to Step 2 (Agency)
-                document.getElementById('lcViewStep1').style.display = 'none';
-                document.getElementById('lcViewStep2').style.display = 'block';
-                document.getElementById('lcModalTitle').innerHTML = '<i class="fa-solid fa-building" style="color: var(--purple);"></i> Étape 2/2 : Rattachement Agence';
-                switchAgencyMode('new');
-
-            } catch (err) {
-                alert("Erreur : " + err.message);
-            }
-        }
-
-        async function submitLinkExistingAgent() {
-            const agentId = document.getElementById('lcSelectExistingAgent').value;
-            if (!agentId) {
-                alert('Veuillez sélectionner un contact dans la liste.');
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/v1/contacts/link-listing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        listing_id: {{ listing.id }},
-                        agent_id: parseInt(agentId)
-                    })
-                });
-
-                if (res.ok) {
-                    location.reload();
-                } else {
-                    const err = await res.json();
-                    alert("Erreur : " + (err.detail || "Impossible de rattacher le contact"));
-                }
-            } catch (e) {
-                alert("Erreur réseau : " + e.message);
-            }
-        }
-
-        async function submitAgencyStep2(skip, e) {
-            if (e) e.preventDefault();
-
-            if (skip || !currentCreatedAgentId) {
-                if (currentCreatedAgentId) {
-                    await fetch('/api/v1/contacts/link-listing', {
+                    const resAg = await fetch('/api/v1/agencies', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            listing_id: {{ listing.id }},
-                            agent_id: currentCreatedAgentId
-                        })
+                        body: JSON.stringify(agencyPayload)
                     });
+                    if (!resAg.ok) {
+                        const err = await resAg.json();
+                        throw new Error(err.detail || "Erreur lors de la création de l'agence");
+                    }
+                    const createdAgency = await resAg.json();
+                    resolvedAgencyId = createdAgency.id;
+                } else if (agencyMode === 'link') {
+                    const sel = document.getElementById('lcSelectExistingAgency');
+                    resolvedAgencyId = sel && sel.value ? parseInt(sel.value) : null;
+                } else if (agencyMode === 'none') {
+                    resolvedAgencyId = 0;
                 }
-                location.reload();
-                return;
-            }
 
-            const agencyName = document.getElementById('lcAgencyName').value.trim();
-            if (!agencyName) {
-                alert("Veuillez renseigner le nom de l'agence ou cliquer sur Ignorer.");
-                return;
-            }
+                // 3. Handle Contact / Agent
+                let resolvedAgentId = null;
+                if (contactMode === 'new') {
+                    const agentPayload = {
+                        first_name: agentFirstName,
+                        last_name: agentLastName,
+                        agency_id: resolvedAgencyId && resolvedAgencyId > 0 ? resolvedAgencyId : null,
+                        phone_mobile: document.getElementById('lcAgentPhoneMobile')?.value.trim() || null,
+                        phone_landline: document.getElementById('lcAgentPhoneLandline')?.value.trim() || null,
+                        email: document.getElementById('lcAgentEmail')?.value.trim() || null,
+                        title: document.getElementById('lcAgentTitle')?.value.trim() || 'Conseiller immobilier',
+                        internal_notes: document.getElementById('lcAgentNotes')?.value.trim() || null
+                    };
 
-            const payload = {
-                legal_name: agencyName,
-                commercial_name: agencyName,
-                city: document.getElementById('lcAgencyCity').value.trim() || null,
-                postal_code: document.getElementById('lcAgencyPostalCode').value.trim() || null,
-                phone: document.getElementById('lcAgencyPhone').value.trim() || null,
-                email: document.getElementById('lcAgencyEmail').value.trim() || null
-            };
-
-            try {
-                // 1. Create agency
-                const res = await fetch('/api/v1/agencies', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.detail || "Erreur lors de la création de l'agence");
-                }
-                const createdAgency = await res.json();
-
-                // 2. Attach agent to agency
-                await fetch(`/api/v1/agents/${currentCreatedAgentId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ agency_id: createdAgency.id })
-                });
-
-                // 3. Link agent + agency to listing
-                await fetch('/api/v1/contacts/link-listing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        listing_id: {{ listing.id }},
-                        agent_id: currentCreatedAgentId,
-                        agency_id: createdAgency.id
-                    })
-                });
-
-                location.reload();
-
-            } catch (err) {
-                alert("Erreur : " + err.message);
-            }
-        }
-
-        async function submitLinkExistingAgency() {
-            const agencyId = document.getElementById('lcSelectExistingAgency').value;
-            if (!agencyId) {
-                alert('Veuillez sélectionner une agence dans la liste.');
-                return;
-            }
-
-            try {
-                if (currentCreatedAgentId) {
-                    await fetch(`/api/v1/agents/${currentCreatedAgentId}`, {
-                        method: 'PUT',
+                    const resAgent = await fetch('/api/v1/agents', {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ agency_id: parseInt(agencyId) })
+                        body: JSON.stringify(agentPayload)
                     });
+                    if (!resAgent.ok) {
+                        const err = await resAgent.json();
+                        throw new Error(err.detail || "Erreur lors de la création du contact");
+                    }
+                    const createdAgent = await resAgent.json();
+                    resolvedAgentId = createdAgent.id;
+                } else if (contactMode === 'link') {
+                    const sel = document.getElementById('lcSelectExistingAgent');
+                    resolvedAgentId = sel && sel.value ? parseInt(sel.value) : null;
+
+                    if (resolvedAgentId && resolvedAgencyId !== null) {
+                        await fetch(`/api/v1/agents/${resolvedAgentId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                agency_id: resolvedAgencyId > 0 ? resolvedAgencyId : null
+                            })
+                        });
+                    }
                 }
 
-                await fetch('/api/v1/contacts/link-listing', {
+                // 4. Link to Listing
+                const linkPayload = {
+                    listing_id: {{ listing.id }},
+                    agent_id: resolvedAgentId,
+                    agency_id: resolvedAgencyId
+                };
+
+                const resLink = await fetch('/api/v1/contacts/link-listing', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        listing_id: {{ listing.id }},
-                        agent_id: currentCreatedAgentId || null,
-                        agency_id: parseInt(agencyId)
-                    })
+                    body: JSON.stringify(linkPayload)
                 });
 
-                location.reload();
+                if (!resLink.ok) {
+                    const err = await resLink.json();
+                    throw new Error(err.detail || "Erreur lors du rattachement à l'annonce");
+                }
 
-            } catch (e) {
-                alert("Erreur : " + e.message);
+                location.reload();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur : " + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer & Rattacher';
+                }
             }
         }
 

@@ -170,10 +170,19 @@ def link_listing_to_contact(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent non trouvé")
         listing.main_agent_id = agent.id
-        if agent.agency_id:
+        
+        if body.agency_id is not None:
+            if body.agency_id == 0:
+                agent.agency_id = None
+                listing.agency_id = None
+            else:
+                agency = db.query(Agency).filter(Agency.id == body.agency_id).first()
+                if not agency:
+                    raise HTTPException(status_code=404, detail="Agence non trouvée")
+                agent.agency_id = agency.id
+                listing.agency_id = agency.id
+        elif agent.agency_id:
             listing.agency_id = agent.agency_id
-        elif body.agency_id is not None:
-            listing.agency_id = None if body.agency_id == 0 else body.agency_id
     elif body.agency_id is not None:
         if body.agency_id == 0:
             listing.agency_id = None
