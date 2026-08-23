@@ -536,5 +536,31 @@ class ReferencePointRequest(BaseModel):
     category: Optional[str] = "custom"
 
 
+class ListingAttachmentResponse(BaseModel):
+    id: int
+    listing_id: int
+    filename: str
+    original_filename: str
+    file_path: str
+    file_type: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ListingAttachmentUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    file_type: Optional[str] = None
+    description: Optional[str] = None
+
+
+
 
 

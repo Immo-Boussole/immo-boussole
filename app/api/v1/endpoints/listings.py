@@ -31,3 +31,18 @@ def get_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     return listing
+
+
+@router.get("/{listing_id}/attachments", response_model=List[schemas.ListingAttachmentResponse])
+def get_listing_attachments_v1(
+    listing_id: int,
+    current_user: models.User = Depends(get_current_user_api),
+    db: Session = Depends(get_db)
+):
+    listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return db.query(models.ListingAttachment).filter(
+        models.ListingAttachment.listing_id == listing_id
+    ).order_by(models.ListingAttachment.created_at.desc()).all()
+

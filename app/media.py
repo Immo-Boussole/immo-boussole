@@ -5,6 +5,10 @@ et organisation du stockage local par listing.
 import os
 import json
 import asyncio
+import uuid
+import re
+import mimetypes
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -290,4 +294,87 @@ def calculate_images_similarity(path1: str, path2: str) -> float:
     sim_a = (64 - dist_a) / 64 * 100
 
     return (sim_d + sim_a) / 2.0
+
+
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    # Documents
+    ".pdf", ".doc", ".docx", ".odt", ".rtf", ".txt",
+    # Images
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".svg", ".tiff",
+    # Spreadsheets
+    ".xls", ".xlsx", ".ods", ".csv",
+    # Archives / other
+    ".zip", ".rar", ".7z"
+}
+
+
+def get_listing_attachments_dir(listing_id: int) -> Path:
+    """Returns the directory path for a listing's attachments."""
+    att_dir = MEDIA_BASE_DIR / str(listing_id) / "attachments"
+    att_dir.mkdir(parents=True, exist_ok=True)
+    return att_dir
+
+
+def sanitize_filename(name: str) -> str:
+    """Sanitizes filename keeping only ascii alphanumeric characters, dashes, underscores and dots."""
+    nfkd = unicodedata.normalize('NFKD', name)
+    ascii_name = nfkd.encode('ASCII', 'ignore').decode('ASCII')
+    clean = re.sub(r'[^a-zA-Z0-9\.\-_]', '_', ascii_name)
+    clean = re.sub(r'_+', '_', clean)
+    return clean.strip('._')
+
+
+async def save_listing_attachment_file(
+    listing_id: int,
+    file: UploadFile
+) -> tuple[str, str, str, int, str]:
+    """
+    Saves an uploaded attachment file for a listing.
+    Returns a tuple: (saved_filename, original_filename, relative_web_path, file_size, mime_type).
+    """
+    orig_name = file.filename or "document"
+    orig_name = os.path.basename(orig_name)
+    ext = Path(orig_name).suffix.lower()
+    if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+        ext = ext if ext else ".pdf"
+
+    safe_base = sanitize_filename(Path(orig_name).stem)
+    unique_suffix = uuid.uuid4().hex[:8]
+    saved_filename = f"{safe_base}_{unique_suffix}{ext}"
+
+    att_dir = get_listing_attachments_dir(listing_id)
+    dest_path = att_dir / saved_filename
+
+    content = await file.read()
+    dest_path.write_bytes(content)
+    file_size = len(content)
+
+    mime_type = file.content_type
+    if not mime_type or mime_type == "application/octet-stream":
+        mime_type, _ = mimetypes.guess_type(saved_filename)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    web_path = f"static/media/{listing_id}/attachments/{saved_filename}"
+    return saved_filename, orig_name, web_path, file_size, mime_type
+
+
+def delete_attachment_file(file_path: str) -> bool:
+    """
+    Safely deletes an attachment file from the disk given its relative web path.
+    """
+    try:
+        if not file_path:
+            return False
+        normalized = file_path.strip().lstrip("/\\").replace("\\", "/")
+        if not normalized.startswith("static/media/"):
+            return False
+        full_path = Path(normalized)
+        if full_path.exists() and full_path.is_file():
+            full_path.unlink()
+            return True
+    except Exception as e:
+        print(f"[Media] Error deleting attachment file {file_path}: {e}")
+    return False
+
 

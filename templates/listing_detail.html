@@ -849,6 +849,213 @@
             color: var(--text-2);
             line-height: 1.3;
         }
+
+        /* ── Pièces Jointes & Documents ── */
+        .attachments-section {
+            margin-top: 1.5rem;
+        }
+
+        .attachments-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .attachments-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .attachments-count-badge {
+            background: rgba(79, 142, 247, 0.15);
+            color: var(--accent);
+            padding: 0.15rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(79, 142, 247, 0.3);
+        }
+
+        .attachments-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .attachment-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--trans);
+            position: relative;
+        }
+
+        .attachment-card:hover {
+            border-color: rgba(79, 142, 247, 0.3);
+            background: rgba(26, 34, 54, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .attachment-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+        }
+
+        .attachment-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attachment-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
+        }
+
+        .attachment-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .attachment-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-diagnostic { background: rgba(248, 168, 75, 0.15); color: var(--orange); border: 1px solid rgba(248, 168, 75, 0.3); }
+        .badge-plan { background: rgba(16, 217, 164, 0.15); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.3); }
+        .badge-pv_ag { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .badge-devis { background: rgba(79, 142, 247, 0.15); color: var(--accent); border: 1px solid rgba(79, 142, 247, 0.3); }
+        .badge-copropriete { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .badge-compromis { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .badge-autre { background: rgba(255, 255, 255, 0.08); color: var(--text-2); border: 1px solid var(--border); }
+
+        .attachment-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-2);
+            flex-wrap: wrap;
+        }
+
+        .attachment-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .attachment-description {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-top: 0.35rem;
+            line-height: 1.35;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            border-left: 2px solid var(--accent);
+        }
+
+        .attachment-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .attachment-btn-action {
+            min-width: 36px;
+            min-height: 36px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--trans);
+        }
+
+        .attachments-empty {
+            text-align: center;
+            padding: 2.5rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+        }
+
+        .attachments-empty i {
+            font-size: 2.5rem;
+            color: var(--text-2);
+            opacity: 0.4;
+            margin-bottom: 0.75rem;
+        }
+
+        .attachments-empty h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.35rem;
+        }
+
+        .attachments-empty p {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            max-width: 480px;
+            margin: 0 auto 1.25rem;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .attachment-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .attachment-actions {
+                width: 100%;
+                justify-content: flex-end;
+                border-top: 1px solid var(--border);
+                padding-top: 0.6rem;
+                margin-top: 0.25rem;
+            }
+            .attachment-btn-action {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -870,6 +1077,15 @@
                 {% if request.session.get('role') in ['user', 'admin'] %}
                 <button class="btn btn-photo-nav" onclick="openPhotoModal()" title="{{ t(request, 'listing.photos_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05);">
                     <i class="fa-solid fa-images"></i> <span class="btn-text">{{ t(request, 'listing.photos_btn') }}</span>
+                </button>
+
+                <button class="btn btn-attachment-nav" onclick="scrollToAttachments()" title="{{ t(request, 'listing.attachments_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05); position: relative;">
+                    <i class="fa-solid fa-paperclip"></i> <span class="btn-text">{{ t(request, 'listing.attachments_btn') }}</span>
+                    {% if attachments and attachments|length > 0 %}
+                    <span id="topbar-attachments-count" style="margin-left: 0.35rem; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px;">{{ attachments|length }}</span>
+                    {% else %}
+                    <span id="topbar-attachments-count" style="margin-left: 0.35rem; background: rgba(255,255,255,0.1); color: var(--text-2); font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px; display: none;">0</span>
+                    {% endif %}
                 </button>
 
                 <div style="border-left: 1px solid var(--border); height: 24px; align-self: center; margin: 0 0.25rem;"></div>
@@ -1313,6 +1529,137 @@
                 <div class="read-more" id="readMore" onclick="toggleDesc()">{{ t(request, 'listing.read_more') }} <i class="fa-solid fa-chevron-down"></i></div>
             </div>
             {% endif %}
+
+            <!-- ── Pièces Jointes & Documents ── -->
+            <div class="info-card attachments-section" id="attachments-section">
+                <div class="attachments-header">
+                    <div class="attachments-title">
+                        <i class="fa-solid fa-paperclip" style="color: var(--accent);"></i>
+                        <span>{{ t(request, 'listing.attachments') }}</span>
+                        <span class="attachments-count-badge" id="attachments-badge-count">
+                            {{ attachments|length if attachments else 0 }}
+                        </span>
+                    </div>
+                    {% if request.session.get('role') in ['user', 'admin'] %}
+                    <button type="button" class="btn sm primary" onclick="openAddAttachmentModal()" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                        <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.add_attachment') }}
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div id="attachments-container">
+                    {% if attachments and attachments|length > 0 %}
+                    <div class="attachments-grid" id="attachments-list">
+                        {% for att in attachments %}
+                        <div class="attachment-card" id="attachment-card-{{ att.id }}" data-category="{{ att.file_type }}">
+                            <div class="attachment-icon-wrapper">
+                                {% set ext = att.filename.split('.')[-1].lower() if '.' in att.filename else '' %}
+                                {% if ext == 'pdf' %}
+                                    <i class="fa-solid fa-file-pdf" style="color: #f25c69;"></i>
+                                {% elif ext in ['jpg', 'jpeg', 'png', 'webp', 'gif'] %}
+                                    <i class="fa-solid fa-file-image" style="color: #10d9a4;"></i>
+                                {% elif ext in ['doc', 'docx', 'odt', 'rtf', 'txt'] %}
+                                    <i class="fa-solid fa-file-word" style="color: #4f8ef7;"></i>
+                                {% elif ext in ['xls', 'xlsx', 'ods', 'csv'] %}
+                                    <i class="fa-solid fa-file-excel" style="color: #10d9a4;"></i>
+                                {% elif ext in ['zip', 'rar', '7z'] %}
+                                    <i class="fa-solid fa-file-zipper" style="color: #f9d04f;"></i>
+                                {% else %}
+                                    <i class="fa-solid fa-file-lines" style="color: var(--text-2);"></i>
+                                {% endif %}
+                            </div>
+
+                            <div class="attachment-info">
+                                <div class="attachment-title-row">
+                                    <span class="attachment-title" id="att-title-{{ att.id }}">{{ att.title or att.original_filename }}</span>
+                                    
+                                    {% set cat = att.file_type or 'autre' %}
+                                    {% if cat == 'diagnostic' %}
+                                        <span class="attachment-badge badge-diagnostic" id="att-badge-{{ att.id }}"><i class="fa-solid fa-stethoscope"></i> Diagnostic</span>
+                                    {% elif cat == 'plan' %}
+                                        <span class="attachment-badge badge-plan" id="att-badge-{{ att.id }}"><i class="fa-solid fa-compass-drafting"></i> Plan</span>
+                                    {% elif cat == 'pv_ag' %}
+                                        <span class="attachment-badge badge-pv_ag" id="att-badge-{{ att.id }}"><i class="fa-solid fa-users-line"></i> PV d'AG</span>
+                                    {% elif cat == 'devis' %}
+                                        <span class="attachment-badge badge-devis" id="att-badge-{{ att.id }}"><i class="fa-solid fa-file-invoice-dollar"></i> Devis / Facture</span>
+                                    {% elif cat == 'copropriete' %}
+                                        <span class="attachment-badge badge-copropriete" id="att-badge-{{ att.id }}"><i class="fa-solid fa-building"></i> Copropriété</span>
+                                    {% elif cat == 'compromis' %}
+                                        <span class="attachment-badge badge-compromis" id="att-badge-{{ att.id }}"><i class="fa-solid fa-file-signature"></i> Compromis / Acte</span>
+                                    {% else %}
+                                        <span class="attachment-badge badge-autre" id="att-badge-{{ att.id }}"><i class="fa-solid fa-file"></i> Autre</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="attachment-meta">
+                                    <span class="attachment-meta-item" title="Nom de fichier d'origine">
+                                        <i class="fa-regular fa-file"></i> {{ att.original_filename }}
+                                    </span>
+                                    {% if att.file_size %}
+                                    <span class="attachment-meta-item">
+                                        • {% if att.file_size > 1048576 %}
+                                            {{ (att.file_size / 1048576)|round(1) }} Mo
+                                          {% elif att.file_size > 1024 %}
+                                            {{ (att.file_size / 1024)|round(0)|int }} Ko
+                                          {% else %}
+                                            {{ att.file_size }} o
+                                          {% endif %}
+                                    </span>
+                                    {% endif %}
+                                    {% if att.created_at %}
+                                    <span class="attachment-meta-item">
+                                        • <i class="fa-regular fa-clock"></i> {{ att.created_at.strftime('%d/%m/%Y') }}
+                                    </span>
+                                    {% endif %}
+                                    {% if att.created_by %}
+                                    <span class="attachment-meta-item" style="opacity: 0.7;">
+                                        ({{ att.created_by }})
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if att.description %}
+                                <div class="attachment-description" id="att-desc-{{ att.id }}">
+                                    {{ att.description }}
+                                </div>
+                                {% else %}
+                                <div class="attachment-description" id="att-desc-{{ att.id }}" style="display: none;"></div>
+                                {% endif %}
+                            </div>
+
+                            <div class="attachment-actions">
+                                <a href="/{{ att.file_path }}" target="_blank" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.preview') }}" style="color: var(--accent); background: rgba(79, 142, 247, 0.08); border-color: rgba(79, 142, 247, 0.2);">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="btn-text">{{ t(request, 'listing.preview') }}</span>
+                                </a>
+                                <a href="/api/listings/{{ listing.id }}/attachments/{{ att.id }}/download" class="btn sm attachment-btn-action" title="{{ t(request, 'listing.download') }}" style="color: var(--text-2); background: var(--surface); border-color: var(--border);">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
+                                {% if request.session.get('role') in ['user', 'admin'] %}
+                                <button type="button" class="btn sm attachment-btn-action" onclick='openEditAttachmentModal({{ att.id }}, {{ (att.title or "")|tojson }}, {{ (att.file_type or "autre")|tojson }}, {{ (att.description or "")|tojson }})' title="{{ t(request, 'listing.edit') }}" style="color: var(--text); background: var(--surface); border-color: var(--border);">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button type="button" class="btn sm attachment-btn-action" onclick='openDeleteAttachmentModal({{ att.id }}, {{ (att.title or att.original_filename)|tojson }})' title="{{ t(request, 'listing.delete_btn') }}" style="color: var(--red); background: rgba(242, 92, 105, 0.08); border-color: rgba(242, 92, 105, 0.2);">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="attachments-empty" id="attachments-empty-state">
+                        <i class="fa-regular fa-folder-open"></i>
+                        <h4>{{ t(request, 'listing.no_attachments') }}</h4>
+                        <p>{{ t(request, 'listing.no_attachments_desc') }}</p>
+                        {% if request.session.get('role') in ['user', 'admin'] %}
+                        <button type="button" class="btn primary" onclick="openAddAttachmentModal()">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> {{ t(request, 'listing.add_attachment') }}
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
             {% if request.session.get('username') %}
             <div style="font-size: 0.75rem; color: var(--text-2); padding: 0 0.75rem; margin-bottom: 0.5rem;">
@@ -1811,6 +2158,121 @@
             <button class="btn primary" id="btn-submit-photos" onclick="submitPhotos({{ listing.id }})"><i class="fa-solid fa-cloud-arrow-down"></i> {{ t(request, 'listing.import_btn') }}</button>
         </div>
 
+    </div>
+</div>
+
+<!-- ── Modal: Add Attachment ── -->
+<div class="modal-backdrop" id="addAttachmentModal" onclick="if(event.target===this)closeAddAttachmentModal()">
+    <div class="modal" style="max-width: 550px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-paperclip" style="color: var(--accent);"></i> {{ t(request, 'listing.add_attachment') }}</h2>
+            <button class="btn sm" onclick="closeAddAttachmentModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="addAttachmentForm" onsubmit="submitAddAttachment(event, {{ listing.id }})">
+            <!-- Drop Zone -->
+            <div class="drop-zone" id="attachment-drop-zone" onclick="document.getElementById('attachment-file-input').click()" style="border: 2px dashed var(--border); border-radius: 9px; padding: 1.75rem 1rem; text-align: center; margin-bottom: 1.25rem; cursor: pointer; transition: all 0.2s; background: var(--surface-2);">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; pointer-events: none;"></i>
+                <p style="font-size: 0.85rem; font-weight: 600; color: var(--text); pointer-events: none; margin-bottom: 0.25rem;">{{ t(request, 'listing.drop_attachment_text') }}</p>
+                <p style="font-size: 0.72rem; color: var(--text-2); pointer-events: none; margin-bottom: 0;">PDF, Images, Word, Excel, CSV, ODT, ZIP (max 50 Mo)</p>
+                <input type="file" id="attachment-file-input" multiple accept=".pdf,.doc,.docx,.odt,.rtf,.txt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.xls,.xlsx,.ods,.csv,.zip,.rar,.7z" style="display: none;" onchange="handleAttachmentFileSelect(this)">
+            </div>
+
+            <!-- Selected Files Preview list -->
+            <div id="attachment-selected-files" style="display: none; margin-bottom: 1.25rem; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 0.75rem; border: 1px solid var(--border); max-height: 140px; overflow-y: auto;">
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 800; color: var(--accent); margin-bottom: 0.4rem;">Fichier(s) sélectionné(s) :</div>
+                <ul id="attachment-files-list" style="list-style: none; margin: 0; padding: 0; font-size: 0.8rem;"></ul>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="attachment-title-input">{{ t(request, 'listing.attachment_title') }} <span style="font-weight: 400; color: var(--text-2); font-size: 0.75rem;">(optionnel si fichier unique)</span></label>
+                <input type="text" id="attachment-title-input" placeholder="{{ t(request, 'listing.attachment_title_placeholder') }}">
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="attachment-category-select">{{ t(request, 'listing.attachment_category') }}</label>
+                <select id="attachment-category-select" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem;">
+                    <option value="diagnostic">{{ t(request, 'listing.attachment_category_diagnostic') }}</option>
+                    <option value="plan">{{ t(request, 'listing.attachment_category_plan') }}</option>
+                    <option value="pv_ag">{{ t(request, 'listing.attachment_category_pv_ag') }}</option>
+                    <option value="devis">{{ t(request, 'listing.attachment_category_devis') }}</option>
+                    <option value="copropriete">{{ t(request, 'listing.attachment_category_copropriete') }}</option>
+                    <option value="compromis">{{ t(request, 'listing.attachment_category_compromis') }}</option>
+                    <option value="autre" selected>{{ t(request, 'listing.attachment_category_autre') }}</option>
+                </select>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="attachment-notes-input">{{ t(request, 'listing.attachment_notes') }}</label>
+                <textarea id="attachment-notes-input" style="min-height: 80px; width: 100%;" placeholder="{{ t(request, 'listing.attachment_notes_placeholder') }}"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeAddAttachmentModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button type="submit" class="btn primary" id="btn-submit-attachment"><i class="fa-solid fa-cloud-arrow-up"></i> {{ t(request, 'listing.upload_btn') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Modal: Edit Attachment ── -->
+<div class="modal-backdrop" id="editAttachmentModal" onclick="if(event.target===this)closeEditAttachmentModal()">
+    <div class="modal" style="max-width: 500px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> {{ t(request, 'listing.edit_attachment') }}</h2>
+            <button class="btn sm" onclick="closeEditAttachmentModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="editAttachmentForm" onsubmit="submitEditAttachment(event, {{ listing.id }})">
+            <input type="hidden" id="edit-attachment-id" value="">
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-attachment-title">{{ t(request, 'listing.attachment_title') }}</label>
+                <input type="text" id="edit-attachment-title" required>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-attachment-category">{{ t(request, 'listing.attachment_category') }}</label>
+                <select id="edit-attachment-category" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem;">
+                    <option value="diagnostic">{{ t(request, 'listing.attachment_category_diagnostic') }}</option>
+                    <option value="plan">{{ t(request, 'listing.attachment_category_plan') }}</option>
+                    <option value="pv_ag">{{ t(request, 'listing.attachment_category_pv_ag') }}</option>
+                    <option value="devis">{{ t(request, 'listing.attachment_category_devis') }}</option>
+                    <option value="copropriete">{{ t(request, 'listing.attachment_category_copropriete') }}</option>
+                    <option value="compromis">{{ t(request, 'listing.attachment_category_compromis') }}</option>
+                    <option value="autre">{{ t(request, 'listing.attachment_category_autre') }}</option>
+                </select>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-attachment-notes">{{ t(request, 'listing.attachment_notes') }}</label>
+                <textarea id="edit-attachment-notes" style="min-height: 80px; width: 100%;"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeEditAttachmentModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button type="submit" class="btn primary" id="btn-save-edit-attachment"><i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Modal: Delete Attachment ── -->
+<div class="modal-backdrop" id="deleteAttachmentModal" onclick="if(event.target===this)closeDeleteAttachmentModal()">
+    <div class="modal delete-modal" style="max-width: 440px; text-align: center; padding: 2rem;">
+        <div class="delete-icon"><i class="fa-solid fa-trash-can"></i></div>
+        <h2 style="color: var(--text); margin-bottom: 0.5rem;">{{ t(request, 'listing.delete_attachment_confirm') }}</h2>
+        <p class="delete-title-preview" id="deleteAttachmentTitlePreview" style="font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; word-break: break-all;"></p>
+        <p class="delete-warning" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.5rem;">{{ t(request, 'listing.delete_attachment_warning') }}</p>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="button" class="btn" style="flex: 1;" onclick="closeDeleteAttachmentModal()">
+                <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel') }}
+            </button>
+            <button type="button" class="btn" id="btn-confirm-delete-attachment" style="flex: 1; color: var(--red); border-color: rgba(242,92,105,0.4); background: rgba(242,92,105,0.1);" onclick="submitDeleteAttachment({{ listing.id }})">
+                <i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_btn') }}
+            </button>
+        </div>
     </div>
 </div>
 
@@ -4581,6 +5043,223 @@
             } catch (e) {
                 alert("Erreur réseau : " + e.message);
             }
+        }
+
+        // ─── Attachments Management ─────────────────────────────────────────
+        let selectedAttachmentFiles = [];
+        let attachmentToDeleteId = null;
+
+        function scrollToAttachments() {
+            const el = document.getElementById('attachments-section');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function openAddAttachmentModal() {
+            selectedAttachmentFiles = [];
+            const form = document.getElementById('addAttachmentForm');
+            if (form) form.reset();
+            const fileInput = document.getElementById('attachment-file-input');
+            if (fileInput) fileInput.value = '';
+            const previewContainer = document.getElementById('attachment-selected-files');
+            if (previewContainer) previewContainer.style.display = 'none';
+            const filesList = document.getElementById('attachment-files-list');
+            if (filesList) filesList.innerHTML = '';
+            document.getElementById('addAttachmentModal').classList.add('open');
+        }
+
+        function closeAddAttachmentModal() {
+            document.getElementById('addAttachmentModal').classList.remove('open');
+        }
+
+        function handleAttachmentFileSelect(input) {
+            if (input.files && input.files.length > 0) {
+                selectedAttachmentFiles = Array.from(input.files);
+                renderSelectedAttachmentFiles();
+            }
+        }
+
+        function renderSelectedAttachmentFiles() {
+            const container = document.getElementById('attachment-selected-files');
+            const list = document.getElementById('attachment-files-list');
+            if (!container || !list) return;
+
+            if (selectedAttachmentFiles.length === 0) {
+                container.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            container.style.display = 'block';
+            list.innerHTML = selectedAttachmentFiles.map((f, i) => {
+                const sizeStr = f.size > 1048576 
+                    ? (f.size / 1048576).toFixed(1) + ' Mo' 
+                    : (f.size > 1024 ? Math.round(f.size / 1024) + ' Ko' : f.size + ' o');
+                return `
+                    <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span style="color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">
+                            <i class="fa-solid fa-file" style="color: var(--accent); margin-right: 0.35rem;"></i>${escapeHtml(f.name)} (${sizeStr})
+                        </span>
+                        <button type="button" onclick="removeSelectedAttachmentFile(${i})" style="background: none; border: none; color: var(--red); cursor: pointer; padding: 0.2rem 0.4rem; font-size: 0.8rem;" title="Retirer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function removeSelectedAttachmentFile(index) {
+            selectedAttachmentFiles.splice(index, 1);
+            renderSelectedAttachmentFiles();
+        }
+
+        async function submitAddAttachment(e, listingId) {
+            e.preventDefault();
+            if (selectedAttachmentFiles.length === 0) {
+                alert("Veuillez sélectionner au moins un fichier à téléverser.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-submit-attachment');
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Téléversement...';
+
+            const formData = new FormData();
+            for (const file of selectedAttachmentFiles) {
+                formData.append('files', file);
+            }
+
+            const title = document.getElementById('attachment-title-input').value.trim();
+            const category = document.getElementById('attachment-category-select').value;
+            const notes = document.getElementById('attachment-notes-input').value.trim();
+
+            if (title) formData.append('title', title);
+            if (category) formData.append('file_type', category);
+            if (notes) formData.append('description', notes);
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/attachments`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors du téléversement");
+                }
+
+                closeAddAttachmentModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+            }
+        }
+
+        function openEditAttachmentModal(id, title, category, notes) {
+            document.getElementById('edit-attachment-id').value = id;
+            document.getElementById('edit-attachment-title').value = title || '';
+            document.getElementById('edit-attachment-category').value = category || 'autre';
+            document.getElementById('edit-attachment-notes').value = notes || '';
+            document.getElementById('editAttachmentModal').classList.add('open');
+        }
+
+        function closeEditAttachmentModal() {
+            document.getElementById('editAttachmentModal').classList.remove('open');
+        }
+
+        async function submitEditAttachment(e, listingId) {
+            e.preventDefault();
+            const attId = document.getElementById('edit-attachment-id').value;
+            const title = document.getElementById('edit-attachment-title').value.trim();
+            const category = document.getElementById('edit-attachment-category').value;
+            const notes = document.getElementById('edit-attachment-notes').value.trim();
+
+            const btn = document.getElementById('btn-save-edit-attachment');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enregistrement...';
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/attachments/${attId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        file_type: category,
+                        description: notes
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors de la mise à jour");
+                }
+
+                closeEditAttachmentModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function openDeleteAttachmentModal(id, title) {
+            attachmentToDeleteId = id;
+            document.getElementById('deleteAttachmentTitlePreview').textContent = title || 'Pièce jointe #' + id;
+            document.getElementById('deleteAttachmentModal').classList.add('open');
+        }
+
+        function closeDeleteAttachmentModal() {
+            attachmentToDeleteId = null;
+            document.getElementById('deleteAttachmentModal').classList.remove('open');
+        }
+
+        async function submitDeleteAttachment(listingId) {
+            if (!attachmentToDeleteId) return;
+
+            const btn = document.getElementById('btn-confirm-delete-attachment');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Suppression...';
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/attachments/${attachmentToDeleteId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors de la suppression");
+                }
+
+                closeDeleteAttachmentModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
         }
 
         document.addEventListener("DOMContentLoaded", () => {

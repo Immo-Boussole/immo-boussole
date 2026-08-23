@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database, schemas, google_service
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency, ListingAttachment
 
 from app.services import (
     scrape_and_diff,
@@ -1437,6 +1437,7 @@ def listing_detail_page(
         db.commit()
 
     photos = json_to_photos(listing.photos_local)
+    attachments = db.query(ListingAttachment).filter(ListingAttachment.listing_id == listing_id).order_by(ListingAttachment.created_at.desc()).all()
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
 
     # Build a dict of reviews by reviewer for easy template access
@@ -1530,6 +1531,7 @@ def listing_detail_page(
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
+        "attachments": attachments,
         "reviews": reviews,
         "reviews_by_reviewer": reviews_by_reviewer,
         "duplicate_original": duplicate_original,
@@ -4755,6 +4757,161 @@ async def upload_listing_photos(
         db.commit()
 
     return {"status": "success", "imported": len(local_paths)}
+
+
+# ─── API: Listing Attachments ──────────────────────────────────────────────────
+
+@app.get("/api/listings/{listing_id}/attachments", response_model=list[schemas.ListingAttachmentResponse])
+def get_listing_attachments(
+    request: Request,
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Retrieve all attachments for a specific listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    
+    attachments = db.query(ListingAttachment).filter(
+        ListingAttachment.listing_id == listing_id
+    ).order_by(ListingAttachment.created_at.desc()).all()
+    return attachments
+
+
+@app.post("/api/listings/{listing_id}/attachments", response_model=list[schemas.ListingAttachmentResponse])
+async def upload_listing_attachments(
+    request: Request,
+    listing_id: int,
+    files: list[UploadFile] = File(...),
+    title: Optional[str] = Form(None),
+    file_type: Optional[str] = Form("autre"),
+    description: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Upload one or more attachments for a listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+
+    if not files:
+        raise HTTPException(status_code=400, detail="Aucun fichier fourni")
+
+    from app.media import save_listing_attachment_file
+    current_username = request.session.get("username")
+
+    created_attachments = []
+    for i, file in enumerate(files):
+        custom_title = title
+        if len(files) > 1 and title:
+            custom_title = f"{title} ({i+1})"
+        
+        saved_filename, orig_name, web_path, file_size, mime_type = await save_listing_attachment_file(listing_id, file)
+        
+        if not custom_title:
+            custom_title = os.path.splitext(orig_name)[0].replace("_", " ").replace("-", " ")
+
+        att = ListingAttachment(
+            listing_id=listing_id,
+            filename=saved_filename,
+            original_filename=orig_name,
+            file_path=web_path,
+            file_type=file_type or "autre",
+            title=custom_title,
+            description=description,
+            file_size=file_size,
+            mime_type=mime_type,
+            created_by=current_username
+        )
+        db.add(att)
+        created_attachments.append(att)
+
+    db.commit()
+    for att in created_attachments:
+        db.refresh(att)
+
+    return created_attachments
+
+
+@app.put("/api/listings/{listing_id}/attachments/{attachment_id}", response_model=schemas.ListingAttachmentResponse)
+def update_listing_attachment(
+    request: Request,
+    listing_id: int,
+    attachment_id: int,
+    body: schemas.ListingAttachmentUpdateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Update metadata (title, category, description) of a listing attachment."""
+    att = db.query(ListingAttachment).filter(
+        ListingAttachment.id == attachment_id,
+        ListingAttachment.listing_id == listing_id
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Pièce jointe introuvable")
+
+    if body.title is not None:
+        att.title = body.title.strip() if body.title.strip() else att.original_filename
+    if body.file_type is not None:
+        att.file_type = body.file_type.strip().lower()
+    if body.description is not None:
+        att.description = body.description.strip()
+
+    db.commit()
+    db.refresh(att)
+    return att
+
+
+@app.delete("/api/listings/{listing_id}/attachments/{attachment_id}")
+def delete_listing_attachment(
+    request: Request,
+    listing_id: int,
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Delete a listing attachment and its physical file on disk."""
+    att = db.query(ListingAttachment).filter(
+        ListingAttachment.id == attachment_id,
+        ListingAttachment.listing_id == listing_id
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Pièce jointe introuvable")
+
+    from app.media import delete_attachment_file
+    delete_attachment_file(att.file_path)
+
+    db.delete(att)
+    db.commit()
+    return {"status": "deleted", "attachment_id": attachment_id, "listing_id": listing_id}
+
+
+@app.get("/api/listings/{listing_id}/attachments/{attachment_id}/download")
+def download_listing_attachment(
+    request: Request,
+    listing_id: int,
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Download an attachment with its original filename and proper headers."""
+    att = db.query(ListingAttachment).filter(
+        ListingAttachment.id == attachment_id,
+        ListingAttachment.listing_id == listing_id
+    ).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Pièce jointe introuvable")
+
+    file_path = att.file_path.strip().lstrip("/\\")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Fichier physique introuvable sur le serveur")
+
+    return FileResponse(
+        path=file_path,
+        filename=att.original_filename or os.path.basename(file_path),
+        media_type=att.mime_type or "application/octet-stream"
+    )
 
 
 # ─── API: Reviews ─────────────────────────────────────────────────────────────

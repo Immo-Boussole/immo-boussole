@@ -184,6 +184,7 @@ class Listing(Base):
     # Relationships
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
     visits = relationship("Visit", back_populates="listing", cascade="all, delete-orphan", order_by="Visit.scheduled_at")
+    attachments = relationship("ListingAttachment", back_populates="listing", cascade="all, delete-orphan", order_by="ListingAttachment.created_at.desc()")
     main_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
     main_agent = relationship("Agent", foreign_keys=[main_agent_id])
@@ -484,4 +485,30 @@ class AIProfile(Base):
     
     # Relationships
     user = relationship("User", backref="ai_profiles")
+
+
+class ListingAttachment(Base):
+    """
+    Stores file attachments and documents linked to a listing
+    (e.g., diagnostics, plans, PV d'AG, devis, copropriété, etc.).
+    """
+    __tablename__ = "listing_attachments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    filename = Column(String(255), nullable=False)
+    original_filename = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_type = Column(String(50), nullable=False, default="autre")  # diagnostic, plan, pv_ag, devis, copropriete, compromis, autre
+    title = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    file_size = Column(Integer, nullable=True)  # size in bytes
+    mime_type = Column(String(100), nullable=True)
+    created_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    listing = relationship("Listing", back_populates="attachments")
+
 
