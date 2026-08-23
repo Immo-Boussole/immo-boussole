@@ -225,11 +225,12 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, f
                 listing = find_existing_listing(url, db)
 
             if listing:
-                # 1. Download photos if original_photo_urls is present but local photos are missing
-                if listing.original_photo_urls and not listing.photos_local:
+                # 1. Download photos if original_photo_urls is present and local photos are missing or incomplete
+                if listing.original_photo_urls:
                     try:
                         urls = json.loads(listing.original_photo_urls)
-                        if urls and isinstance(urls, list):
+                        local_list = json.loads(listing.photos_local) if listing.photos_local else []
+                        if urls and isinstance(urls, list) and (not local_list or len(urls) > len(local_list)):
                             downloaded = await download_listing_photos(listing.id, urls)
                             if downloaded:
                                 listing.photos_local = photos_to_json(downloaded)
@@ -259,11 +260,11 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, f
                 if listing.city and not listing.nearest_sncf_station:
                     try:
                         sncf_data = fetch_sncf_times_for_city(listing.city)
-                        if sncf_data and sncf_data.get("status") == "success":
-                            listing.nearest_sncf_station = sncf_data.get("nearest_station")
-                            listing.walk_time_sncf = sncf_data.get("walk_time")
-                            listing.bike_time_sncf = sncf_data.get("bike_time")
-                            listing.car_time_sncf = sncf_data.get("car_time")
+                        if sncf_data:
+                            listing.nearest_sncf_station = sncf_data.get("nearest_sncf_station")
+                            listing.car_time_sncf = sncf_data.get("car_time_sncf")
+                            listing.bike_time_sncf = sncf_data.get("bike_time_sncf")
+                            listing.walk_time_sncf = sncf_data.get("walk_time_sncf")
                             db.commit()
                     except Exception as e:
                         print(f"[API] SNCF enrichment error for listing {listing.id}: {e}")
@@ -274,7 +275,7 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, f
         finally:
             db.close()
     except Exception as e:
-        print(f"[API] Background enrichment error for {url}: {e}")
+        print(f"[API] _enrich_external_listing failed for {url}: {e}")
 
 
 def _determine_source(url: str, explicit_source: Optional[str] = None) -> models.Source:
@@ -392,12 +393,12 @@ async def submit_external_listing_api(
             title=listing.title
         )
     else:
-        # Update fields if provided and not already filled
+        # Update fields if provided
         if request.title:
             existing.title = request.title
-        if request.price is not None:
+        if request.price is not None and request.price > 0:
             existing.price = request.price
-        if request.area is not None:
+        if request.area is not None and request.area > 0:
             existing.area = request.area
         if request.land_area is not None:
             existing.land_area = request.land_area
@@ -407,19 +408,23 @@ async def submit_external_listing_api(
             existing.city = request.city
         if request.postal_code:
             existing.postal_code = request.postal_code
+        if request.location:
+            existing.location = request.location
+        elif request.city:
+            existing.location = f"{request.city} ({request.postal_code})" if request.postal_code else request.city
         if request.rooms is not None:
             existing.rooms = request.rooms
         if request.bedrooms is not None:
             existing.bedrooms = request.bedrooms
         if request.bathroom_count is not None:
             existing.bathroom_count = request.bathroom_count
-        if request.description and not existing.description_text:
+        if request.description and (not existing.description_text or len(request.description) > len(existing.description_text)):
             existing.description_text = request.description
-        if request.property_type and not existing.property_type:
+        if request.property_type:
             existing.property_type = request.property_type
-        if request.dpe_rating and not existing.dpe_rating:
+        if request.dpe_rating:
             existing.dpe_rating = request.dpe_rating
-        if request.ges_rating and not existing.ges_rating:
+        if request.ges_rating:
             existing.ges_rating = request.ges_rating
         if request.land_tax is not None:
             existing.land_tax = request.land_tax
@@ -526,9 +531,9 @@ async def submit_external_listings_batch_api(
                 # Update basic fields if provided
                 if item.title:
                     existing.title = item.title
-                if item.price is not None:
+                if item.price is not None and item.price > 0:
                     existing.price = item.price
-                if item.area is not None:
+                if item.area is not None and item.area > 0:
                     existing.area = item.area
                 if item.land_area is not None:
                     existing.land_area = item.land_area
@@ -538,8 +543,24 @@ async def submit_external_listings_batch_api(
                     existing.city = item.city
                 if item.postal_code:
                     existing.postal_code = item.postal_code
+                if item.location:
+                    existing.location = item.location
+                elif item.city:
+                    existing.location = f"{item.city} ({item.postal_code})" if item.postal_code else item.city
+                if item.rooms is not None:
+                    existing.rooms = item.rooms
+                if item.bedrooms is not None:
+                    existing.bedrooms = item.bedrooms
                 if item.bathroom_count is not None:
                     existing.bathroom_count = item.bathroom_count
+                if item.description and (not existing.description_text or len(item.description) > len(existing.description_text)):
+                    existing.description_text = item.description
+                if item.property_type:
+                    existing.property_type = item.property_type
+                if item.dpe_rating:
+                    existing.dpe_rating = item.dpe_rating
+                if item.ges_rating:
+                    existing.ges_rating = item.ges_rating
                 if item.land_tax is not None:
                     existing.land_tax = item.land_tax
                 if item.charges is not None:

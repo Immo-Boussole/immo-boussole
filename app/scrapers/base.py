@@ -54,7 +54,10 @@ class BaseScraper(abc.ABC):
             is_blocked = (
                 status_code == 403 or
                 "geo.captcha-delivery.com" in html or
-                "<title>leboncoin.fr</title>" in html
+                "<title>leboncoin.fr</title>" in html or
+                "<title>seloger.com</title>" in html or
+                "var dd={'rt':'i'" in html or
+                "data-cfasync=\"false\"" in html and "var dd=" in html
             )
 
             if is_blocked:
@@ -71,7 +74,7 @@ class BaseScraper(abc.ABC):
                 return snapshot
 
         print(f"[Scraper] Échec de l'extraction de {url} : tous les proxys de la chaîne ont échoué ou été bloqués.")
-        return snapshot
+        return {}
 
     async def _execute_extraction(self, url: str, proxy: str) -> Dict:
         """

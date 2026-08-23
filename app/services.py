@@ -193,7 +193,7 @@ def is_error_or_generic_title(title: Optional[str]) -> bool:
     t = title.strip()
     t_lower = t.lower()
     
-    if t_lower in ("", "none", "null", "leboncoin.fr", "annonce le figaro", "sans titre", "annonce", "bien immobilier"):
+    if t_lower in ("", "none", "null", "leboncoin.fr", "seloger.com", "seloger", "seloger immobilier", "www.seloger.com", "annonce le figaro", "sans titre", "annonce", "bien immobilier"):
         return True
     if re.search(r'\berreur\s*\d{3}\b', t_lower):
         return True
@@ -256,7 +256,8 @@ def extract_title_from_url_slug(url: str) -> Optional[str]:
     # Filter out generic directories like 'ad', 'ventes_immobilieres', 'locations', 'annonces', 'achat', etc.
     ignore_segments = {
         "ad", "ads", "ventes_immobilieres", "locations", "colocations", "bureaux_commerces",
-        "annonces", "annonce", "achat", "vente", "immobilier", "detail", "item", "prop", "fr"
+        "annonces", "annonce", "achat", "vente", "immobilier", "detail", "item", "prop", "fr",
+        "seloger", "leboncoin"
     }
 
     meaningful_slug = None
@@ -270,8 +271,8 @@ def extract_title_from_url_slug(url: str) -> Optional[str]:
         else:
             segment_clean = segment
 
-        # Check if segment is solely numeric (e.g., ad ID "2881234567")
-        if re.match(r'^\d+$', segment_clean) or re.match(r'^[a-f0-9-]{32,}$', segment_clean):
+        # Check if segment is solely numeric or alphanumeric ID (e.g. "2881234567", "269W7APVLTZA")
+        if re.match(r'^\d+$', segment_clean) or re.match(r'^[a-f0-9-]{32,}$', segment_clean) or re.match(r'^[A-Z0-9]{8,15}$', segment_clean):
             continue
 
         meaningful_slug = segment_clean
@@ -744,6 +745,37 @@ async def fetch_basic_metadata(url: str) -> dict:
         
         if photo_urls:
             details["photo_urls"] = list(dict.fromkeys(photo_urls))
+
+        # Extract attributes from title if not already present
+        title_to_parse = details.get("title") or ""
+        if not details.get("area"):
+            area_m = re.search(r'(\d+(?:[.,]\d+)?)\s*m²', title_to_parse)
+            if area_m:
+                try: details["area"] = float(area_m.group(1).replace(",", "."))
+                except (ValueError, TypeError): pass
+        if not details.get("rooms"):
+            rooms_m = re.search(r'\b(?:T|F)?(\d+)\s*(?:pièces?|p\b)', title_to_parse, re.I) or re.search(r'\bT(\d+)/F\d+\b', title_to_parse, re.I)
+            if rooms_m:
+                try: details["rooms"] = int(rooms_m.group(1))
+                except (ValueError, TypeError): pass
+        if not details.get("price"):
+            price_m = re.search(r'(\d[\d\s]*)\s*€', title_to_parse)
+            if price_m:
+                try: details["price"] = float(price_m.group(1).replace(" ", "").replace("\xa0", ""))
+                except (ValueError, TypeError): pass
+        if not details.get("city"):
+            loc_m = re.search(r'([A-Za-zÀ-ÿ\s-]+)\s*\((\d{5})\)', title_to_parse)
+            if loc_m:
+                details["city"] = loc_m.group(1).strip()
+                details["postal_code"] = loc_m.group(2).strip()
+                details["location"] = f"{details['city']} ({details['postal_code']})"
+        if not details.get("property_type"):
+            if re.search(r'\bmaison\b', title_to_parse, re.I):
+                details["property_type"] = "Maison"
+            elif re.search(r'\bappartement\b', title_to_parse, re.I):
+                details["property_type"] = "Appartement"
+            elif re.search(r'\bterrain\b', title_to_parse, re.I):
+                details["property_type"] = "Terrain"
         
         print(f"[Services] Basic metadata OK: {fb_title!r} ({len(details.get('photo_urls', []))} photos)")
     else:
