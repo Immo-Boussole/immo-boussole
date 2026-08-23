@@ -11,8 +11,8 @@
 
 ## 🌐 Languages
 
-- [English (Default)](README.md)
-- [Français](README.fr.md)
+- 🇬🇧 [English (Default)](README.md)
+- 🇫🇷 [Français](README.fr.md)
 
 ---
 
