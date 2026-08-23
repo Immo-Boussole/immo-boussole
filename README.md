@@ -5,8 +5,16 @@
 [![Docker Image](https://img.shields.io/badge/image-wikijm%2Fimmo-boussole%3A033f87759524a240e4e91d75982c7afcc08a4564-0db7ed?logo=docker&logoColor=white)](https://hub.docker.com/r/wikijm/immo-boussole)
 [![Wiki Documentation](https://img.shields.io/badge/docs-GitHub%20Wiki-blue?logo=github)](https://github.com/Immo-Boussole/immo-boussole/wiki)
 
-> *Note: At its core, this project targets French real estate platforms. / Note : Ce projet cible principalement les plateformes immobilières françaises.*  
-> 🇫🇷 **[Version française disponible ici (README.fr.md)](README.fr.md)**
+> 🧭 **Immo-Boussole Organization**: [Core Web App](https://github.com/Immo-Boussole/immo-boussole) • [WebExtension](https://github.com/Immo-Boussole/immo-boussole-extension) • [Orchestrator](https://github.com/Immo-Boussole/immo-boussole-orchestrator) • [Central Wiki](https://github.com/Immo-Boussole/immo-boussole/wiki)
+
+---
+
+## 🌐 Languages
+
+- [English (Default)](README.md)
+- [Français](README.fr.md)
+
+---
 
 **Immo-Boussole** is a modern, collaborative web application designed to centralize, catalog, evaluate, and track real estate listings across 10+ platforms (LeBonCoin, SeLoger, BienIci, LogicImmo, Le Figaro, etc.) in a structured and intuitive manner.
 
@@ -38,15 +46,19 @@
 
 ## 📚 Complete Documentation & Guides (GitHub Wiki)
 
-All technical deployment and configuration guides are centralized on our **[GitHub Wiki](https://github.com/Immo-Boussole/immo-boussole/wiki)**:
+All technical deployment, operational, and configuration guides are centralized on our **[GitHub Wiki](https://github.com/Immo-Boussole/immo-boussole/wiki)**:
 
 | Guide / Topic | Description | Link |
 |---|---|---|
+| 🧭 **Architecture & Ecosystem** | Overall system design across Core App, WebExtension, and Orchestrator | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Architecture-Overview-EN) |
 | 🐳 **Docker & Cloudflare Deployment** | Production setup with Docker Compose, Portainer, and Cloudflare Zero Trust Tunnels | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-EN) |
+| 🎛️ **Fleet Orchestrator** | Deploy and manage multiple instances across local and remote Docker hosts | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Orchestrator-Setup-EN) |
+| 🧩 **Browser WebExtension** | 1-click scraping directly from LeBonCoin & Figaro in Firefox, Chrome, Edge | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/WebExtension-Setup-EN) |
 | 🛡️ **Residential Proxy & Anti-Bot** | Deploy a residential proxy (Synology NAS / Raspberry Pi) to bypass DataDome / 403 blocks | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Proxy-Setup-EN) |
 | 🤖 **AI Assistant & MCP Service** | Connect Ollama and expose your listings to Claude Desktop via MCP | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/MCP-Setup-EN) |
 | 💾 **Backup & Restore** | Backup and restore SQLite databases, media files, and configurations | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Backup-Restore-EN) |
 | 🔑 **Google OAuth2 Setup** | Configure Google Calendar & Google Contacts synchronization | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Google-OAuth-Setup-EN) |
+| 📐 **Documentation Standards** | Guidelines for docs, translations, and AI agent operating rules | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Documentation-Standards-EN) |
 
 ---
 

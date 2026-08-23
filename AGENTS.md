@@ -50,3 +50,14 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 
 - **Full Automation on Dev & Local**: The agent is authorized to execute all tasks autonomously without prompting for user confirmation (running tests, modifying files, creating commits, pushing to remote, and deploying to the **Dev** environment).
 - **Manual Confirmation for Production**: Once local tests, GitHub Actions CI, and the Dev deployment are all **OK**, the agent must **never auto-deploy to Production**. Instead, propose and prompt the user to trigger or approve the Production deployment.
+
+---
+
+## 6. Documentation, Internationalization (i18n) & Cross-Repository Parity
+
+- **English First & French Parity**: Write user-facing documentation in English first (`README.md`), and maintain exact parity in French (`README.fr.md`) in the same task/commit.
+- **Cross-Repo Ecosystem**: Keep references, navigation banners, and GitHub links aligned across all repositories (`immo-boussole`, `immo-boussole-extension`, `immo-boussole-orchestrator`, `immo-boussole.wiki`).
+- **Organization Namespace**: Always use `https://github.com/Immo-Boussole/<repo>`.
+- **Text & Structure**: Focus on text, tables, and diagrams; do not spend time generating new screenshots unless requested.
+- **Detailed Reference**: See [.agents/rules/documentation_and_i18n.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/documentation_and_i18n.md).
+
