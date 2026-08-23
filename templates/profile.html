@@ -321,6 +321,47 @@
                             <i class="fa-solid fa-paper-plane"></i> {{ t(request, 'profile.test_notif_btn', 'Tester la notification') }}
                         </button>
                     </div>
+                    <!-- Section: Bookmarklet Navigateur (Anti-DataDome) -->
+                    <div class="card" id="bookmarkletCard">
+                        <div class="card-header">
+                            <i class="fa-solid fa-bookmark" style="color: var(--accent);"></i>
+                            <h2>{{ t(request, 'profile.bookmarklet_title', 'Bookmarklet d\'importation (Anti-blocage DataDome)') }}</h2>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.25rem;">
+                            Importez vos recherches et annonces depuis <strong>Leboncoin</strong>, <strong>SeLoger</strong>, etc. directement depuis votre propre navigateur web avec votre adresse IP résidentielle pour contourner les protections anti-robots (DataDome).
+                        </p>
+
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--yellow);"></i>
+                                Bouton Favori (Glisser-Déposer)
+                            </div>
+                            <p style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1rem;">
+                                Glissez le bouton bleu ci-dessous directement dans la <strong>barre de favoris</strong> de votre navigateur :
+                            </p>
+                            
+                            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                                <a id="bookmarkletLink" href="#" class="btn primary" style="cursor: grab; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent-2));" onclick="event.preventDefault(); alert('Glissez ce bouton dans votre barre de favoris (Ctrl+Shift+B / Cmd+Shift+B pour l\'afficher)');">
+                                    <i class="fa-solid fa-star"></i> ⭐ Immo-Boussole Import
+                                </a>
+                                <button type="button" class="btn sm" onclick="copyBookmarkletCode()" id="copyBmBtn">
+                                    <i class="fa-solid fa-copy"></i> Copier le code
+                                </button>
+                                <button type="button" class="btn sm" onclick="generateNewApiKey()" id="genKeyBtn">
+                                    <i class="fa-solid fa-key"></i> Générer / Renouveler la clé API
+                                </button>
+                            </div>
+
+                            <div style="font-size: 0.75rem; color: var(--text-2); background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <strong>💡 Mode d'emploi :</strong><br>
+                                1. Affichez votre barre de favoris dans Chrome/Firefox/Edge (raccourci <code>Ctrl + Maj + B</code> ou <code>Cmd + Maj + B</code>).<br>
+                                2. Glissez le bouton <strong>⭐ Immo-Boussole Import</strong> dans votre barre de favoris.<br>
+                                3. Rendez-vous sur <strong>Leboncoin</strong> sur une page de recherche ou une annonce immobilière.<br>
+                                4. Cliquez sur le favori : un panneau flottant s'ouvre pour sélectionner et envoyer les annonces en 1 clic !
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Section: Assistant IA -->
                     <div class="card">
                         <div class="card-header">
@@ -662,9 +703,74 @@
             }
         }
 
+        // Bookmarklet Generator
+        let currentApiKey = localStorage.getItem('immo_user_api_key') || '';
+
+        function updateBookmarkletUI(apiKey) {
+            const origin = window.location.origin;
+            const link = document.getElementById('bookmarkletLink');
+            if (!link) return;
+
+            const code = `javascript:(function(){window.__IMMO_CONFIG__={server:'${origin}',apiKey:'${apiKey || ''}'};var s=document.createElement('script');s.src=window.__IMMO_CONFIG__.server+'/static/js/immo_bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();`;
+            link.href = code;
+        }
+
+        async function generateNewApiKey() {
+            const btn = document.getElementById('genKeyBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Génération...';
+
+            try {
+                const res = await fetch('/api/v1/users/me/api-key', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentApiKey = data.api_key;
+                    localStorage.setItem('immo_user_api_key', currentApiKey);
+                    updateBookmarkletUI(currentApiKey);
+                    alert("Nouvelle clé API générée et intégrée à votre Bookmarklet ! Vous pouvez maintenant glisser le bouton dans vos favoris.");
+                } else {
+                    const err = await res.json();
+                    alert("Erreur: " + (err.detail || "Impossible de générer une clé API."));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur réseau lors de la génération de la clé API.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        function copyBookmarkletCode() {
+            const link = document.getElementById('bookmarkletLink');
+            if (!link || !link.href || link.href === '#') {
+                alert("Veuillez d'abord générer votre clé API.");
+                return;
+            }
+
+            navigator.clipboard.writeText(link.href).then(() => {
+                const btn = document.getElementById('copyBmBtn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check" style="color:var(--green);"></i> Copié !';
+                setTimeout(() => btn.innerHTML = orig, 2500);
+            }).catch(err => {
+                prompt("Copiez ce code JavaScript manuellement :", link.href);
+            });
+        }
+
         // Init
         renderPois();
         loadAiProfiles();
+        updateBookmarkletUI(currentApiKey);
+        if (!currentApiKey) {
+            // Check if user has api key or can generate
+            updateBookmarkletUI('');
+        }
     </script>
     <script>
         if ('serviceWorker' in navigator) {

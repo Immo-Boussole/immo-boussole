@@ -208,12 +208,114 @@ async def submit_url_api(
     )
 
 
-async def _enrich_external_listing(url: str):
+async def _enrich_external_listing(url: str, listing_id: Optional[int] = None):
     try:
-        from app.services import fetch_basic_metadata
-        await fetch_basic_metadata(url)
+        from app.database import SessionLocal
+        from app.services import fetch_basic_metadata, repair_listing_photos
+        from app.media import download_listing_photos, photos_to_json
+        from app.geo import get_coordinates, fetch_sncf_times_for_city
+        import json
+
+        db = SessionLocal()
+        try:
+            listing = None
+            if listing_id:
+                listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
+            if not listing and url:
+                listing = find_existing_listing(url, db)
+
+            if listing:
+                # 1. Download photos if original_photo_urls is present but local photos are missing
+                if listing.original_photo_urls and not listing.photos_local:
+                    try:
+                        urls = json.loads(listing.original_photo_urls)
+                        if urls and isinstance(urls, list):
+                            downloaded = await download_listing_photos(listing.id, urls)
+                            if downloaded:
+                                listing.photos_local = photos_to_json(downloaded)
+                                db.commit()
+                    except Exception as e:
+                        print(f"[API] Photo download error for listing {listing.id}: {e}")
+
+                # 2. Geocoding if coordinates are missing
+                if listing.latitude is None and (listing.location or listing.city):
+                    loc = listing.location or listing.city
+                    try:
+                        coords = get_coordinates(loc)
+                        if coords:
+                            listing.latitude, listing.longitude = coords
+                            db.commit()
+                    except Exception as e:
+                        print(f"[API] Geocoding error for listing {listing.id}: {e}")
+
+                # 3. SNCF times if city is present
+                if listing.city and not listing.nearest_sncf_station:
+                    try:
+                        sncf_data = fetch_sncf_times_for_city(listing.city)
+                        if sncf_data and sncf_data.get("status") == "success":
+                            listing.nearest_sncf_station = sncf_data.get("nearest_station")
+                            listing.walk_time_sncf = sncf_data.get("walk_time")
+                            listing.bike_time_sncf = sncf_data.get("bike_time")
+                            listing.car_time_sncf = sncf_data.get("car_time")
+                            db.commit()
+                    except Exception as e:
+                        print(f"[API] SNCF enrichment error for listing {listing.id}: {e}")
+
+            # 4. Optional fallback metadata fetch if needed
+            if url:
+                await fetch_basic_metadata(url)
+        finally:
+            db.close()
     except Exception as e:
         print(f"[API] Background enrichment error for {url}: {e}")
+
+
+def _determine_source(url: str, explicit_source: Optional[str] = None) -> models.Source:
+    if explicit_source:
+        for s in models.Source:
+            if s.value == explicit_source.lower():
+                return s
+    if "leboncoin.fr" in url:
+        return models.Source.LEBONCOIN
+    elif "lefigaro.fr" in url:
+        return models.Source.LEFIGARO
+    elif "seloger.com" in url:
+        return models.Source.SELOGER
+    elif "bienici.com" in url:
+        return models.Source.BIENICI
+    elif "pap.fr" in url:
+        return models.Source.MANUAL
+    return models.Source.MANUAL
+
+
+@router.post("/check-external-listings", response_model=schemas.ExternalListingCheckResponse)
+def check_external_listings_api(
+    request: schemas.ExternalListingCheckRequest,
+    current_user: models.User = Depends(get_current_user_api),
+    db: Session = Depends(get_db)
+):
+    """
+    Check a list of URLs and external IDs against existing listings in the database
+    to inform the bookmarklet/browser extension which items already exist.
+    """
+    existing_urls = []
+    existing_ext_ids = []
+
+    for u in request.urls:
+        if find_existing_listing(u, db):
+            existing_urls.append(u)
+
+    if request.external_ids:
+        found_ext = db.query(models.Listing.external_id).filter(
+            models.Listing.external_id.in_(request.external_ids)
+        ).all()
+        existing_ext_ids = [r[0] for r in found_ext if r[0]]
+
+    return schemas.ExternalListingCheckResponse(
+        existing_urls=existing_urls,
+        existing_external_ids=existing_ext_ids
+    )
+
 
 @router.post("/submit-external-listing", response_model=schemas.ActionResponse)
 async def submit_external_listing_api(
@@ -224,33 +326,24 @@ async def submit_external_listing_api(
     db: Session = Depends(get_db)
 ):
     """
-    Add or update a listing with pre-extracted data from the browser extension.
-    Also queues a background scraping job to enrich full details if possible.
+    Add or update a listing with pre-extracted data from the browser bookmarklet/extension.
+    Also queues a background task to enrich photos and coordinates if needed.
     """
+    import json
     existing = find_existing_listing(request.url, db)
     is_already_exists = False
 
+    source_val = _determine_source(request.url, request.source)
+
+    price_per_sqm = None
+    if request.price and request.area and request.area > 0:
+        price_per_sqm = round(request.price / request.area, 2)
+
     if not existing:
-        # Determine source
-        source_val = models.Source.MANUAL.value
-        if request.source:
-            source_val = request.source
-        elif "leboncoin.fr" in request.url:
-            source_val = models.Source.LEBONCOIN.value
-        elif "lefigaro.fr" in request.url:
-            source_val = models.Source.LEFIGARO.value
-        elif "seloger.com" in request.url:
-            source_val = models.Source.SELOGER.value
-        elif "bienici.com" in request.url:
-            source_val = models.Source.BIENICI.value
-
-        price_per_sqm = None
-        if request.price and request.area and request.area > 0:
-            price_per_sqm = round(request.price / request.area, 2)
-
         listing = models.Listing(
             url=request.url,
             original_url=request.url,
+            external_id=request.external_id,
             title=request.title or "Annonce sans titre",
             price=request.price,
             area=request.area,
@@ -260,14 +353,16 @@ async def submit_external_listing_api(
             postal_code=request.postal_code,
             location=request.location or request.city or "Inconnu",
             description_text=request.description,
+            property_type=request.property_type,
+            dpe_rating=request.dpe_rating,
+            ges_rating=request.ges_rating,
             source=source_val,
             status=models.ListingStatus.NEW,
             price_per_sqm=price_per_sqm
         )
 
         if request.photos:
-            import json
-            listing.photos_json = json.dumps(request.photos)
+            listing.original_photo_urls = json.dumps(request.photos)
 
         db.add(listing)
         db.commit()
@@ -280,18 +375,34 @@ async def submit_external_listing_api(
             title=listing.title
         )
     else:
-        # Update fields if provided
+        # Update fields if provided and not already filled
         if request.title:
             existing.title = request.title
-        if request.price:
+        if request.price is not None:
             existing.price = request.price
-        if request.area:
+        if request.area is not None:
             existing.area = request.area
+        if price_per_sqm is not None:
+            existing.price_per_sqm = price_per_sqm
         if request.city:
             existing.city = request.city
+        if request.postal_code:
+            existing.postal_code = request.postal_code
+        if request.rooms is not None:
+            existing.rooms = request.rooms
+        if request.bedrooms is not None:
+            existing.bedrooms = request.bedrooms
+        if request.description and not existing.description_text:
+            existing.description_text = request.description
+        if request.property_type and not existing.property_type:
+            existing.property_type = request.property_type
+        if request.dpe_rating and not existing.dpe_rating:
+            existing.dpe_rating = request.dpe_rating
+        if request.ges_rating and not existing.ges_rating:
+            existing.ges_rating = request.ges_rating
         if request.photos:
-            import json
-            existing.photos_json = json.dumps(request.photos)
+            existing.original_photo_urls = json.dumps(request.photos)
+
         db.commit()
         db.refresh(existing)
         target_listing = existing
@@ -303,8 +414,8 @@ async def submit_external_listing_api(
             title=existing.title
         )
 
-    # Launch background scrape for full enrichment if possible
-    background_tasks.add_task(_enrich_external_listing, request.url)
+    # Launch background enrichment
+    background_tasks.add_task(_enrich_external_listing, request.url, target_listing.id)
 
     return schemas.ActionResponse(
         status="success",
@@ -315,4 +426,119 @@ async def submit_external_listing_api(
             "already_exists": is_already_exists,
             "status": "nouvelle"
         }
+    )
+
+
+@router.post("/submit-external-listings-batch", response_model=schemas.ExternalListingBatchResponse)
+async def submit_external_listings_batch_api(
+    batch: schemas.ExternalListingBatchRequest,
+    background_tasks: BackgroundTasks,
+    req: Request,
+    current_user: models.User = Depends(get_current_user_api),
+    db: Session = Depends(get_db)
+):
+    """
+    Add or update a batch of listings extracted from a search page via bookmarklet or extension.
+    Queues background tasks for each new or updated listing.
+    """
+    import json
+    results = []
+    created_count = 0
+    already_exists_count = 0
+    error_count = 0
+
+    for item in batch.listings:
+        try:
+            existing = find_existing_listing(item.url, db)
+            source_val = _determine_source(item.url, item.source)
+
+            price_per_sqm = None
+            if item.price and item.area and item.area > 0:
+                price_per_sqm = round(item.price / item.area, 2)
+
+            if not existing:
+                listing = models.Listing(
+                    url=item.url,
+                    original_url=item.url,
+                    external_id=item.external_id,
+                    title=item.title or "Annonce sans titre",
+                    price=item.price,
+                    area=item.area,
+                    rooms=item.rooms,
+                    bedrooms=item.bedrooms,
+                    city=item.city,
+                    postal_code=item.postal_code,
+                    location=item.location or item.city or "Inconnu",
+                    description_text=item.description,
+                    property_type=item.property_type,
+                    dpe_rating=item.dpe_rating,
+                    ges_rating=item.ges_rating,
+                    source=source_val,
+                    status=models.ListingStatus.NEW,
+                    price_per_sqm=price_per_sqm
+                )
+
+                if item.photos:
+                    listing.original_photo_urls = json.dumps(item.photos)
+
+                db.add(listing)
+                db.commit()
+                db.refresh(listing)
+                created_count += 1
+                target_listing = listing
+                status_str = "created"
+            else:
+                # Update basic fields if provided
+                if item.title:
+                    existing.title = item.title
+                if item.price is not None:
+                    existing.price = item.price
+                if item.area is not None:
+                    existing.area = item.area
+                if price_per_sqm is not None:
+                    existing.price_per_sqm = price_per_sqm
+                if item.city:
+                    existing.city = item.city
+                if item.postal_code:
+                    existing.postal_code = item.postal_code
+                if item.photos:
+                    existing.original_photo_urls = json.dumps(item.photos)
+
+                db.commit()
+                db.refresh(existing)
+                already_exists_count += 1
+                target_listing = existing
+                status_str = "already_exists"
+
+            results.append(schemas.ExternalListingBatchItemResult(
+                url=item.url,
+                status=status_str,
+                listing_id=target_listing.id,
+                title=target_listing.title,
+                error=None
+            ))
+
+            # Queue background enrichment
+            background_tasks.add_task(_enrich_external_listing, item.url, target_listing.id)
+
+        except Exception as e:
+            error_count += 1
+            results.append(schemas.ExternalListingBatchItemResult(
+                url=item.url,
+                status="error",
+                listing_id=None,
+                title=item.title,
+                error=str(e)
+            ))
+
+    message = f"Traitement terminé : {created_count} créée(s), {already_exists_count} déjà existante(s), {error_count} erreur(s)."
+
+    return schemas.ExternalListingBatchResponse(
+        status="success",
+        message=message,
+        total_received=len(batch.listings),
+        created_count=created_count,
+        already_exists_count=already_exists_count,
+        error_count=error_count,
+        results=results
     )

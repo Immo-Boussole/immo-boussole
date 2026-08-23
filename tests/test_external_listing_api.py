@@ -163,3 +163,147 @@ def test_submit_external_listing():
     db2.query(Listing).filter(Listing.url.in_(test_urls) | Listing.original_url.in_(test_urls)).delete(synchronize_session=False)
     db2.commit()
     db2.close()
+
+
+def test_submit_external_listings_batch():
+    run_migrations()
+    db = SessionLocal()
+
+    raw_key = "test_batch_api_key_123"
+    import hashlib
+    key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+    user = db.query(User).filter(User.username == "test_batch_user").first()
+    if not user:
+        user = User(
+            username="test_batch_user",
+            password_hash=b"fakehash",
+            salt=b"fakesalt",
+            role="user",
+            api_key_hash=key_hash,
+            can_create_api_key=True
+        )
+        db.add(user)
+        db.commit()
+    else:
+        user.api_key_hash = key_hash
+        db.commit()
+
+    test_urls = [
+        "https://www.leboncoin.fr/ad/ventes_immobilieres/100000001",
+        "https://www.leboncoin.fr/ad/ventes_immobilieres/100000002",
+        "https://www.leboncoin.fr/ad/ventes_immobilieres/100000003"
+    ]
+    db.query(Listing).filter(Listing.url.in_(test_urls) | Listing.original_url.in_(test_urls)).delete(synchronize_session=False)
+    db.commit()
+    db.close()
+
+    headers = {"Authorization": f"Bearer {raw_key}"}
+
+    # 1. Test check_external_listings endpoint
+    res_check = client.post("/api/v1/actions/check-external-listings", json={
+        "urls": test_urls,
+        "external_ids": ["lbc_100000001", "lbc_100000002"]
+    }, headers=headers)
+    assert res_check.status_code == 200
+    check_data = res_check.json()
+    assert check_data["existing_urls"] == []
+    assert check_data["existing_external_ids"] == []
+
+    # 2. Test batch submit
+    batch_payload = {
+        "listings": [
+            {
+                "url": test_urls[0],
+                "external_id": "lbc_100000001",
+                "title": "Maison 4 pièces Grenoble",
+                "price": 280000.0,
+                "area": 95.0,
+                "rooms": 4,
+                "city": "Grenoble",
+                "postal_code": "38000",
+                "photos": ["https://img.leboncoin.fr/pic1.jpg"],
+                "source": "leboncoin"
+            },
+            {
+                "url": test_urls[1],
+                "external_id": "lbc_100000002",
+                "title": "Appartement 2 pièces Echirolles",
+                "price": 140000.0,
+                "area": 48.0,
+                "rooms": 2,
+                "city": "Echirolles",
+                "postal_code": "38130",
+                "photos": ["https://img.leboncoin.fr/pic2.jpg"],
+                "source": "leboncoin"
+            }
+        ]
+    }
+
+    res_batch = client.post("/api/v1/actions/submit-external-listings-batch", json=batch_payload, headers=headers)
+    assert res_batch.status_code == 200
+    data_batch = res_batch.json()
+    assert data_batch["status"] == "success"
+    assert data_batch["total_received"] == 2
+    assert data_batch["created_count"] == 2
+    assert data_batch["already_exists_count"] == 0
+    assert data_batch["error_count"] == 0
+    assert len(data_batch["results"]) == 2
+
+    # 3. Test re-submitting with 1 existing and 1 new
+    batch_payload_mixed = {
+        "listings": [
+            {
+                "url": test_urls[0],
+                "title": "Maison 4 pièces Grenoble (Updated)",
+                "price": 275000.0,
+                "area": 95.0
+            },
+            {
+                "url": test_urls[2],
+                "external_id": "lbc_100000003",
+                "title": "Terrain 500 m² Meylan",
+                "price": 220000.0,
+                "area": 500.0,
+                "city": "Meylan"
+            }
+        ]
+    }
+
+    res_batch2 = client.post("/api/v1/actions/submit-external-listings-batch", json=batch_payload_mixed, headers=headers)
+    assert res_batch2.status_code == 200
+    data_batch2 = res_batch2.json()
+    assert data_batch2["created_count"] == 1
+    assert data_batch2["already_exists_count"] == 1
+    assert data_batch2["error_count"] == 0
+
+    # 4. Re-check check_external_listings
+    res_check2 = client.post("/api/v1/actions/check-external-listings", json={
+        "urls": test_urls,
+        "external_ids": ["lbc_100000001", "lbc_100000002", "lbc_100000003", "lbc_unknown"]
+    }, headers=headers)
+    assert res_check2.status_code == 200
+    check_data2 = res_check2.json()
+    assert len(check_data2["existing_urls"]) == 3
+    assert "lbc_100000001" in check_data2["existing_external_ids"]
+
+    # Clean up
+    db2 = SessionLocal()
+    db2.query(Listing).filter(Listing.url.in_(test_urls) | Listing.original_url.in_(test_urls)).delete(synchronize_session=False)
+    db2.commit()
+    db2.close()
+
+
+def test_cors_options_preflight():
+    """Verify that OPTIONS requests for cross-origin callers from portals receive proper CORS headers."""
+    res = client.options(
+        "/api/v1/actions/submit-external-listings-batch",
+        headers={
+            "Origin": "https://www.leboncoin.fr",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization, content-type"
+        }
+    )
+    assert res.status_code == 200
+    assert "access-control-allow-origin" in res.headers
+

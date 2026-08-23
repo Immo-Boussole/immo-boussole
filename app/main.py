@@ -17,6 +17,7 @@ import io
 
 
 from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -105,6 +106,15 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecureHeadersMiddleware)
+
+# Allow Cross-Origin Requests from browser extensions and bookmarklets
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Add session middleware for authentication
 app.add_middleware(

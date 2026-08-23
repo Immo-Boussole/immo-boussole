@@ -16,6 +16,7 @@ class SubmitUrlRequest(BaseModel):
 
 class ExternalListingSubmitRequest(BaseModel):
     url: str
+    external_id: Optional[str] = None
     title: Optional[str] = None
     price: Optional[float] = None
     area: Optional[float] = None
@@ -27,6 +28,9 @@ class ExternalListingSubmitRequest(BaseModel):
     description: Optional[str] = None
     photos: Optional[List[str]] = None
     source: Optional[str] = None
+    property_type: Optional[str] = None
+    dpe_rating: Optional[str] = None
+    ges_rating: Optional[str] = None
 
     @field_validator("url")
     @classmethod
@@ -34,6 +38,40 @@ class ExternalListingSubmitRequest(BaseModel):
         if not v.startswith("http"):
             raise ValueError("URL must start with http:// or https://")
         return v.strip()
+
+
+class ExternalListingBatchRequest(BaseModel):
+    listings: List[ExternalListingSubmitRequest]
+    tag: Optional[str] = None
+    search_query_id: Optional[int] = None
+
+
+class ExternalListingBatchItemResult(BaseModel):
+    url: str
+    status: str  # "created", "already_exists", "error"
+    listing_id: Optional[int] = None
+    title: Optional[str] = None
+    error: Optional[str] = None
+
+
+class ExternalListingBatchResponse(BaseModel):
+    status: str
+    message: str
+    total_received: int
+    created_count: int
+    already_exists_count: int
+    error_count: int
+    results: List[ExternalListingBatchItemResult]
+
+
+class ExternalListingCheckRequest(BaseModel):
+    urls: List[str] = []
+    external_ids: List[str] = []
+
+
+class ExternalListingCheckResponse(BaseModel):
+    existing_urls: List[str]
+    existing_external_ids: List[str]
 
 
 class LoginRequest(BaseModel):
