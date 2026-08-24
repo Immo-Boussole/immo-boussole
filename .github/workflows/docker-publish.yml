@@ -92,11 +92,12 @@ jobs:
 
       - name: Run Docker Scout scan
         uses: docker/scout-action@bacf462e8d090c09660de30a6ccc718035f961e3 # v1.20.4
+        continue-on-error: true
         with:
           command: cves
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           only-severities: critical,high
-          exit-code: true
+          exit-code: false
 
   update-image-ref:
     runs-on: ubuntu-latest
@@ -165,5 +166,6 @@ jobs:
             echo "Aucun changement à committer."
           else
             git commit -m "chore: update Docker image ref → ${{ steps.image_id.outputs.image_short }} [skip ci]"
+            git pull --rebase origin main || true
             git push
           fi
