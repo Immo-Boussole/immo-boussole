@@ -767,15 +767,15 @@
         <div class="header">
             <div class="header-title">
                 <i class="fa-solid fa-address-book" style="color: var(--accent);"></i>
-                Gestionnaire de Contacts
+                {{ t(request, 'contacts.page_title', 'Gestionnaire de Contacts') }}
             </div>
             <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                 <span id="googleSyncBadge" class="badge badge-accent">
-                    <i class="fa-brands fa-google"></i> Google Contacts Sync
+                    <i class="fa-brands fa-google"></i> {{ t(request, 'contacts.google_sync', 'Google Contacts Sync') }}
                 </span>
-                <button class="btn btn-purple" onclick="openMergeModal()"><i class="fa-solid fa-code-merge"></i> Fusionner / Doublons</button>
-                <button class="btn btn-secondary" id="headerBtnNewAgency" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> Nouvelle Agence</button>
-                <button class="btn btn-primary" id="headerBtnNewAgent" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> Nouvel Agent</button>
+                <button class="btn btn-purple" onclick="openMergeModal()"><i class="fa-solid fa-code-merge"></i> {{ t(request, 'contacts.merge_duplicates', 'Fusionner / Doublons') }}</button>
+                <button class="btn btn-secondary" id="headerBtnNewAgency" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> {{ t(request, 'contacts.new_agency', 'Nouvelle Agence') }}</button>
+                <button class="btn btn-primary" id="headerBtnNewAgent" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> {{ t(request, 'contacts.new_agent', 'Nouvel Agent') }}</button>
             </div>
         </div>
 
@@ -784,19 +784,19 @@
             <div class="tabs-header">
                 <!-- Onglet 1 -->
                 <button class="tab-btn active" id="tabContactsBtn" onclick="switchMainTab('contacts')">
-                    <i class="fa-solid fa-user-tie"></i> Fiches Contacts
+                    <i class="fa-solid fa-user-tie"></i> {{ t(request, 'contacts.tab_contacts', 'Fiches Contacts') }}
                     <span class="tab-badge" id="contactsCountBadge">0</span>
                 </button>
                 <!-- Onglet 2 -->
                 <button class="tab-btn" id="tabAgenciesBtn" onclick="switchMainTab('agencies')">
-                    <i class="fa-solid fa-building"></i> Fiches Agences
+                    <i class="fa-solid fa-building"></i> {{ t(request, 'contacts.tab_agencies', 'Fiches Agences') }}
                     <span class="tab-badge" id="agenciesCountBadge">0</span>
                 </button>
                 <!-- Moteur de recherche -->
-                <input type="text" id="searchInput" class="search-input" placeholder="Rechercher par nom, agence, téléphone, email, ville ou bien rattaché..." oninput="filterContacts()">
+                <input type="text" id="searchInput" class="search-input" placeholder="{{ t(request, 'contacts.search_placeholder', 'Rechercher par nom, agence, téléphone, email, ville ou bien rattaché...') }}" oninput="filterContacts()">
                 <!-- Filtre "Biens à visiter" (Actif par défaut) -->
                 <button type="button" id="btnFilterToVisit" class="btn btn-purple" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
-                    <i class="fa-solid fa-bookmark"></i> Biens à visiter (Actif)
+                    <i class="fa-solid fa-bookmark"></i> {{ t(request, 'contacts.filter_to_visit_active', 'Biens à visiter (Actif)') }}
                 </button>
             </div>
 

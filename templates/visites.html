@@ -785,11 +785,11 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1><i class="fa-solid fa-calendar-days" style="color: var(--accent); margin-right: 0.5rem;"></i> Gestionnaire de visites</h1>
+                <h1><i class="fa-solid fa-calendar-days" style="color: var(--accent); margin-right: 0.5rem;"></i> {{ t(request, 'visites.page_title', 'Gestionnaire de visites') }}</h1>
             </div>
             <div>
                 <button class="btn primary" onclick="openVisitModal()">
-                    <i class="fa-solid fa-plus"></i> Planifier une visite
+                    <i class="fa-solid fa-plus"></i> {{ t(request, 'visites.schedule_visit', 'Planifier une visite') }}
                 </button>
             </div>
         </header>
@@ -805,10 +805,10 @@
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2 style="font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2);">
-                    <i class="fa-solid fa-chart-pie" style="color: var(--accent); margin-right: 0.4rem;"></i> Vue d'ensemble du Pipeline
+                    <i class="fa-solid fa-chart-pie" style="color: var(--accent); margin-right: 0.4rem;"></i> {{ t(request, 'visites.pipeline_overview', 'Vue d\'ensemble du Pipeline') }}
                 </h2>
                 <button class="btn" style="font-size: 0.78rem;" onclick="toggleDetailedStepsStats()">
-                    <i class="fa-solid fa-layer-group"></i> <span id="toggleStepsBtnText">Afficher le détail par Étape (16)</span>
+                    <i class="fa-solid fa-layer-group"></i> <span id="toggleStepsBtnText">{{ t(request, 'visites.toggle_detailed_steps', 'Afficher le détail par Étape') }}</span>
                 </button>
             </div>
 
@@ -817,49 +817,49 @@
                     <div class="stat-icon blue"><i class="fa-solid fa-house-circle-check"></i></div>
                     <div class="stat-info">
                         <div class="val">{{ total_targets }}</div>
-                        <div class="lbl">Biens à visiter</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_to_visit', 'Biens à visiter') }}</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon blue"><i class="fa-regular fa-paper-plane"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statFamilyContactCnt">{{ contact_cnt }}</div>
-                        <div class="lbl">Prise de contact</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_contact', 'Prise de contact') }}</div>
                     </div>
                 </div>
                 <div class="stat-card indigo">
                     <div class="stat-icon indigo"><i class="fa-solid fa-calendar-day"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statFamilyVisiteCnt">{{ rdv_cnt }}</div>
-                        <div class="lbl">Rendez-vous</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_rdv', 'Rendez-vous') }}</div>
                     </div>
                 </div>
                 <div class="stat-card orange">
                     <div class="stat-icon orange"><i class="fa-solid fa-house-circle-check"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statBiensVisitesCnt">{{ biens_visites_cnt }}</div>
-                        <div class="lbl">Biens visités</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_visited', 'Biens visités') }}</div>
                     </div>
                 </div>
                 <div class="stat-card yellow">
                     <div class="stat-icon yellow"><i class="fa-solid fa-brain"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statFamilyReflexionCnt">{{ reflexion_cnt }}</div>
-                        <div class="lbl">Réflexion</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_reflection', 'Réflexion') }}</div>
                     </div>
                 </div>
                 <div class="stat-card purple">
                     <div class="stat-icon purple"><i class="fa-solid fa-handshake"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statFamilyOffreCnt">{{ offre_cnt }}</div>
-                        <div class="lbl">Offre & Négociation</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_offer', 'Offre & Négociation') }}</div>
                     </div>
                 </div>
                 <div class="stat-card green">
                     <div class="stat-icon green"><i class="fa-solid fa-flag-checkered"></i></div>
                     <div class="stat-info">
                         <div class="val" id="statFamilyClotureCnt">{{ cloture_cnt }}</div>
-                        <div class="lbl">Issue & Clôture</div>
+                        <div class="lbl">{{ t(request, 'visites.stat_closed', 'Issue & Clôture') }}</div>
                     </div>
                 </div>
             </div>

@@ -6,12 +6,12 @@
     "nav": {
         "dashboard": "Dashboard",
         "listings_table": "Listings Table",
-        "ideal_profile": "Ideal Profile",
-        "ready_to_search": "Ready to Search",
+        "ideal_profile": "Ideal Property Profile",
+        "ready_to_search": "Ready Searches",
         "logout": "Logout",
         "navigation": "Navigation",
-        "auto_searches": "Automatic Searches",
-        "auto_searches_view": "Automatic Searches",
+        "auto_searches": "Automated Searches",
+        "auto_searches_view": "Automated Searches",
         "manual_searches": "Manual Searches",
         "no_searches": "No searches configured",
         "no_manual": "No manual listings",
@@ -19,15 +19,21 @@
         "connected": "Connected:",
         "total_listings": "Total listings",
         "users": "Users",
-        "map": "Map",
-        "distance_temps": "Distance & Time",
+        "map": "Interactive Map",
+        "distance_temps": "Distance & Travel Times",
         "points_interet": "Points of Interest",
         "profile": "My Profile",
         "administration": "Administration",
         "duplicate_hunt": "Duplicate Hunt",
         "visites": "Visits Manager",
         "contacts": "Contacts Manager",
-        "repairs": "Repairs"
+        "repairs": "Listings Repair",
+        "a_voir": "To Review",
+        "a_visiter": "To Visit",
+        "zones": "Zone Management",
+        "ai_assistant": "AI Assistant",
+        "user_management": "User Management",
+        "admin_maintenance": "Administration"
     },
     "pois": {
         "title": "Points of Interest",
@@ -148,7 +154,12 @@
             "all": "All",
             "new": "New",
             "active": "Active",
-            "disappeared": "Disappeared"
+            "disappeared": "Disappeared",
+            "rejected": "Rejected",
+            "favorite": "Favorites",
+            "liked": "Liked",
+            "disliked": "Disliked",
+            "contacted": "Contacted"
         },
         "imported": "Imported",
         "rejected": "Rejected",
@@ -185,7 +196,17 @@
         "scrape_and_add": "Scrape & Add",
         "run_batch": "Run batch insert",
         "delete_title": "Delete this listing?",
-        "delete_warn": "This action is irreversible. Associated reviews will also be removed."
+        "delete_warn": "This action is irreversible. Associated reviews will also be removed.",
+        "add_listing_mobile": "Add listing",
+        "refresh_tags_mobile": "Refresh tags",
+        "visit_status_all": "All visit states",
+        "visit_status_none": "No state defined",
+        "visit_status_retour_agence": "Agency follow-up for appointment",
+        "visit_status_visite_programmee": "Visit scheduled",
+        "visit_status_deja_visitee": "Already visited, under review",
+        "visit_status_sans_suite_acheteur": "No further action (buyer)",
+        "visit_status_sans_suite_visiteur": "No further action (seller)",
+        "visit_status_a_relancer": "Follow up for appointment"
     },
     "table": {
         "title": "Title",
@@ -543,5 +564,56 @@
         "photo": "Photo",
         "merge_success": "Listings merged!",
         "reject_success": "Duplicate rejected!"
+    },
+    "contacts": {
+        "page_title": "Contacts Manager",
+        "google_sync": "Google Contacts Sync",
+        "merge_duplicates": "Merge / Duplicates",
+        "new_agency": "New Agency",
+        "new_agent": "New Agent",
+        "tab_contacts": "Contact Cards",
+        "tab_agencies": "Agency Cards",
+        "search_placeholder": "Search by name, agency, phone, email, city or linked property...",
+        "filter_to_visit": "Properties to visit",
+        "filter_to_visit_active": "Properties to visit (Active)",
+        "filter_to_visit_all": "All properties",
+        "detected_contacts_title": "Contacts Detected in Listings",
+        "no_contacts": "No contact card found.",
+        "no_agencies": "No agency card found."
+    },
+    "visites": {
+        "page_title": "Visits Manager",
+        "schedule_visit": "Schedule a Visit",
+        "pipeline_overview": "Pipeline Overview",
+        "toggle_detailed_steps": "Show detailed step breakdown",
+        "stat_to_visit": "Properties to visit",
+        "stat_contact": "Contact initiated",
+        "stat_rdv": "Appointments",
+        "stat_visited": "Visited properties",
+        "stat_reflection": "Under review",
+        "stat_offer": "Offer & Negotiation",
+        "stat_closed": "Closed"
+    },
+    "zones": {
+        "page_title": "Zone Management",
+        "subtitle": "Define forbidden cities and train stations — instant impact across the entire application",
+        "forbidden_cities": "Forbidden Cities",
+        "forbidden_stations": "Forbidden Train Stations",
+        "allowed_zones": "Allowed Preferred Zones",
+        "add_train_line": "Add a Train Line",
+        "add_city": "Add a City Rule",
+        "add_station": "Add a Station Rule"
+    },
+    "chat": {
+        "title": "AI Assistant",
+        "clear": "Clear Chat",
+        "placeholder": "Ask your question...",
+        "welcome": "Hello! I am your Immo-Boussole AI assistant. I can help you explore and analyze your real estate catalog."
+    },
+    "repairs": {
+        "title": "Listings Repair",
+        "subtitle": "Non-destructive verification and diagnostic repair tools for listings and media",
+        "audit_btn": "Audit Database",
+        "repair_btn": "Repair Inconsistencies"
     }
 }

@@ -1321,14 +1321,14 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% elif is_a_visiter %}À visiter{% else
+                <h1>{% if is_a_voir %}{{ t(request, 'nav.a_voir', 'À voir') }}{% elif is_a_visiter %}{{ t(request, 'nav.a_visiter', 'À visiter') }}{% else
                     %}{{ t(request, 'dashboard.all_listings') }}{% endif %}</h1>
 
                 {% if request.session.get('role') == 'user' or request.session.get('role') == 'admin' %}
                 <button class="btn primary" id="btnAddUrl" onclick="openModal()" style="margin-left: 0.5rem;">
                     <i class="fa-solid fa-plus"></i>
                     <span class="d-desktop">{{ t(request, 'dashboard.add_listing') }}</span>
-                    <span class="d-mobile">Ajouter annonce</span>
+                    <span class="d-mobile">{{ t(request, 'dashboard.add_listing_mobile', 'Ajouter') }}</span>
                 </button>
                 {% endif %}
             </div>
@@ -1352,35 +1352,35 @@
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-rejected" onclick="filter('rejetee', this)" style="color: var(--orange);">
-                    <i class="fa-solid fa-ban"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.rejected',
+                    <i class="fa-solid fa-ban"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.rejected',
                         'Rejetées') }}</span>
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-favorite" onclick="filter('favorite', this)" style="color: var(--red);">
-                    <i class="fa-solid fa-heart"></i><span class="hide-on-mobile">Coup de cœur</span>
+                    <i class="fa-solid fa-heart"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.favorite', 'Coup de cœur') }}</span>
                 </button>
                 <button class="btn" id="f-liked" onclick="filter('liked', this)" style="color: var(--green);">
-                    <i class="fa-solid fa-thumbs-up"></i><span class="hide-on-mobile">J'aime</span>
+                    <i class="fa-solid fa-thumbs-up"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.liked', 'J\'aime') }}</span>
                 </button>
                 <button class="btn" id="f-disliked" onclick="filter('disliked', this)" style="color: var(--text-2);">
-                    <i class="fa-solid fa-thumbs-down"></i><span class="hide-on-mobile">Je n'aime pas</span>
+                    <i class="fa-solid fa-thumbs-down"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.disliked', 'Je n\'aime pas') }}</span>
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <button class="btn" id="f-contacted" onclick="filter('contacted', this)" style="color: var(--accent);">
-                    <i class="fa-solid fa-envelope"></i><span class="hide-on-mobile">Contacté</span>
+                    <i class="fa-solid fa-envelope"></i><span class="hide-on-mobile">{{ t(request, 'dashboard.filters.contacted', 'Contacté') }}</span>
                 </button>
                 <div class="vertical-separator hide-on-mobile"></div>
                 <div class="visit-status-filter-wrapper" style="display: flex; align-items: center;">
                     <select id="filterVisitStatus" onchange="applyVisitStatusFilter(this.value)" class="btn"
                         style="background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; outline: none;">
-                        <option value="">Tous états de visite</option>
-                        <option value="none">Sans état défini</option>
-                        <option value="retour_agence">🔵 Retour d'agence pour RDV</option>
-                        <option value="visite_programmee">🟣 Visite programmée</option>
-                        <option value="deja_visitee">🟡 Déjà visitée, réflexion</option>
-                        <option value="sans_suite_acheteur">🔴 Sans suite acheteur</option>
-                        <option value="sans_suite_visiteur">🔴 Sans suite vendeur</option>
-                        <option value="a_relancer">🟠 A relancer pour RDV</option>
+                        <option value="">{{ t(request, 'dashboard.visit_status_all', 'Tous états de visite') }}</option>
+                        <option value="none">{{ t(request, 'dashboard.visit_status_none', 'Sans état défini') }}</option>
+                        <option value="retour_agence">🔵 {{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</option>
+                        <option value="visite_programmee">🟣 {{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</option>
+                        <option value="deja_visitee">🟡 {{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</option>
+                        <option value="sans_suite_acheteur">🔴 {{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</option>
+                        <option value="sans_suite_visiteur">🔴 {{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</option>
+                        <option value="a_relancer">🟠 {{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</option>
                     </select>
                 </div>
             </div>
@@ -1390,7 +1390,7 @@
                     style="border-color: rgba(16, 217, 164, 0.3); color: var(--green);">
                     <i class="fa-solid fa-rotate"></i>
                     <span class="d-desktop">{{ t(request, 'dashboard.refresh_tags') }}</span>
-                    <span class="d-mobile">Rafraîch. tags</span>
+                    <span class="d-mobile">{{ t(request, 'dashboard.refresh_tags_mobile', 'Rafraîch. tags') }}</span>
                 </button>
             </div>
         </div>

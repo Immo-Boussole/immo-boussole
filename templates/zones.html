@@ -442,9 +442,9 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" style="background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; display:none;">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1><i class="fa-solid fa-ban" style="color:var(--red); margin-right:0.5rem;"></i> Gestion des Zones Interdites</h1>
+                <h1><i class="fa-solid fa-ban" style="color:var(--red); margin-right:0.5rem;"></i> {{ t(request, 'zones.page_title', 'Gestion des Zones Interdites') }}</h1>
             </div>
-            <p style="font-size:0.85rem; color:var(--text-2);">Définissez les villes et gares SNCF interdites — impact immédiat sur toute l'application</p>
+            <p style="font-size:0.85rem; color:var(--text-2);">{{ t(request, 'zones.subtitle', 'Définissez les villes et gares SNCF interdites — impact immédiat sur toute l\'application') }}</p>
         </header>
 
         <div class="content-wrapper">

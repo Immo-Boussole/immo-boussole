@@ -450,10 +450,10 @@
 
     <main class="main">
         <div class="topbar">
-            <h1><i class="fas fa-robot" style="color: var(--accent); margin-right: 0.5rem;"></i> Assistant IA</h1>
+            <h1><i class="fas fa-robot" style="color: var(--accent); margin-right: 0.5rem;"></i> {{ t(request, 'chat.title', 'Assistant IA') }}</h1>
             <div class="topbar-right">
                 <button class="btn" onclick="clearChat()">
-                    <i class="fas fa-trash-alt"></i> Effacer
+                    <i class="fas fa-trash-alt"></i> {{ t(request, 'chat.clear', 'Effacer') }}
                 </button>
             </div>
         </div>
@@ -461,19 +461,13 @@
         <div class="chat-container">
             <div id="chat-messages">
                 <div class="message assistant">
-                    Bonjour ! Je suis l'assistant intelligent d'Immo-Boussole. Je peux vous aider à explorer vos annonces. 
-                    Vous pouvez me poser des questions comme :
-                    <ul>
-                        <li>"Quelles sont les dernières annonces à Bordeaux ?"</li>
-                        <li>"Donne-moi des stats sur le prix moyen par ville"</li>
-                        <li>"Y a-t-il des maisons avec jardin de plus de 100m² ?"</li>
-                    </ul>
+                    {{ t(request, 'chat.welcome', 'Bonjour ! Je suis l\'assistant intelligent d\'Immo-Boussole. Je peux vous aider à explorer et analyser vos annonces immobilières.') }}
                 </div>
             </div>
 
             <div class="chat-input-wrapper">
                 <form id="chat-form" class="chat-input-container">
-                    <input type="text" id="user-input" placeholder="Posez votre question..." autocomplete="off">
+                    <input type="text" id="user-input" placeholder="{{ t(request, 'chat.placeholder', 'Posez votre question...') }}" autocomplete="off">
                     <button type="submit" id="send-btn">
                         <i class="fas fa-paper-plane"></i>
                     </button>

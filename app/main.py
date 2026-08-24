@@ -688,7 +688,7 @@ def admin_users_page(
         "users": users,
         "queries": queries,
         "listings": listings,
-        "title": "Gestion des Utilisateurs — Immo-Boussole",
+        "title": f"{get_text(request, 'admin_users.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -706,7 +706,7 @@ def admin_maintenance_page(
     return templates.TemplateResponse(request=request, name="admin_maintenance.html", context={
         "queries": queries,
         "listings": listings,
-        "title": "Administration — Immo-Boussole",
+        "title": f"{get_text(request, 'admin_maintenance.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1343,7 +1343,7 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
         "all_agencies": all_agencies,
         "local_hash": local_hash,
         "app_version": settings.APP_VERSION,
-        "title": "Gestionnaire de visites — Immo-Boussole",
+        "title": f"{get_text(request, 'visites.page_title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1364,7 +1364,7 @@ def contacts_page(
         "users": users,
         "local_hash": local_hash,
         "app_version": settings.APP_VERSION,
-        "title": "Gestionnaire de Contacts — Immo-Boussole",
+        "title": f"{get_text(request, 'contacts.page_title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1392,7 +1392,7 @@ def listings_table_page(
         "rejected_listings": rejected_listings,
         "listings": all_listings,
         "queries": queries,
-        "title": "Tableau des Annonces — Immo-Boussole",
+        "title": f"{get_text(request, 'table.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1411,7 +1411,7 @@ def listings_repair_page(
     return templates.TemplateResponse(request=request, name="listings_repair.html", context={
         "queries": queries,
         "listings": listings,
-        "title": "Réparations — Immo-Boussole",
+        "title": f"{get_text(request, 'repairs.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1620,7 +1620,7 @@ def ideal_profile_page(
         "listings": listings,
         "std_users": std_users,
         "coup_de_coeur_listings": coup_de_coeur_listings,
-        "title": "Fiche de Bien Idéal — Immo-Boussole",
+        "title": f"{get_text(request, 'ideal_profile.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1640,7 +1640,7 @@ def ready_searches_page(
         "ready_searches": ready_searches,
         "queries": queries,
         "listings": listings,
-        "title": "Prêt à Rechercher — Immo-Boussole",
+        "title": f"{get_text(request, 'ready_searches.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1738,7 +1738,7 @@ def auto_searches_page(
         "listings": all_listings,
         "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),
         "last_sync": last_sync,
-        "title": "Recherches Automatiques",
+        "title": f"{get_text(request, 'auto_searches.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1769,7 +1769,7 @@ def profile_page(
         "pois": pois,
         "queries": queries,
         "listings": listings,
-        "title": "Mon Profil — Immo-Boussole",
+        "title": f"{get_text(request, 'profile.title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1846,7 +1846,7 @@ def zones_page(
         "queries": queries,
         "listings": listings,
         "to_qualify": to_qualify,
-        "title": "Gestion des Zones — Immo-Boussole",
+        "title": f"{get_text(request, 'zones.page_title')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -1875,7 +1875,7 @@ def duplicate_hunt_page(
         "potential_pairs": potential_pairs,
         "queries": queries,
         "listings": all_listings,
-        "title": "Chasse aux duplicats — Immo-Boussole",
+        "title": f"{get_text(request, 'duplicates.title')} — {get_text(request, 'app.title')}",
     })
 
 # ─── API: Allowed Departments ─────────────────────────────────────────────────
@@ -2103,7 +2103,7 @@ def map_page(
     return templates.TemplateResponse(request=request, name="carte.html", context={
         "queries": queries,
         "listings": listings,
-        "title": "Carte des Biens — Immo-Boussole",
+        "title": f"{get_text(request, 'nav.map')} — {get_text(request, 'app.title')}",
     })
 
 
@@ -2133,7 +2133,7 @@ def distance_temps_page(
         if user.work_address and user.work_lat and user.work_lon:
             user_points.append({
                 "id": "work",
-                "name": "Mon travail",
+                "name": get_text(request, "map.work", "Mon travail"),
                 "address": user.work_address,
                 "lat": user.work_lat,
                 "lon": user.work_lon,
@@ -2147,7 +2147,7 @@ def distance_temps_page(
                     poi_id = poi.get("id") or f"poi_{idx}"
                     user_points.append({
                         "id": str(poi_id),
-                        "name": poi.get("name", "Point d'intérêt"),
+                        "name": poi.get("name", get_text(request, "pois.title", "Point d'intérêt")),
                         "address": poi.get("address", ""),
                         "lat": poi.get("lat"),
                         "lon": poi.get("lon"),
@@ -2167,7 +2167,7 @@ def distance_temps_page(
             _enrich_listings([selected_listing], viewed_ids)
 
     return templates.TemplateResponse(request=request, name="distance_temps.html", context={
-        "title": "Distance & Temps — Immo-Boussole",
+        "title": f"{get_text(request, 'distance_temps.title')} — {get_text(request, 'app.title')}",
         "queries": queries,
         "listings": listings,
         "user_points": user_points,
@@ -2205,7 +2205,7 @@ def points_interet_page(
         if user.work_address and user.work_lat and user.work_lon:
             user_points.append({
                 "id": "work",
-                "name": "Mon travail",
+                "name": get_text(request, "map.work", "Mon travail"),
                 "address": user.work_address,
                 "lat": user.work_lat,
                 "lon": user.work_lon,
@@ -2219,7 +2219,7 @@ def points_interet_page(
                     poi_id = poi.get("id") or f"poi_{idx}"
                     user_points.append({
                         "id": str(poi_id),
-                        "name": poi.get("name", "Point d'intérêt"),
+                        "name": poi.get("name", get_text(request, "pois.title", "Point d'intérêt")),
                         "address": poi.get("address", ""),
                         "lat": poi.get("lat"),
                         "lon": poi.get("lon"),
@@ -2239,7 +2239,7 @@ def points_interet_page(
             _enrich_listings([selected_listing], viewed_ids)
 
     return templates.TemplateResponse(request=request, name="points_interet.html", context={
-        "title": "Points d'Intérêt — Immo-Boussole",
+        "title": f"{get_text(request, 'pois.title')} — {get_text(request, 'app.title')}",
         "queries": queries,
         "listings": listings,
         "user_points": user_points,
@@ -2267,7 +2267,7 @@ def chat_page(
     return templates.TemplateResponse(request=request, name="chat.html", context={
         "queries": queries,
         "listings": all_listings,
-        "title": "Assistant IA — Immo-Boussole",
+        "title": f"{get_text(request, 'chat.title')} — {get_text(request, 'app.title')}",
     })
 
 

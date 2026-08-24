@@ -234,7 +234,7 @@
         <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard', 'Tableau de bord') }}</a>
         <a href="/listings/table" class="nav-link{% if request.url.path == '/listings/table' %} active{% endif %}"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table', 'Tableau des annonces') }}</a>
         <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>
-        <a href="/a-visiter" class="nav-link{% if request.url.path == '/a-visiter' %} active{% endif %}"><i class="fa-solid fa-house-circle-check"></i> À visiter</a>
+        <a href="/a-visiter" class="nav-link{% if request.url.path == '/a-visiter' %} active{% endif %}"><i class="fa-solid fa-house-circle-check"></i> {{ t(request, 'nav.a_visiter', 'À visiter') }}</a>
         
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
@@ -243,17 +243,17 @@
         
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
-        <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> Gestion des Zones</a>
+        <a href="/zones" class="nav-link{% if request.url.path == '/zones' %} active{% endif %}"><i class="fa-solid fa-ban"></i> {{ t(request, 'nav.zones', 'Gestion des Zones') }}</a>
         <a href="/carte" class="nav-link{% if request.url.path == '/carte' %} active{% endif %}"><i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'nav.map', 'Carte') }}</a>
         <a href="/distance-temps" class="nav-link{% if request.url.path == '/distance-temps' %} active{% endif %}"><i class="fa-solid fa-route"></i> {{ t(request, 'nav.distance_temps', 'Distance & Temps') }}</a>
         <a href="/points-interet" class="nav-link{% if request.url.path == '/points-interet' %} active{% endif %}"><i class="fa-solid fa-location-crosshairs"></i> {{ t(request, 'nav.points_interet', 'Points d\'Intérêt') }}</a>
         
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
-        <a href="/profile/ideal" class="nav-link{% if request.url.path == '/profile/ideal' %} active{% endif %}"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile') }}</a>
-        <a href="/chat" class="nav-link{% if request.url.path == '/chat' %} active{% endif %}"><i class="fa-solid fa-robot"></i> Assistant IA</a>
-        <a href="/searches/ready" class="nav-link{% if request.url.path == '/searches/ready' %} active{% endif %}"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search') }}</a>
-        <a href="/searches/auto" class="nav-link{% if request.url.path == '/searches/auto' %} active{% endif %}"><i class="fa-solid fa-robot"></i> {{ t(request, "nav.auto_searches_view", "Recherches Automatiques") }}</a>
+        <a href="/profile/ideal" class="nav-link{% if request.url.path == '/profile/ideal' %} active{% endif %}"><i class="fa-solid fa-star"></i> {{ t(request, 'nav.ideal_profile', 'Fiche Bien Idéal') }}</a>
+        <a href="/chat" class="nav-link{% if request.url.path == '/chat' %} active{% endif %}"><i class="fa-solid fa-robot"></i> {{ t(request, 'nav.ai_assistant', 'Assistant IA') }}</a>
+        <a href="/searches/ready" class="nav-link{% if request.url.path == '/searches/ready' %} active{% endif %}"><i class="fa-solid fa-list-check"></i> {{ t(request, 'nav.ready_to_search', 'Recherches Prêtes') }}</a>
+        <a href="/searches/auto" class="nav-link{% if request.url.path == '/searches/auto' %} active{% endif %}"><i class="fa-solid fa-robot"></i> {{ t(request, 'nav.auto_searches_view', 'Recherches Automatiques') }}</a>
         
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
         
@@ -262,8 +262,8 @@
         
         {% if request.session.get('role') == 'admin' %}
         <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
-        <a href="/admin/users" class="nav-link{% if request.url.path == '/admin/users' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> Gestion Utilisateurs</a>
-        <a href="/admin/maintenance" class="nav-link{% if request.url.path == '/admin/maintenance' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> Administration</a>
+        <a href="/admin/users" class="nav-link{% if request.url.path == '/admin/users' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-users-gear"></i> {{ t(request, 'nav.user_management', 'Gestion Utilisateurs') }}</a>
+        <a href="/admin/maintenance" class="nav-link{% if request.url.path == '/admin/maintenance' %} active{% endif %}" style="color: var(--accent);"><i class="fa-solid fa-gears"></i> {{ t(request, 'nav.admin_maintenance', 'Administration') }}</a>
         {% endif %}
     </nav>
 

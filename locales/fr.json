@@ -7,7 +7,7 @@
         "dashboard": "Tableau de bord",
         "listings_table": "Tableau des annonces",
         "ideal_profile": "Fiche Bien Idéal",
-        "ready_to_search": "Prêt à rechercher",
+        "ready_to_search": "Recherches Prêtes",
         "logout": "Déconnexion",
         "navigation": "Navigation",
         "auto_searches": "Recherches Automatiques",
@@ -27,7 +27,13 @@
         "duplicate_hunt": "Chasse aux duplicats",
         "visites": "Gestionnaire de visites",
         "contacts": "Gestionnaire de contacts",
-        "repairs": "Réparations"
+        "repairs": "Réparations",
+        "a_voir": "À voir",
+        "a_visiter": "À visiter",
+        "zones": "Gestion des Zones",
+        "ai_assistant": "Assistant IA",
+        "user_management": "Gestion Utilisateurs",
+        "admin_maintenance": "Administration"
     },
     "pois": {
         "title": "Points d'Intérêt",
@@ -145,10 +151,15 @@
     "dashboard": {
         "all_listings": "Toutes les annonces",
         "filters": {
-            "all": "Toutes",
-            "new": "Nouvelles",
-            "active": "Actives",
-            "disappeared": "Disparues"
+            "all": "Tous",
+            "new": "Nouvelle",
+            "active": "Active",
+            "disappeared": "Disparue",
+            "rejected": "Rejetées",
+            "favorite": "Coup de cœur",
+            "liked": "J'aime",
+            "disliked": "Je n'aime pas",
+            "contacted": "Contacté"
         },
         "imported": "Importée(s)",
         "rejected": "Rejetée(s)",
@@ -185,7 +196,17 @@
         "scrape_and_add": "Scraper & Ajouter",
         "run_batch": "Lancer l'ajout massif",
         "delete_title": "Supprimer cette annonce ?",
-        "delete_warn": "Cette action est irréversible. Les avis associés seront également supprimés."
+        "delete_warn": "Cette action est irréversible. Les avis associés seront également supprimés.",
+        "add_listing_mobile": "Ajouter annonce",
+        "refresh_tags_mobile": "Rafraîch. tags",
+        "visit_status_all": "Tous états de visite",
+        "visit_status_none": "Sans état défini",
+        "visit_status_retour_agence": "Retour d'agence pour RDV",
+        "visit_status_visite_programmee": "Visite programmée",
+        "visit_status_deja_visitee": "Déjà visitée, réflexion",
+        "visit_status_sans_suite_acheteur": "Sans suite acheteur",
+        "visit_status_sans_suite_visiteur": "Sans suite vendeur",
+        "visit_status_a_relancer": "A relancer pour RDV"
     },
     "table": {
         "title": "Titre",
@@ -543,5 +564,56 @@
         "photo": "Photo",
         "merge_success": "Annonces fusionnées !",
         "reject_success": "Duplicat rejeté !"
+    },
+    "contacts": {
+        "page_title": "Gestionnaire de Contacts",
+        "google_sync": "Synchronisation Google Contacts",
+        "merge_duplicates": "Fusionner / Doublons",
+        "new_agency": "Nouvelle Agence",
+        "new_agent": "Nouvel Agent",
+        "tab_contacts": "Fiches Contacts",
+        "tab_agencies": "Fiches Agences",
+        "search_placeholder": "Rechercher par nom, agence, téléphone, email, ville ou bien rattaché...",
+        "filter_to_visit": "Biens à visiter",
+        "filter_to_visit_active": "Biens à visiter (Actif)",
+        "filter_to_visit_all": "Tous les biens",
+        "detected_contacts_title": "Contacts détectés dans les annonces",
+        "no_contacts": "Aucune fiche contact trouvée.",
+        "no_agencies": "Aucune fiche agence trouvée."
+    },
+    "visites": {
+        "page_title": "Gestionnaire de visites",
+        "schedule_visit": "Planifier une visite",
+        "pipeline_overview": "Vue d'ensemble du Pipeline",
+        "toggle_detailed_steps": "Afficher le détail par Étape",
+        "stat_to_visit": "Biens à visiter",
+        "stat_contact": "Prise de contact",
+        "stat_rdv": "Rendez-vous",
+        "stat_visited": "Biens visités",
+        "stat_reflection": "Réflexion",
+        "stat_offer": "Offre & Négociation",
+        "stat_closed": "Clôture"
+    },
+    "zones": {
+        "page_title": "Gestion des Zones",
+        "subtitle": "Définissez les villes et gares SNCF interdites — impact immédiat sur toute l'application",
+        "forbidden_cities": "Villes interdites",
+        "forbidden_stations": "Gares interdites",
+        "allowed_zones": "Zones autorisées",
+        "add_train_line": "Ajouter une ligne de train",
+        "add_city": "Ajouter une règle de ville",
+        "add_station": "Ajouter une règle de gare"
+    },
+    "chat": {
+        "title": "Assistant IA",
+        "clear": "Effacer",
+        "placeholder": "Posez votre question...",
+        "welcome": "Bonjour ! Je suis l'assistant intelligent d'Immo-Boussole. Je peux vous aider à explorer et analyser vos annonces immobilières."
+    },
+    "repairs": {
+        "title": "Réparations d'Annonces",
+        "subtitle": "Vérification et réparation non-destructive des données et annonces",
+        "audit_btn": "Auditer la base",
+        "repair_btn": "Réparer les anomalies"
     }
 }
