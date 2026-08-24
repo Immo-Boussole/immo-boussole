@@ -1053,10 +1053,10 @@
             if (btn) {
                 if (filterToVisit) {
                     btn.className = 'btn btn-purple';
-                    btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Biens à visiter (Actif)';
+                    btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> {{ t(request, "contacts.filter_to_visit_active", "Biens à visiter (Actif)") }}';
                 } else {
                     btn.className = 'btn btn-secondary';
-                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i> Biens à visiter';
+                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i> {{ t(request, "contacts.filter_to_visit", "Biens à visiter") }}';
                 }
             }
             loadAll();

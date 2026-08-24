@@ -867,7 +867,7 @@
             <!-- ── Detailed Steps Grid (Hidden by default) ── -->
             <div id="detailedStepsGrid" style="display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; animation: slideUp 0.25s ease;">
                 <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-2); text-transform: uppercase; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                    Compteurs détaillés par Étape du Pipeline (16 étapes)
+                    {{ t(request, 'visites.detailed_steps_title', 'Compteurs détaillés par Étape du Pipeline (16 étapes)') }}
                 </div>
                 <div id="stepsCountersContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem;">
                     <!-- Populated dynamically via JS -->
@@ -877,13 +877,13 @@
             <!-- ── Tabs ── -->
             <div class="tab-bar">
                 <button class="tab-btn active" id="tabBtnCal" onclick="switchTab('calendar')">
-                    <i class="fa-solid fa-calendar-days"></i> Calendrier
+                    <i class="fa-solid fa-calendar-days"></i> {{ t(request, 'visites.tab_calendar', 'Calendrier') }}
                 </button>
                 <button class="tab-btn" id="tabBtnProps" onclick="switchTab('properties')">
-                    <i class="fa-solid fa-list-check"></i> Biens à visiter ({{ total_targets }})
+                    <i class="fa-solid fa-list-check"></i> {{ t(request, 'visites.tab_properties', 'Biens à visiter') }} ({{ total_targets }})
                 </button>
                 <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">
-                    <i class="fa-solid fa-clock-rotate-left"></i> Historique des visites
+                    <i class="fa-solid fa-clock-rotate-left"></i> {{ t(request, 'visites.tab_history', 'Historique des visites') }}
                 </button>
             </div>
 
@@ -893,20 +893,20 @@
                     <div class="calendar-header">
                         <h2 id="calendarMonthYear">Mois Année</h2>
                         <div class="calendar-controls">
-                            <button class="btn" onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i> Précédent</button>
-                            <button class="btn" onclick="todayMonth()">Aujourd'hui</button>
-                            <button class="btn" onclick="nextMonth()">Suivant <i class="fa-solid fa-chevron-right"></i></button>
+                            <button class="btn" onclick="prevMonth()"><i class="fa-solid fa-chevron-left"></i> {{ t(request, 'visites.cal_prev', 'Précédent') }}</button>
+                            <button class="btn" onclick="todayMonth()">{{ t(request, 'visites.cal_today', 'Aujourd\'hui') }}</button>
+                            <button class="btn" onclick="nextMonth()">{{ t(request, 'visites.cal_next', 'Suivant') }} <i class="fa-solid fa-chevron-right"></i></button>
                         </div>
                     </div>
 
                     <div class="calendar-grid">
-                        <div class="calendar-day-head">Lun</div>
-                        <div class="calendar-day-head">Mar</div>
-                        <div class="calendar-day-head">Mer</div>
-                        <div class="calendar-day-head">Jeu</div>
-                        <div class="calendar-day-head">Ven</div>
-                        <div class="calendar-day-head">Sam</div>
-                        <div class="calendar-day-head">Dim</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.mon', 'Lun') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.tue', 'Mar') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.wed', 'Mer') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.thu', 'Jeu') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.fri', 'Ven') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.sat', 'Sam') }}</div>
+                        <div class="calendar-day-head">{{ t(request, 'cal.sun', 'Dim') }}</div>
                     </div>
                     <div class="calendar-grid" id="calendarBody" style="margin-top: 6px;"></div>
                 </div>
@@ -930,36 +930,36 @@
                                 {% endif %}
                                 {% if listing.last_visit_status %}
                                 <div class="visit-status-container" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                                    <div class="visit-status-badge status-{{ listing.last_visit_status }}" title="Cliquer pour modifier l'état">
-                                        {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence</span>
-                                        {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
-                                        {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée</span>
-                                        {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite (ach.)</span>
-                                        {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite (vend.)</span>
-                                        {% elif listing.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer</span>
+                                    <div class="visit-status-badge status-{{ listing.last_visit_status }}" title="{{ t(request, 'listing.click_to_change_status', 'Cliquer pour modifier l\'état') }}">
+                                        {% if listing.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_retour_agence_short', 'Retour agence') }}</span>
+                                        {% elif listing.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_visite_programmee_short', 'Visite programmée') }}</span>
+                                        {% elif listing.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_deja_visitee_short', 'Déjà visitée') }}</span>
+                                        {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_sans_suite_acheteur_short', 'Sans suite (ach.)') }}</span>
+                                        {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_sans_suite_visiteur_short', 'Sans suite (vend.)') }}</span>
+                                        {% elif listing.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_a_relancer_short', 'A relancer') }}</span>
                                         {% endif %}
                                         <i class="fa-solid fa-chevron-down badge-caret"></i>
                                     </div>
                                     <div class="visit-status-menu">
-                                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
-                                        <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                                        <div class="visit-status-item item-retour_agence {% if listing.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</span></div>
+                                        <div class="visit-status-item item-visite_programmee {% if listing.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</span></div>
+                                        <div class="visit-status-item item-deja_visitee {% if listing.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</span></div>
+                                        <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</span></div>
+                                        <div class="visit-status-item item-sans_suite_visiteur {% if listing.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</span></div>
+                                        <div class="visit-status-item item-a_relancer {% if listing.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</span></div>
+                                        <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_clear', 'Effacer l\'état') }}</span></div>
                                     </div>
                                 </div>
                                 {% else %}
                                 <div class="visit-status-container show-add" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
-                                    <div class="visit-status-add-btn" style="opacity: 1;" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                                    <div class="visit-status-add-btn" style="opacity: 1;" title="{{ t(request, 'visites.define_status_tooltip', 'Définir un état de visite') }}"><i class="fa-solid fa-plus"></i></div>
                                     <div class="visit-status-menu">
-                                        <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                        <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                        <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                        <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                        <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                                        <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</span></div>
+                                        <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</span></div>
+                                        <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</span></div>
+                                        <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</span></div>
+                                        <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</span></div>
+                                        <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</span></div>
                                     </div>
                                 </div>
                                 {% endif %}
@@ -967,15 +967,15 @@
                                 <!-- Address Precision Badge (Bottom-Left) -->
                                 {% set prec = listing.address_precision or ('exact' if listing.address else 'city') %}
                                 {% if prec == 'exact' %}
-                                <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ listing.address or listing.location or listing.city or '' }}">
+                                <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.exact_address_tooltip', 'Adresse exacte :') }} {{ listing.address or listing.location or listing.city or '' }}">
                                     <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
                                 </div>
                                 {% elif prec == 'street' %}
-                                <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ listing.address or listing.location or listing.city or '' }}">
+                                <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.street_tooltip', 'Rue / Quartier :') }} {{ listing.address or listing.location or listing.city or '' }}">
                                     <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
                                 </div>
                                 {% else %}
-                                <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ listing.city or listing.location or 'Non précisée' }}">
+                                <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.city_tooltip', 'Commune seule :') }} {{ listing.city or listing.location or t(request, 'visites.unspecified', 'Non précisée') }}">
                                     <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
                                 </div>
                                 {% endif %}
@@ -988,19 +988,19 @@
                                 <div class="prop-loc"><i class="fa-solid fa-location-dot"></i> {{ listing.location or "N/C" }}</div>
                                 <div class="prop-contact">
                                     {% if listing.main_agent %}
-                                    <a href="/contacts?q={{ (listing.main_agent.first_name ~ ' ' ~ listing.main_agent.last_name)|urlencode }}" class="btn-contact-pill has-contact" title="Voir la fiche contact : {{ listing.main_agent.first_name }} {{ listing.main_agent.last_name }}">
+                                    <a href="/contacts?q={{ (listing.main_agent.first_name ~ ' ' ~ listing.main_agent.last_name)|urlencode }}" class="btn-contact-pill has-contact" title="{{ listing.main_agent.first_name }} {{ listing.main_agent.last_name }}">
                                         <i class="fa-solid fa-user-tie"></i>
                                         <span class="truncate-contact">{{ listing.main_agent.first_name }} {{ listing.main_agent.last_name }}{% if listing.main_agent.agency %} ({{ listing.main_agent.agency.commercial_name or listing.main_agent.agency.legal_name }}){% endif %}</span>
                                     </a>
                                     {% elif listing.agency %}
-                                    <a href="/contacts?q={{ (listing.agency.commercial_name or listing.agency.legal_name)|urlencode }}" class="btn-contact-pill has-contact" title="Voir la fiche agence : {{ listing.agency.commercial_name or listing.agency.legal_name }}">
+                                    <a href="/contacts?q={{ (listing.agency.commercial_name or listing.agency.legal_name)|urlencode }}" class="btn-contact-pill has-contact" title="{{ listing.agency.commercial_name or listing.agency.legal_name }}">
                                         <i class="fa-solid fa-building"></i>
                                         <span class="truncate-contact">{{ listing.agency.commercial_name or listing.agency.legal_name }}</span>
                                     </a>
                                     {% else %}
-                                    <a href="/contacts?q={{ (listing.title or listing.location or '')|urlencode }}" class="btn-contact-pill missing-contact" title="Aucun contact relié — Attribuer ou créer un contact">
+                                    <a href="/contacts?q={{ (listing.title or listing.location or '')|urlencode }}" class="btn-contact-pill missing-contact">
                                         <i class="fa-solid fa-user-plus"></i>
-                                        <span>Contact manquant ? Ajoutons-le !</span>
+                                        <span>{{ t(request, 'visites.missing_contact', 'Contact manquant ? Ajoutons-le !') }}</span>
                                     </a>
                                     {% endif %}
                                 </div>
@@ -1008,7 +1008,7 @@
                         </div>
 
                         <div class="prop-visits">
-                            <div class="prop-visits-title">Visites associées :</div>
+                            <div class="prop-visits-title">{{ t(request, 'visites.associated_visits', 'Visites associées :') }}</div>
                             {% set prop_visits = listing.visits if listing.visits is defined else [] %}
                             {% if prop_visits %}
                             {% for v in prop_visits %}
@@ -1022,19 +1022,19 @@
                             </div>
                             {% endfor %}
                             {% else %}
-                            <div style="font-size: 0.75rem; color: var(--text-2); font-style: italic;">Aucune date de visite définie.</div>
+                            <div style="font-size: 0.75rem; color: var(--text-2); font-style: italic;">{{ t(request, 'visites.no_visit_dates', 'Aucune date de visite définie.') }}</div>
                             {% endif %}
                         </div>
 
                         <div class="prop-actions">
                             <button class="btn" style="font-size: 0.75rem;" onclick="openVisitModal({{ listing.id }})">
-                                <i class="fa-solid fa-plus"></i> Planifier
+                                <i class="fa-solid fa-plus"></i> {{ t(request, 'visites.schedule_btn', 'Planifier') }}
                             </button>
                             <button class="btn" style="font-size: 0.75rem; color: var(--red);" onclick="toggleToVisit({{ listing.id }}, this)">
-                                <i class="fa-solid fa-bookmark-slash"></i> Retirer
+                                <i class="fa-solid fa-bookmark-slash"></i> {{ t(request, 'visites.remove_btn', 'Retirer') }}
                             </button>
                             <a href="/listings/{{ listing.id }}" target="_blank" class="btn" style="font-size: 0.75rem;">
-                                DÉTAILS <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                {{ t(request, 'visites.details_btn', 'DÉTAILS')|upper }} <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             </a>
                         </div>
                     </div>
@@ -1043,8 +1043,8 @@
                 {% else %}
                 <div style="text-align: center; padding: 4rem 2rem; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);">
                     <i class="fa-solid fa-house-circle-exclamation" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                    <h2>Aucun bien sélectionné à visiter</h2>
-                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">Ajoutez des biens en cliquant sur le bouton <strong>"À visiter"</strong> depuis le tableau de bord ou les fiches annonces.</p>
+                    <h2>{{ t(request, 'visites.no_target_listings', 'Aucun bien sélectionné à visiter') }}</h2>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem;">{{ t(request, 'visites.no_target_listings_desc', 'Ajoutez des biens en cliquant sur le bouton \"À visiter\" depuis le tableau de bord ou les fiches annonces.') }}</p>
                 </div>
                 {% endif %}
             </div>
@@ -1056,22 +1056,22 @@
                     <div style="display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: center; flex: 1;">
                         <!-- Famille Filter -->
                         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                            <label for="historyFilterFamily" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">Famille d'étape</label>
+                            <label for="historyFilterFamily" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">{{ t(request, 'visites.filter_family', 'Famille d\'étape') }}</label>
                             <select id="historyFilterFamily" onchange="onHistoryFamilyFilterChange()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.82rem; font-weight: 600;">
-                                <option value="">Toutes les familles</option>
-                                <option value="contact">📩 Prise de contact</option>
-                                <option value="visite">🏡 Rendez-vous & Visites</option>
-                                <option value="reflexion">🧠 Réflexion</option>
-                                <option value="offre">🤝 Offre & Négociation</option>
-                                <option value="cloture">🏁 Issue & Clôture</option>
+                                <option value="">{{ t(request, 'visites.all_families', 'Toutes les familles') }}</option>
+                                <option value="contact">{{ t(request, 'visites.family_contact', '📩 Prise de contact') }}</option>
+                                <option value="visite">{{ t(request, 'visites.family_visite', '🏡 Rendez-vous & Visites') }}</option>
+                                <option value="reflexion">{{ t(request, 'visites.family_reflexion', '🧠 Réflexion') }}</option>
+                                <option value="offre">{{ t(request, 'visites.family_offre', '🤝 Offre & Négociation') }}</option>
+                                <option value="cloture">{{ t(request, 'visites.family_cloture', '🏁 Issue & Clôture') }}</option>
                             </select>
                         </div>
 
                         <!-- Étape Filter -->
                         <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                            <label for="historyFilterStep" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">Étape précise</label>
+                            <label for="historyFilterStep" style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2);">{{ t(request, 'visites.filter_step', 'Étape précise') }}</label>
                             <select id="historyFilterStep" onchange="applyHistoryFilters()" style="padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.82rem; font-weight: 600;">
-                                <option value="">Toutes les étapes</option>
+                                <option value="">{{ t(request, 'visites.all_steps', 'Toutes les étapes') }}</option>
                             </select>
                         </div>
 
@@ -1082,12 +1082,12 @@
                                 <span><i class="fa-solid fa-bell"></i> {{ t(request, 'visites.to_follow_up', 'À relancer (sans nouvelles depuis >)') }}</span>
                             </label>
                             <input type="number" id="historyRelanceDays" value="7" min="1" max="365" style="width: 60px; padding: 0.25rem 0.4rem; text-align: center; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.85rem; font-weight: 700;" onchange="applyHistoryFilters()" oninput="applyHistoryFilters()">
-                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--orange);">jours</span>
+                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--orange);">{{ t(request, 'visites.days', 'jours') }}</span>
                         </div>
                     </div>
 
                     <button class="btn" style="font-size: 0.75rem;" onclick="resetHistoryFilters()">
-                        <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+                        <i class="fa-solid fa-rotate-left"></i> {{ t(request, 'visites.reset', 'Réinitialiser') }}
                     </button>
                 </div>
 
@@ -1095,7 +1095,7 @@
                     <!-- ── Timeline (Frise Chronologique) ── -->
                     <div class="timeline-wrapper">
                         <h3 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                            <i class="fa-solid fa-timeline" style="color: var(--accent);"></i> Frise Chronologique des Activités
+                            <i class="fa-solid fa-timeline" style="color: var(--accent);"></i> {{ t(request, 'visites.timeline_title', 'Frise Chronologique des Activités') }}
                         </h3>
                         <div class="timeline-scroll-container">
                             <div class="timeline-line"></div>
@@ -1107,7 +1107,7 @@
                                 {% set st = v.step or '1ere_visite' %}
                                 <div class="timeline-node {{ sf }} {{ v.status }}" onclick="scrollToPropertyBlock('prop-block-{{ l.id if l else 0 }}')">
                                     <div class="timeline-tooltip">
-                                        <div class="tooltip-title">{{ l.title if l else 'Bien non disponible' }}</div>
+                                        <div class="tooltip-title">{{ l.title if l else t(request, 'visites.prop_non_dispo', 'Bien non disponible') }}</div>
                                         <div class="tooltip-date">{{ v.scheduled_at.strftime('%d/%m/%Y à %H:%M') if v.scheduled_at else 'N/C' }}</div>
                                         {% if v.notes %}
                                         <div class="tooltip-notes">{{ v.notes[:80] }}{% if v.notes|length > 80 %}...{% endif %}</div>
@@ -1165,36 +1165,36 @@
                                     {% endif %}
                                     {% if l and l.last_visit_status %}
                                     <div class="visit-status-container" data-listing-id="{{ l.id }}" data-listing-title="{{ l.title|default('') }}" onclick="event.stopPropagation();">
-                                        <div class="visit-status-badge status-{{ l.last_visit_status }}" title="Cliquer pour modifier l'état">
-                                            {% if l.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">Retour d'agence</span>
-                                            {% elif l.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">Visite programmée</span>
-                                            {% elif l.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">Déjà visitée</span>
-                                            {% elif l.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">Sans suite (ach.)</span>
-                                            {% elif l.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">Sans suite (vend.)</span>
-                                            {% elif l.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">A relancer</span>
+                                        <div class="visit-status-badge status-{{ l.last_visit_status }}" title="{{ t(request, 'listing.click_to_change_status', 'Cliquer pour modifier l\'état') }}">
+                                            {% if l.last_visit_status == 'retour_agence' %}<i class="fa-solid fa-comments"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_retour_agence_short', 'Retour agence') }}</span>
+                                            {% elif l.last_visit_status == 'visite_programmee' %}<i class="fa-solid fa-calendar-check"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_visite_programmee_short', 'Visite programmée') }}</span>
+                                            {% elif l.last_visit_status == 'deja_visitee' %}<i class="fa-solid fa-brain"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_deja_visitee_short', 'Déjà visitée') }}</span>
+                                            {% elif l.last_visit_status == 'sans_suite_acheteur' %}<i class="fa-solid fa-user-slash"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_sans_suite_acheteur_short', 'Sans suite (ach.)') }}</span>
+                                            {% elif l.last_visit_status == 'sans_suite_visiteur' %}<i class="fa-solid fa-ban"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_sans_suite_visiteur_short', 'Sans suite (vend.)') }}</span>
+                                            {% elif l.last_visit_status == 'a_relancer' %}<i class="fa-solid fa-clock-rotate-left"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_a_relancer_short', 'A relancer') }}</span>
                                             {% endif %}
                                             <i class="fa-solid fa-chevron-down badge-caret"></i>
                                         </div>
                                         <div class="visit-status-menu">
-                                            <div class="visit-status-item item-retour_agence {% if l.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                            <div class="visit-status-item item-visite_programmee {% if l.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                            <div class="visit-status-item item-deja_visitee {% if l.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                            <div class="visit-status-item item-sans_suite_acheteur {% if l.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                            <div class="visit-status-item item-sans_suite_visiteur {% if l.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                            <div class="visit-status-item item-a_relancer {% if l.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
-                                            <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>Effacer l'état</span></div>
+                                            <div class="visit-status-item item-retour_agence {% if l.last_visit_status == 'retour_agence' %}active{% endif %}" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</span></div>
+                                            <div class="visit-status-item item-visite_programmee {% if l.last_visit_status == 'visite_programmee' %}active{% endif %}" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</span></div>
+                                            <div class="visit-status-item item-deja_visitee {% if l.last_visit_status == 'deja_visitee' %}active{% endif %}" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</span></div>
+                                            <div class="visit-status-item item-sans_suite_acheteur {% if l.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</span></div>
+                                            <div class="visit-status-item item-sans_suite_visiteur {% if l.last_visit_status == 'sans_suite_visiteur' %}active{% endif %}" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</span></div>
+                                            <div class="visit-status-item item-a_relancer {% if l.last_visit_status == 'a_relancer' %}active{% endif %}" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</span></div>
+                                            <div class="visit-status-item item-clear" data-status=""><i class="fa-solid fa-xmark" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_clear', 'Effacer l\'état') }}</span></div>
                                         </div>
                                     </div>
                                     {% elif l %}
                                     <div class="visit-status-container show-add" data-listing-id="{{ l.id }}" data-listing-title="{{ l.title|default('') }}" onclick="event.stopPropagation();">
-                                        <div class="visit-status-add-btn" style="opacity: 1;" title="Définir un état de visite"><i class="fa-solid fa-plus"></i></div>
+                                        <div class="visit-status-add-btn" style="opacity: 1;" title="{{ t(request, 'visites.define_status_tooltip', 'Définir un état de visite') }}"><i class="fa-solid fa-plus"></i></div>
                                         <div class="visit-status-menu">
-                                            <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>Retour d'agence pour RDV</span></div>
-                                            <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>Visite programmée</span></div>
-                                            <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>Déjà visitée, réflexion</span></div>
-                                            <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>Sans suite acheteur</span></div>
-                                            <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>Sans suite vendeur</span></div>
-                                            <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>A relancer pour RDV</span></div>
+                                            <div class="visit-status-item item-retour_agence" data-status="retour_agence"><span class="dot"></span><i class="fa-solid fa-comments" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</span></div>
+                                            <div class="visit-status-item item-visite_programmee" data-status="visite_programmee"><span class="dot"></span><i class="fa-solid fa-calendar-check" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</span></div>
+                                            <div class="visit-status-item item-deja_visitee" data-status="deja_visitee"><span class="dot"></span><i class="fa-solid fa-brain" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</span></div>
+                                            <div class="visit-status-item item-sans_suite_acheteur" data-status="sans_suite_acheteur"><span class="dot"></span><i class="fa-solid fa-user-slash" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</span></div>
+                                            <div class="visit-status-item item-sans_suite_visiteur" data-status="sans_suite_visiteur"><span class="dot"></span><i class="fa-solid fa-ban" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</span></div>
+                                            <div class="visit-status-item item-a_relancer" data-status="a_relancer"><span class="dot"></span><i class="fa-solid fa-clock-rotate-left" style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</span></div>
                                         </div>
                                     </div>
                                     {% endif %}
@@ -1203,15 +1203,15 @@
                                     <!-- Address Precision Badge (Bottom-Left) -->
                                     {% set prec = l.address_precision or ('exact' if l.address else 'city') %}
                                     {% if prec == 'exact' %}
-                                    <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Adresse exacte : {{ l.address or l.location or l.city or '' }}">
+                                    <div class="address-precision-badge precision-exact" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.exact_address_tooltip', 'Adresse exacte :') }} {{ l.address or l.location or l.city or '' }}">
                                         <span class="badge-icon"><i class="fa-solid fa-bullseye"></i></span>
                                     </div>
                                     {% elif prec == 'street' %}
-                                    <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Rue / Quartier : {{ l.address or l.location or l.city or '' }}">
+                                    <div class="address-precision-badge precision-street" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.street_tooltip', 'Rue / Quartier :') }} {{ l.address or l.location or l.city or '' }}">
                                         <span class="badge-icon"><i class="fa-solid fa-location-dot"></i></span>
                                     </div>
                                     {% else %}
-                                    <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="Commune seule : {{ l.city or l.location or 'Non précisée' }}">
+                                    <div class="address-precision-badge precision-city" style="bottom: 4px; left: 4px; min-height: 20px; padding: 0.15rem 0.35rem; font-size: 0.65rem;" title="{{ t(request, 'listing.city_tooltip', 'Commune seule :') }} {{ l.city or l.location or t(request, 'visites.unspecified', 'Non précisée') }}">
                                         <span class="badge-icon"><i class="fa-solid fa-city"></i></span>
                                     </div>
                                     {% endif %}
@@ -1227,16 +1227,16 @@
                                     </div>
                                     <div class="prop-loc"><i class="fa-solid fa-location-dot"></i> {{ l.location or "N/C" }}</div>
                                     {% else %}
-                                    <div class="prop-title">Bien non disponible</div>
+                                    <div class="prop-title">{{ t(request, 'visites.prop_non_dispo', 'Bien non disponible') }}</div>
                                     {% endif %}
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span class="relance-badge" id="relance-badge-{{ l_id }}" style="display: none; background: rgba(248, 168, 75, 0.2); color: var(--orange); border: 1px solid rgba(248, 168, 75, 0.4); padding: 0.35rem 0.65rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">
-                                        <i class="fa-solid fa-bell"></i> Relance requise
+                                        <i class="fa-solid fa-bell"></i> {{ t(request, 'visites.followup_required', 'Relance requise') }}
                                     </span>
                                     {% if l %}
                                     <button class="btn primary" style="font-size: 0.75rem;" onclick="openVisitModal({{ l.id }})">
-                                        <i class="fa-solid fa-plus"></i> Ajouter une activité
+                                        <i class="fa-solid fa-plus"></i> {{ t(request, 'visites.add_activity', 'Ajouter une activité') }}
                                     </button>
                                     {% endif %}
                                 </div>
@@ -1246,12 +1246,12 @@
                                 <table class="history-table">
                                     <thead>
                                         <tr>
-                                            <th>Date & Heure</th>
-                                            <th>Famille & Étape</th>
-                                            <th>Visiteur</th>
-                                            <th>Statut</th>
-                                            <th>Notes / Compte-rendu</th>
-                                            <th>Actions</th>
+                                            <th>{{ t(request, 'visites.th_datetime', 'Date & Heure') }}</th>
+                                            <th>{{ t(request, 'visites.th_family_step', 'Famille & Étape') }}</th>
+                                            <th>{{ t(request, 'visites.th_visitor', 'Visiteur') }}</th>
+                                            <th>{{ t(request, 'visites.th_status', 'Statut') }}</th>
+                                            <th>{{ t(request, 'visites.th_notes', 'Notes / Compte-rendu') }}</th>
+                                            <th>{{ t(request, 'visites.th_actions', 'Actions') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1266,11 +1266,11 @@
                                             <td>{{ v.visitor or '—' }}</td>
                                             <td>
                                                 <span class="badge-status {{ v.status }}">
-                                                    {{ 'Programmée' if v.status == 'programme' else ('Effectuée' if v.status == 'effectuee' else 'Annulée') }}
+                                                    {{ t(request, 'visites.status_' ~ v.status, v.status|capitalize) }}
                                                 </span>
                                             </td>
                                             <td style="max-width: 300px; font-size: 0.78rem; color: var(--text-2);">
-                                                {{ v.notes or 'Aucune note' }}
+                                                {{ v.notes or '—' }}
                                             </td>
                                             <td>
                                                 <div style="display: flex; gap: 0.4rem;">
@@ -1298,7 +1298,7 @@
                 {% else %}
                     <div style="text-align: center; padding: 4rem 2rem; color: var(--text-2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);">
                         <i class="fa-solid fa-calendar-xmark" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                        <h2>Aucune activité ou visite enregistrée</h2>
+                        <h2>{{ t(request, 'visites.no_activities', 'Aucune activité ou visite enregistrée') }}</h2>
                     </div>
                 {% endif %}
             </div>
@@ -1310,7 +1310,7 @@
     <div class="modal-backdrop" id="visitModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 id="modalTitle"><i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> Enregistrer une activité / visite</h2>
+                <h2 id="modalTitle"><i class="fa-solid fa-calendar-plus" style="color: var(--accent);"></i> {{ t(request, 'visites.modal_record_activity', 'Enregistrer une activité / visite') }}</h2>
                 <button class="modal-close" onclick="closeVisitModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="visitForm" onsubmit="saveVisit(event)">
@@ -1567,55 +1567,55 @@
     <script>
         const STEP_FAMILIES = {
             contact: {
-                label: "Prise de contact",
+                label: {{ t(request, 'visites.family_contact_label', 'Prise de contact')|tojson }},
                 icon: "fa-regular fa-paper-plane",
                 color: "blue",
                 steps: {
-                    formulaire_envoye: { label: "Formulaire web envoyé", icon: "fa-solid fa-file-pen" },
-                    email_envoye: { label: "E-mail envoyé", icon: "fa-solid fa-envelope" },
-                    appel_direct: { label: "Appel direct effectué", icon: "fa-solid fa-phone" },
-                    message_vocal: { label: "Message vocal laissé", icon: "fa-solid fa-voicemail" },
-                    relance_sans_reponse: { label: "Relance initiale sans réponse", icon: "fa-solid fa-phone-volume" }
+                    formulaire_envoye: { label: {{ t(request, 'visites.step_formulaire_envoye', 'Formulaire web envoyé')|tojson }}, icon: "fa-solid fa-file-pen" },
+                    email_envoye: { label: {{ t(request, 'visites.step_email_envoye', 'E-mail envoyé')|tojson }}, icon: "fa-solid fa-envelope" },
+                    appel_direct: { label: {{ t(request, 'visites.step_appel_direct', 'Appel direct effectué')|tojson }}, icon: "fa-solid fa-phone" },
+                    message_vocal: { label: {{ t(request, 'visites.step_message_vocal', 'Message vocal laissé')|tojson }}, icon: "fa-solid fa-voicemail" },
+                    relance_sans_reponse: { label: {{ t(request, 'visites.step_relance_sans_reponse', 'Relance initiale sans réponse')|tojson }}, icon: "fa-solid fa-phone-volume" }
                 }
             },
             visite: {
-                label: "Rendez-vous & Visites",
+                label: {{ t(request, 'visites.family_visite_label', 'Rendez-vous & Visites')|tojson }},
                 icon: "fa-solid fa-house-circle-check",
                 color: "orange",
                 steps: {
-                    rdv_planifie: { label: "RDV Visite planifié", icon: "fa-regular fa-calendar-check" },
-                    "1ere_visite": { label: "1ère Visite effectuée", icon: "fa-solid fa-eye" },
-                    contre_visite: { label: "Contre-visite planifiée / effectuée", icon: "fa-solid fa-repeat" },
-                    visite_annulee: { label: "Visite annulée", icon: "fa-solid fa-calendar-xmark" }
+                    rdv_planifie: { label: {{ t(request, 'visites.step_rdv_planifie', 'RDV Visite planifié')|tojson }}, icon: "fa-regular fa-calendar-check" },
+                    "1ere_visite": { label: {{ t(request, 'visites.step_1ere_visite', '1ère Visite effectuée')|tojson }}, icon: "fa-solid fa-eye" },
+                    contre_visite: { label: {{ t(request, 'visites.step_contre_visite', 'Contre-visite planifiée / effectuée')|tojson }}, icon: "fa-solid fa-repeat" },
+                    visite_annulee: { label: {{ t(request, 'visites.step_visite_annulee', 'Visite annulée')|tojson }}, icon: "fa-solid fa-calendar-xmark" }
                 }
             },
             reflexion: {
-                label: "Réflexion",
+                label: {{ t(request, 'visites.family_reflexion_label', 'Réflexion')|tojson }},
                 icon: "fa-solid fa-brain",
                 color: "yellow",
                 steps: {
-                    en_reflexion_sans_offre: { label: "En réflexion sans offre faite", icon: "fa-solid fa-brain" }
+                    en_reflexion_sans_offre: { label: {{ t(request, 'visites.step_en_reflexion_sans_offre', 'En réflexion sans offre faite')|tojson }}, icon: "fa-solid fa-brain" }
                 }
             },
             offre: {
-                label: "Offre & Négociation",
+                label: {{ t(request, 'visites.family_offre_label', 'Offre & Négociation')|tojson }},
                 icon: "fa-solid fa-handshake",
                 color: "purple",
                 steps: {
-                    dossier_demande: { label: "Documents / Dossier demandé", icon: "fa-solid fa-folder-open" },
-                    offre_transmise: { label: "Offre d'achat transmise", icon: "fa-solid fa-file-signature" },
-                    contre_proposition: { label: "Contre-proposition vendeur", icon: "fa-solid fa-scale-balanced" }
+                    dossier_demande: { label: {{ t(request, 'visites.step_dossier_demande', 'Documents / Dossier demandé')|tojson }}, icon: "fa-solid fa-folder-open" },
+                    offre_transmise: { label: {{ t(request, 'visites.step_offre_transmise', 'Offre d\'achat transmise')|tojson }}, icon: "fa-solid fa-file-signature" },
+                    contre_proposition: { label: {{ t(request, 'visites.step_contre_proposition', 'Contre-proposition vendeur')|tojson }}, icon: "fa-solid fa-scale-balanced" }
                 }
             },
             cloture: {
-                label: "Issue & Clôture",
+                label: {{ t(request, 'visites.family_cloture_label', 'Issue & Clôture')|tojson }},
                 icon: "fa-solid fa-flag-checkered",
                 color: "green",
                 steps: {
-                    offre_acceptee: { label: "Offre acceptée 🎉", icon: "fa-solid fa-circle-check" },
-                    offre_refusee: { label: "Offre refusée", icon: "fa-solid fa-ban" },
-                    bien_vendu: { label: "Bien plus sur le marché / Vendu", icon: "fa-solid fa-house-circle-xmark" },
-                    abandon: { label: "Abandon / Classé sans suite", icon: "fa-solid fa-xmark" }
+                    offre_acceptee: { label: {{ t(request, 'visites.step_offre_acceptee', 'Offre acceptée 🎉')|tojson }}, icon: "fa-solid fa-circle-check" },
+                    offre_refusee: { label: {{ t(request, 'visites.step_offre_refusee', 'Offre refusée')|tojson }}, icon: "fa-solid fa-ban" },
+                    bien_vendu: { label: {{ t(request, 'visites.step_bien_vendu', 'Bien plus sur le marché / Vendu')|tojson }}, icon: "fa-solid fa-house-circle-xmark" },
+                    abandon: { label: {{ t(request, 'visites.step_abandon', 'Abandon / Classé sans suite')|tojson }}, icon: "fa-solid fa-xmark" }
                 }
             }
         };
@@ -1996,8 +1996,9 @@
             body.innerHTML = '';
 
             const date = new Date(year, month, 1);
-            const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-            document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+            const calLocale = '{{ request.session.get("lang", "fr") }}' === 'en' ? 'en-US' : 'fr-FR';
+            const monthYearStr = date.toLocaleDateString(calLocale, { month: 'long', year: 'numeric' });
+            document.getElementById('calendarMonthYear').textContent = monthYearStr.charAt(0).toUpperCase() + monthYearStr.slice(1);
 
             let firstDay = date.getDay() - 1;
             if (firstDay < 0) firstDay = 6;
@@ -2025,7 +2026,7 @@
                     openVisitModal(null, dateStr + 'T10:00');
                 };
 
-                let cellHtml = `<div class="cell-date"><span>${d}</span>${isToday ? '<span style="font-size: 0.6rem; text-transform: uppercase;">Auj.</span>' : ''}</div>`;
+                let cellHtml = `<div class="cell-date"><span>${d}</span>${isToday ? '<span style="font-size: 0.6rem; text-transform: uppercase;">{{ t(request, "visites.cal_today_short", "Auj.") }}</span>' : ''}</div>`;
 
                 const dayVisits = RAW_VISITS.filter(v => {
                     if (!v.scheduled_at) return false;
