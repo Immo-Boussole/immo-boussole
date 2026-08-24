@@ -1,7 +1,11 @@
 {
     "app": {
         "title": "Immo-Boussole",
-        "description": "Collaborative real estate listing tracking dashboard - Jean DUPONT & Marie MARTIN"
+        "description": "Collaborative real estate listing tracking dashboard - Jean DUPONT & Marie MARTIN",
+        "update_available": "New version available!",
+        "update_desc": "An update for Immo-Boussole is available on GitHub with new features and fixes.",
+        "view_update": "View update",
+        "close": "Close"
     },
     "nav": {
         "dashboard": "Dashboard",
@@ -206,7 +210,14 @@
         "visit_status_deja_visitee": "Already visited, under review",
         "visit_status_sans_suite_acheteur": "No further action (buyer)",
         "visit_status_sans_suite_visiteur": "No further action (seller)",
-        "visit_status_a_relancer": "Follow up for appointment"
+        "visit_status_a_relancer": "Follow up for appointment",
+        "visit_status_clear": "Clear status",
+        "visit_status_retour_agence_short": "Agency follow-up",
+        "visit_status_visite_programmee_short": "Scheduled visit",
+        "visit_status_deja_visitee_short": "Visited",
+        "visit_status_sans_suite_acheteur_short": "Closed (buyer)",
+        "visit_status_sans_suite_visiteur_short": "Closed (seller)",
+        "visit_status_a_relancer_short": "To follow up"
     },
     "table": {
         "title": "Title",
@@ -219,7 +230,9 @@
         "status": "Status",
         "action": "Action",
         "details": "Details",
-        "reload": "Reload scraping"
+        "reload": "Reload scraping",
+        "contacted": "Contacted",
+        "visit_status": "Visit Status"
     },
     "listing": {
         "like": "Like",
@@ -381,7 +394,17 @@
         "duplicate_of_internal": "Duplicate of internal listing:",
         "duplicate_of_external": "Duplicate of external listing:",
         "duplicate_generic": "This listing is a duplicate.",
-        "duplicate_success": "Duplicate declared successfully!"
+        "duplicate_success": "Duplicate declared successfully!",
+        "click_to_change_status": "Click to change status",
+        "exact_address_tooltip": "Verified exact address",
+        "exact_address": "Exact address",
+        "street_tooltip": "Street / Neighborhood",
+        "city_tooltip": "City only",
+        "to_visit_tooltip": "Add / remove properties to visit",
+        "contact_tooltip": "Agency contact requested",
+        "updated_on": "Updated on",
+        "contact_agency_card": "Contact & Agency",
+        "unspecified": "Not specified"
     },
     "setup": {
         "title": "Admin Setup",
@@ -447,7 +470,10 @@
         "bed_short": "beds",
         "bath_short": "baths",
         "tf": "Tax:",
-        "ch": "HOA:"
+        "ch": "HOA:",
+        "manuel": "MANUAL",
+        "street": "Street",
+        "city": "City"
     },
     "ideal_profile": {
         "title": "Ideal Property Profile",
@@ -579,7 +605,8 @@
         "filter_to_visit_all": "All properties",
         "detected_contacts_title": "Contacts Detected in Listings",
         "no_contacts": "No contact card found.",
-        "no_agencies": "No agency card found."
+        "no_agencies": "No agency card found.",
+        "new": "New"
     },
     "visites": {
         "page_title": "Visits Manager",
@@ -592,7 +619,8 @@
         "stat_visited": "Visited properties",
         "stat_reflection": "Under review",
         "stat_offer": "Offer & Negotiation",
-        "stat_closed": "Closed"
+        "stat_closed": "Closed",
+        "to_follow_up": "To follow up (no news for >)"
     },
     "zones": {
         "page_title": "Zone Management",
@@ -615,5 +643,9 @@
         "subtitle": "Non-destructive verification and diagnostic repair tools for listings and media",
         "audit_btn": "Audit Database",
         "repair_btn": "Repair Inconsistencies"
+    },
+    "filter": {
+        "yes": "Yes",
+        "no": "No"
     }
 }

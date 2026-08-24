@@ -753,7 +753,7 @@
                         <td data-sort="{{ item.listing.status or 'active' }}">
                             {% set status = item.listing.status or 'active' %}
                             <span class="badge-status badge-{{ status }}">
-                                {{ t(request, 'misc.' + status) | default(status|upper) }}
+                                {{ t(request, 'misc.' ~ (status|lower), status|upper) }}
                             </span>
                         </td>
                     </tr>
@@ -824,7 +824,7 @@
                         <td data-sort="{{ listing.status or 'active' }}">
                             {% set status = listing.status or 'active' %}
                             <span class="badge-status badge-{{ status }}">
-                                {{ t(request, 'misc.' + status) | default(status|upper) }}
+                                {{ t(request, 'misc.' ~ (status|lower), status|upper) }}
                             </span>
                         </td>
                     </tr>

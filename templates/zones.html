@@ -1706,14 +1706,17 @@
                     let statusClass = '';
                     const statusLower = (l.status || '').toLowerCase();
                     if (statusLower === 'new' || statusLower === 'nouvelle') {
-                        statusLabel = 'Nouvelle';
+                        statusLabel = '{{ t(request, "misc.nouvelle", "Nouvelle") }}';
                         statusClass = 'nouvelle';
                     } else if (statusLower === 'active') {
-                        statusLabel = 'Active';
+                        statusLabel = '{{ t(request, "misc.active", "Active") }}';
                         statusClass = 'active';
                     } else if (statusLower === 'disappeared' || statusLower === 'disparue') {
-                        statusLabel = 'Disparue';
+                        statusLabel = '{{ t(request, "misc.disparue", "Disparue") }}';
                         statusClass = 'disparue';
+                    } else if (statusLower === 'rejetee') {
+                        statusLabel = '{{ t(request, "misc.rejetee", "Rejetée") }}';
+                        statusClass = 'rejetee';
                     }
 
                     const statusHtml = statusLabel ? `<span class="city-listing-status ${statusClass}">${statusLabel}</span>` : '';

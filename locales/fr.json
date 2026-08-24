@@ -1,7 +1,11 @@
 {
     "app": {
         "title": "Immo-Boussole",
-        "description": "Tableau de bord collaboratif de suivi des annonces immobilières - Jean DUPONT & Marie MARTIN"
+        "description": "Tableau de bord collaboratif de suivi des annonces immobilières - Jean DUPONT & Marie MARTIN",
+        "update_available": "Nouvelle version disponible !",
+        "update_desc": "Une mise à jour d'Immo-Boussole est disponible sur GitHub avec de nouvelles fonctionnalités et corrections.",
+        "view_update": "Voir la mise à jour",
+        "close": "Fermer"
     },
     "nav": {
         "dashboard": "Tableau de bord",
@@ -206,7 +210,14 @@
         "visit_status_deja_visitee": "Déjà visitée, réflexion",
         "visit_status_sans_suite_acheteur": "Sans suite acheteur",
         "visit_status_sans_suite_visiteur": "Sans suite vendeur",
-        "visit_status_a_relancer": "A relancer pour RDV"
+        "visit_status_a_relancer": "A relancer pour RDV",
+        "visit_status_clear": "Effacer l'état",
+        "visit_status_retour_agence_short": "Retour agence",
+        "visit_status_visite_programmee_short": "Visite programmée",
+        "visit_status_deja_visitee_short": "Déjà visitée",
+        "visit_status_sans_suite_acheteur_short": "Sans suite (ach.)",
+        "visit_status_sans_suite_visiteur_short": "Sans suite (vend.)",
+        "visit_status_a_relancer_short": "A relancer"
     },
     "table": {
         "title": "Titre",
@@ -219,7 +230,9 @@
         "status": "Statut",
         "action": "Action",
         "details": "Détails",
-        "reload": "Relancer le scraping"
+        "reload": "Relancer le scraping",
+        "contacted": "Contacté",
+        "visit_status": "État de visite"
     },
     "listing": {
         "like": "J'aime",
@@ -381,7 +394,17 @@
         "duplicate_of_internal": "Doublon de l'annonce interne :",
         "duplicate_of_external": "Doublon de l'annonce externe :",
         "duplicate_generic": "Cette annonce est un doublon.",
-        "duplicate_success": "Doublon déclaré avec succès !"
+        "duplicate_success": "Doublon déclaré avec succès !",
+        "click_to_change_status": "Cliquer pour modifier l'état",
+        "exact_address_tooltip": "Adresse exacte vérifiée",
+        "exact_address": "Adresse exacte",
+        "street_tooltip": "Rue / Quartier",
+        "city_tooltip": "Commune seule",
+        "to_visit_tooltip": "Ajouter / Retirer des biens à visiter",
+        "contact_tooltip": "Demande de contact agence effectuée",
+        "updated_on": "MAJ le",
+        "contact_agency_card": "Contact & Agence",
+        "unspecified": "Non précisée"
     },
     "setup": {
         "title": "Création Administrateur",
@@ -447,7 +470,10 @@
         "bed_short": "ch.",
         "bath_short": "sdb.",
         "tf": "TF:",
-        "ch": "CH:"
+        "ch": "CH:",
+        "manuel": "MANUEL",
+        "street": "Rue",
+        "city": "Ville"
     },
     "ideal_profile": {
         "title": "Fiche de Bien Idéal",
@@ -579,7 +605,8 @@
         "filter_to_visit_all": "Tous les biens",
         "detected_contacts_title": "Contacts détectés dans les annonces",
         "no_contacts": "Aucune fiche contact trouvée.",
-        "no_agencies": "Aucune fiche agence trouvée."
+        "no_agencies": "Aucune fiche agence trouvée.",
+        "new": "Nouvelle"
     },
     "visites": {
         "page_title": "Gestionnaire de visites",
@@ -592,7 +619,8 @@
         "stat_visited": "Biens visités",
         "stat_reflection": "Réflexion",
         "stat_offer": "Offre & Négociation",
-        "stat_closed": "Clôture"
+        "stat_closed": "Clôture",
+        "to_follow_up": "À relancer (sans nouvelles depuis >)"
     },
     "zones": {
         "page_title": "Gestion des Zones",
@@ -615,5 +643,9 @@
         "subtitle": "Vérification et réparation non-destructive des données et annonces",
         "audit_btn": "Auditer la base",
         "repair_btn": "Réparer les anomalies"
+    },
+    "filter": {
+        "yes": "Oui",
+        "no": "Non"
     }
 }

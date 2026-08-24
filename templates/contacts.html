@@ -926,7 +926,7 @@
     <div class="modal-overlay" id="agencyModal">
         <div class="modal">
             <div class="modal-header">
-                <div class="modal-title" id="agencyModalTitle">Nouvelle Agence</div>
+                <div class="modal-title" id="agencyModalTitle">{{ t(request, 'contacts.new_agency', 'Nouvelle Agence') }}</div>
                 <button class="modal-close" onclick="closeAgencyModal()">&times;</button>
             </div>
             <form id="agencyForm" onsubmit="saveAgency(event)">
