@@ -136,7 +136,7 @@ def test_visits_flow():
         assert "total_visites" in stats_json
 
         # Test GET /visites page counter split
-        visites_html_resp = client.get("/visites")
+        visites_html_resp = client.get("/visites", headers={"Accept-Language": "fr"})
         assert visites_html_resp.status_code == 200
         assert "Rendez-vous" in visites_html_resp.text
         assert "Biens visités" in visites_html_resp.text
