@@ -42,6 +42,54 @@
 * **Google Integrations**: Synchronize property visits with Google Calendar and real estate agency contacts with Google Contacts.
 * **Backup & Restore**: Built-in admin module to export and import the entire database and media library in a single ZIP file.
 
+## 📱 Application Views & Functional Modules
+
+Immo-Boussole provides a suite of 20 integrated views organized across 6 functional domains:
+
+### 1. 🏠 Real Estate Catalog & Property Evaluation
+| Route | View Name | Description |
+|---|---|---|
+| `/` | **Dashboard** | Executive overview with KPI metric cards, new listings feed, price changes, and status filters |
+| `/listings/table` | **Listings Table** | High-density sortable data grid with multi-criteria filtering, column customizers, and batch actions |
+| `/listing/{id}` | **Listing Detail** | Exhaustive dossier with high-res photo gallery, DPE/GES gauges, financial metrics, agency contact widget, Georisques natural hazards, document attachments, collaborative reviews, and visit scheduling |
+| `/a-voir` | **To Review ("À voir")** | Dedicated triage inbox for newly imported and unreviewed property listings |
+| `/a-visiter` | **To Visit ("À visiter")** | Focused shortlist of prioritized properties selected for physical on-site visits |
+
+### 2. 👥 Collaboration, Contacts & Agenda
+| Route | View Name | Description |
+|---|---|---|
+| `/contacts` | **Contacts Manager** | Real estate agencies, negotiators, notaries, and seller directory with Google Contacts 2-way sync |
+| `/visites` | **Visits Manager** | Visit scheduler, debriefing notes, photo logs, offer tracker, and Google Calendar synchronization |
+
+### 3. 🗺️ Geospatial Intelligence & Proximity
+| Route | View Name | Description |
+|---|---|---|
+| `/carte` | **Interactive Map** | Fullscreen Leaflet exploration map with marker clustering, heatmaps, status colors, and POI layers |
+| `/zones` | **Zone Management** | Interactive polygon and radius map editor to define target search areas and forbidden/blacklisted sectors |
+| `/distance-temps` | **Commute & Travel Times** | Commute matrix calculating driving, transit, and cycling times from listings to daily destinations |
+| `/points-interet` | **Points of Interest & Amenities** | Proximity scanner (OpenStreetMap Overpass API) measuring walking distance to transit, schools, and shops |
+
+### 4. 🤖 AI Insights & Automated Sourcing
+| Route | View Name | Description |
+|---|---|---|
+| `/profile/ideal` | **Ideal Property Profile** | AI-synthesized profile highlighting recurring must-haves, dealbreakers, and automated fit scoring (0-100%) |
+| `/chat` | **AI Assistant** | Conversational chat assistant (Ollama) to query, compare, and analyze cataloged listings in natural language |
+| `/searches/ready` | **Ready Searches** | Pre-configured search URL library across 10+ portals with instant "Force Search" execution |
+| `/searches/auto` | **Automated Scheduled Scraping** | Background hourly scraping engine (6:00 to 22:30) with proxy pool allocation and execution logs |
+
+### 5. 🔍 Data Quality, Deduplication & Maintenance
+| Route | View Name | Description |
+|---|---|---|
+| `/duplicates/hunt` | **Duplicate Hunt** | Perceptual visual hashing (dHash/pHash) and fuzzy attribute matching to detect cross-portal duplicates and merge listings |
+| `/listings/repair` | **Listings Repair** | Diagnostic maintenance suite to fix missing GPS coordinates, repair broken thumbnails, and re-scrape outdated entries |
+
+### 6. ⚙️ User Management, Administration & Settings
+| Route | View Name | Description |
+|---|---|---|
+| `/admin/users` | **User Management** | Account provisioning, role-based access control (Admin/User), and API key management |
+| `/admin/maintenance` | **System Maintenance** | Proxy pool health monitor, 1-click full database & photo backup/restore (ZIP archive), and cache tools |
+| `/profile` | **User Profile & Security** | Password management, Google OAuth token connections (Calendar & Contacts), and personal API key generator |
+
 ---
 
 ## 📚 Complete Documentation & Guides (GitHub Wiki)
@@ -51,6 +99,7 @@ All technical deployment, operational, and configuration guides are centralized 
 | Guide / Topic | Description | Link |
 |---|---|---|
 | 🧭 **Architecture & Ecosystem** | Overall system design across Core App, WebExtension, and Orchestrator | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Architecture-Overview-EN) |
+| 📱 **Views & Functional Modules** | Detailed catalog of all 20 views, pages, and capabilities | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Views-and-Features-EN) |
 | 🐳 **Docker & Cloudflare Deployment** | Production setup with Docker Compose, Portainer, and Cloudflare Zero Trust Tunnels | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-EN) |
 | 🎛️ **Fleet Orchestrator** | Deploy and manage multiple instances across local and remote Docker hosts | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Orchestrator-Setup-EN) |
 | 🧩 **Browser WebExtension** | 1-click scraping directly from LeBonCoin & Figaro in Firefox, Chrome, Edge | [Read Guide](https://github.com/Immo-Boussole/immo-boussole/wiki/WebExtension-Setup-EN) |

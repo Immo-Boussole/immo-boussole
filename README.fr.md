@@ -42,6 +42,54 @@
 * **Intégrations Google** : Synchronisation des visites avec Google Calendar et des contacts d'agences avec Google Contacts.
 * **Sauvegarde & Restauration** : Module administrateur pour exporter et réimporter l'intégralité de la base de données et des photos en un clic (archive ZIP).
 
+## 📱 Vues de l'Application & Modules Fonctionnels
+
+Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionnels :
+
+### 1. 🏠 Catalogue Immobilier & Évaluation des Biens
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/` | **Tableau de bord** | Synthèse globale avec indicateurs KPI, flux des nouvelles annonces, suivi des baisses de prix et filtres de statut |
+| `/listings/table` | **Tableau des annonces** | Grille haute densité triable avec filtres multicritères, personnalisation des colonnes et actions groupées |
+| `/listing/{id}` | **Fiche détaillée** | Dossier complet avec galerie haute résolution, jauges DPE/GES, calculs financiers, fiche agence, widget Géorisques, pièces jointes, avis collaboratifs et prise de rendez-vous |
+| `/a-voir` | **À voir** | Boîte de réception dédiée au tri des annonces importées non encore qualifiées |
+| `/a-visiter` | **À visiter** | Présélection des biens prioritaires retenus pour des visites physiques |
+
+### 2. 👥 Collaboration, Contacts & Agenda
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/contacts` | **Gestionnaire de contacts** | Annuaire des agences, négociateurs, notaires et vendeurs avec synchronisation Google Contacts |
+| `/visites` | **Gestionnaire de visites** | Planification des visites, comptes-rendus post-visite, photos de visite, suivi des offres et synchro Google Calendar |
+
+### 3. 🗺️ Intelligence Géospatiale & Trajets
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/carte` | **Carte interactive** | Carte plein écran Leaflet avec regroupement en clusters, heatmaps, statuts colorés et calques de commodités |
+| `/zones` | **Gestion des zones** | Éditeur cartographique de polygones et rayons pour définir vos zones recherchées ou secteurs interdits |
+| `/distance-temps` | **Distance & Temps** | Matrice d'estimation des temps de trajet (voiture, transports, vélo) vers vos lieux du quotidien |
+| `/points-interet` | **Points d'intérêt** | Scanner de proximité (OpenStreetMap Overpass API) mesurant les distances aux gares, écoles et commerces |
+
+### 4. 🤖 IA & Sourcing Automatisé
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/profile/ideal` | **Profil Idéal IA** | Modélisation IA de vos critères clés et calcul d'un score d'adéquation (0-100%) sur chaque annonce |
+| `/chat` | **Assistant IA** | Assistant conversationnel (Ollama) pour interroger, comparer et résumer le catalogue en langage naturel |
+| `/searches/ready` | **Recherches Prêtes** | Bibliothèque d'URL de recherche multi-portails avec déclenchement immédiat à la demande |
+| `/searches/auto` | **Recherches Automatiques** | Moteur de scraping planifié toutes les heures (6h-22h30) avec gestion des proxies et journaux |
+
+### 5. 🔍 Qualité des Données & Maintenance
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/duplicates/hunt` | **Chasse aux duplicats** | Hachage visuel perceptuel (dHash/pHash) et corrélation floue pour détecter et fusionner les annonces en doublon |
+| `/listings/repair` | **Réparations** | Boîte à outils de maintenance : correction du géocodage GPS, réparation d'images et actualisation des anciennes annonces |
+
+### 6. ⚙️ Gestion Utilisateurs, Administration & Paramètres
+| Route | Nom de la Vue | Description |
+|---|---|---|
+| `/admin/users` | **Gestion Utilisateurs** | Gestion des accès, attribution des rôles (Admin/User) et révocation des clés d'API |
+| `/admin/maintenance` | **Administration & Maintenance** | Moniteur de proxies, sauvegarde/restauration intégrale en 1 clic (archive ZIP) et gestion des caches |
+| `/profile` | **Mon Profil & Sécurité** | Gestion du compte, jetons de connexion Google OAuth (Calendar & Contacts) et clés d'API personnelles |
+
 ---
 
 ## 📚 Documentation Complète & Guides (GitHub Wiki)
@@ -51,6 +99,7 @@ Tous les guides techniques de déploiement, d'administration et de configuration
 | Guide / Thème | Description | Lien |
 |---|---|---|
 | 🧭 **Architecture & Écosystème** | Vue d'ensemble du système (App Principale, Extension Web et Orchestrateur) | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Architecture-Overview-FR) |
+| 📱 **Vues & Modules Fonctionnels** | Guide détaillé des 20 vues, pages et fonctionnalités de l'application | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Views-and-Features-FR) |
 | 🐳 **Déploiement Docker & Cloudflare** | Mise en production avec Docker Compose, Portainer et les tunnels Cloudflare Zero Trust | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Installation-Docker-FR) |
 | 🎛️ **Orchestrateur de Flotte** | Déployer et piloter plusieurs instances sur Docker local et distant | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/Orchestrator-Setup-FR) |
 | 🧩 **Extension Web (Navigateurs)** | Scraping en 1 clic sur LeBonCoin & Figaro depuis Firefox, Chrome et Edge | [Consulter le guide](https://github.com/Immo-Boussole/immo-boussole/wiki/WebExtension-Setup-FR) |
