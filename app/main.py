@@ -195,6 +195,10 @@ class PhotoImportRequest(BaseModel):
     urls: list[str]
 
 
+class PhotoBatchDeleteRequest(BaseModel):
+    indices: list[int]
+
+
 class ReviewRequest(BaseModel):
     pros: Optional[str] = None
     cons: Optional[str] = None
@@ -4228,6 +4232,54 @@ def delete_listing_photo(
     db.commit()
     
     return {"status": "deleted", "photo_index": photo_index}
+
+
+@app.delete("/api/listings/{listing_id}/photos")
+@app.post("/api/listings/{listing_id}/photos/bulk-delete")
+def delete_listing_photos_batch(
+    request: Request,
+    listing_id: int,
+    body: PhotoBatchDeleteRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Delete multiple photos by their indices."""
+    if not body.indices:
+        raise HTTPException(status_code=400, detail="No photo indices provided")
+
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+
+    photos = json_to_photos(listing.photos_local)
+    
+    # Sort indices in descending order so popping from list does not disrupt lower indices
+    unique_indices = sorted(set(body.indices), reverse=True)
+    deleted_paths = []
+
+    for idx in unique_indices:
+        if 0 <= idx < len(photos):
+            photo_path = photos.pop(idx)
+            deleted_paths.append(photo_path)
+            try:
+                full_path = os.path.join(os.getcwd(), photo_path.strip('/'))
+                if os.path.exists(full_path):
+                    os.remove(full_path)
+            except Exception as e:
+                print(f"Failed to delete photo file {photo_path}: {e}")
+
+    if not deleted_paths:
+        raise HTTPException(status_code=404, detail="No matching photos found for provided indices")
+
+    listing.photos_local = photos_to_json(photos)
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "deleted_count": len(deleted_paths),
+        "remaining_count": len(photos),
+        "listing_id": listing_id
+    }
 
 
 @app.put("/api/listings/{listing_id}")

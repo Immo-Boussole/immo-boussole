@@ -545,6 +545,88 @@
 
         .gallery-mobile-separator { display: none; }
 
+        /* ── Photo Delete Multi-Select Modal ── */
+        .photo-delete-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+            padding: 4px;
+            overflow-y: auto;
+            max-height: 52vh;
+        }
+        .photo-delete-card {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: var(--trans);
+            background: var(--surface-2);
+            user-select: none;
+        }
+        .photo-delete-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.2s ease;
+        }
+        .photo-delete-card:hover {
+            border-color: rgba(242, 92, 105, 0.5);
+        }
+        .photo-delete-card:hover img {
+            transform: scale(1.04);
+        }
+        .photo-delete-card.is-selected {
+            border-color: var(--red);
+            box-shadow: 0 0 0 2px rgba(242, 92, 105, 0.4);
+        }
+        .photo-delete-card .photo-select-checkbox {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 22px;
+            height: 22px;
+            accent-color: var(--red);
+            cursor: pointer;
+            z-index: 3;
+        }
+        .photo-delete-card .photo-idx-badge {
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+            z-index: 2;
+        }
+        .photo-delete-card .photo-selected-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(242, 92, 105, 0.25);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .photo-delete-card.is-selected .photo-selected-overlay {
+            display: flex;
+        }
+        @media (max-width: 600px) {
+            .photo-delete-grid {
+                grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+                gap: 8px;
+                max-height: 48vh;
+            }
+        }
+
         /* Responsive Gallery Adjustments */
         @media (max-width: 1024px) {
             .gallery-sidebar { width: 320px; }
@@ -2262,6 +2344,56 @@
     </div>
 </div>
 
+<!-- ── Modal: Delete Photos (Multi-Select) ── -->
+<div class="modal-backdrop" id="photoDeleteModal" style="z-index: 2100;" onclick="if(event.target===this)closePhotoDeleteModal()">
+    <div class="modal card" style="max-width: 680px; width: 92%; max-height: 90vh; padding: 1.5rem; text-align: left; display: flex; flex-direction: column;">
+        <!-- Modal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(242,92,105,0.12); color: var(--red); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 0;">
+                    {{ t(request, 'listing.delete_photos_title', 'Supprimer des photos') }}
+                </h2>
+            </div>
+            <button type="button" class="btn sm" onclick="closePhotoDeleteModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer; padding: 0.25rem 0.5rem;" title="{{ t(request, 'listing.cancel', 'Annuler') }}">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Selection Quick Actions Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; padding: 0.6rem 0.75rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; flex-shrink: 0;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn sm" onclick="selectAllPhotosToDelete(true)" style="touch-action: manipulation;">
+                    <i class="fa-solid fa-check-double"></i> {{ t(request, 'listing.select_all', 'Tout sélectionner') }}
+                </button>
+                <button type="button" class="btn sm" onclick="selectAllPhotosToDelete(false)" style="touch-action: manipulation;">
+                    <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.deselect_all', 'Tout désélectionner') }}
+                </button>
+            </div>
+            <div id="photoDeleteCountBadge" style="font-size: 0.8rem; font-weight: 600; color: var(--text-2);">
+                0 / {{ photos|length }}
+            </div>
+        </div>
+
+        <!-- Photo Selection Grid -->
+        <div id="photoDeleteGrid" class="photo-delete-grid">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border); flex-shrink: 0;">
+            <button type="button" class="btn" onclick="closePhotoDeleteModal()">
+                <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel', 'Annuler') }}
+            </button>
+            <button type="button" class="btn danger" id="btn-confirm-delete-photos" onclick="submitDeletePhotos({{ listing.id }})" disabled style="min-width: 170px;">
+                <i class="fa-solid fa-trash-can"></i> <span id="btnDeletePhotosText">{{ t(request, 'listing.delete_selected_photos', 'Supprimer les photos') }}</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ── Modal: Add Attachment ── -->
 <div class="modal-backdrop" id="addAttachmentModal" onclick="if(event.target===this)closeAddAttachmentModal()">
     <div class="modal" style="max-width: 550px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
@@ -3685,7 +3817,7 @@
                 <div class="gallery-idx" id="galleryIdxMob">1/1</div>
                 <div class="gallery-mob-actions">
                     {% if request.session.get('role') in ['user', 'admin'] %}
-                    <button class="btn-gallery-action delete" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                    <button class="btn-gallery-action delete" onclick="openPhotoDeleteModal()" title="{{ t(request, 'listing.delete_photos_title', 'Supprimer des photos') }}">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                     {% endif %}
@@ -3712,7 +3844,7 @@
                     <div style="display:flex; justify-content: space-between; align-items: start; gap: 0.75rem; margin-bottom: 1.5rem;">
                         <div class="gallery-title">{{ listing.title }}</div>
                         {% if request.session.get('role') in ['user', 'admin'] %}
-                        <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="deleteCurrentPhoto()" title="Supprimer cette photo">
+                        <button class="btn sm" style="color: var(--red); border-color: rgba(242,92,105,0.2); background: rgba(242,92,105,0.05); flex-shrink: 0;" onclick="openPhotoDeleteModal()" title="{{ t(request, 'listing.delete_photos_title', 'Supprimer des photos') }}">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
                         {% endif %}
@@ -4017,25 +4149,150 @@
             galleryGoTo(currentGalleryIdx + dir);
         }
 
-        async function deleteCurrentPhoto() {
-            if (!confirm("{{ t(request, 'listing.confirm_delete_photo', 'Voulez-vous vraiment supprimer cette photo ?') }}")) return;
-            
+        // ── Photo Delete Multi-Select Logic ────────────────────────────────────
+        let selectedPhotosToDelete = new Set();
+
+        function openPhotoDeleteModal() {
+            if (totalGalleryPhotos === 0) return;
+            selectedPhotosToDelete.clear();
+            if (currentGalleryIdx >= 0 && currentGalleryIdx < totalGalleryPhotos) {
+                selectedPhotosToDelete.add(currentGalleryIdx);
+            }
+            renderPhotoDeleteGrid();
+            document.getElementById('photoDeleteModal').classList.add('open');
+        }
+
+        function closePhotoDeleteModal() {
+            document.getElementById('photoDeleteModal').classList.remove('open');
+            selectedPhotosToDelete.clear();
+        }
+
+        function renderPhotoDeleteGrid() {
+            const grid = document.getElementById('photoDeleteGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            galleryPhotos.forEach((src, idx) => {
+                const isChecked = selectedPhotosToDelete.has(idx);
+                const card = document.createElement('div');
+                card.className = 'photo-delete-card' + (isChecked ? ' is-selected' : '');
+                card.dataset.idx = idx;
+                card.onclick = (e) => {
+                    if (e.target.tagName.toLowerCase() !== 'input') {
+                        togglePhotoSelection(idx);
+                    }
+                };
+
+                card.innerHTML = `
+                    <input type="checkbox" class="photo-select-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''} onchange="togglePhotoSelection(${idx})">
+                    <img src="${src}" loading="lazy" alt="Photo ${idx + 1}">
+                    <span class="photo-idx-badge">#${idx + 1}</span>
+                    <div class="photo-selected-overlay"><i class="fa-solid fa-check" style="color: #fff; font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i></div>
+                `;
+                grid.appendChild(card);
+            });
+
+            updatePhotoDeleteSelectionUI();
+        }
+
+        function togglePhotoSelection(idx) {
+            if (selectedPhotosToDelete.has(idx)) {
+                selectedPhotosToDelete.delete(idx);
+            } else {
+                selectedPhotosToDelete.add(idx);
+            }
+            updatePhotoDeleteSelectionUI();
+        }
+
+        function selectAllPhotosToDelete(select) {
+            if (select) {
+                for (let i = 0; i < totalGalleryPhotos; i++) {
+                    selectedPhotosToDelete.add(i);
+                }
+            } else {
+                selectedPhotosToDelete.clear();
+            }
+            updatePhotoDeleteSelectionUI();
+        }
+
+        function updatePhotoDeleteSelectionUI() {
+            const cards = document.querySelectorAll('#photoDeleteGrid .photo-delete-card');
+            cards.forEach(card => {
+                const idx = parseInt(card.dataset.idx, 10);
+                const isSelected = selectedPhotosToDelete.has(idx);
+                card.classList.toggle('is-selected', isSelected);
+                const cb = card.querySelector('.photo-select-checkbox');
+                if (cb) cb.checked = isSelected;
+            });
+
+            const countBadge = document.getElementById('photoDeleteCountBadge');
+            if (countBadge) {
+                countBadge.textContent = `${selectedPhotosToDelete.size} / ${totalGalleryPhotos} sélectionnée(s)`;
+            }
+
+            const deleteBtn = document.getElementById('btn-confirm-delete-photos');
+            const deleteBtnText = document.getElementById('btnDeletePhotosText');
+            if (deleteBtn && deleteBtnText) {
+                if (selectedPhotosToDelete.size > 0) {
+                    deleteBtn.disabled = false;
+                    const tmpl = "{{ t(request, 'listing.delete_selected_photos', 'Supprimer ({count}) photo(s)') }}";
+                    deleteBtnText.textContent = tmpl.replace('{count}', selectedPhotosToDelete.size);
+                } else {
+                    deleteBtn.disabled = true;
+                    deleteBtnText.textContent = "{{ t(request, 'listing.no_photo_selected', 'Aucune photo sélectionnée') }}";
+                }
+            }
+        }
+
+        async function submitDeletePhotos(listingId) {
+            if (selectedPhotosToDelete.size === 0) return;
+
+            const count = selectedPhotosToDelete.size;
+            let confirmMsg = "";
+            if (count === 1) {
+                confirmMsg = "{{ t(request, 'listing.confirm_delete_single_photo', 'Voulez-vous vraiment supprimer cette photo ?') }}";
+            } else {
+                confirmMsg = "{{ t(request, 'listing.confirm_delete_selected_photos', 'Voulez-vous vraiment supprimer les {count} photos sélectionnées ?') }}".replace('{count}', count);
+            }
+
+            if (!confirm(confirmMsg)) return;
+
+            const btn = document.getElementById('btn-confirm-delete-photos');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Suppression...';
+
             try {
-                const res = await fetch(`/api/listings/{{ listing.id }}/photos/${currentGalleryIdx}`, {
-                    method: 'DELETE'
+                const res = await fetch(`/api/listings/${listingId}/photos`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        indices: Array.from(selectedPhotosToDelete)
+                    })
                 });
-                
+
                 if (res.ok) {
-                    showToast("{{ t(request, 'listing.photo_deleted', 'Photo supprimée avec succès !') }}");
+                    const data = await res.json();
+                    closePhotoDeleteModal();
+                    const successTmpl = "{{ t(request, 'listing.photos_deleted_success', '{count} photo(s) supprimée(s) avec succès !') }}";
+                    showToast(successTmpl.replace('{count}', data.deleted_count || count));
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    const err = await res.json();
+                    const err = await res.json().catch(() => ({}));
                     alert("Erreur lors de la suppression: " + (err.detail || "Inconnue"));
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
                 }
             } catch (error) {
                 console.error("Error:", error);
                 alert("Erreur réseau");
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
             }
+        }
+
+        function deleteCurrentPhoto() {
+            openPhotoDeleteModal();
         }
 
         // ── Duplicate Declaration Logic ────────────────────────────────────────
