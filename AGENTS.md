@@ -61,3 +61,12 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 - **Text & Structure**: Focus on text, tables, and diagrams; do not spend time generating new screenshots unless requested.
 - **Detailed Reference**: See [.agents/rules/documentation_and_i18n.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/documentation_and_i18n.md).
 
+---
+
+## 7. GitHub Workflow Verification on Pushes & Pull Requests
+
+- **Mandatory Workflow Monitoring**: After pushing code or creating/updating pull requests, always check the status of all triggered GitHub Actions workflows using `gh run list` / `gh run view` / `gh pr checks`.
+- **Zero Failure Tolerance**: Never mark a task complete if any workflow job fails (CI, Docker build, lint, quality checks, test suite, security scans).
+- **Immediate Failure Resolution**: Inspect failure logs (`gh run view <run-id> --log-failed`), diagnose the root cause, apply fixes, commit and push, and monitor until all workflows are 100% green.
+- **Detailed Reference**: See [.agents/rules/github_workflow_verification.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/github_workflow_verification.md).
+
