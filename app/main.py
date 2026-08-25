@@ -4,6 +4,8 @@ Defines all routes: HTML pages + REST API.
 """
 import json
 import os
+import re
+import urllib.parse
 import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -5047,7 +5049,6 @@ def download_listing_attachment(
 
 def _deduce_link_metadata(raw_url: str, custom_title: Optional[str] = None, custom_category: Optional[str] = None):
     """Clean URL and deduce a user-friendly title and category from hostname if not provided."""
-    import urllib.parse
     clean_url = raw_url.strip()
     if not clean_url.startswith("http://") and not clean_url.startswith("https://"):
         clean_url = "https://" + clean_url
@@ -5065,12 +5066,18 @@ def _deduce_link_metadata(raw_url: str, custom_title: Optional[str] = None, cust
             title = "Rapport Clairbien"
         elif "terva" in hostname:
             title = "Analyse Terva"
+        elif "valeurici" in hostname:
+            title = "ValeurIci (Estimation)"
         elif "georisques" in hostname:
             title = "Géorisques"
         elif "cadastre.gouv" in hostname:
             title = "Cadastre"
         elif "explore.data.gouv" in hostname or "data.gouv" in hostname:
-            title = "Data.gouv.fr"
+            title = "Data.gouv.fr (DVF)"
+        elif "meilleursagents" in hostname:
+            title = "Meilleurs Agents"
+        elif "castorus" in hostname:
+            title = "Castorus"
         elif "wikipedia" in hostname:
             title = "Wikipédia"
         elif "leboncoin" in hostname:
@@ -5097,7 +5104,7 @@ def _deduce_link_metadata(raw_url: str, custom_title: Optional[str] = None, cust
     if category == "rapport":
         if any(k in hostname for k in ["haven-score", "clairbien", "terva", "georisques"]):
             category = "rapport"
-        elif any(k in hostname for k in ["data.gouv", "dvf", "meilleursagents", "castorus"]):
+        elif any(k in hostname for k in ["data.gouv", "dvf", "meilleursagents", "castorus", "valeurici"]):
             category = "marche"
         elif any(k in hostname for k in ["cadastre", "urbanisme", "plu"]):
             category = "cadastre"

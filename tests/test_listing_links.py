@@ -50,7 +50,12 @@ def test_deduce_link_metadata():
 
     # Test Data.gouv
     url, title, cat = _deduce_link_metadata("https://explore.data.gouv.fr/fr/immobilier?lat=45.44&lng=4.77")
-    assert title == "Data.gouv.fr"
+    assert title == "Data.gouv.fr (DVF)"
+    assert cat == "marche"
+
+    # Test ValeurIci
+    url, title, cat = _deduce_link_metadata("https://valeurici.com/resultat?id=163a5bc3-98da-4143-b61f-7597774470be")
+    assert title == "ValeurIci (Estimation)"
     assert cat == "marche"
 
     # Test Custom Title & Category preserved

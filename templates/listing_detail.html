@@ -1296,6 +1296,8 @@
         }
 
         .icon-haven { background: rgba(16, 217, 164, 0.12); color: var(--green); border-color: rgba(16, 217, 164, 0.3); }
+        .icon-valeurici { background: rgba(16, 217, 164, 0.12); color: var(--green); border-color: rgba(16, 217, 164, 0.3); }
+        .icon-marche { background: rgba(16, 217, 164, 0.12); color: var(--green); border-color: rgba(16, 217, 164, 0.3); }
         .icon-clairbien { background: rgba(79, 142, 247, 0.12); color: var(--accent); border-color: rgba(79, 142, 247, 0.3); }
         .icon-terva { background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.3); }
         .icon-georisques { background: rgba(248, 168, 75, 0.12); color: var(--orange); border-color: rgba(248, 168, 75, 0.3); }
@@ -2171,9 +2173,11 @@
                         {% for lk in links %}
                         {% set url_lower = lk.url|lower %}
                         <div class="link-card" id="link-card-{{ lk.id }}" data-link-id="{{ lk.id }}">
-                            <div class="link-icon-wrapper {% if 'haven-score' in url_lower %}icon-haven{% elif 'clairbien' in url_lower %}icon-clairbien{% elif 'terva' in url_lower %}icon-terva{% elif 'georisques' in url_lower %}icon-georisques{% elif 'data.gouv' in url_lower or 'dvf' in url_lower %}icon-datagouv{% elif 'cadastre' in url_lower %}icon-cadastre{% elif 'wikipedia' in url_lower or 'mairie' in url_lower or 'ville' in url_lower %}icon-ville{% else %}icon-default{% endif %}">
+                            <div class="link-icon-wrapper {% if 'haven-score' in url_lower %}icon-haven{% elif 'valeurici' in url_lower or 'meilleursagents' in url_lower or 'castorus' in url_lower %}icon-marche{% elif 'clairbien' in url_lower %}icon-clairbien{% elif 'terva' in url_lower %}icon-terva{% elif 'georisques' in url_lower %}icon-georisques{% elif 'data.gouv' in url_lower or 'dvf' in url_lower %}icon-datagouv{% elif 'cadastre' in url_lower %}icon-cadastre{% elif 'wikipedia' in url_lower or 'mairie' in url_lower or 'ville' in url_lower %}icon-ville{% else %}icon-default{% endif %}">
                                 {% if 'haven-score' in url_lower %}
                                 <i class="fa-solid fa-star-half-stroke"></i>
+                                {% elif 'valeurici' in url_lower or 'meilleursagents' in url_lower or 'castorus' in url_lower %}
+                                <i class="fa-solid fa-chart-simple"></i>
                                 {% elif 'clairbien' in url_lower %}
                                 <i class="fa-solid fa-chart-line"></i>
                                 {% elif 'terva' in url_lower %}
