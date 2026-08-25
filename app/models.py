@@ -38,9 +38,6 @@ class User(Base):
     # Notifications
     apprise_url = Column(String, nullable=True)  # Apprise-compatible URL (tgram://, discord://, ntfy://, mailto://, etc.)
 
-    # Public Services Integrations (Toggles)
-    public_services_json = Column(Text, nullable=True, default="{}")  # JSON: {"cadastre": bool, "dvf": bool, "georisques": bool}
-
 
 class ListingStatus(str, enum.Enum):
     NEW = "nouvelle"
@@ -189,6 +186,7 @@ class Listing(Base):
     reviews = relationship("Review", back_populates="listing", cascade="all, delete-orphan")
     visits = relationship("Visit", back_populates="listing", cascade="all, delete-orphan", order_by="Visit.scheduled_at")
     attachments = relationship("ListingAttachment", back_populates="listing", cascade="all, delete-orphan", order_by="ListingAttachment.created_at.desc()")
+    links = relationship("ListingLink", back_populates="listing", cascade="all, delete-orphan", order_by="ListingLink.created_at.asc()")
     main_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
     main_agent = relationship("Agent", foreign_keys=[main_agent_id])
@@ -439,6 +437,9 @@ class GlobalSettings(Base):
     # Scraping Proxies Settings (JSON string)
     scraping_proxies_json = Column(Text, nullable=True)
 
+    # Public Data Services Integrations (JSON string, e.g. {"dvf": true, "cadastre": true, "georisques": false})
+    public_services_json = Column(Text, nullable=True, default="{}")
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
@@ -514,5 +515,26 @@ class ListingAttachment(Base):
 
     # Relationships
     listing = relationship("Listing", back_populates="attachments")
+
+
+class ListingLink(Base):
+    """
+    Stores external and useful links related to a listing
+    (e.g., Haven Score, Clairbien report, Terva, city/neighborhood guides, etc.).
+    """
+    __tablename__ = "listing_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=True)
+    url = Column(Text, nullable=False)
+    category = Column(String(50), nullable=True, default="rapport")  # rapport, ville, marche, cadastre, autre
+    description = Column(Text, nullable=True)
+    created_by = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    listing = relationship("Listing", back_populates="links")
 
 

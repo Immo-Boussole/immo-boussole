@@ -1225,6 +1225,252 @@
                 margin-left: 0;
             }
         }
+
+        /* ── Useful Links (Liens utiles) ── */
+        .links-section {
+            margin-top: 1.5rem;
+        }
+
+        .links-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .links-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .links-count-badge {
+            background: rgba(79, 142, 247, 0.15);
+            color: var(--accent);
+            padding: 0.15rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid rgba(79, 142, 247, 0.3);
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .link-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--trans);
+            position: relative;
+        }
+
+        .link-card:hover {
+            border-color: rgba(79, 142, 247, 0.3);
+            background: rgba(26, 34, 54, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .link-icon-wrapper {
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+
+        .icon-haven { background: rgba(16, 217, 164, 0.12); color: var(--green); border-color: rgba(16, 217, 164, 0.3); }
+        .icon-clairbien { background: rgba(79, 142, 247, 0.12); color: var(--accent); border-color: rgba(79, 142, 247, 0.3); }
+        .icon-terva { background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.3); }
+        .icon-georisques { background: rgba(248, 168, 75, 0.12); color: var(--orange); border-color: rgba(248, 168, 75, 0.3); }
+        .icon-datagouv { background: rgba(99, 102, 241, 0.12); color: #818cf8; border-color: rgba(99, 102, 241, 0.3); }
+        .icon-cadastre { background: rgba(6, 182, 212, 0.12); color: #22d3ee; border-color: rgba(6, 182, 212, 0.3); }
+        .icon-ville { background: rgba(249, 208, 79, 0.12); color: var(--yellow); border-color: rgba(249, 208, 79, 0.3); }
+        .icon-default { background: rgba(255, 255, 255, 0.04); color: var(--text-2); }
+
+        .link-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .link-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.2rem;
+        }
+
+        .link-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .link-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-rapport { background: rgba(79, 142, 247, 0.15); color: var(--accent); border: 1px solid rgba(79, 142, 247, 0.3); }
+        .badge-ville { background: rgba(249, 208, 79, 0.15); color: var(--yellow); border: 1px solid rgba(249, 208, 79, 0.3); }
+        .badge-marche { background: rgba(16, 217, 164, 0.15); color: var(--green); border: 1px solid rgba(16, 217, 164, 0.3); }
+        .badge-cadastre { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+        .badge-autre { background: rgba(255, 255, 255, 0.08); color: var(--text-2); border: 1px solid var(--border); }
+
+        .link-url-row {
+            margin-bottom: 0.25rem;
+        }
+
+        .link-url-anchor {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.76rem;
+            max-width: 100%;
+            transition: var(--trans);
+        }
+
+        .link-url-anchor:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        .link-url-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            max-width: 420px;
+        }
+
+        .link-description {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-top: 0.35rem;
+            line-height: 1.35;
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            border-left: 2px solid var(--accent);
+        }
+
+        .link-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.72rem;
+            color: var(--text-2);
+            margin-top: 0.3rem;
+            opacity: 0.75;
+            flex-wrap: wrap;
+        }
+
+        .link-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .link-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .link-btn-action {
+            min-width: 36px;
+            min-height: 36px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--trans);
+        }
+
+        .links-empty {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+        }
+
+        .links-empty i {
+            font-size: 2.5rem;
+            color: var(--text-2);
+            opacity: 0.4;
+            margin-bottom: 0.75rem;
+        }
+
+        .links-empty h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.35rem;
+        }
+
+        .links-empty p {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            max-width: 480px;
+            margin: 0 auto 1.25rem;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .link-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .link-actions {
+                width: 100%;
+                border-top: 1px solid var(--border);
+                padding-top: 0.6rem;
+                margin-top: 0.25rem;
+                justify-content: flex-end;
+            }
+            .link-btn-action {
+                min-width: 44px;
+                min-height: 44px;
+            }
+            .link-url-text {
+                max-width: 250px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1254,6 +1500,15 @@
                     <span id="topbar-attachments-count" style="margin-left: 0.35rem; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px;">{{ attachments|length }}</span>
                     {% else %}
                     <span id="topbar-attachments-count" style="margin-left: 0.35rem; background: rgba(255,255,255,0.1); color: var(--text-2); font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px; display: none;">0</span>
+                    {% endif %}
+                </button>
+
+                <button class="btn btn-link-nav" onclick="scrollToLinks()" title="{{ t(request, 'listing.links_btn') }}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.2); background: rgba(79, 142, 247, 0.05); position: relative;">
+                    <i class="fa-solid fa-link"></i> <span class="btn-text">{{ t(request, 'listing.links_btn') }}</span>
+                    {% if links and links|length > 0 %}
+                    <span id="topbar-links-count" style="margin-left: 0.35rem; background: var(--accent); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px;">{{ links|length }}</span>
+                    {% else %}
+                    <span id="topbar-links-count" style="margin-left: 0.35rem; background: rgba(255,255,255,0.1); color: var(--text-2); font-size: 0.65rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 10px; display: none;">0</span>
                     {% endif %}
                 </button>
 
@@ -1884,6 +2139,126 @@
                         {% if request.session.get('role') in ['user', 'admin'] %}
                         <button type="button" class="btn primary" onclick="openAddAttachmentModal()">
                             <i class="fa-solid fa-cloud-arrow-up"></i> {{ t(request, 'listing.add_attachment') }}
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ── Liens Utiles ── -->
+            <div class="info-card links-section" id="links-section">
+                <div class="links-header">
+                    <div class="links-title">
+                        <i class="fa-solid fa-link" style="color: var(--accent);"></i>
+                        <span>{{ t(request, 'listing.links') }}</span>
+                        <span class="links-count-badge" id="links-badge-count">
+                            {{ links|length if links else 0 }}
+                        </span>
+                    </div>
+                    {% if request.session.get('role') in ['user', 'admin'] %}
+                    <div class="links-header-actions" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="button" class="btn sm primary" onclick="openAddLinkModal()" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+                            <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.add_link') }}
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div id="links-container">
+                    {% if links and links|length > 0 %}
+                    <div class="links-grid" id="links-list">
+                        {% for lk in links %}
+                        {% set url_lower = lk.url|lower %}
+                        <div class="link-card" id="link-card-{{ lk.id }}" data-link-id="{{ lk.id }}">
+                            <div class="link-icon-wrapper {% if 'haven-score' in url_lower %}icon-haven{% elif 'clairbien' in url_lower %}icon-clairbien{% elif 'terva' in url_lower %}icon-terva{% elif 'georisques' in url_lower %}icon-georisques{% elif 'data.gouv' in url_lower or 'dvf' in url_lower %}icon-datagouv{% elif 'cadastre' in url_lower %}icon-cadastre{% elif 'wikipedia' in url_lower or 'mairie' in url_lower or 'ville' in url_lower %}icon-ville{% else %}icon-default{% endif %}">
+                                {% if 'haven-score' in url_lower %}
+                                <i class="fa-solid fa-star-half-stroke"></i>
+                                {% elif 'clairbien' in url_lower %}
+                                <i class="fa-solid fa-chart-line"></i>
+                                {% elif 'terva' in url_lower %}
+                                <i class="fa-solid fa-magnifying-glass-chart"></i>
+                                {% elif 'georisques' in url_lower %}
+                                <i class="fa-solid fa-shield-halved"></i>
+                                {% elif 'data.gouv' in url_lower or 'dvf' in url_lower %}
+                                <i class="fa-solid fa-chart-pie"></i>
+                                {% elif 'cadastre' in url_lower %}
+                                <i class="fa-solid fa-map-location-dot"></i>
+                                {% elif 'wikipedia' in url_lower or 'mairie' in url_lower or 'ville' in url_lower %}
+                                <i class="fa-solid fa-city"></i>
+                                {% else %}
+                                <i class="fa-solid fa-globe"></i>
+                                {% endif %}
+                            </div>
+
+                            <div class="link-info">
+                                <div class="link-title-row">
+                                    <span class="link-title">{{ lk.title or lk.url }}</span>
+                                    {% set cat = lk.category or 'rapport' %}
+                                    <span class="link-badge badge-{{ cat }}">
+                                        {% if cat == 'rapport' %}<i class="fa-solid fa-file-waveform"></i> {{ t(request, 'listing.link_category_report') }}
+                                        {% elif cat == 'ville' %}<i class="fa-solid fa-city"></i> {{ t(request, 'listing.link_category_city') }}
+                                        {% elif cat == 'marche' %}<i class="fa-solid fa-coins"></i> {{ t(request, 'listing.link_category_market') }}
+                                        {% elif cat == 'cadastre' %}<i class="fa-solid fa-map-location-dot"></i> {{ t(request, 'listing.link_category_cadastre') }}
+                                        {% else %}<i class="fa-solid fa-link"></i> {{ t(request, 'listing.link_category_other') }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                <div class="link-url-row">
+                                    <a href="{{ lk.url }}" target="_blank" rel="noopener noreferrer" class="link-url-anchor" title="{{ lk.url }}">
+                                        <span class="link-url-text">{{ lk.url }}</span>
+                                        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.72rem; margin-left: 0.3rem;"></i>
+                                    </a>
+                                </div>
+
+                                {% if lk.description %}
+                                <div class="link-description">
+                                    {{ lk.description }}
+                                </div>
+                                {% endif %}
+
+                                {% if lk.created_at or lk.created_by %}
+                                <div class="link-meta">
+                                    {% if lk.created_by %}
+                                    <span class="link-meta-item"><i class="fa-regular fa-user"></i> {{ lk.created_by }}</span>
+                                    {% endif %}
+                                    {% if lk.created_at %}
+                                    <span class="link-meta-item"><i class="fa-regular fa-clock"></i> {{ lk.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="link-actions">
+                                <a href="{{ lk.url }}" target="_blank" rel="noopener noreferrer" class="btn sm primary link-btn-action" title="{{ t(request, 'listing.preview') }}">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                    <span class="btn-text-desktop">{{ t(request, 'listing.preview') }}</span>
+                                </a>
+                                <button type="button" class="btn sm link-btn-action" onclick='copyLinkUrl({{ lk.url|tojson }}, this)' title="{{ t(request, 'listing.copy_link') }}" style="color: var(--text-2); background: var(--surface); border-color: var(--border);">
+                                    <i class="fa-regular fa-copy"></i>
+                                    <span class="btn-text-desktop">{{ t(request, 'listing.copy_link') }}</span>
+                                </button>
+                                {% if request.session.get('role') in ['user', 'admin'] %}
+                                <button type="button" class="btn sm link-btn-action" onclick='openEditLinkModal({{ lk.id }}, {{ (lk.title or "")|tojson }}, {{ lk.url|tojson }}, {{ (lk.category or "rapport")|tojson }}, {{ (lk.description or "")|tojson }})' title="{{ t(request, 'listing.edit_link') }}" style="color: var(--text-2); background: var(--surface); border-color: var(--border);">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button type="button" class="btn sm link-btn-action" onclick='openDeleteLinkModal({{ lk.id }}, {{ (lk.title or lk.url)|tojson }})' title="{{ t(request, 'listing.delete_link') }}" style="color: var(--red); background: var(--surface); border-color: var(--border);">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="links-empty" id="links-empty-state">
+                        <i class="fa-solid fa-link-slash"></i>
+                        <h4>{{ t(request, 'listing.no_links') }}</h4>
+                        <p>{{ t(request, 'listing.no_links_desc') }}</p>
+                        {% if request.session.get('role') in ['user', 'admin'] %}
+                        <button type="button" class="btn primary" onclick="openAddLinkModal()">
+                            <i class="fa-solid fa-plus"></i> {{ t(request, 'listing.add_link') }}
                         </button>
                         {% endif %}
                     </div>
@@ -2556,6 +2931,116 @@
                 <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel') }}
             </button>
             <button type="button" class="btn" id="btn-confirm-delete-attachment" style="flex: 1; color: var(--red); border-color: rgba(242,92,105,0.4); background: rgba(242,92,105,0.1);" onclick="submitDeleteAttachment({{ listing.id }})">
+                <i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_btn') }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Add Useful Link ── -->
+<div class="modal-backdrop" id="addLinkModal" onclick="if(event.target===this)closeAddLinkModal()">
+    <div class="modal" style="max-width: 550px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-link" style="color: var(--accent);"></i> {{ t(request, 'listing.add_links') }}</h2>
+            <button class="btn sm" onclick="closeAddLinkModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="addLinkForm" onsubmit="submitAddLink(event, {{ listing.id }})">
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="link-url-input">{{ t(request, 'listing.link_url') }} <span style="color: var(--red);">*</span></label>
+                <textarea id="link-url-input" required style="min-height: 85px; width: 100%; font-family: monospace; font-size: 0.82rem;" placeholder="{{ t(request, 'listing.link_url_placeholder') }}"></textarea>
+                <div style="font-size: 0.72rem; color: var(--text-2); margin-top: 0.25rem;">
+                    <i class="fa-solid fa-circle-info"></i> Vous pouvez coller un ou plusieurs liens (séparés par un espace ou retour à la ligne). Le titre et le type de rapport seront détectés automatiquement.
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="link-title-input">{{ t(request, 'listing.link_title') }}</label>
+                <input type="text" id="link-title-input" placeholder="{{ t(request, 'listing.link_title_placeholder') }}">
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="link-category-select">{{ t(request, 'listing.link_category') }}</label>
+                <select id="link-category-select" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem;">
+                    <option value="rapport" selected>{{ t(request, 'listing.link_category_report') }}</option>
+                    <option value="ville">{{ t(request, 'listing.link_category_city') }}</option>
+                    <option value="marche">{{ t(request, 'listing.link_category_market') }}</option>
+                    <option value="cadastre">{{ t(request, 'listing.link_category_cadastre') }}</option>
+                    <option value="autre">{{ t(request, 'listing.link_category_other') }}</option>
+                </select>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="link-notes-input">{{ t(request, 'listing.link_notes') }}</label>
+                <textarea id="link-notes-input" style="min-height: 70px; width: 100%;" placeholder="{{ t(request, 'listing.link_notes_placeholder') }}"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeAddLinkModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button type="submit" class="btn primary" id="btn-submit-link"><i class="fa-solid fa-plus"></i> {{ t(request, 'listing.save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Modal: Edit Useful Link ── -->
+<div class="modal-backdrop" id="editLinkModal" onclick="if(event.target===this)closeEditLinkModal()">
+    <div class="modal" style="max-width: 500px; text-align: left; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="color: var(--text); margin-bottom: 0;"><i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> {{ t(request, 'listing.edit_link') }}</h2>
+            <button class="btn sm" onclick="closeEditLinkModal()" style="border: none; background: transparent; font-size: 1.25rem; color: var(--text-2); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="editLinkForm" onsubmit="submitEditLink(event, {{ listing.id }})">
+            <input type="hidden" id="edit-link-id" value="">
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-link-title">{{ t(request, 'listing.link_title') }}</label>
+                <input type="text" id="edit-link-title" required>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-link-url">{{ t(request, 'listing.link_url') }}</label>
+                <input type="url" id="edit-link-url" required style="font-family: monospace; font-size: 0.82rem;">
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-link-category">{{ t(request, 'listing.link_category') }}</label>
+                <select id="edit-link-category" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem;">
+                    <option value="rapport">{{ t(request, 'listing.link_category_report') }}</option>
+                    <option value="ville">{{ t(request, 'listing.link_category_city') }}</option>
+                    <option value="marche">{{ t(request, 'listing.link_category_market') }}</option>
+                    <option value="cadastre">{{ t(request, 'listing.link_category_cadastre') }}</option>
+                    <option value="autre">{{ t(request, 'listing.link_category_other') }}</option>
+                </select>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 1rem;">
+                <label for="edit-link-notes">{{ t(request, 'listing.link_notes') }}</label>
+                <textarea id="edit-link-notes" style="min-height: 70px; width: 100%;"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end; display: flex; gap: 0.75rem;">
+                <button type="button" class="btn" onclick="closeEditLinkModal()">{{ t(request, 'listing.cancel') }}</button>
+                <button type="submit" class="btn primary" id="btn-save-edit-link"><i class="fa-solid fa-floppy-disk"></i> {{ t(request, 'listing.save') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Modal: Delete Useful Link ── -->
+<div class="modal-backdrop" id="deleteLinkModal" onclick="if(event.target===this)closeDeleteLinkModal()">
+    <div class="modal delete-modal" style="max-width: 460px; text-align: center; padding: 2rem;">
+        <div class="delete-icon"><i class="fa-solid fa-trash-can"></i></div>
+        <h2 style="color: var(--text); margin-bottom: 0.5rem;" id="deleteLinkModalTitle">{{ t(request, 'listing.delete_link_confirm') }}</h2>
+        <div class="delete-title-preview" id="deleteLinkTitlePreview" style="font-size: 0.85rem; font-weight: 600; color: var(--accent); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; word-break: break-all; max-height: 160px; overflow-y: auto;"></div>
+        <p class="delete-warning" id="deleteLinkWarningText" style="font-size: 0.8rem; color: var(--text-2); margin-bottom: 1.5rem;">{{ t(request, 'listing.delete_link_warning') }}</p>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button type="button" class="btn" style="flex: 1;" onclick="closeDeleteLinkModal()">
+                <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel') }}
+            </button>
+            <button type="button" class="btn" id="btn-confirm-delete-link" style="flex: 1; color: var(--red); border-color: rgba(242,92,105,0.4); background: rgba(242,92,105,0.1);" onclick="submitDeleteLink({{ listing.id }})">
                 <i class="fa-solid fa-trash-can"></i> {{ t(request, 'listing.delete_btn') }}
             </button>
         </div>
@@ -6051,6 +6536,172 @@
                 btn.disabled = false;
                 btn.innerHTML = origHtml;
             }
+        }
+
+        // ─── Useful Links Management ─────────────────────────────────────────
+        let linkToDelete = null;
+
+        function scrollToLinks() {
+            const el = document.getElementById('links-section');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function openAddLinkModal() {
+            const form = document.getElementById('addLinkForm');
+            if (form) form.reset();
+            document.getElementById('addLinkModal').classList.add('open');
+        }
+
+        function closeAddLinkModal() {
+            document.getElementById('addLinkModal').classList.remove('open');
+        }
+
+        async function submitAddLink(e, listingId) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-link');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enregistrement...';
+
+            try {
+                const url = document.getElementById('link-url-input').value.trim();
+                const title = document.getElementById('link-title-input').value.trim();
+                const category = document.getElementById('link-category-select').value;
+                const description = document.getElementById('link-notes-input').value.trim();
+
+                const res = await fetch(`/api/listings/${listingId}/links`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: url,
+                        title: title || null,
+                        category: category,
+                        description: description || null
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors de l'ajout du lien");
+                }
+
+                closeAddLinkModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function openEditLinkModal(id, title, url, category, description) {
+            document.getElementById('edit-link-id').value = id;
+            document.getElementById('edit-link-title').value = title || '';
+            document.getElementById('edit-link-url').value = url || '';
+            document.getElementById('edit-link-category').value = category || 'rapport';
+            document.getElementById('edit-link-notes').value = description || '';
+            document.getElementById('editLinkModal').classList.add('open');
+        }
+
+        function closeEditLinkModal() {
+            document.getElementById('editLinkModal').classList.remove('open');
+        }
+
+        async function submitEditLink(e, listingId) {
+            e.preventDefault();
+            const id = document.getElementById('edit-link-id').value;
+            const btn = document.getElementById('btn-save-edit-link');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enregistrement...';
+
+            try {
+                const title = document.getElementById('edit-link-title').value.trim();
+                const url = document.getElementById('edit-link-url').value.trim();
+                const category = document.getElementById('edit-link-category').value;
+                const description = document.getElementById('edit-link-notes').value.trim();
+
+                const res = await fetch(`/api/listings/${listingId}/links/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        url: url,
+                        category: category,
+                        description: description || null
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors de la modification");
+                }
+
+                closeEditLinkModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function openDeleteLinkModal(id, title) {
+            linkToDelete = { id: id, title: title };
+            const previewEl = document.getElementById('deleteLinkTitlePreview');
+            if (previewEl) previewEl.textContent = title || 'Lien #' + id;
+            document.getElementById('deleteLinkModal').classList.add('open');
+        }
+
+        function closeDeleteLinkModal() {
+            linkToDelete = null;
+            document.getElementById('deleteLinkModal').classList.remove('open');
+        }
+
+        async function submitDeleteLink(listingId) {
+            if (!linkToDelete) return;
+            const btn = document.getElementById('btn-confirm-delete-link');
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Suppression...';
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/links/${linkToDelete.id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || "Erreur lors de la suppression");
+                }
+
+                closeDeleteLinkModal();
+                location.reload();
+            } catch (err) {
+                alert("Erreur : " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function copyLinkUrl(url, btn) {
+            if (!url) return;
+            navigator.clipboard.writeText(url).then(() => {
+                if (btn) {
+                    const origHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check" style="color: var(--green);"></i> <span class="btn-text-desktop">{{ t(request, "listing.copy_link") }}</span>';
+                    setTimeout(() => {
+                        btn.innerHTML = origHtml;
+                    }, 2000);
+                }
+            }).catch(err => {
+                console.error("Erreur copie presse-papier", err);
+            });
         }
 
         function escapeHtml(text) {

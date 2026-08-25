@@ -46,3 +46,18 @@ def get_listing_attachments_v1(
         models.ListingAttachment.listing_id == listing_id
     ).order_by(models.ListingAttachment.created_at.desc()).all()
 
+
+@router.get("/{listing_id}/links", response_model=List[schemas.ListingLinkResponse])
+def get_listing_links_v1(
+    listing_id: int,
+    current_user: models.User = Depends(get_current_user_api),
+    db: Session = Depends(get_db)
+):
+    listing = db.query(models.Listing).filter(models.Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return db.query(models.ListingLink).filter(
+        models.ListingLink.listing_id == listing_id
+    ).order_by(models.ListingLink.created_at.asc()).all()
+
+

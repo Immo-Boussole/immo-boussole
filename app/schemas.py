@@ -221,7 +221,6 @@ class ProfileUpdateRequest(BaseModel):
     phone: Optional[str] = None
     sfr_identifier: Optional[str] = None
     sfr_password: Optional[str] = None
-    public_services_json: Optional[str] = None
 
 
 class StationChoice(BaseModel):
@@ -609,6 +608,35 @@ class ListingAttachmentUpdateRequest(BaseModel):
 
 class BulkDeleteAttachmentsRequest(BaseModel):
     attachment_ids: list[int]
+
+
+class ListingLinkCreateRequest(BaseModel):
+    url: str
+    title: Optional[str] = None
+    category: Optional[str] = "rapport"
+    description: Optional[str] = None
+
+
+class ListingLinkUpdateRequest(BaseModel):
+    url: Optional[str] = None
+    title: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ListingLinkResponse(BaseModel):
+    id: int
+    listing_id: int
+    title: Optional[str] = None
+    url: str
+    category: Optional[str] = None
+    description: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 
 

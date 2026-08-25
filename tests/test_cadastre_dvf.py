@@ -136,54 +136,39 @@ def test_listing_update_cadastral_parcel():
         app.dependency_overrides.clear()
 
 
-def test_user_profile_public_services_toggles():
-    db = SessionLocal()
-    app.dependency_overrides[login_required] = lambda: {"username": "testuser_cadastre", "role": "admin"}
-
-    user = db.query(User).filter(User.username == "testuser_cadastre").first()
-    if not user:
-        user = User(
-            username="testuser_cadastre",
-            password_hash=b"fake",
-            salt=b"fake",
-            role="admin",
-            public_services_json="{}"
-        )
-        db.add(user)
-        db.commit()
-    db.close()
+def test_admin_settings_public_services_toggles():
+    client = TestClient(app)
+    from app.main import admin_required
+    app.dependency_overrides[admin_required] = lambda: {"username": "admin", "role": "admin"}
+    app.dependency_overrides[login_required] = lambda: {"username": "admin", "role": "admin"}
 
     try:
         toggles = {"dvf": True, "cadastre": True, "georisques": False}
-        from unittest.mock import MagicMock
-        from app.main import update_profile
-        from app.schemas import ProfileUpdateRequest
+        res = client.post("/api/admin/settings", json={
+            "public_services_json": json.dumps(toggles)
+        })
+        assert res.status_code == 200
 
-        mock_req = MagicMock()
-        mock_req.session = {"username": "testuser_cadastre"}
-        body = ProfileUpdateRequest(
-            public_services_json=json.dumps(toggles)
-        )
-        db_call = SessionLocal()
-        import asyncio
-        asyncio.run(update_profile(mock_req, body, db_call, None))
-        db_call.close()
-
-        # Re-fetch from DB
-        db_check = SessionLocal()
-        saved_user = db_check.query(User).filter(User.username == "testuser_cadastre").first()
-        assert saved_user is not None
-        assert saved_user.public_services_json is not None
-        saved_services = json.loads(saved_user.public_services_json)
+        # Query GET /api/admin/settings
+        res_get = client.get("/api/admin/settings")
+        assert res_get.status_code == 200
+        data = res_get.json()
+        assert data.get("public_services_json") is not None
+        saved_services = json.loads(data["public_services_json"]) if isinstance(data["public_services_json"], str) else data["public_services_json"]
         assert saved_services.get("dvf") is True
         assert saved_services.get("cadastre") is True
         assert saved_services.get("georisques") is False
+
+        # Query directly from DB
+        db_check = SessionLocal()
+        from app.models import GlobalSettings
+        gs = db_check.query(GlobalSettings).first()
+        assert gs is not None
+        assert gs.public_services_json is not None
+        db_services = json.loads(gs.public_services_json)
+        assert db_services.get("dvf") is True
+        assert db_services.get("cadastre") is True
+        assert db_services.get("georisques") is False
         db_check.close()
     finally:
-        db_clean = SessionLocal()
-        u = db_clean.query(User).filter(User.username == "testuser_cadastre").first()
-        if u:
-            db_clean.delete(u)
-            db_clean.commit()
-        db_clean.close()
         app.dependency_overrides.clear()

@@ -8,7 +8,7 @@ except ImportError:
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import SessionLocal
-from app.models import Listing, ListingStatus, Source, Review, Visit
+from app.models import Listing, ListingStatus, Source, Review, Visit, ListingLink
 from typing import Optional, List
 from datetime import datetime
 import json
@@ -121,6 +121,16 @@ def tool_get_listing_details(listing_id: int) -> str:
                 "visitor": v.visitor,
                 "notes": v.notes
             } for v in visits]
+
+        links = db.query(ListingLink).filter(ListingLink.listing_id == l.id).order_by(ListingLink.created_at.asc()).all()
+        if links:
+            data["liens_utiles"] = [{
+                "id": link.id,
+                "titre": link.title,
+                "url": link.url,
+                "categorie": link.category,
+                "description": link.description
+            } for link in links]
 
         return json.dumps(data, indent=2, ensure_ascii=False)
     finally:

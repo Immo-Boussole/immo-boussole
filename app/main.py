@@ -33,7 +33,7 @@ from sqlalchemy.orm import Session
 
 from app import models, database, schemas, google_service
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency, ListingAttachment
+from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency, ListingAttachment, ListingLink
 
 from app.services import (
     scrape_and_diff,
@@ -356,6 +356,9 @@ class GlobalSettingsRequest(BaseModel):
 
     # Scraping Proxies (JSON)
     scraping_proxies_json: Optional[str] = None
+
+    # Public Services Integrations (JSON)
+    public_services_json: Optional[str] = None
 
 
 class DuplicateMergeRequest(BaseModel):
@@ -846,6 +849,9 @@ def update_global_settings(
             proxy_router.reload_chains(settings.scraping_proxies_json)
         except Exception as e:
             print(f"[Main] Erreur reload_chains proxy_router: {e}")
+
+    if body.public_services_json is not None:
+        settings.public_services_json = body.public_services_json.strip() or "{}"
 
     db.commit()
 
@@ -1453,6 +1459,7 @@ def listing_detail_page(
 
     photos = json_to_photos(listing.photos_local)
     attachments = db.query(ListingAttachment).filter(ListingAttachment.listing_id == listing_id).order_by(ListingAttachment.created_at.desc()).all()
+    links = db.query(ListingLink).filter(ListingLink.listing_id == listing_id).order_by(ListingLink.created_at.asc()).all()
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
 
     # Build a dict of reviews by reviewer for easy template access
@@ -1543,12 +1550,11 @@ def listing_detail_page(
     all_agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
     all_agencies = db.query(Agency).order_by(Agency.commercial_name.asc(), Agency.legal_name.asc()).all()
 
-    current_username = request.session.get("username")
-    current_user = db.query(models.User).filter(models.User.username == current_username).first() if current_username else None
+    global_settings = db.query(models.GlobalSettings).first()
     public_services = {}
-    if current_user and current_user.public_services_json:
+    if global_settings and global_settings.public_services_json:
         try:
-            public_services = json.loads(current_user.public_services_json)
+            public_services = json.loads(global_settings.public_services_json)
         except Exception:
             public_services = {}
 
@@ -1556,6 +1562,7 @@ def listing_detail_page(
         "listing": listing,
         "photos": photos,
         "attachments": attachments,
+        "links": links,
         "reviews": reviews,
         "reviews_by_reviewer": reviews_by_reviewer,
         "duplicate_original": duplicate_original,
@@ -3673,10 +3680,6 @@ async def update_profile(
     if body.sfr_identifier is not None: user.sfr_identifier = body.sfr_identifier.strip() or None
     if body.sfr_password is not None: user.sfr_password = body.sfr_password.strip() or None
 
-    # Update Public Services Integrations
-    if body.public_services_json is not None:
-        user.public_services_json = body.public_services_json.strip() or "{}"
-
     db.commit()
     
     return {"status": "updated"}
@@ -5038,6 +5041,196 @@ def download_listing_attachment(
         filename=att.original_filename or os.path.basename(file_path),
         media_type=att.mime_type or "application/octet-stream"
     )
+
+
+# ─── API: Useful Links (Liens utiles) ─────────────────────────────────────────
+
+def _deduce_link_metadata(raw_url: str, custom_title: Optional[str] = None, custom_category: Optional[str] = None):
+    """Clean URL and deduce a user-friendly title and category from hostname if not provided."""
+    import urllib.parse
+    clean_url = raw_url.strip()
+    if not clean_url.startswith("http://") and not clean_url.startswith("https://"):
+        clean_url = "https://" + clean_url
+
+    parsed = urllib.parse.urlparse(clean_url)
+    hostname = (parsed.hostname or "").lower()
+
+    # Deduce title
+    if custom_title and custom_title.strip():
+        title = custom_title.strip()
+    else:
+        if "haven-score" in hostname:
+            title = "Haven Score"
+        elif "clairbien" in hostname:
+            title = "Rapport Clairbien"
+        elif "terva" in hostname:
+            title = "Analyse Terva"
+        elif "georisques" in hostname:
+            title = "Géorisques"
+        elif "cadastre.gouv" in hostname:
+            title = "Cadastre"
+        elif "explore.data.gouv" in hostname or "data.gouv" in hostname:
+            title = "Data.gouv.fr"
+        elif "wikipedia" in hostname:
+            title = "Wikipédia"
+        elif "leboncoin" in hostname:
+            title = "LeBonCoin"
+        elif "seloger" in hostname:
+            title = "SeLoger"
+        elif "bienici" in hostname:
+            title = "Bien'ici"
+        elif "figaro" in hostname:
+            title = "Figaro Immobilier"
+        elif "notaires" in hostname:
+            title = "Notaires de France"
+        elif hostname:
+            parts = hostname.split(".")
+            if len(parts) >= 2 and parts[-2] not in ["gouv", "co", "asso", "org", "net", "com"]:
+                title = parts[-2].capitalize()
+            else:
+                title = hostname
+        else:
+            title = "Lien externe"
+
+    # Deduce category
+    category = custom_category or "rapport"
+    if category == "rapport":
+        if any(k in hostname for k in ["haven-score", "clairbien", "terva", "georisques"]):
+            category = "rapport"
+        elif any(k in hostname for k in ["data.gouv", "dvf", "meilleursagents", "castorus"]):
+            category = "marche"
+        elif any(k in hostname for k in ["cadastre", "urbanisme", "plu"]):
+            category = "cadastre"
+        elif any(k in hostname for k in ["wikipedia", "ville-", "mairie-", "commune", "sncf"]):
+            category = "ville"
+
+    return clean_url, title, category
+
+
+@app.get("/api/listings/{listing_id}/links", response_model=list[schemas.ListingLinkResponse])
+def get_listing_links(
+    request: Request,
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Retrieve all useful links for a listing."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+    return db.query(ListingLink).filter(ListingLink.listing_id == listing_id).order_by(ListingLink.created_at.asc()).all()
+
+
+@app.post("/api/listings/{listing_id}/links", response_model=list[schemas.ListingLinkResponse])
+def create_listing_links(
+    request: Request,
+    listing_id: int,
+    body: schemas.ListingLinkCreateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Create one or more useful links for a listing (supports pasting multiple URLs)."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail=get_text(request, "api.listing_not_found"))
+
+    username = request.session.get("username")
+    raw_input = (body.url or "").strip()
+    if not raw_input:
+        raise HTTPException(status_code=400, detail="URL requise")
+
+    # Split on whitespace/newlines to support bulk pasting multiple URLs
+    tokens = [t.strip() for t in re.split(r'[\r\n\s]+', raw_input) if t.strip()]
+    if not tokens:
+        tokens = [raw_input]
+
+    created = []
+    is_multi = len(tokens) > 1
+
+    for tok in tokens:
+        # Ignore non-url-like tokens if multi
+        if is_multi and not ("." in tok or "http" in tok):
+            continue
+        
+        # If user gave a single custom title and single URL, use that title; otherwise deduce per URL
+        custom_t = body.title if (not is_multi and body.title) else None
+        clean_url, title, cat = _deduce_link_metadata(tok, custom_title=custom_t, custom_category=body.category)
+        
+        link = ListingLink(
+            listing_id=listing_id,
+            url=clean_url,
+            title=title,
+            category=cat,
+            description=body.description.strip() if (body.description and not is_multi) else None,
+            created_by=username
+        )
+        db.add(link)
+        created.append(link)
+
+    db.commit()
+    for l in created:
+        db.refresh(l)
+
+    return created
+
+
+@app.put("/api/listings/{listing_id}/links/{link_id}", response_model=schemas.ListingLinkResponse)
+def update_listing_link(
+    request: Request,
+    listing_id: int,
+    link_id: int,
+    body: schemas.ListingLinkUpdateRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Update metadata for an existing useful link."""
+    link = db.query(ListingLink).filter(
+        ListingLink.id == link_id,
+        ListingLink.listing_id == listing_id
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien introuvable")
+
+    if body.url is not None and body.url.strip():
+        clean_url, title, cat = _deduce_link_metadata(body.url, custom_title=body.title, custom_category=body.category)
+        link.url = clean_url
+        if body.title is not None:
+            link.title = body.title.strip() if body.title.strip() else title
+        if body.category is not None:
+            link.category = body.category
+    else:
+        if body.title is not None:
+            link.title = body.title.strip() or link.title
+        if body.category is not None:
+            link.category = body.category
+
+    if body.description is not None:
+        link.description = body.description.strip() if body.description.strip() else None
+
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+@app.delete("/api/listings/{listing_id}/links/{link_id}")
+def delete_listing_link(
+    request: Request,
+    listing_id: int,
+    link_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Delete a useful link from a listing."""
+    link = db.query(ListingLink).filter(
+        ListingLink.id == link_id,
+        ListingLink.listing_id == listing_id
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien introuvable")
+
+    db.delete(link)
+    db.commit()
+    return {"status": "deleted", "link_id": link_id, "listing_id": listing_id}
 
 
 # ─── API: Reviews ─────────────────────────────────────────────────────────────

@@ -216,8 +216,8 @@ _MIGRATIONS = [
     # listings — cadastral parcel v30
     ("listings", "cadastral_parcel",                    "TEXT"),
 
-    # users — public services integrations v30
-    ("users", "public_services_json",                   "TEXT DEFAULT '{}'"),
+    # global_settings — public services integrations v30
+    ("global_settings", "public_services_json",         "TEXT DEFAULT '{}'"),
 ]
 
 
