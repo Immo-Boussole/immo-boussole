@@ -53,11 +53,11 @@ class BaseScraper(abc.ABC):
             # Detect DataDome blocks
             is_blocked = (
                 status_code == 403 or
-                "geo.captcha-delivery.com" in html or
+                "geo.captcha-delivery.com/captcha/" in html or
                 "<title>leboncoin.fr</title>" in html or
                 "<title>seloger.com</title>" in html or
-                "var dd={'rt':'i'" in html or
-                "data-cfasync=\"false\"" in html and "var dd=" in html
+                "var dd={'rt':'c'" in html or
+                "var dd={'rt':'b'" in html
             )
 
             if is_blocked:
@@ -113,7 +113,7 @@ class BaseScraper(abc.ABC):
         if proxy and proxy != "direct":
             import urllib.parse
             encoded_proxy = urllib.parse.quote_plus(proxy)
-            browserless_url += f"&externalProxyServer={encoded_proxy}"
+            browserless_url += f"&--proxy-server={proxy}&externalProxyServer={encoded_proxy}"
         
         print(f"[Scraper] Extraction via Playwright/Browserless CDP pour : {url} (proxy: {proxy})")
 

@@ -87,6 +87,15 @@ services:
       # Replace with your Zero Trust token or use a .env file
       - TUNNEL_TOKEN=${TUNNEL_TOKEN:-YOUR_TOKEN_HERE}
 
+  # ── Gost WS Tunnel Client (Residential Proxy Client) ───────────────────────
+  gost-client:
+    image: gogost/gost:latest
+    container_name: gost-client-${APP_ENV:-prod}
+    restart: always
+    networks:
+      - immo-boussole-net
+    command: ["-L", ":1080", "-F", "wss://${PROXY_USER}:${PROXY_PASSWORD}@${PROXY_DOMAIN:-immo-boussole-proxy.jeanmarcalbert.fr}:443"]
+
 # ── Internal Network ─────────────────────────────────────────────────────────
 networks:
   immo-boussole-net:
