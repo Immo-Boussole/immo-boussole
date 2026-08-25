@@ -94,7 +94,7 @@ services:
     restart: always
     networks:
       - immo-boussole-net
-    command: ["-L", ":1080", "-F", "wss://${PROXY_USER}:${PROXY_PASSWORD}@${PROXY_DOMAIN:-immo-boussole-proxy.jeanmarcalbert.fr}:443"]
+    command: ["-L", ":1080", "-F", "${GOST_UPSTREAM_URL:-}"]
 
 # ── Internal Network ─────────────────────────────────────────────────────────
 networks:
