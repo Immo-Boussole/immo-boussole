@@ -4,6 +4,84 @@ from typing import List, Dict, Optional
 from app.config import settings
 
 
+# Standard modern Chrome User-Agent and stealth initialization
+DEFAULT_CHROME_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+)
+
+STEALTH_INIT_SCRIPT = """
+// 1. Remove webdriver flag
+Object.defineProperty(navigator, 'webdriver', {
+    get: () => undefined
+});
+
+// 2. Mock Chrome runtime
+if (!window.chrome) {
+    window.chrome = {};
+}
+if (!window.chrome.runtime) {
+    window.chrome.runtime = {};
+}
+
+// 3. Languages
+Object.defineProperty(navigator, 'languages', {
+    get: () => ['fr-FR', 'fr', 'en-US', 'en']
+});
+Object.defineProperty(navigator, 'language', {
+    get: () => 'fr-FR'
+});
+
+// 4. Hardware and Memory
+Object.defineProperty(navigator, 'deviceMemory', {
+    get: () => 8
+});
+Object.defineProperty(navigator, 'hardwareConcurrency', {
+    get: () => 8
+});
+
+// 5. Platform
+Object.defineProperty(navigator, 'platform', {
+    get: () => 'Win32'
+});
+
+// 6. WebGL vendor/renderer spoofing (masking SwiftShader / headless markers)
+const getParameterOrig = WebGLRenderingContext.prototype.getParameter;
+WebGLRenderingContext.prototype.getParameter = function(parameter) {
+    if (parameter === 37445) {
+        return 'Google Inc. (NVIDIA)';
+    }
+    if (parameter === 37446) {
+        return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+    }
+    return getParameterOrig.apply(this, arguments);
+};
+
+if (window.WebGL2RenderingContext) {
+    const getParameter2Orig = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function(parameter) {
+        if (parameter === 37445) {
+            return 'Google Inc. (NVIDIA)';
+        }
+        if (parameter === 37446) {
+            return 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)';
+        }
+        return getParameter2Orig.apply(this, arguments);
+    };
+}
+
+// 7. Notification permissions
+if (window.navigator.permissions) {
+    const origQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+            Promise.resolve({ state: Notification.permission }) :
+            origQuery(parameters)
+    );
+}
+"""
+
+
 class BaseScraper(abc.ABC):
     def __init__(self):
         pass
@@ -103,9 +181,14 @@ class BaseScraper(abc.ABC):
         # --- Browserless URL Preparation ---
         base_url = settings.BROWSERLESS_URL.rstrip("/")
         
-        # Append token and stealth if provided
+        # Append token, stealth and chrome evasion flags
         token = settings.BROWSERLESS_TOKEN
-        browserless_url = f"{base_url}?stealth=true"
+        browserless_url = (
+            f"{base_url}?stealth=true"
+            f"&--disable-blink-features=AutomationControlled"
+            f"&--lang=fr-FR"
+            f"&--window-size=1920,1080"
+        )
         if token:
             browserless_url += f"&token={token}"
 
@@ -154,11 +237,21 @@ class BaseScraper(abc.ABC):
                     raise launch_err
             
             try:
-                # Once connected, proceed with page extraction
+                # Once connected, configure stealth context
                 context = await browser.new_context(
                     viewport={"width": 1920, "height": 1080},
+                    user_agent=DEFAULT_CHROME_USER_AGENT,
                     locale="fr-FR",
+                    timezone_id="Europe/Paris",
+                    extra_http_headers={
+                        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+                        "sec-ch-ua-mobile": "?0",
+                        "sec-ch-ua-platform": '"Windows"',
+                        "Upgrade-Insecure-Requests": "1",
+                    }
                 )
+                await context.add_init_script(STEALTH_INIT_SCRIPT)
                 page = await context.new_page()
                 
                 # Apply stealth
