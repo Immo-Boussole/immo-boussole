@@ -110,7 +110,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
-          # Le GITHUB_TOKEN par défaut suffit pour pousser sur le même repo
+          ref: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Determine image identifier
@@ -161,11 +161,11 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin ${{ github.ref_name }} --rebase || true
           git add DOCKER_IMAGE.txt README.md README.fr.md
           if git diff --cached --quiet; then
             echo "Aucun changement à committer."
           else
             git commit -m "chore: update Docker image ref → ${{ steps.image_id.outputs.image_short }} [skip ci]"
-            git pull --rebase origin main || true
-            git push
+            git push origin HEAD:${{ github.ref_name }}
           fi
