@@ -354,15 +354,16 @@ def extract_title_from_description(description: Optional[str]) -> Optional[str]:
     return None
 
 
-def has_valid_local_photos(listing: Listing) -> bool:
+def count_valid_local_photos(listing: Listing) -> int:
     """
-    Checks if a listing has valid, non-empty local photos on disk.
+    Returns the number of valid, non-empty local photo files on disk for a listing.
     """
     if not listing:
-        return False
+        return 0
     photos = json_to_photos(listing.photos_local)
     if not photos or not isinstance(photos, list):
-        return False
+        return 0
+    valid_count = 0
     for p in photos:
         if not p or not isinstance(p, str):
             continue
@@ -372,21 +373,29 @@ def has_valid_local_photos(listing: Listing) -> bool:
             if os.path.exists(candidate) and os.path.isfile(candidate):
                 try:
                     if os.path.getsize(candidate) > 0:
-                        return True
+                        valid_count += 1
+                        break
                 except Exception:
                     pass
-    return False
+    return valid_count
+
+
+def has_valid_local_photos(listing: Listing, min_photos: int = 2) -> bool:
+    """
+    Checks if a listing has at least min_photos valid, non-empty local photos on disk (default: 2).
+    """
+    return count_valid_local_photos(listing) >= min_photos
 
 
 def is_missing_or_corrupt_photos(listing: Listing) -> bool:
     """
-    Returns True if a listing has missing or corrupted photos that require repair.
-    Returns False if valid local photo files exist on disk.
+    Returns True if a listing has missing, corrupted or insufficient photos that require repair (< 2 valid photos).
+    Returns False if at least 2 valid local photo files exist on disk.
     """
     if not listing:
         return False
 
-    return not has_valid_local_photos(listing)
+    return not has_valid_local_photos(listing, min_photos=2)
 
 
 async def repair_listing_photos(listing: Listing, db: Session) -> bool:
@@ -394,9 +403,9 @@ async def repair_listing_photos(listing: Listing, db: Session) -> bool:
     Attempts to repair/recover photos for a listing:
     1. Check original_photo_urls from database and try to download them.
     2. If missing or failed, trigger page extraction (scraper or fetch_basic_metadata) to get fresh photo URLs and download them.
-    Returns True if valid photos are available.
+    Returns True if at least 2 valid photos (or at least 1 if only 1 exists) are available.
     """
-    if has_valid_local_photos(listing):
+    if has_valid_local_photos(listing, min_photos=2):
         return True
 
     # 1. Try from original_photo_urls if present
@@ -411,13 +420,13 @@ async def repair_listing_photos(listing: Listing, db: Session) -> bool:
         except Exception:
             photo_urls = []
             
-    if photo_urls:
+    if photo_urls and len(photo_urls) > count_valid_local_photos(listing):
         try:
             downloaded = await download_listing_photos(listing.id, photo_urls)
             if downloaded:
                 listing.photos_local = photos_to_json(downloaded)
                 db.commit()
-                if has_valid_local_photos(listing):
+                if has_valid_local_photos(listing, min_photos=2):
                     print(f"[Services] Successfully repaired photos for listing {listing.id} from original_photo_urls ({len(downloaded)} photos)")
                     return True
         except Exception as e:
@@ -447,14 +456,14 @@ async def repair_listing_photos(listing: Listing, db: Session) -> bool:
             if downloaded:
                 listing.photos_local = photos_to_json(downloaded)
                 db.commit()
-                if has_valid_local_photos(listing):
+                if has_valid_local_photos(listing, min_photos=2):
                     print(f"[Services] Successfully repaired photos for listing {listing.id} from fresh scrape ({len(downloaded)} photos)")
                     return True
         except Exception as e:
             print(f"[Services] Photo download failed during fresh repair for listing {listing.id}: {e}")
 
     db.commit()
-    return has_valid_local_photos(listing)
+    return has_valid_local_photos(listing, min_photos=2) or count_valid_local_photos(listing) > 0
 
 
 async def repair_listing_title(listing: Listing, db: Session, force: bool = False) -> Tuple[bool, str]:

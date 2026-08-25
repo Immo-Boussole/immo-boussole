@@ -84,8 +84,10 @@ def test_create_listing_preserves_good_title_and_data_on_scrape_error(db_session
 
 
 def test_has_valid_local_photos(tmp_path):
-    dummy_photo = tmp_path / "photo_0.webp"
-    dummy_photo.write_bytes(b"dummy image data")
+    dummy_photo_1 = tmp_path / "photo_0.webp"
+    dummy_photo_1.write_bytes(b"dummy image data 1")
+    dummy_photo_2 = tmp_path / "photo_1.webp"
+    dummy_photo_2.write_bytes(b"dummy image data 2")
 
     l_empty = Listing(photos_local=None)
     assert has_valid_local_photos(l_empty) is False
@@ -96,13 +98,22 @@ def test_has_valid_local_photos(tmp_path):
     l_nonexistent = Listing(photos_local=json.dumps(["/non/existent/path.webp"]))
     assert has_valid_local_photos(l_nonexistent) is False
 
-    l_valid = Listing(photos_local=json.dumps([str(dummy_photo)]))
+    # 1 valid photo: False for default min_photos=2, True for min_photos=1
+    l_single = Listing(photos_local=json.dumps([str(dummy_photo_1)]))
+    assert has_valid_local_photos(l_single, min_photos=2) is False
+    assert has_valid_local_photos(l_single, min_photos=1) is True
+    assert has_valid_local_photos(l_single) is False
+
+    # 2 valid photos: True
+    l_valid = Listing(photos_local=json.dumps([str(dummy_photo_1), str(dummy_photo_2)]))
     assert has_valid_local_photos(l_valid) is True
 
 
 def test_is_missing_or_corrupt_photos(tmp_path):
-    dummy_photo = tmp_path / "photo_0.webp"
-    dummy_photo.write_bytes(b"dummy image data")
+    dummy_photo_1 = tmp_path / "photo_0.webp"
+    dummy_photo_1.write_bytes(b"dummy image data 1")
+    dummy_photo_2 = tmp_path / "photo_1.webp"
+    dummy_photo_2.write_bytes(b"dummy image data 2")
 
     # None photos_local -> missing
     l_none = Listing(photos_local=None)
@@ -120,21 +131,34 @@ def test_is_missing_or_corrupt_photos(tmp_path):
     l_corrupt = Listing(photos_local=json.dumps(["/non/existent/path.webp"]))
     assert is_missing_or_corrupt_photos(l_corrupt) is True
 
-    # Valid photo -> not missing/corrupt
-    l_valid = Listing(photos_local=json.dumps([str(dummy_photo)]))
+    # Only 1 photo -> flagged as missing/insufficient photos
+    l_single = Listing(photos_local=json.dumps([str(dummy_photo_1)]))
+    assert is_missing_or_corrupt_photos(l_single) is True
+
+    # >= 2 valid photos -> not missing/corrupt
+    l_valid = Listing(photos_local=json.dumps([str(dummy_photo_1), str(dummy_photo_2)]))
     assert is_missing_or_corrupt_photos(l_valid) is False
 
 
 def test_identify_problems_missing_photos(db_session, tmp_path):
-    valid_photo = tmp_path / "valid.jpg"
-    valid_photo.write_bytes(b"valid content")
+    valid_photo_1 = tmp_path / "valid_1.jpg"
+    valid_photo_1.write_bytes(b"valid content 1")
+    valid_photo_2 = tmp_path / "valid_2.jpg"
+    valid_photo_2.write_bytes(b"valid content 2")
 
     l_good = Listing(
         external_id="ext_good",
         url="https://example.com/1",
         title="Good listing",
         status=ListingStatus.ACTIVE,
-        photos_local=json.dumps([str(valid_photo)])
+        photos_local=json.dumps([str(valid_photo_1), str(valid_photo_2)])
+    )
+    l_single = Listing(
+        external_id="ext_single",
+        url="https://example.com/single",
+        title="Single photo listing",
+        status=ListingStatus.ACTIVE,
+        photos_local=json.dumps([str(valid_photo_1)])
     )
     l_missing = Listing(
         external_id="ext_missing",
@@ -151,12 +175,13 @@ def test_identify_problems_missing_photos(db_session, tmp_path):
         photos_local="[]",
         original_photo_urls="[]"
     )
-    db_session.add_all([l_good, l_missing, l_no_photos])
+    db_session.add_all([l_good, l_single, l_missing, l_no_photos])
     db_session.commit()
 
     problems = identify_problems(db_session)
     assert MISSING_PHOTOS in problems
-    assert problems[MISSING_PHOTOS]["count"] == 2
+    assert problems[MISSING_PHOTOS]["count"] == 3
+    assert l_single.id in problems[MISSING_PHOTOS]["ids"]
     assert l_missing.id in problems[MISSING_PHOTOS]["ids"]
     assert l_no_photos.id in problems[MISSING_PHOTOS]["ids"]
     assert l_good.id not in problems[MISSING_PHOTOS]["ids"]
