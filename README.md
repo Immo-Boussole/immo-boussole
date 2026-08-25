@@ -30,8 +30,8 @@
 
 ## 🚀 Key Features
 
-* **Smart Multi-Platform Scraping**: Automated extraction of price, area, DPE energy ratings, property taxes, HOA fees, geolocations, and full-resolution photos from over 10 platforms:
-  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo.*
+* **Smart Multi-Platform Scraping**: Automated extraction of price, area, DPE energy ratings, property taxes, HOA fees, geolocations, and full-resolution photos from over 11 platforms:
+  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo, Hektor (Ma-Boîte-Immo, Immo-Rêve).*
 * **Automated Scheduled Scraping**: Background scheduler running hourly from 6:00 to 22:30 to automatically scrape configured searches ("Ready to Search").
 * **Instant Force Search**: Trigger a complete background scraping cycle on demand without waiting for the schedule.
 * **Local Media & Offline Storage**: Photos are downloaded and served locally to ensure zero dead links.

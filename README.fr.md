@@ -30,8 +30,8 @@
 
 ## 🚀 Fonctionnalités Clés
 
-* **Scraping Multi-Plateformes Intelligent** : Extraction automatisée des prix, surfaces, DPE, taxes foncières, charges, géolocalisations et photos haute résolution sur plus de 10 sites :
-  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo.*
+* **Scraping Multi-Plateformes Intelligent** : Extraction automatisée des prix, surfaces, DPE, taxes foncières, charges, géolocalisations et photos haute résolution sur plus de 11 plateformes :
+  * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo, Hektor (Ma-Boîte-Immo, Immo-Rêve).*
 * **Recherches Automatiques Planifiées** : Planificateur d'arrière-plan exécuté toutes les heures de 6h à 22h30 pour scraper vos recherches configurées ("Prêt à Rechercher").
 * **Forcer la Recherche Immédiate** : Déclenchez un cycle de scraping complet à la demande sans attendre l'heure planifiée.
 * **Stockage Local des Médias** : Photos téléchargées et servies en local pour garantir l'absence de liens cassés.

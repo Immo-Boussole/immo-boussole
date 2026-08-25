@@ -58,6 +58,7 @@ class Source(str, enum.Enum):
     IMMOBILIER_FRANCE = "immobilier_france"
     ORPI = "orpi"
     PROVIMO = "provimo"
+    HEKTOR = "hektor"
     MANUAL = "manuel"
 
 
