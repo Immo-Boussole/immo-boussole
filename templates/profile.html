@@ -210,6 +210,80 @@
         }
         .toast.show { transform: translateY(0); opacity: 1; }
 
+        /* Modern Switch Component */
+        .service-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.85rem;
+            gap: 1rem;
+            transition: var(--trans);
+        }
+        .service-toggle-row:hover {
+            border-color: rgba(79, 142, 247, 0.3);
+        }
+        .service-toggle-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .service-toggle-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .service-toggle-desc {
+            font-size: 0.8rem;
+            color: var(--text-2);
+            line-height: 1.35;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: .25s;
+            border-radius: 26px;
+            border: 1px solid var(--border);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
         /* Mobile Adjustments */
         @media (max-width: 768px) {
             .poi-item { grid-template-columns: 1fr; }
@@ -362,6 +436,68 @@
                         </div>
                     </div>
 
+                    <!-- Section: Intégration Données Publiques (DVF, Cadastre, Géorisques) -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-earth-europe"></i>
+                            <h2>Intégration Données Publiques</h2>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
+                            Activez ou désactivez les services tiers et données publiques ouvertes (explore.data.gouv.fr, APICarto, Géorisques). Si un service est désactivé (choix par défaut), ses boutons et raccourcis n'apparaîtront pas dans les fiches annonces.
+                        </p>
+
+                        <!-- DVF -->
+                        <div class="service-toggle-row">
+                            <div class="service-toggle-info">
+                                <div class="service-toggle-title">
+                                    <i class="fa-solid fa-chart-line" style="color: var(--accent);"></i>
+                                    DVF — Valeurs Foncières (explore.data.gouv.fr)
+                                </div>
+                                <div class="service-toggle-desc">
+                                    Affiche le bouton de consultation directe des prix de vente et transactions immobilières historiques sur l'application officielle explore.data.gouv.fr.
+                                </div>
+                            </div>
+                            <label class="switch" for="service_dvf">
+                                <input type="checkbox" id="service_dvf" aria-label="Activer DVF explore.data.gouv.fr">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Cadastre / APICarto -->
+                        <div class="service-toggle-row">
+                            <div class="service-toggle-info">
+                                <div class="service-toggle-title">
+                                    <i class="fa-solid fa-map-location-dot" style="color: var(--green);"></i>
+                                    Cadastre & APICarto IGN (explore.data.gouv.fr)
+                                </div>
+                                <div class="service-toggle-desc">
+                                    Permet la résolution et la recherche automatique de la parcelle cadastrale depuis l'adresse postale ou les coordonnées géographiques.
+                                </div>
+                            </div>
+                            <label class="switch" for="service_cadastre">
+                                <input type="checkbox" id="service_cadastre" aria-label="Activer Cadastre APICarto IGN">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Géorisques -->
+                        <div class="service-toggle-row" style="margin-bottom: 0;">
+                            <div class="service-toggle-info">
+                                <div class="service-toggle-title">
+                                    <i class="fa-solid fa-shield-halved" style="color: var(--orange);"></i>
+                                    Géorisques (georisques.gouv.fr)
+                                </div>
+                                <div class="service-toggle-desc">
+                                    Active l'analyse et la consultation des rapports de risques naturels, technologiques, sols et pollutions.
+                                </div>
+                            </div>
+                            <label class="switch" for="service_georisques">
+                                <input type="checkbox" id="service_georisques" aria-label="Activer Géorisques">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Section: Assistant IA -->
                     <div class="card">
                         <div class="card-header">
@@ -436,7 +572,20 @@
 
     <script>
         let pois = {{ (user.poi_json or '[]') | safe }};
+        let publicServices = {{ (user.public_services_json or '{}') | safe }};
+        if (typeof publicServices === 'string') {
+            try { publicServices = JSON.parse(publicServices); } catch(e) { publicServices = {}; }
+        }
         let aiProfiles = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dvfInput = document.getElementById('service_dvf');
+            const cadastreInput = document.getElementById('service_cadastre');
+            const georisquesInput = document.getElementById('service_georisques');
+            if (dvfInput) dvfInput.checked = !!publicServices.dvf;
+            if (cadastreInput) cadastreInput.checked = !!publicServices.cadastre;
+            if (georisquesInput) georisquesInput.checked = !!publicServices.georisques;
+        });
 
         async function loadAiProfiles() {
             try {
@@ -636,6 +785,12 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enregistrement...';
 
+            const publicServicesPayload = {
+                dvf: !!(document.getElementById('service_dvf') && document.getElementById('service_dvf').checked),
+                cadastre: !!(document.getElementById('service_cadastre') && document.getElementById('service_cadastre').checked),
+                georisques: !!(document.getElementById('service_georisques') && document.getElementById('service_georisques').checked)
+            };
+
             const payload = {
                 work_address: document.getElementById('work_address').value,
                 poi: pois,
@@ -643,7 +798,8 @@
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
                 sfr_identifier: document.getElementById('sfr_identifier').value,
-                sfr_password: document.getElementById('sfr_password').value
+                sfr_password: document.getElementById('sfr_password').value,
+                public_services_json: JSON.stringify(publicServicesPayload)
             };
 
             try {

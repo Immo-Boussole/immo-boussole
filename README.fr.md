@@ -51,7 +51,7 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 |---|---|---|
 | `/` | **Tableau de bord** | Synthèse globale avec indicateurs KPI, flux des nouvelles annonces, suivi des baisses de prix et filtres de statut |
 | `/listings/table` | **Tableau des annonces** | Grille haute densité triable avec filtres multicritères, personnalisation des colonnes et actions groupées |
-| `/listing/{id}` | **Fiche détaillée** | Dossier complet avec galerie haute résolution, jauges DPE/GES, calculs financiers, fiche agence, widget Géorisques, pièces jointes, avis collaboratifs et prise de rendez-vous |
+| `/listing/{id}` | **Fiche détaillée** | Dossier complet avec galerie haute résolution, jauges DPE/GES, calculs financiers, fiche agence, références cadastrales avec lien officiel DVF (explore.data.gouv.fr), widget Géorisques, pièces jointes, avis collaboratifs et prise de rendez-vous |
 | `/a-voir` | **À voir** | Boîte de réception dédiée au tri des annonces importées non encore qualifiées |
 | `/a-visiter` | **À visiter** | Présélection des biens prioritaires retenus pour des visites physiques |
 

@@ -53,6 +53,7 @@ def tool_search_listings(
                 "city": l.city,
                 "area": l.area,
                 "rooms": l.rooms,
+                "cadastral_parcel": getattr(l, "cadastral_parcel", None),
                 "to_visit": getattr(l, "to_visit", False),
                 "url": f"/listing/{l.id}"
             })
@@ -70,12 +71,20 @@ def tool_get_listing_details(listing_id: int) -> str:
         if not l:
             return f"Annonce {listing_id} introuvable."
         
+        dvf_url = None
+        if l.latitude and l.longitude:
+            dvf_url = f"https://explore.data.gouv.fr/fr/immobilier?lat={l.latitude}&lng={l.longitude}&zoom=18"
+
         data = {
             "id": l.id,
             "title": l.title,
             "url_originale": l.url,
             "price": l.price,
+            "address": l.address,
+            "postal_code": l.postal_code,
             "city": l.city,
+            "cadastral_parcel": getattr(l, "cadastral_parcel", None),
+            "dvf_url": dvf_url,
             "area": l.area,
             "rooms": l.rooms,
             "bedrooms": l.bedrooms,

@@ -1448,4 +1448,88 @@ def resolve_address_details(address_str: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def fetch_cadastral_parcel(
+    address: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    insee_code: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Identifies the cadastral parcel reference using IGN APICarto Cadastre API
+    (https://apicarto.ign.fr/api/cadastre/parcelle) or coordinates.
+    Returns a dictionary with:
+      - 'parcel_id': full standardized parcel id (e.g. '33063000AB0123')
+      - 'section': e.g. 'AB' or '0A'
+      - 'numero': e.g. '0123'
+      - 'commune': e.g. '33063'
+      - 'contenance': surface en m2
+      - 'dvf_url': official explore.data.gouv.fr URL
+      - 'lat': float
+      - 'lon': float
+    """
+    import json
+
+    cur_lat = lat
+    cur_lon = lon
+
+    if (cur_lat is None or cur_lon is None) and address:
+        addr_info = resolve_address_details(address)
+        if addr_info and addr_info.get("lat") is not None and addr_info.get("lon") is not None:
+            cur_lat = addr_info["lat"]
+            cur_lon = addr_info["lon"]
+            if not insee_code and addr_info.get("citycode"):
+                insee_code = addr_info["citycode"]
+
+    if cur_lat is None or cur_lon is None:
+        return None
+
+    dvf_url = f"https://explore.data.gouv.fr/fr/immobilier?lat={cur_lat}&lng={cur_lon}&zoom=18"
+
+    # Query APICarto Cadastre IGN
+    url = "https://apicarto.ign.fr/api/cadastre/parcelle"
+    geom = json.dumps({"type": "Point", "coordinates": [cur_lon, cur_lat]})
+    params = {"geom": geom}
+    headers = {"User-Agent": "ImmoBoussole/1.0"}
+
+    try:
+        res = httpx.get(url, params=params, headers=headers, timeout=12.0)
+        if res.status_code == 200:
+            data = res.json()
+            features = data.get("features", [])
+            if features:
+                props = features[0].get("properties", {})
+                parcel_id = props.get("id")
+                if not parcel_id:
+                    code_insee = props.get("code_insee", "")
+                    prefixe = props.get("prefixe", "000")
+                    section = props.get("section", "")
+                    numero = str(props.get("numero", "")).zfill(4)
+                    parcel_id = f"{code_insee}{prefixe}{section}{numero}"
+
+                return {
+                    "parcel_id": parcel_id,
+                    "section": props.get("section"),
+                    "numero": props.get("numero"),
+                    "commune": props.get("code_insee") or insee_code,
+                    "contenance": props.get("contenance"),
+                    "dvf_url": dvf_url,
+                    "lat": cur_lat,
+                    "lon": cur_lon,
+                }
+    except Exception as e:
+        print(f"[Geo Cadastre] APICarto lookup failed for lat={cur_lat}, lon={cur_lon}: {e}")
+
+    # Fallback return with DVF URL and coords even if exact parcel polygon could not be resolved
+    return {
+        "parcel_id": None,
+        "section": None,
+        "numero": None,
+        "commune": insee_code,
+        "contenance": None,
+        "dvf_url": dvf_url,
+        "lat": cur_lat,
+        "lon": cur_lon,
+    }
+
+
 

@@ -212,6 +212,12 @@ _MIGRATIONS = [
     ("listings", "postal_code",                         "TEXT"),
     ("listings", "address_precision",                   "TEXT DEFAULT 'city'"),
     ("listings", "manual_address_override",             "BOOLEAN DEFAULT 0"),
+
+    # listings — cadastral parcel v30
+    ("listings", "cadastral_parcel",                    "TEXT"),
+
+    # users — public services integrations v30
+    ("users", "public_services_json",                   "TEXT DEFAULT '{}'"),
 ]
 
 

@@ -25,6 +25,7 @@ class ExternalListingSubmitRequest(BaseModel):
     city: Optional[str] = None
     postal_code: Optional[str] = None
     location: Optional[str] = None
+    cadastral_parcel: Optional[str] = None
     description: Optional[str] = None
     photos: Optional[List[str]] = None
     source: Optional[str] = None
@@ -106,6 +107,7 @@ class ListingUpdateRequest(BaseModel):
     postal_code: Optional[str] = None
     address_precision: Optional[str] = None
     manual_address_override: Optional[bool] = None
+    cadastral_parcel: Optional[str] = None
     description_text: Optional[str] = None
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
@@ -219,6 +221,7 @@ class ProfileUpdateRequest(BaseModel):
     phone: Optional[str] = None
     sfr_identifier: Optional[str] = None
     sfr_password: Optional[str] = None
+    public_services_json: Optional[str] = None
 
 
 class StationChoice(BaseModel):

@@ -51,7 +51,7 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 |---|---|---|
 | `/` | **Dashboard** | Executive overview with KPI metric cards, new listings feed, price changes, and status filters |
 | `/listings/table` | **Listings Table** | High-density sortable data grid with multi-criteria filtering, column customizers, and batch actions |
-| `/listing/{id}` | **Listing Detail** | Exhaustive dossier with high-res photo gallery, DPE/GES gauges, financial metrics, agency contact widget, Georisques natural hazards, document attachments, collaborative reviews, and visit scheduling |
+| `/listing/{id}` | **Listing Detail** | Exhaustive dossier with high-res photo gallery, DPE/GES gauges, financial metrics, agency contact widget, cadastral parcel references with official DVF (explore.data.gouv.fr) links, Georisques natural hazards, document attachments, collaborative reviews, and visit scheduling |
 | `/a-voir` | **To Review ("À voir")** | Dedicated triage inbox for newly imported and unreviewed property listings |
 | `/a-visiter` | **To Visit ("À visiter")** | Focused shortlist of prioritized properties selected for physical on-site visits |
 

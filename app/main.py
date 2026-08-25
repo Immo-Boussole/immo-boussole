@@ -180,6 +180,7 @@ class ListingUpdateRequest(BaseModel):
     postal_code: Optional[str] = None
     address_precision: Optional[str] = None
     manual_address_override: Optional[bool] = None
+    cadastral_parcel: Optional[str] = None
     description_text: Optional[str] = None
     dpe_rating: Optional[str] = None
     ges_rating: Optional[str] = None
@@ -1542,6 +1543,15 @@ def listing_detail_page(
     all_agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
     all_agencies = db.query(Agency).order_by(Agency.commercial_name.asc(), Agency.legal_name.asc()).all()
 
+    current_username = request.session.get("username")
+    current_user = db.query(models.User).filter(models.User.username == current_username).first() if current_username else None
+    public_services = {}
+    if current_user and current_user.public_services_json:
+        try:
+            public_services = json.loads(current_user.public_services_json)
+        except Exception:
+            public_services = {}
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -1563,6 +1573,7 @@ def listing_detail_page(
         "detected_contact": detected_contact,
         "all_agents": all_agents,
         "all_agencies": all_agencies,
+        "public_services": public_services,
     })
 
 
@@ -3429,6 +3440,24 @@ def address_autocomplete(
     return {"query": q, "results": results}
 
 
+@app.get("/api/geo/cadastre-lookup")
+def cadastre_lookup(
+    request: Request,
+    address: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
+    insee: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns cadastral parcel info and official DVF link via APICarto / BAN."""
+    from app.geo import fetch_cadastral_parcel
+    result = fetch_cadastral_parcel(address=address, lat=lat, lon=lon, insee_code=insee)
+    if not result:
+        return {"status": "not_found", "parcel": None, "dvf_url": None}
+    return {"status": "ok", "parcel": result}
+
+
 @app.get("/api/city-info")
 async def get_city_info(
     city: str,
@@ -3643,6 +3672,10 @@ async def update_profile(
     if body.phone is not None: user.phone = body.phone.strip() or None
     if body.sfr_identifier is not None: user.sfr_identifier = body.sfr_identifier.strip() or None
     if body.sfr_password is not None: user.sfr_password = body.sfr_password.strip() or None
+
+    # Update Public Services Integrations
+    if body.public_services_json is not None:
+        user.public_services_json = body.public_services_json.strip() or "{}"
 
     db.commit()
     

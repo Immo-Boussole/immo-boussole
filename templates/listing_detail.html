@@ -1689,6 +1689,53 @@
                 </div>
             </div>
 
+            <!-- Données Foncières & Cadastre -->
+            <div class="info-card" id="cadastre-dvf-section" data-listing-id="{{ listing.id }}" data-address="{{ listing.address or listing.location or listing.city or '' }}" data-lat="{{ listing.latitude or '' }}" data-lon="{{ listing.longitude or '' }}">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <span><i class="fa-solid fa-map-location-dot" style="color: var(--accent);"></i> Données Foncières & Cadastre</span>
+                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        {% if public_services.get('cadastre') %}
+                        <button type="button" class="btn sm" id="btn-fetch-cadastre" onclick="fetchCadastreAuto()" style="color: var(--green); border-color: rgba(16, 217, 164, 0.3); background: rgba(16, 217, 164, 0.08);">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="btn-text">Rechercher la parcelle</span>
+                        </button>
+                        {% endif %}
+                        {% if public_services.get('dvf') %}
+                        {% set dvf_target = "https://explore.data.gouv.fr/fr/immobilier?lat=" ~ (listing.latitude|string) ~ "&lng=" ~ (listing.longitude|string) ~ "&zoom=18" if (listing.latitude and listing.longitude) else "https://explore.data.gouv.fr/fr/immobilier" %}
+                        <a href="{{ dvf_target }}" target="_blank" class="btn sm primary" style="text-decoration: none;">
+                            <i class="fa-solid fa-chart-line"></i> <span class="btn-text">Consulter DVF (explore.data.gouv.fr)</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem; margin-left: 0.2rem;"></i>
+                        </a>
+                        {% endif %}
+                        <button type="button" class="btn sm" onclick="openEditModal()" title="Modifier la parcelle">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 0.75rem;">
+                    <div class="cost-item" style="padding: 0.75rem 1rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0; align-items: flex-start;">
+                        <i class="fa-solid fa-vector-square" style="color: var(--accent); font-size: 1.1rem; margin-top: 0.2rem;"></i>
+                        <div>
+                            <div style="font-size: 0.72rem; color: var(--text-2); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Parcelle Cadastrale</div>
+                            <div id="display-cadastral-parcel" style="font-size: 1rem; font-weight: 800; color: var(--text); margin-top: 0.2rem;">
+                                {{ listing.cadastral_parcel or 'Non renseignée' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if public_services.get('georisques') and georisques %}
+                    <div class="cost-item" style="padding: 0.75rem 1rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0; align-items: flex-start;">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--orange); font-size: 1.1rem; margin-top: 0.2rem;"></i>
+                        <div>
+                            <div style="font-size: 0.72rem; color: var(--text-2); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Géorisques</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text); margin-top: 0.2rem;">
+                                {{ georisques.get('nb_risques_naturels', 0) }} risques naturels identifiés
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Description -->
             {% if listing.description_text %}
             <div class="info-card">
@@ -2240,6 +2287,12 @@
                     <input type="hidden" id="edit-address-precision" value="{{ listing.address_precision or '' }}">
                     <input type="hidden" id="edit-latitude" value="{{ listing.latitude or '' }}">
                     <input type="hidden" id="edit-longitude" value="{{ listing.longitude or '' }}">
+                </div>
+
+                <!-- Parcelle Cadastrale (Full Width) -->
+                <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
+                    <label for="edit-cadastral-parcel"><i class="fa-solid fa-vector-square" style="color: var(--accent);"></i> Parcelle cadastrale</label>
+                    <input type="text" id="edit-cadastral-parcel" value="{{ listing.cadastral_parcel or '' }}" placeholder="Ex: 33063000AB0123 ou Section AB n° 123">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                     <label>{{ t(request, 'listing.edit_condition') }}</label>
@@ -3615,6 +3668,7 @@
             city: valStr('edit-city'),
             postal_code: valStr('edit-postal-code'),
             address_precision: valStr('edit-address-precision'),
+            cadastral_parcel: valStr('edit-cadastral-parcel'),
             latitude: valNum('edit-latitude'),
             longitude: valNum('edit-longitude'),
             condition: valStr('edit-condition'),
@@ -3652,6 +3706,63 @@
             showToast('Erreur réseau.', false);
             btn.innerHTML = originalText;
             btn.disabled = false;
+        }
+    }
+
+    async function fetchCadastreAuto() {
+        const sec = document.getElementById('cadastre-dvf-section');
+        const btn = document.getElementById('btn-fetch-cadastre');
+        if (!sec || !btn) return;
+        const listingId = sec.dataset.listingId;
+        const addr = sec.dataset.address;
+        const lat = sec.dataset.lat;
+        const lon = sec.dataset.lon;
+
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Recherche...';
+
+        try {
+            let queryUrl = '/api/geo/cadastre-lookup?';
+            if (lat && lon) {
+                queryUrl += 'lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon);
+            } else if (addr) {
+                queryUrl += 'address=' + encodeURIComponent(addr);
+            } else {
+                showToast("Aucune adresse ou coordonnée disponible pour rechercher la parcelle.", false);
+                return;
+            }
+
+            const res = await fetch(queryUrl);
+            const data = await res.json();
+
+            if (data.status === 'ok' && data.parcel && data.parcel.parcel_id) {
+                const parcelId = data.parcel.parcel_id;
+                // Save directly to listing
+                const saveRes = await fetch('/api/listings/' + listingId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cadastral_parcel: parcelId })
+                });
+
+                if (saveRes.ok) {
+                    const disp = document.getElementById('display-cadastral-parcel');
+                    if (disp) disp.textContent = parcelId;
+                    const editInp = document.getElementById('edit-cadastral-parcel');
+                    if (editInp) editInp.value = parcelId;
+                    showToast('✓ Parcelle cadastrale identifiée : ' + parcelId, true);
+                } else {
+                    showToast('Parcelle identifiée (' + parcelId + '), mais erreur lors de la sauvegarde.', false);
+                }
+            } else {
+                showToast("Impossible d'identifier automatiquement la parcelle pour cette adresse.", false);
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Erreur réseau lors de la recherche cadastrale.", false);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
         }
     }
 </script>

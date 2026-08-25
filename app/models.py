@@ -38,6 +38,9 @@ class User(Base):
     # Notifications
     apprise_url = Column(String, nullable=True)  # Apprise-compatible URL (tgram://, discord://, ntfy://, mailto://, etc.)
 
+    # Public Services Integrations (Toggles)
+    public_services_json = Column(Text, nullable=True, default="{}")  # JSON: {"cadastre": bool, "dvf": bool, "georisques": bool}
+
 
 class ListingStatus(str, enum.Enum):
     NEW = "nouvelle"
@@ -79,6 +82,7 @@ class Listing(Base):
     postal_code = Column(String(10), nullable=True)# Postal code (e.g., "69002")
     address_precision = Column(String(20), default="city") # "exact", "street", "city", "unknown"
     manual_address_override = Column(Boolean, default=False) # True if address was set manually by user
+    cadastral_parcel = Column(String(50), nullable=True)     # Parcelle cadastrale (ex: "33063000AB0123" ou "AB 123")
     location = Column(String, nullable=True)
     city = Column(String, nullable=True)           # Normalized city for duplicate detection
     area = Column(Float, nullable=True)            # Surface habitable en m²
