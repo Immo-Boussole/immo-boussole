@@ -2868,6 +2868,44 @@ def get_db_repair_status_user(_auth = Depends(login_required)):
     return db_maintenance.get_repair_status()
 
 
+# ─── Scrapers: Statistical Analytics & Parser Health ───────────────────────────
+
+@app.get("/api/scrapers/analytics")
+def get_scrapers_analytics_endpoint(
+    force_refresh: bool = False,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns statistical analysis, completeness matrix, and defects for all scrapers/parsers."""
+    from app.scraper_analytics import get_scraper_analytics
+    return get_scraper_analytics(db=db, force_refresh=force_refresh)
+
+
+@app.post("/api/scrapers/reparse-listing/{listing_id}")
+async def reparse_single_listing_endpoint(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Re-parses and re-fetches data for a single listing to fix parsed defects."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable.")
+
+    from app.services import refresh_listing_status, repair_listing_photos, repair_listing_title
+    from app.scraper_analytics import clear_scraper_analytics_cache
+
+    await repair_listing_title(listing, db)
+    await repair_listing_photos(listing, db)
+    try:
+        await refresh_listing_status(listing, db)
+    except Exception as e:
+        print(f"[reparse] Error refreshing listing #{listing_id}: {e}")
+
+    clear_scraper_analytics_cache()
+    return {"status": "success", "listing_id": listing_id}
+
+
 
 
 @app.get("/api/listings")
