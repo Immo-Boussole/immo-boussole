@@ -3130,10 +3130,10 @@ def get_map_data(
 
     # 2. User Data
     username = request.session.get("username")
-    user = db.query(models.User).filter(models.User.username == username).first()
-    
+    user = db.query(models.User).filter(models.User.username == username).first() if username else None
+
     pois = []
-    if user.poi_json:
+    if user and user.poi_json:
         try:
             pois = json.loads(user.poi_json)
         except:
@@ -3146,20 +3146,39 @@ def get_map_data(
     ).all()
 
     # Cities to qualify
+    from app.geo import is_city_in_forbidden_set
     zone_rules = db.query(ZoneRule).all()
     existing_city_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'city'}
-    
+
     active_cities_raw = db.query(Listing.city).filter(
         Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
         Listing.city != None,
         Listing.city != ""
     ).distinct().all()
-    
+
+    active_locations_raw = db.query(Listing.location).filter(
+        Listing.status.in_([ListingStatus.NEW, ListingStatus.ACTIVE]),
+        (Listing.city == None) | (Listing.city == ""),
+        Listing.location != None,
+        Listing.location != ""
+    ).distinct().all()
+
     to_qualify_cities = []
+    seen_cities = set()
+
     for c in active_cities_raw:
-        city_name = c[0].strip()
-        if city_name.lower().strip() not in existing_city_rules:
-            to_qualify_cities.append(city_name)
+        city_name = (c[0] or "").strip()
+        if city_name and city_name.lower() not in seen_cities:
+            seen_cities.add(city_name.lower())
+            if not is_city_in_forbidden_set(city_name, existing_city_rules) and city_name.lower() not in existing_city_rules:
+                to_qualify_cities.append(city_name)
+
+    for loc in active_locations_raw:
+        loc_str = (loc[0] or "").strip()
+        if loc_str and loc_str.lower() not in seen_cities:
+            seen_cities.add(loc_str.lower())
+            if not is_city_in_forbidden_set(loc_str, existing_city_rules) and loc_str.lower() not in existing_city_rules:
+                to_qualify_cities.append(loc_str)
 
     return {
         "listings": [
@@ -3182,7 +3201,7 @@ def get_map_data(
                 "address": user.work_address,
                 "lat": user.work_lat,
                 "lon": user.work_lon
-            } if user.work_address and user.work_lat else None,
+            } if user and user.work_address and user.work_lat else None,
             "pois": pois
         },
         "pins": [
@@ -3605,11 +3624,17 @@ async def get_city_info(
     Also returns matching dynamic listings and any existing ZoneRule.
     """
     import httpx as _httpx
-    from app.geo import GEO_CACHE, find_nearby_stations, calculate_station_times, haversine_km
+    import re
+    from sqlalchemy import or_
+    from app.geo import (
+        GEO_CACHE, find_nearby_stations, calculate_station_times, haversine_km,
+        standardize_and_enrich_city, parse_city_input, clean_arrondissement,
+        is_city_in_forbidden_set
+    )
 
-    from app.geo import standardize_and_enrich_city
-    std_city, _, _ = standardize_and_enrich_city(city)
+    std_city, std_zip, _ = standardize_and_enrich_city(city)
     city_key = std_city if std_city else city.strip()
+    plain_name = re.sub(r'\s*\(\d{5}\)$', '', city_key).strip()
     cache_key = f"city_info:{city_key.lower()}"
 
     if cache_key in GEO_CACHE:
@@ -3623,41 +3648,44 @@ async def get_city_info(
         try:
             async with _httpx.AsyncClient() as client:
                 # 1a. First try: structured search for administrative boundary (has area data)
+                boundary_params = {
+                    "city": plain_name,
+                    "country": "France",
+                    "featuretype": "city",
+                    "format": "json",
+                    "limit": 1,
+                    "extratags": 1,
+                    "addressdetails": 0,
+                }
+                if std_zip:
+                    boundary_params["postalcode"] = std_zip
+
                 res_boundary = await client.get(
                     "https://nominatim.openstreetmap.org/search",
-                    params={
-                        "city": city_key,
-                        "country": "France",
-                        "featuretype": "city",
-                        "format": "json",
-                        "limit": 1,
-                        "extratags": 1,
-                        "addressdetails": 0,
-                    },
+                    params=boundary_params,
                     headers=headers,
                     timeout=10.0,
                 )
-                res_boundary.raise_for_status()
-                boundary_data = res_boundary.json()
-
-                if boundary_data:
-                    place = boundary_data[0]
-                    lat = float(place["lat"])
-                    lon = float(place["lon"])
-                    extratags = place.get("extratags") or {}
-                    area_m2 = extratags.get("area")
-                    if area_m2:
-                        try:
-                            area_km2 = round(float(area_m2) / 1_000_000, 1)
-                        except Exception:
-                            area_km2 = None
+                if res_boundary.status_code == 200:
+                    boundary_data = res_boundary.json()
+                    if boundary_data:
+                        place = boundary_data[0]
+                        lat = float(place["lat"])
+                        lon = float(place["lon"])
+                        extratags = place.get("extratags") or {}
+                        area_m2 = extratags.get("area")
+                        if area_m2:
+                            try:
+                                area_km2 = round(float(area_m2) / 1_000_000, 1)
+                            except Exception:
+                                area_km2 = None
 
                 # 1b. Fallback: generic search (if boundary search found nothing)
                 if lat is None:
                     res_generic = await client.get(
                         "https://nominatim.openstreetmap.org/search",
                         params={
-                            "q": city_key,
+                            "q": f"{plain_name} {std_zip}".strip() if std_zip else plain_name,
                             "format": "json",
                             "limit": 1,
                             "extratags": 1,
@@ -3667,21 +3695,40 @@ async def get_city_info(
                         headers=headers,
                         timeout=10.0,
                     )
-                    res_generic.raise_for_status()
-                    generic_data = res_generic.json()
-                    if generic_data:
-                        place = generic_data[0]
-                        lat = float(place["lat"])
-                        lon = float(place["lon"])
-                        # Try area from fallback too
-                        if area_km2 is None:
-                            extratags = place.get("extratags") or {}
-                            area_m2 = extratags.get("area")
-                            if area_m2:
-                                try:
-                                    area_km2 = round(float(area_m2) / 1_000_000, 1)
-                                except Exception:
-                                    area_km2 = None
+                    if res_generic.status_code == 200:
+                        generic_data = res_generic.json()
+                        if generic_data:
+                            place = generic_data[0]
+                            lat = float(place["lat"])
+                            lon = float(place["lon"])
+                            if area_km2 is None:
+                                extratags = place.get("extratags") or {}
+                                area_m2 = extratags.get("area")
+                                if area_m2:
+                                    try:
+                                        area_km2 = round(float(area_m2) / 1_000_000, 1)
+                                    except Exception:
+                                        area_km2 = None
+
+                # 1c. Second fallback: geo.api.gouv.fr (for French communes)
+                if lat is None:
+                    geo_api_url = f"https://geo.api.gouv.fr/communes?nom={plain_name}&boost=population&fields=nom,code,codesPostaux,centre,surface&format=json"
+                    res_geo = await client.get(geo_api_url, timeout=5.0)
+                    if res_geo.status_code == 200:
+                        geo_communes = res_geo.json()
+                        if geo_communes:
+                            best = geo_communes[0]
+                            if std_zip and "codesPostaux" in best:
+                                for c in geo_communes:
+                                    if std_zip in c.get("codesPostaux", []):
+                                        best = c
+                                        break
+                            if "centre" in best and "coordinates" in best["centre"]:
+                                lon = float(best["centre"]["coordinates"][0])
+                                lat = float(best["centre"]["coordinates"][1])
+                            if "surface" in best and best["surface"]:
+                                # surface in hectares -> convert to km2 (/100)
+                                area_km2 = round(float(best["surface"]) / 100.0, 1)
 
             if lat is None or lon is None:
                 raise HTTPException(status_code=404, detail=f"Ville '{city_key}' introuvable")
@@ -3724,15 +3771,29 @@ async def get_city_info(
         GEO_CACHE[cache_key] = geo_data
 
     # Query matching listings dynamically (NOT cached, to reflect up-to-date data)
-    listings = db.query(Listing).filter(
-        (Listing.city.ilike(city_key)) | (Listing.location.ilike(f"%{city_key}%"))
-    ).order_by(Listing.date_added.desc()).all()
+    search_terms = {city.strip(), city_key, plain_name}
+    filters = []
+    for term in search_terms:
+        if term:
+            filters.append(Listing.city.ilike(f"%{term}%"))
+            filters.append(Listing.location.ilike(f"%{term}%"))
 
-    # Query active zone rule for this city (NOT cached)
-    zone_rule = db.query(ZoneRule).filter(
-        ZoneRule.zone_type == "city",
-        ZoneRule.name.ilike(city_key)
-    ).first()
+    listings = db.query(Listing).filter(or_(*filters)).order_by(Listing.date_added.desc()).all() if filters else []
+
+    # Query active zone rule for this city (matching variations cleanly)
+    all_city_rules = db.query(ZoneRule).filter(ZoneRule.zone_type == "city").all()
+    zone_rule = None
+    target_names = {t.lower() for t in search_terms if t}
+    for r in all_city_rules:
+        r_name_clean = r.name.strip().lower()
+        if (
+            r_name_clean in target_names
+            or is_city_in_forbidden_set(r.name, target_names)
+            or is_city_in_forbidden_set(city_key, {r_name_clean})
+            or is_city_in_forbidden_set(plain_name, {r_name_clean})
+        ):
+            zone_rule = r
+            break
 
     zone_rule_info = None
     if zone_rule:
