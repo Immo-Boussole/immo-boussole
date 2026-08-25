@@ -340,6 +340,20 @@ async def submit_external_listing_api(
     Add or update a listing with pre-extracted data from the browser bookmarklet/extension.
     Also queues a background task to enrich photos and coordinates if needed.
     """
+    # Validate URL structure and title
+    from app.services import is_valid_listing_url, is_search_page_title
+    is_valid, err_msg = is_valid_listing_url(request.url)
+    if not is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail=err_msg or "L'URL fournie correspond à une page de recherche ou de résultats et ne peut être importée comme une annonce unitaire."
+        )
+    if is_search_page_title(request.title):
+        raise HTTPException(
+            status_code=422,
+            detail="Le titre de l'annonce indique une page de résultats agrégée plutôt qu'une annonce unique."
+        )
+
     import json
     existing = find_existing_listing(request.url, db)
     is_already_exists = False
@@ -480,8 +494,20 @@ async def submit_external_listings_batch_api(
     already_exists_count = 0
     error_count = 0
 
+    from app.services import is_valid_listing_url, is_search_page_title
+
     for item in batch.listings:
         try:
+            is_valid, _ = is_valid_listing_url(item.url)
+            if not is_valid or is_search_page_title(item.title):
+                error_count += 1
+                results.append(schemas.ExternalListingBatchItemResult(
+                    url=item.url,
+                    success=False,
+                    message="Page de recherche ignorée.",
+                ))
+                continue
+
             existing = find_existing_listing(item.url, db)
             source_val = _determine_source(item.url, item.source)
 

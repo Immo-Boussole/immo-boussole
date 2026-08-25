@@ -6,7 +6,10 @@ from app.services import (
     repair_listing_photos,
     is_missing_or_corrupt_photos,
     is_error_or_generic_title,
-    repair_listing_title
+    repair_listing_title,
+    is_search_page_title,
+    is_valid_listing_url,
+    split_or_purge_aggregate_listing
 )
 from app.database import SessionLocal
 import asyncio
@@ -25,6 +28,7 @@ def _is_past_date(dt) -> bool:
 # Problem types
 EMPTY_DESCRIPTION = "empty_description"
 GENERIC_TITLE_FIGARO = "generic_title_figaro"
+AGGREGATE_SEARCH_PAGE = "aggregate_search_page"
 DUPLICATE_CITY_ZIP = "duplicate_city_zip"
 ANOMALOUS_PRICE = "anomalous_price"
 LINKED_ADS_NONE = "linked_ads_none"
@@ -55,6 +59,11 @@ def identify_problems(db: Session):
     # Generic / Error titles (e.g. "Annonce Le Figaro", "Annonce (...) - Erreur 403", "leboncoin.fr", etc.)
     generic_title_listings = [
         l for l in active_listings_all if is_error_or_generic_title(l.title)
+    ]
+
+    # Aggregate search pages (e.g. "685 Maisons à Vendre...", "Maisons en Vente", search URLs)
+    aggregate_search_listings = [
+        l for l in active_listings_all if is_search_page_title(l.title) or (l.url and not is_valid_listing_url(l.url)[0])
     ]
 
     # Duplicate postal code in location (e.g., "Chavanay (42) (42)")
@@ -201,6 +210,10 @@ def identify_problems(db: Session):
             "count": len(generic_title_listings),
             "ids": [l.id for l in generic_title_listings]
         },
+        AGGREGATE_SEARCH_PAGE: {
+            "count": len(aggregate_search_listings),
+            "ids": [l.id for l in aggregate_search_listings]
+        },
         DUPLICATE_CITY_ZIP: {
             "count": len(duplicate_city_listings),
             "ids": [l.id for l in duplicate_city_listings]
@@ -248,6 +261,7 @@ def identify_problems(db: Session):
 SAFE_PROBLEM_TYPES = [
     EMPTY_DESCRIPTION,
     GENERIC_TITLE_FIGARO,
+    AGGREGATE_SEARCH_PAGE,
     DUPLICATE_CITY_ZIP,
     ANOMALOUS_PRICE,
     LINKED_ADS_NONE,
@@ -462,6 +476,8 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                             elif problem_type == GENERIC_TITLE_FIGARO:
                                 await repair_listing_title(listing, db)
                                 await refresh_listing_status(listing, db, force_update=True)
+                            elif problem_type == AGGREGATE_SEARCH_PAGE:
+                                await split_or_purge_aggregate_listing(db, listing.id)
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)
                         except Exception as e:

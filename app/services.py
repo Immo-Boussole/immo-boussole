@@ -85,9 +85,11 @@ def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
     Validates if a URL is a single listing page URL, and NOT a search results or landing page.
     Returns (is_valid, error_message).
     """
+    if not url or not isinstance(url, str):
+        return False, "URL invalide ou vide."
     url_lower = url.lower()
     
-    # 1. Broad checks for common search keywords
+    # 1. Broad checks for common search keywords in path or query
     search_keywords = ["/recherche", "/resultats", "/search", "projects=", "category=", "/carte"]
     for kw in search_keywords:
         if kw in url_lower:
@@ -100,31 +102,31 @@ def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
             
     elif "leboncoin.fr" in url_lower:
         is_lbc_ad = "/ad/" in url_lower or any(cat in url_lower for cat in ["/ventes_immobilieres/", "/locations/", "/colocations/", "/bureaux_commerces/"])
-        if not is_lbc_ad:
+        if not is_lbc_ad or "/recherche" in url_lower:
             return False, "Les URLs LeBonCoin d'annonces valides doivent contenir '/ad/' ou une catégorie d'annonce."
 
     elif "seloger.com" in url_lower:
-        if "/annonces/" not in url_lower and "/annonce/" not in url_lower:
+        if ("/annonces/" not in url_lower and "/annonce/" not in url_lower) or "/resultats/" in url_lower or "/carte/" in url_lower:
             return False, "Les URLs SeLoger d'annonces valides doivent contenir '/annonce/' ou '/annonces/'."
 
     elif "lefigaro.fr" in url_lower:
-        if "/annonces/" not in url_lower or "/annonce-" not in url_lower:
-            return False, "Les URLs Le Figaro d'annonces valides doivent contenir '/annonces/' et '/annonce-'."
+        if "/annonce-" not in url_lower and "/annonces/annonce-" not in url_lower:
+            return False, "Les URLs Le Figaro d'annonces valides doivent contenir '/annonce-' (les pages de résultats globales sont exclues)."
 
     elif "logic-immo.com" in url_lower:
         if "/detail-" not in url_lower:
             return False, "Les URLs Logic-Immo d'annonces valides doivent contenir '/detail-'."
 
     elif "bienici.com" in url_lower:
-        if "/annonce/" not in url_lower:
+        if "/annonce/" not in url_lower or "/recherche/" in url_lower:
             return False, "Les URLs Bien'Ici d'annonces valides doivent contenir '/annonce/'."
 
     elif "iadfrance.fr" in url_lower:
-        if "/annonce/" not in url_lower:
+        if "/annonce/" not in url_lower or "/recherche/" in url_lower:
             return False, "Les URLs IAD France d'annonces valides doivent contenir '/annonce/'."
 
     elif "immobilier.notaires.fr" in url_lower:
-        if "/annonce/" not in url_lower:
+        if "/annonce/" not in url_lower or "/recherche/" in url_lower:
             return False, "Les URLs Notaires d'annonces valides doivent contenir '/annonce/'."
 
     elif "vinci-immobilier.com" in url_lower:
@@ -132,43 +134,65 @@ def is_valid_listing_url(url: str) -> Tuple[bool, Optional[str]]:
             return False, "Les URLs Vinci d'annonces valides doivent contenir '/achat-immobilier-neuf/'."
 
     elif "immobilier-france.fr" in url_lower:
-        if "/annonce/" not in url_lower and "/detail/" not in url_lower:
+        if ("/annonce/" not in url_lower and "/detail/" not in url_lower) or "/recherche/" in url_lower:
             return False, "Les URLs Immobilier France d'annonces valides doivent contenir '/annonce/' ou '/detail/'."
 
     return True, None
 
 
-def is_search_page_title(title: str) -> bool:
+def is_search_page_title(title: Optional[str]) -> bool:
     """
     Checks if a page title indicates it is a search results/landing page instead of a single listing.
     """
-    if not title:
+    if not title or not isinstance(title, str):
         return False
-    t = title.lower()
+    t = title.strip()
+    if not t:
+        return False
+    t_lower = t.lower()
     
-    # Common search page title patterns
+    # 1. Starting with count: e.g. "685 Maisons à Vendre...", "12 Appartements à louer...", "5 Biens en vente..."
+    if re.search(
+        r'^\s*\d+\s+(?:maisons?|appartements?|biens?|annonces?|logements?|terrains?|propri[ée]t[ée]s?|locaux|garages?|parkings?)\b',
+        t_lower
+    ):
+        return True
+
+    # 2. Plural nouns followed by "à/a vendre", "à/a louer", "en vente", "en location"
+    if re.search(
+        r'\b(?:maisons|appartements|biens|annonces|logements|terrains|propri[ée]t[ée]s|locaux)\s+(?:[àa]\s+(?:vendre|louer)|en\s+(?:vente|location))\b',
+        t_lower
+    ):
+        return True
+
+    # 3. SEO Landing page templates & Portal indicators (e.g., Le Figaro, SeLoger)
+    if re.search(r'🏡\s*:\s*(?:maisons?|appartements?|biens?|logements?)\s+en\s+vente', t_lower):
+        return True
+
     indicators = [
-        "🏡 : maisons en vente",
-        "🏡 : maison en vente",
-        "🏡 : appartements en vente",
-        "🏡 : appartement en vente",
         "résultats de recherche",
+        "résultat de recherche",
+        "résultats de votre recherche",
+        "résultat de votre recherche",
         "annonces immobilières",
         "moteur de recherche",
         "toutes les annonces",
         "liste des annonces",
         "dernières annonces",
+        "nos annonces",
         "alertes immo",
         "recherche immobilière",
+        "sélection de biens",
+        "tous les biens",
     ]
     for ind in indicators:
-        if ind in t:
+        if ind in t_lower:
             return True
-            
-    # Plural nouns followed by "à vendre" or "à louer"
-    if re.search(r'\b(maisons|appartements|terrains|locaux)\s+à\s+(vendre|louer)\b', t):
+
+    # 4. Pattern "Vente/Achat ... : Annonces ..."
+    if re.search(r'\b(?:vente|achat|location)\s+.*:\s*annonces\b', t_lower):
         return True
-        
+
     return False
 
 
@@ -1920,5 +1944,132 @@ def update_listing_address(
     db.commit()
     db.refresh(listing)
     return listing
+
+
+async def split_or_purge_aggregate_listing(db: Session, listing_id: int) -> dict:
+    """
+    Splits an aggregate search listing by scraping individual sub-listings from its URL
+    and creating genuine listings in the database, then cleanly deleting the aggregate listing.
+    If no sub-listings can be extracted, purges the aggregate listing directly.
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        return {
+            "success": False,
+            "message": f"Annonce #{listing_id} introuvable.",
+            "extracted": 0,
+            "created": 0,
+        }
+
+    url = listing.original_url or listing.url
+    source = listing.source
+    created_count = 0
+    extracted_count = 0
+
+    from app.scrapers import (
+        LeboncoinScraper, SelogerScraper, LeFigaroScraper,
+        LogicimmoScraper, BieniciScraper, IadfranceScraper,
+        NotairesScraper, VinciScraper, ImmobilierFranceScraper,
+        OrpiScraper, ProvimoScraper, HektorScraper
+    )
+
+    scrapers = {
+        Source.LEBONCOIN: LeboncoinScraper(),
+        Source.SELOGER: SelogerScraper(),
+        Source.LEFIGARO: LeFigaroScraper(),
+        Source.LOGICIMMO: LogicimmoScraper(),
+        Source.BIENICI: BieniciScraper(),
+        Source.IADFRANCE: IadfranceScraper(),
+        Source.NOTAIRES: NotairesScraper(),
+        Source.VINCI: VinciScraper(),
+        Source.IMMOBILIER_FRANCE: ImmobilierFranceScraper(),
+        Source.ORPI: OrpiScraper(),
+        Source.PROVIMO: ProvimoScraper(),
+        Source.HEKTOR: HektorScraper(),
+    }
+
+    scraper = scrapers.get(source)
+    if not scraper and url:
+        url_lower = url.lower()
+        if "lefigaro.fr" in url_lower:
+            scraper = scrapers.get(Source.LEFIGARO)
+        elif "seloger.com" in url_lower:
+            scraper = scrapers.get(Source.SELOGER)
+        elif "leboncoin.fr" in url_lower:
+            scraper = scrapers.get(Source.LEBONCOIN)
+        elif "bienici.com" in url_lower:
+            scraper = scrapers.get(Source.BIENICI)
+        elif "logic-immo.com" in url_lower:
+            scraper = scrapers.get(Source.LOGICIMMO)
+
+    if scraper and url:
+        try:
+            print(f"[SplitAggregate] Scraping des sous-annonces depuis : {url}", flush=True)
+            scraped_items = await scraper.get_listings(url)
+            extracted_count = len(scraped_items)
+            print(f"[SplitAggregate] {extracted_count} annonces trouvées sur la page", flush=True)
+
+            for item in scraped_items:
+                item_url = item.get("url", "")
+                is_valid, _ = is_valid_listing_url(item_url)
+                if not is_valid or is_search_page_title(item.get("title", "")):
+                    continue
+
+                ext_id = str(item.get("external_id", ""))
+                norm_item_url = normalize_listing_url(item_url)
+
+                existing = db.query(Listing).filter(
+                    (Listing.external_id == ext_id) | (Listing.url == item_url) | (Listing.original_url == item_url)
+                ).first()
+                if not existing and norm_item_url:
+                    for l in db.query(Listing).filter(Listing.url.isnot(None)).all():
+                        if normalize_listing_url(l.url) == norm_item_url or (l.original_url and normalize_listing_url(l.original_url) == norm_item_url):
+                            existing = l
+                            break
+
+                if not existing:
+                    new_listing = Listing(
+                        external_id=ext_id,
+                        title=item.get("title") or "Annonce immobilière",
+                        url=item_url,
+                        original_url=item_url,
+                        price=item.get("price") or 0.0,
+                        city=item.get("city"),
+                        location=item.get("location") or item.get("city") or "Inconnu",
+                        source=source if isinstance(source, Source) else Source.LEFIGARO,
+                        status=ListingStatus.ACTIVE,
+                        date_added=datetime.now(timezone.utc),
+                    )
+                    db.add(new_listing)
+                    created_count += 1
+
+            db.commit()
+        except Exception as e:
+            print(f"[SplitAggregate] Erreur lors du scraping de {url}: {e}", flush=True)
+
+    # Clean photos and duplicate references of the aggregate listing
+    if listing.photos_local:
+        try:
+            local_paths = json_to_photos(listing.photos_local)
+            for lp in local_paths:
+                if lp and os.path.exists(lp):
+                    os.remove(lp)
+        except Exception as e:
+            print(f"[SplitAggregate] Erreur suppression photos: {e}", flush=True)
+
+    # Detach duplicate links
+    db.query(Listing).filter(Listing.duplicate_of_id == listing.id).update(
+        {"duplicate_of_id": None, "is_duplicate": False}
+    )
+    db.delete(listing)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Annonce agrégée #{listing_id} supprimée ({extracted_count} annonces extraites, {created_count} nouvelles créées).",
+        "extracted": extracted_count,
+        "created": created_count,
+    }
+
 
 

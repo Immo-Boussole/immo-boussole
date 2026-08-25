@@ -78,15 +78,19 @@ class TestSearchPageValidation(unittest.TestCase):
         """Test page title validation that detects search results/landing pages."""
         # Titles that should be rejected as search pages
         search_titles = [
+            "685 Maisons à Vendre à Malleval (42520) 🏡 : Maisons en Vente",
             "Maisons à Vendre à Gradignan (33170) 🏡 : Maisons en Vente",
             "Appartements à Vendre à Bordeaux 🏡 : Appartements en Vente",
             "123 Maisons à vendre à Gradignan - SeLoger",
+            "45 Appartements à vendre à Lyon",
+            "12 Biens en vente à Chavanay",
             "Résultats de votre recherche immobilière",
             "Annonces immobilières de particuliers et d'agences",
             "Dernières annonces de vente à Paris",
             "Toutes les annonces immobilières de location",
             "Terrains à vendre à Lyon",
             "Locaux à louer à Marseille",
+            "Vente maison Malleval : Annonces vente maison Malleval",
         ]
         for title in search_titles:
             self.assertTrue(is_search_page_title(title), f"Expected search page title to be detected: {title}")
@@ -102,6 +106,44 @@ class TestSearchPageValidation(unittest.TestCase):
         ]
         for title in listing_titles:
             self.assertFalse(is_search_page_title(title), f"Expected single listing title to be accepted: {title}")
+
+    def test_split_or_purge_aggregate_listing(self):
+        """Test split_or_purge_aggregate_listing on a simulated aggregate listing."""
+        import asyncio
+        from app.database import SessionLocal
+        from app.models import Listing, ListingStatus, Source
+        from app.services import split_or_purge_aggregate_listing
+        from datetime import datetime, timezone
+
+        db = SessionLocal()
+        try:
+            # Create a mock aggregate listing
+            aggregate = Listing(
+                external_id="agg_test_123",
+                title="685 Maisons à Vendre à Malleval (42520) 🏡 : Maisons en Vente",
+                url="https://immobilier.lefigaro.fr/annonces/immobilier-vente-maison-malleval+42520.html",
+                original_url="https://immobilier.lefigaro.fr/annonces/immobilier-vente-maison-malleval+42520.html",
+                price=300000.0,
+                city="Malleval",
+                location="Malleval (42520)",
+                source=Source.LEFIGARO,
+                status=ListingStatus.ACTIVE,
+                date_added=datetime.now(timezone.utc),
+            )
+            db.add(aggregate)
+            db.commit()
+            db.refresh(aggregate)
+            agg_id = aggregate.id
+
+            # Run split/purge
+            res = asyncio.run(split_or_purge_aggregate_listing(db, agg_id))
+            self.assertTrue(res["success"])
+
+            # Verify aggregate is deleted
+            deleted = db.query(Listing).filter(Listing.id == agg_id).first()
+            self.assertIsNone(deleted)
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":
