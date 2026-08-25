@@ -113,40 +113,66 @@ class SelogerScraper(BaseScraper):
                 data = json.loads(script.string or "")
                 ad_details = self._extract_detail_from_json(data)
                 if ad_details:
-                    details.update(ad_details)
-                    if details.get("photo_urls"):
-                        break
+                    # Merge details, prioritizing non-empty values and largest photo list
+                    for k, v in ad_details.items():
+                        if k == "photo_urls":
+                            existing_photos = details.get("photo_urls", [])
+                            if len(v) > len(existing_photos):
+                                details["photo_urls"] = v
+                        elif k == "floorplans":
+                            existing_fp = details.get("floorplans", [])
+                            merged_fp = list(dict.fromkeys(existing_fp + v))
+                            details["floorplans"] = merged_fp
+                        elif not details.get(k):
+                            details[k] = v
             except Exception:
                 continue
 
         # 2. Modern window.__UFRN_LIFECYCLE_SERVERREQUEST__ / __NEXT_DATA__ (as JS variable)
-        if not details or not details.get("photo_urls"):
-            ufrn_script = soup.find('script', string=re.compile(r'window\.__UFRN_LIFECYCLE_SERVERREQUEST__|__NEXT_DATA__'))
-            if ufrn_script and ufrn_script.string:
-                try:
-                    start_idx = ufrn_script.string.find('{')
-                    end_idx = ufrn_script.string.rfind('}')
-                    if start_idx != -1 and end_idx != -1:
-                        json_text = ufrn_script.string[start_idx:end_idx+1]
-                        data = json.loads(json_text)
-                        ad_details = self._extract_detail_from_json(data)
-                        if ad_details:
-                            details.update(ad_details)
-                except Exception as e:
-                    print(f"[SeLoger] Error parsing UFRN JSON: {e}")
+        ufrn_script = soup.find('script', string=re.compile(r'window\.__UFRN_LIFECYCLE_SERVERREQUEST__|__NEXT_DATA__|__INITIAL_STATE__'))
+        if ufrn_script and ufrn_script.string:
+            try:
+                start_idx = ufrn_script.string.find('{')
+                end_idx = ufrn_script.string.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    json_text = ufrn_script.string[start_idx:end_idx+1]
+                    data = json.loads(json_text)
+                    ad_details = self._extract_detail_from_json(data)
+                    if ad_details:
+                        for k, v in ad_details.items():
+                            if k == "photo_urls":
+                                existing_photos = details.get("photo_urls", [])
+                                if len(v) > len(existing_photos):
+                                    details["photo_urls"] = v
+                            elif k == "floorplans":
+                                existing_fp = details.get("floorplans", [])
+                                merged_fp = list(dict.fromkeys(existing_fp + v))
+                                details["floorplans"] = merged_fp
+                            elif not details.get(k):
+                                details[k] = v
+            except Exception as e:
+                print(f"[SeLoger] Error parsing UFRN JSON: {e}")
 
         # 3. JSON-LD schema extraction
         for ld_script in soup.find_all('script', type='application/ld+json'):
             try:
                 ld_data = json.loads(ld_script.string or "")
-                if isinstance(ld_data, dict):
-                    if not details.get("title") and (ld_data.get("name") or ld_data.get("headline")):
-                        details["title"] = ld_data.get("name") or ld_data.get("headline")
-                    if not details.get("description_text") and ld_data.get("description"):
-                        details["description_text"] = ld_data.get("description")
-                    if not details.get("photo_urls") and ld_data.get("image"):
-                        imgs = ld_data.get("image")
-                        details["photo_urls"] = imgs if isinstance(imgs, list) else [imgs]
+                items = ld_data if isinstance(ld_data, list) else (ld_data.get("@graph", [ld_data]) if isinstance(ld_data, dict) else [])
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    if not details.get("title") and (item.get("name") or item.get("headline")):
+                        details["title"] = item.get("name") or item.get("headline")
+                    if not details.get("description_text") and item.get("description"):
+                        details["description_text"] = item.get("description")
+                    if item.get("image"):
+                        imgs = item.get("image")
+                        ld_imgs = imgs if isinstance(imgs, list) else [imgs]
+                        clean_ld = [self._normalize_image_url(u) for u in ld_imgs if self._is_valid_property_photo(u)]
+                        if clean_ld:
+                            curr_photos = details.get("photo_urls", [])
+                            merged = list(dict.fromkeys(curr_photos + clean_ld))
+                            details["photo_urls"] = merged
             except Exception:
                 pass
 
@@ -154,18 +180,142 @@ class SelogerScraper(BaseScraper):
         title_tag = soup.find('h1') or soup.find('title')
         if title_tag and not details.get("title"):
             details["title"] = title_tag.text.strip()
-        
+
         og_img = soup.find('meta', attrs={"property": "og:image"})
-        if og_img and not details.get("photo_urls"):
-            details["photo_urls"] = [og_img.get("content")]
+        if og_img and og_img.get("content"):
+            og_clean = self._normalize_image_url(og_img.get("content"))
+            if og_clean and self._is_valid_property_photo(og_clean):
+                curr = details.get("photo_urls", [])
+                if og_clean not in curr:
+                    curr.append(og_clean)
+                details["photo_urls"] = curr
 
         og_desc = soup.find('meta', attrs={"property": "og:description"})
         if og_desc and not details.get("description_text"):
             details["description_text"] = og_desc.get("content", "")
 
+        # 5. Regex extraction across script tags if still very few photos
+        if len(details.get("photo_urls", [])) < 3:
+            page_str = str(soup)
+            regex_imgs = re.findall(
+                r'https?:\\?/\\?/[^"\'\s<>]+\.(?:jpg|jpeg|webp|png)(?:\?[^"\'\s<>]*)?',
+                page_str,
+                re.IGNORECASE
+            )
+            found_photos = []
+            for raw_u in regex_imgs:
+                clean_u = raw_u.replace(r'\/', '/')
+                norm_u = self._normalize_image_url(clean_u)
+                if norm_u and self._is_valid_property_photo(norm_u) and norm_u not in found_photos:
+                    found_photos.append(norm_u)
+            if len(found_photos) > len(details.get("photo_urls", [])):
+                details["photo_urls"] = found_photos
+
         return details
 
     # ─── Private Helpers ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _normalize_image_url(url: Optional[str]) -> str:
+        """Normalizes and upgrades SeLoger/Aviv/Poliris image URLs to HD resolution."""
+        if not url or not isinstance(url, str):
+            return ""
+        u = url.strip()
+        if not u:
+            return ""
+
+        # Protocol-relative URL
+        if u.startswith("//"):
+            u = "https:" + u
+
+        # Next.js optimized images (/_next/image?url=https%3A%2F%2F...&w=1920&q=75)
+        if "/_next/image" in u and "url=" in u:
+            try:
+                import urllib.parse
+                parsed = urllib.parse.urlparse(u)
+                qs = urllib.parse.parse_qs(parsed.query)
+                if "url" in qs and qs["url"]:
+                    u = urllib.parse.unquote(qs["url"][0])
+            except Exception:
+                pass
+
+        # Upgrade sizing in URL path to HD (1920x1080)
+        u = re.sub(r'/(?:crop|fit-in|resize|thumbnail)/\d+x\d+/', '/fit-in/1920x1080/', u, flags=re.IGNORECASE)
+        u = re.sub(r'/\d+x\d+/', '/1920x1080/', u)
+
+        # Upgrade query params sizing
+        if "w=" in u or "width=" in u:
+            u = re.sub(r'[?&](?:w|width)=\d+', '&w=1920', u)
+            u = re.sub(r'[?&](?:h|height)=\d+', '', u)
+            u = u.replace('?&', '?')
+
+        return u
+
+    @staticmethod
+    def _is_valid_property_photo(url: Optional[str]) -> bool:
+        """Filters out logos, icons, avatars, pins, and non-photo assets."""
+        if not url or not isinstance(url, str) or not url.startswith("http"):
+            return False
+        url_lower = url.lower()
+        ignore_keywords = [
+            'logo', 'avatar', 'icon', 'placeholder', 'rating', 'badge',
+            'static-asset', 'pin-map', 'favicon', 'social', 'pixel'
+        ]
+        return not any(kw in url_lower for kw in ignore_keywords)
+
+    def _extract_all_photos_from_json(self, data, depth=0) -> List[str]:
+        """Recursively scans a JSON tree to extract all candidate photo URLs."""
+        if not data or depth > 8:
+            return []
+        photos: List[str] = []
+
+        def _add_url(candidate: Optional[str]):
+            if candidate and isinstance(candidate, str):
+                norm = self._normalize_image_url(candidate)
+                if norm and self._is_valid_property_photo(norm) and norm not in photos:
+                    photos.append(norm)
+
+        def _extract_from_item(item):
+            if isinstance(item, str):
+                _add_url(item)
+            elif isinstance(item, dict):
+                for key in ['hdUrl', 'largeUrl', 'fullUrl', 'url', 'src', 'path', 'contentUrl', 'uri', 'original', 'large', 'big', 'url_photo', 'url_large', 'rawUrl', 'thumbnail']:
+                    val = item.get(key)
+                    if val and isinstance(val, str):
+                        _add_url(val)
+                if isinstance(item.get("image"), (str, dict)):
+                    _extract_from_item(item.get("image"))
+                if isinstance(item.get("urls"), dict):
+                    for u_val in item["urls"].values():
+                        if isinstance(u_val, str):
+                            _add_url(u_val)
+
+        if isinstance(data, list):
+            for elem in data:
+                _extract_from_item(elem)
+        elif isinstance(data, dict):
+            # Check direct photo array keys
+            for key in ['images', 'photos', 'medias', 'pictures', 'rawPhotos', 'gallery']:
+                if key in data:
+                    val = data[key]
+                    if isinstance(val, list):
+                        for elem in val:
+                            _extract_from_item(elem)
+                    elif isinstance(val, dict):
+                        for sub_k in ['images', 'photos', 'all', 'large', 'list']:
+                            if isinstance(val.get(sub_k), list):
+                                for elem in val[sub_k]:
+                                    _extract_from_item(elem)
+
+            # Recurse into child objects
+            for val in data.values():
+                if isinstance(val, (dict, list)):
+                    sub_photos = self._extract_all_photos_from_json(val, depth + 1)
+                    for sp in sub_photos:
+                        if sp not in photos:
+                            photos.append(sp)
+
+        return photos
 
     def _find_ads_in_json(self, data, depth=0) -> list:
         """Recursively search for a list of ad objects in nested JSON."""
@@ -194,6 +344,8 @@ class SelogerScraper(BaseScraper):
             zip_code = ad.get("zipCode") or ad.get("postalCode") or ""
             location_str = f"{loc_name} ({zip_code})".strip() if zip_code else loc_name
 
+            raw_photos = self._extract_all_photos_from_json(ad)
+
             return {
                 "external_id": f"sl_{ad.get('id', url.split('/')[-1])}",
                 "title": ad.get("customTitle") or ad.get("headline") or ad.get("title") or ad.get("subject", "Annonce SeLoger"),
@@ -206,7 +358,7 @@ class SelogerScraper(BaseScraper):
                 "land_area": ad.get("landSurface", ad.get("landArea")),
                 "rooms": ad.get("rooms", ad.get("roomCount")),
                 "bedrooms": ad.get("bedrooms", ad.get("bedroomCount")),
-                "photo_urls": ad.get("photos", []),
+                "photo_urls": raw_photos,
             }
         except Exception:
             return None
@@ -216,15 +368,28 @@ class SelogerScraper(BaseScraper):
         details = {}
         classified = None
         if isinstance(data, dict):
-            # Check for UFRN structures
+            # Check for various Next.js / UFRN structures
             if "app_cldp" in data and "data" in data["app_cldp"]:
                 classified = data["app_cldp"]["data"].get("classified")
             elif "props" in data and "pageProps" in data["props"]:
-                classified = data["props"]["pageProps"].get("classified") or data["props"]["pageProps"].get("ad")
+                page_props = data["props"]["pageProps"]
+                listing_data = page_props.get("listingData") or {}
+                classified = (
+                    listing_data.get("listing") or
+                    listing_data.get("classified") or
+                    page_props.get("classified") or
+                    page_props.get("ad") or
+                    page_props.get("initialState", {}).get("classified") or
+                    page_props.get("initialState", {}).get("listing")
+                )
+            elif "listingData" in data:
+                classified = data["listingData"].get("listing") or data["listingData"]
             elif "classified" in data:
                 classified = data["classified"]
             elif "ad" in data:
                 classified = data["ad"]
+            elif "listing" in data:
+                classified = data["listing"]
 
         if classified and isinstance(classified, dict):
             try:
@@ -336,20 +501,7 @@ class SelogerScraper(BaseScraper):
 
                 # Photos & Floorplans
                 domains = classified.get("domains", {})
-                medias = domains.get("medias", {}) if isinstance(domains, dict) else {}
-                
-                # Photos
-                photos = []
-                images = medias.get("images", []) if isinstance(medias, dict) else []
-                if not images:
-                    images = classified.get("photos", [])
-                
-                if isinstance(images, list):
-                    for img in images:
-                        if isinstance(img, dict) and img.get("url"):
-                            photos.append(img["url"])
-                        elif isinstance(img, str):
-                            photos.append(img)
+                medias = domains.get("medias", {}) if isinstance(domains, dict) else (classified.get("medias") if isinstance(classified.get("medias"), dict) else {})
 
                 # Floorplans / Plans
                 floorplans = []
@@ -362,15 +514,26 @@ class SelogerScraper(BaseScraper):
 
                 if isinstance(fp_list, list):
                     for fp in fp_list:
-                        if isinstance(fp, dict) and fp.get("url"):
-                            floorplans.append(fp["url"])
-                        elif isinstance(fp, str):
-                            floorplans.append(fp)
+                        u = fp.get("url") if isinstance(fp, dict) else fp
+                        if isinstance(u, str):
+                            norm = self._normalize_image_url(u)
+                            if norm and norm not in floorplans:
+                                floorplans.append(norm)
 
                 if floorplans:
-                    details["floorplans"] = list(dict.fromkeys(floorplans))
-                    # Also append floorplans to photo_urls so they are visible in the photo gallery
-                    for fp_url in details["floorplans"]:
+                    details["floorplans"] = floorplans
+
+                # Comprehensive photo extraction across classified and entire data node
+                photos = self._extract_all_photos_from_json(classified)
+                if not photos or len(photos) < 2:
+                    all_json_photos = self._extract_all_photos_from_json(data)
+                    for p in all_json_photos:
+                        if p not in photos:
+                            photos.append(p)
+
+                # Include floorplans in photos so they render in gallery
+                if floorplans:
+                    for fp_url in floorplans:
                         if fp_url not in photos:
                             photos.append(fp_url)
 

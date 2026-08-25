@@ -187,6 +187,80 @@
             return url.includes('seloger.com');
         }
 
+        static _normalizeImageUrl(url) {
+            if (!url || typeof url !== 'string') return '';
+            let u = url.trim();
+            if (!u) return '';
+            if (u.startsWith('//')) u = 'https:' + u;
+            if (u.includes('/_next/image') && u.includes('url=')) {
+                try {
+                    const parsed = new URL(u, window.location.origin);
+                    const realUrl = parsed.searchParams.get('url');
+                    if (realUrl) u = decodeURIComponent(realUrl);
+                } catch (e) {}
+            }
+            u = u.replace(/\/(?:crop|fit-in|resize|thumbnail)\/\d+x\d+\//i, '/fit-in/1920x1080/');
+            u = u.replace(/\/\d+x\d+\//i, '/1920x1080/');
+            try {
+                const parsed = new URL(u);
+                if (parsed.searchParams.has('w') || parsed.searchParams.has('width')) {
+                    parsed.searchParams.set('w', '1920');
+                    parsed.searchParams.delete('h');
+                    parsed.searchParams.delete('height');
+                    u = parsed.toString();
+                }
+            } catch (e) {}
+            return u;
+        }
+
+        static _extractAllPhotos(node, depth = 0) {
+            if (!node || depth > 8) return [];
+            const photos = [];
+            const isPhotoValid = (u) => {
+                if (!u || typeof u !== 'string' || !u.startsWith('http')) return false;
+                const low = u.toLowerCase();
+                return !['logo', 'avatar', 'icon', 'placeholder', 'badge', 'pin-map', 'favicon', 'pixel'].some(k => low.includes(k));
+            };
+            const addUrl = (candidate) => {
+                if (!candidate) return;
+                const norm = SelogerParser._normalizeImageUrl(candidate);
+                if (norm && isPhotoValid(norm) && !photos.includes(norm)) photos.push(norm);
+            };
+
+            const extractItem = (item) => {
+                if (typeof item === 'string') addUrl(item);
+                else if (item && typeof item === 'object') {
+                    for (const k of ['hdUrl', 'largeUrl', 'fullUrl', 'url', 'src', 'path', 'contentUrl', 'uri', 'original', 'large', 'big', 'url_photo', 'url_large', 'rawUrl', 'thumbnail']) {
+                        if (typeof item[k] === 'string') addUrl(item[k]);
+                    }
+                    if (item.image) extractItem(item.image);
+                }
+            };
+
+            if (Array.isArray(node)) {
+                node.forEach(extractItem);
+            } else if (typeof node === 'object') {
+                for (const k of ['images', 'photos', 'medias', 'pictures', 'rawPhotos', 'gallery']) {
+                    if (node[k]) {
+                        if (Array.isArray(node[k])) node[k].forEach(extractItem);
+                        else if (typeof node[k] === 'object') {
+                            for (const subK of ['images', 'photos', 'all', 'large', 'list']) {
+                                if (Array.isArray(node[k][subK])) node[k][subK].forEach(extractItem);
+                            }
+                        }
+                    }
+                }
+                for (const val of Object.values(node)) {
+                    if (val && typeof val === 'object') {
+                        SelogerParser._extractAllPhotos(val, depth + 1).forEach(p => {
+                            if (!photos.includes(p)) photos.push(p);
+                        });
+                    }
+                }
+            }
+            return photos;
+        }
+
         static async parse() {
             const listings = [];
             const pathname = window.location.pathname;
@@ -194,17 +268,16 @@
 
             // 1. Chercher les données structurées JSON
             let classified = null;
+            let fullData = null;
             let searchAds = [];
 
             // A. window.__UFRN_LIFECYCLE_SERVERREQUEST__
             try {
                 if (window.__UFRN_LIFECYCLE_SERVERREQUEST__) {
-                    const ufrn = window.__UFRN_LIFECYCLE_SERVERREQUEST__;
-                    if (ufrn.app_cldp?.data?.classified) {
-                        classified = ufrn.app_cldp.data.classified;
-                    } else if (ufrn.classified) {
-                        classified = ufrn.classified;
-                    }
+                    fullData = window.__UFRN_LIFECYCLE_SERVERREQUEST__;
+                    const ufrn = fullData;
+                    if (ufrn.app_cldp?.data?.classified) classified = ufrn.app_cldp.data.classified;
+                    else if (ufrn.classified) classified = ufrn.classified;
                 }
             } catch (e) {}
 
@@ -213,9 +286,11 @@
                 const nextScript = document.getElementById('__NEXT_DATA__');
                 if (nextScript) {
                     try {
-                        const data = JSON.parse(nextScript.textContent);
-                        classified = data?.props?.pageProps?.classified || data?.props?.pageProps?.ad;
-                        searchAds = data?.props?.pageProps?.searchData?.ads || data?.props?.pageProps?.initialData?.searchData?.ads || [];
+                        fullData = JSON.parse(nextScript.textContent);
+                        const pageProps = fullData?.props?.pageProps || {};
+                        const listingData = pageProps.listingData || {};
+                        classified = listingData.listing || listingData.classified || pageProps.classified || pageProps.ad || pageProps.initialState?.classified || pageProps.initialState?.listing;
+                        searchAds = pageProps.searchData?.ads || pageProps.initialData?.searchData?.ads || [];
                     } catch (e) {}
                 }
             }
@@ -226,8 +301,8 @@
                     if (!classified && (s.textContent.includes('classified') || s.textContent.includes('livingArea') || s.textContent.includes('price'))) {
                         try {
                             const d = JSON.parse(s.textContent);
-                            if (d.classified) classified = d.classified;
-                            else if (d.app_cldp?.data?.classified) classified = d.app_cldp.data.classified;
+                            if (d.classified) { classified = d.classified; fullData = d; }
+                            else if (d.app_cldp?.data?.classified) { classified = d.app_cldp.data.classified; fullData = d; }
                         } catch (e) {}
                     }
                 });
@@ -235,7 +310,7 @@
 
             if (isAdPage) {
                 if (classified) {
-                    const formatted = await this._formatClassified(classified);
+                    const formatted = await this._formatClassified(classified, fullData);
                     listings.push(formatted);
                     return { type: 'single', listings };
                 }
@@ -272,7 +347,8 @@
                 const price = priceText ? parseFloat(priceText) : null;
 
                 const img = card.querySelector('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]');
-                const photos = img ? [img.src.split('?')[0]] : [];
+                const rawSrc = img?.src || img?.getAttribute('src') || '';
+                const photos = rawSrc ? [SelogerParser._normalizeImageUrl(rawSrc.split('?')[0])] : [];
 
                 listings.push({
                     url: fullUrl,
@@ -286,7 +362,7 @@
             return { type: listings.length === 1 ? 'single' : 'search', listings };
         }
 
-        static async _formatClassified(classified) {
+        static async _formatClassified(classified, fullData = null) {
             const loc = classified.location || {};
             let city = loc.city || loc.cityName || classified.city || '';
             let zipcode = loc.zipCode || loc.postalCode || loc.postCode || classified.zipCode || '';
@@ -333,24 +409,24 @@
             const description = classified.description || classified.body || '';
 
             // Medias & Floorplans
-            const photos = [];
+            let photos = SelogerParser._extractAllPhotos(classified);
+            if ((!photos || photos.length < 2) && fullData) {
+                const fullPhotos = SelogerParser._extractAllPhotos(fullData);
+                fullPhotos.forEach(p => { if (!photos.includes(p)) photos.push(p); });
+            }
+
             const floorplans = [];
             const domains = classified.domains || {};
-            const medias = domains.medias || {};
-
-            const images = medias.images || classified.photos || [];
-            if (Array.isArray(images)) {
-                images.forEach(img => {
-                    const u = typeof img === 'object' ? img?.url : img;
-                    if (typeof u === 'string' && !photos.includes(u)) photos.push(u);
-                });
-            }
+            const medias = domains.medias || (classified.medias && typeof classified.medias === 'object' ? classified.medias : {});
 
             const fpList = medias.floorplans || medias.plans || medias.floorPlans || classified.floorplans || classified.floorPlans || classified.plans || [];
             if (Array.isArray(fpList)) {
                 fpList.forEach(fp => {
-                    const u = typeof fp === 'object' ? fp?.url : fp;
-                    if (typeof u === 'string' && !floorplans.includes(u)) floorplans.push(u);
+                    const u = typeof fp === 'object' ? (fp.url || fp.src) : fp;
+                    if (typeof u === 'string') {
+                        const norm = SelogerParser._normalizeImageUrl(u);
+                        if (norm && !floorplans.includes(norm)) floorplans.push(norm);
+                    }
                 });
             }
 
@@ -365,8 +441,11 @@
                         const fpDoc = domParser.parseFromString(fpHtml, 'text/html');
                         fpDoc.querySelectorAll('img[src*="seloger"], img[src*="aviv"], img[src*="poliris"]').forEach(img => {
                             const src = img.src || img.getAttribute('src');
-                            if (src && !floorplans.includes(src) && !photos.includes(src)) {
-                                floorplans.push(src);
+                            if (src) {
+                                const norm = SelogerParser._normalizeImageUrl(src);
+                                if (norm && !floorplans.includes(norm) && !photos.includes(norm)) {
+                                    floorplans.push(norm);
+                                }
                             }
                         });
                     }

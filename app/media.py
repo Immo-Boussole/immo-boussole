@@ -36,9 +36,18 @@ async def download_single_image(
     Returns the resolved Path on success, None on failure.
     """
     try:
+        referer = "https://www.leboncoin.fr/"
+        url_lower = url.lower()
+        if any(d in url_lower for d in ["seloger", "poliris", "aviv", "slstatic"]):
+            referer = "https://www.seloger.com/"
+        elif "lefigaro" in url_lower:
+            referer = "https://immobilier.lefigaro.fr/"
+        elif "bienici" in url_lower:
+            referer = "https://www.bienici.com/"
+
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": "https://www.leboncoin.fr/",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": referer,
         }
         response = await client.get(url, headers=headers, timeout=30.0, follow_redirects=True)
         response.raise_for_status()

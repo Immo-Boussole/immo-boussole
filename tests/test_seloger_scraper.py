@@ -200,3 +200,67 @@ def test_external_listing_submit_with_floorplans_and_details():
     assert "floorplan1.jpg" in listing.original_photo_urls
     db2.close()
 
+
+def test_seloger_multi_photo_and_hd_normalization():
+    scraper = SelogerScraper()
+    
+    # 1. Test HD normalization
+    thumb_url = "https://v.seloger.com/s/crop/120x90/visuels/1/2/3.jpg"
+    hd = scraper._normalize_image_url(thumb_url)
+    assert hd == "https://v.seloger.com/s/fit-in/1920x1080/visuels/1/2/3.jpg"
+
+    proto_url = "//mms.seloger.com/photos/1.jpg"
+    assert scraper._normalize_image_url(proto_url) == "https://mms.seloger.com/photos/1.jpg"
+
+    next_url = "https://www.seloger.com/_next/image?url=https%3A%2F%2Fv.seloger.com%2Fs%2Fcrop%2F120x90%2Ftest.jpg&w=640&q=75"
+    assert scraper._normalize_image_url(next_url) == "https://v.seloger.com/s/fit-in/1920x1080/test.jpg"
+
+    # 2. Test modern Next.js listingData structure
+    mock_listing_data = {
+        "props": {
+            "pageProps": {
+                "classifiedSummary": {
+                    "id": "269W7APVLTZA_SUMMARY",
+                    "title": "Teaser title",
+                    "photos": ["https://v.seloger.com/s/crop/120x90/teaser.jpg"]
+                },
+                "listingData": {
+                    "listing": {
+                        "id": "269W7APVLTZA_FULL",
+                        "customTitle": "Villa contemporaine 6 pièces",
+                        "livingArea": 180.0,
+                        "landSurface": 800.0,
+                        "pricing": {"amount": 495000.0},
+                        "location": {"city": "Vienne", "zipCode": "38200"},
+                        "rooms": {"total": 6, "bedrooms": 4},
+                        "photos": [
+                            "https://v.seloger.com/s/crop/120x90/photo1.jpg",
+                            "//mms.seloger.com/photos/photo2.jpg",
+                            {"hdUrl": "https://v.seloger.com/s/crop/120x90/photo3.jpg"},
+                            {"largeUrl": "https://photos.aviv-group.com/photo4.jpg"},
+                            {"src": "/_next/image?url=https%3A%2F%2Fv.seloger.com%2Fs%2Fcrop%2F120x90%2Fphoto5.jpg&w=1080&q=75"}
+                        ],
+                        "floorplans": [
+                            {"url": "https://img.seloger.com/plan_rdc.jpg"}
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    details = scraper._extract_detail_from_json(mock_listing_data)
+    assert details["title"] == "Villa contemporaine 6 pièces"
+    assert details["area"] == 180.0
+    assert details["price"] == 495000.0
+    assert details["city"] == "Vienne"
+    assert details["postal_code"] == "38200"
+    assert len(details["photo_urls"]) >= 6  # 5 photos + 1 floorplan
+    assert any("fit-in/1920x1080/photo1.jpg" in u for u in details["photo_urls"])
+    assert any("https://mms.seloger.com/photos/photo2.jpg" in u for u in details["photo_urls"])
+    assert any("fit-in/1920x1080/photo3.jpg" in u for u in details["photo_urls"])
+    assert any("photos.aviv-group.com/photo4.jpg" in u for u in details["photo_urls"])
+    assert any("fit-in/1920x1080/photo5.jpg" in u for u in details["photo_urls"])
+    assert any("plan_rdc.jpg" in u for u in details["photo_urls"])
+
+
