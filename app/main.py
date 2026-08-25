@@ -1564,6 +1564,9 @@ def listing_detail_page(
         except Exception:
             public_services = {}
 
+    from app.services import is_search_page_title, is_valid_listing_url
+    is_aggregate_search = is_search_page_title(listing.title) or (bool(listing.url) and not is_valid_listing_url(listing.url)[0])
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -1587,6 +1590,7 @@ def listing_detail_page(
         "all_agents": all_agents,
         "all_agencies": all_agencies,
         "public_services": public_services,
+        "is_aggregate_search": is_aggregate_search,
     })
 
 
@@ -4347,6 +4351,22 @@ def get_keywords(db: Session = Depends(get_db), _auth = Depends(login_required))
         "pros": [{"id": k.id, "text": k.text} for k in keywords if k.keyword_type == "pros"],
         "cons": [{"id": k.id, "text": k.text} for k in keywords if k.keyword_type == "cons"]
     }
+
+
+@app.post("/api/listings/{listing_id}/split-or-purge")
+async def split_or_purge_listing_endpoint(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Splits an aggregate search listing into individual listings or purges it cleanly.
+    """
+    from app.services import split_or_purge_aggregate_listing
+    res = await split_or_purge_aggregate_listing(db, listing_id)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res
 
 
 @app.post("/api/keywords")

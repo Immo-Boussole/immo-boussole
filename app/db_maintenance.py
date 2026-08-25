@@ -62,8 +62,9 @@ def identify_problems(db: Session):
     ]
 
     # Aggregate search pages (e.g. "685 Maisons à Vendre...", "Maisons en Vente", search URLs)
+    all_listings_in_db = db.query(Listing).all()
     aggregate_search_listings = [
-        l for l in active_listings_all if is_search_page_title(l.title) or (l.url and not is_valid_listing_url(l.url)[0])
+        l for l in all_listings_in_db if is_search_page_title(l.title) or (l.url and not is_valid_listing_url(l.url)[0])
     ]
 
     # Duplicate postal code in location (e.g., "Chavanay (42) (42)")
