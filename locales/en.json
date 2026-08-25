@@ -599,7 +599,15 @@
         "ignore_duplicate": "Not a duplicate",
         "view_existing_listing": "View in database",
         "merge_success": "Listing merged successfully!",
-        "ignore_success": "Duplicate alert dismissed."
+        "ignore_success": "Duplicate alert dismissed.",
+        "all_sources": "All Sources",
+        "sources_summary_title": "Sources & Latest Offers",
+        "last_offer_label": "Latest offer",
+        "last_offer_prefix": "Latest offer:",
+        "no_offer_recorded": "No offer",
+        "filter_by_ready_search": "All ready searches",
+        "select_ready_search_placeholder": "Filter by ready search...",
+        "source_focus_badge": "Focus"
     },
     "duplicates": {
         "title": "Duplicate Hunt",

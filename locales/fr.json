@@ -599,7 +599,15 @@
         "ignore_duplicate": "Ce n'est pas un duplicat",
         "view_existing_listing": "Consulter la fiche",
         "merge_success": "Annonce fusionnée avec succès !",
-        "ignore_success": "Alerte de duplicat ignorée."
+        "ignore_success": "Alerte de duplicat ignorée.",
+        "all_sources": "Toutes les sources",
+        "sources_summary_title": "Sources & Dernières offres",
+        "last_offer_label": "Dernière offre",
+        "last_offer_prefix": "Dernière offre :",
+        "no_offer_recorded": "Aucune offre",
+        "filter_by_ready_search": "Toutes les recherches prêtes",
+        "select_ready_search_placeholder": "Filtrer par recherche prête...",
+        "source_focus_badge": "Focus"
     },
     "duplicates": {
         "title": "Chasse aux duplicats",

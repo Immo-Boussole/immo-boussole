@@ -110,6 +110,70 @@ def test_hektor_parse_graphql_property():
     assert "Saint-Alban-du-Rhône" in details["title"]
 
 
+def test_hektor_parse_html_property():
+    scraper = HektorScraper()
+    sample_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta property="og:title" content="Villa à CHAVANAY 86 m2 habitables élevée sur sous-sol complet et 1474 m2 de terrain" />
+        <meta property="og:description" content="Fort potentiel ! Alan BEHEREC agence Immorêve vous invite à découvrir cette villa..." />
+    </head>
+    <body>
+        <div class="properties-detail__city">Chavanay (42410)</div>
+        <div class="properties-detail__price">245 000 €</div>
+        <h1>Maison 4 pièce(s) 3 chambre(s) 86 m²</h1>
+        <section class="detail_caracteristiques_v1">
+            <li class="list_item surf">Surface 86 m²</li>
+            <li class="list_item surf_carrez">carrez 86 m²</li>
+            <li class="list_item surfterrn">terrain 1 474 m²</li>
+            <li class="list_item">3 chambre(s)</li>
+            <li class="list_item">1 salle(s) de bain</li>
+            <li class="list_item">1 garage(s)</li>
+            <li class="list_item">2 niveau(x)</li>
+            <li class="list_item">terrasse</li>
+            <li class="list_item">arboré</li>
+            <li class="list_item">piscinable</li>
+        </section>
+        <div class="card-contact__title">IMMORÊVE</div>
+        <div class="card-contact__coords">04 37 04 32 17 contact@immoreve.fr</div>
+        <div class="properties-detail-v2__media">
+            <div class="slider__main">
+                <img src="//immoreve.staticlbi.com/1200xauto/images/biens/1/f3d09/photo_1.png" />
+                <img src="//immoreve.staticlbi.com/1200xauto/images/biens/1/f3d09/photo_2.png" />
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    url = "https://www.immoreve.fr/vente/160-chavanay/maison/882-villa-a-chavanay-86-m2-habitables-elevee-sur-sous-sol-complet-et-1474-m2-de-terrain"
+    details = scraper._parse_html_property(sample_html, url)
+
+    assert details["external_id"] == "hektor_882"
+    assert details["price"] == 245000.0
+    assert details["area"] == 86.0
+    assert details["carrez_surface"] == 86.0
+    assert details["land_area"] == 1474.0
+    assert details["rooms"] == 4
+    assert details["bedrooms"] == 3
+    assert details["bathroom_count"] == 1
+    assert details["parking_count"] == 1
+    assert details["total_floors"] == 2
+    assert details["city"] == "Chavanay"
+    assert details["postal_code"] == "42410"
+    assert details["location"] == "Chavanay (42410)"
+    assert details["terrace"] is True
+    assert details["garden"] is True
+    assert details["pool"] is True
+    assert details["cellar"] is True
+    assert details["property_type"] == "Maison"
+    assert details["agency_name"] == "IMMORÊVE"
+    assert details["contact_phone"] == "04 37 04 32 17"
+    assert details["contact_email"] == "contact@immoreve.fr"
+    assert len(details["photo_urls"]) == 2
+    assert "original" in details["photo_urls"][0]
+
+
 def test_hektor_live_sample():
     scraper = HektorScraper()
     url = "https://www.immoreve.fr/admin/crm/index.php?uri=property&id=953&senderUserId=8&token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0eXBlIjoiZ3JhcGhxbF9wdWJsaWNfYWNjZXNzIiwiZW50aXRpZXMiOlt7InR5cGUiOiJQUk9QRVJUWSIsImlkcyI6WyI5NTMiXSwic2NvcGVzIjpbIlBST1BFUlRZX1BVQkxJQyJdfSx7InR5cGUiOiJVU0VSIiwiaWRzIjpbIjgiXSwic2NvcGVzIjpbIlVTRVJfUFVCTElDIl19XSwiaWF0IjoxNzg3NTcxMDMzLCJpc3MiOiJpbW1vcmV2ZSJ9.AtKcJb0NNCMpqOudkeXV6SjrKB2GORrOUXbgF4MwJmY"
@@ -122,3 +186,4 @@ def test_hektor_live_sample():
     assert details.get("city") == "Saint-Alban-du-Rhône"
     assert details.get("postal_code") == "38370"
     assert len(details.get("photo_urls", [])) > 0
+

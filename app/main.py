@@ -30,7 +30,7 @@ from pydantic import BaseModel, field_validator
 import time
 from collections import defaultdict
 import secrets
-from sqlalchemy import text, func
+from sqlalchemy import text, func, or_
 from sqlalchemy.orm import Session
 
 from app import models, database, schemas, google_service
@@ -1734,6 +1734,24 @@ def auto_searches_page(
     latest_query = db.query(SearchQuery).filter(SearchQuery.active == 1).order_by(SearchQuery.last_run.desc()).first()
     last_sync = latest_query.last_run if latest_query else None
 
+    # Platform branding & formatting metadata
+    platform_meta = {
+        "leboncoin": {"label": "LeBonCoin", "icon": "fa-solid fa-tag", "color": "#f56b2a"},
+        "seloger": {"label": "SeLoger", "icon": "fa-solid fa-house-chimney", "color": "#e01a4f"},
+        "lefigaro": {"label": "Le Figaro", "icon": "fa-solid fa-newspaper", "color": "#1a73e8"},
+        "logicimmo": {"label": "Logic-Immo", "icon": "fa-solid fa-house-laptop", "color": "#8e24aa"},
+        "bienici": {"label": "Bien'Ici", "icon": "fa-solid fa-map-pin", "color": "#fbc02d"},
+        "iadfrance": {"label": "IAD France", "icon": "fa-solid fa-city", "color": "#00897b"},
+        "notaires": {"label": "Notaires", "icon": "fa-solid fa-scale-balanced", "color": "#546e7a"},
+        "vinci": {"label": "Vinci", "icon": "fa-solid fa-building", "color": "#0d47a1"},
+        "orpi": {"label": "Orpi", "icon": "fa-solid fa-house-user", "color": "#d32f2f"},
+        "provimo": {"label": "Provimo", "icon": "fa-solid fa-key", "color": "#388e3c"},
+        "hektor": {"label": "Hektor", "icon": "fa-solid fa-handshake", "color": "#7b1fa2"},
+    }
+
+    # Fetch all ready searches
+    all_ready_searches = db.query(ReadySearch).order_by(ReadySearch.platform.asc(), ReadySearch.criteria.asc()).all()
+
     for listing in new_listings:
         listing._photos = json_to_photos(listing.photos_local)
 
@@ -1741,11 +1759,73 @@ def auto_searches_page(
         if listing.source_ready_search_id and listing.source_ready_search_id in ready_search_map:
             rs = ready_search_map[listing.source_ready_search_id]
             listing._platform = rs.platform.upper()
+            listing._platform_key = rs.platform.lower()
             listing._criteria = rs.criteria or "-"
         else:
             # Fallback for listings created before this feature, or via other paths
             listing._platform = listing.source.value.upper() if listing.source else "-"
+            listing._platform_key = listing.source.value.lower() if listing.source else "manuel"
             listing._criteria = listing.source_criteria or "-"
+
+    # Collect all known platforms from ready searches + new listings
+    known_platforms = set(rs.platform.lower() for rs in all_ready_searches if rs.platform)
+    for l in new_listings:
+        if getattr(l, "_platform_key", None):
+            known_platforms.add(l._platform_key)
+
+    sources_stats = []
+    for p_key in sorted(known_platforms):
+        meta = platform_meta.get(p_key, {
+            "label": p_key.capitalize(),
+            "icon": "fa-solid fa-globe",
+            "color": "var(--accent)"
+        })
+        p_listings = [
+            l for l in new_listings 
+            if getattr(l, "_platform_key", "") == p_key
+        ]
+        p_count = len(p_listings)
+
+        # Determine latest offer date
+        last_offer = None
+        dates_in_new = [l.date_added for l in p_listings if l.date_added]
+        if dates_in_new:
+            last_offer = max(dates_in_new)
+        else:
+            # Fallback to latest listing in DB for this source / platform
+            p_rs_ids = [rs.id for rs in all_ready_searches if rs.platform.lower() == p_key]
+            conds = [Listing.source == p_key]
+            if p_rs_ids:
+                conds.append(Listing.source_ready_search_id.in_(p_rs_ids))
+            db_row = db.query(Listing.date_added).filter(or_(*conds)).order_by(Listing.date_added.desc()).first()
+            if db_row and db_row[0]:
+                last_offer = db_row[0]
+
+        sources_stats.append({
+            "key": p_key,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "color": meta["color"],
+            "count": p_count,
+            "last_offer": last_offer,
+            "has_new": p_count > 0,
+        })
+
+    # Sort sources: sources with new listings first, then by latest offer date descending
+    sources_stats.sort(key=lambda x: (x["count"] > 0, x["count"], x["last_offer"] or datetime.min), reverse=True)
+
+    # Prepare ready searches for selector dropdown
+    ready_searches_stats = []
+    for rs in all_ready_searches:
+        rs_count = sum(1 for l in new_listings if l.source_ready_search_id == rs.id)
+        ready_searches_stats.append({
+            "id": rs.id,
+            "platform": rs.platform.lower(),
+            "platform_label": platform_meta.get(rs.platform.lower(), {}).get("label", rs.platform.capitalize()),
+            "criteria": rs.criteria or get_text(request, "auto_searches.no_criteria", "Critères non spécifiés"),
+            "url": rs.url,
+            "count": rs_count
+        })
 
     # Group listings by date_added.date()
     from itertools import groupby
@@ -1758,6 +1838,8 @@ def auto_searches_page(
         "count_total": count_total,
         "count_duplicates": count_duplicates,
         "count_unique": count_unique,
+        "sources_stats": sources_stats,
+        "ready_searches_stats": ready_searches_stats,
         "queries": queries,
         "listings": all_listings,
         "scraping_schedule": get_text(request, "auto_searches.auto_refresh_value"),

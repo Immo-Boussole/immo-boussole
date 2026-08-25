@@ -61,28 +61,17 @@ def normalize_listing_url(url: str) -> str:
         if len(path) > 1 and path.endswith("/"):
             path = path.rstrip("/")
 
-        # For major real estate portals, listing detail pages do not need query params or fragments
-        portal_domains = {
-            "seloger.com", "leboncoin.fr", "lefigaro.fr", "immobilier.lefigaro.fr",
-            "bienici.com", "pap.fr", "logic-immo.com", "ouestfrance-immo.com",
-            "bellesdemeures.com", "superimmo.com", "avendrealouer.fr"
+        # Filter tracking query params
+        tracking_params = {
+            "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
+            "fbclid", "gclid", "gbraid", "wbraid", "msclkid", "twclid", "dclid",
+            "ref", "referrer", "source", "origin", "xtor", "xtref", "cmp", "at_medium",
+            "at_campaign", "at_custom1", "at_custom2", "at_custom3", "at_custom4",
+            "_gl", "_ga", "mc_cid", "mc_eid"
         }
-        is_portal = any(netloc == pd or netloc.endswith("." + pd) for pd in portal_domains)
-
-        if is_portal:
-            query_str = ""
-        else:
-            # Filter tracking query params for other sources
-            tracking_params = {
-                "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
-                "fbclid", "gclid", "gbraid", "wbraid", "msclkid", "twclid", "dclid",
-                "ref", "referrer", "source", "origin", "xtor", "xtref", "cmp", "at_medium",
-                "at_campaign", "at_custom1", "at_custom2", "at_custom3", "at_custom4",
-                "_gl", "_ga", "mc_cid", "mc_eid"
-            }
-            query_dict = parse_qs(parsed.query, keep_blank_values=False)
-            filtered_query = {k: v for k, v in query_dict.items() if k.lower() not in tracking_params}
-            query_str = urlencode(filtered_query, doseq=True)
+        query_dict = parse_qs(parsed.query, keep_blank_values=False)
+        filtered_query = {k: v for k, v in query_dict.items() if k.lower() not in tracking_params}
+        query_str = urlencode(filtered_query, doseq=True)
 
         normalized_scheme = "https" if scheme in ("http", "https") else scheme
 

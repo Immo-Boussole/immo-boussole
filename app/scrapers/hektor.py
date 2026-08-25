@@ -201,11 +201,27 @@ class HektorScraper(BaseScraper):
         """
         Extract search results from a Hektor-powered agency search page.
         """
-        snapshot = await self.extract_page_content(search_url)
-        if not snapshot:
-            return []
+        html_content = ""
+        try:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                resp = await client.get(
+                    search_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    }
+                )
+                if resp.status_code == 200 and len(resp.text) > 1000:
+                    html_content = resp.text
+        except Exception:
+            pass
 
-        html_content = snapshot.get("html", "")
+        if not html_content:
+            snapshot = await self.extract_page_content(search_url)
+            if snapshot:
+                html_content = snapshot.get("html", "")
+
         if not html_content:
             return []
 
@@ -215,12 +231,12 @@ class HektorScraper(BaseScraper):
         parsed_url = urllib.parse.urlparse(search_url)
         base_origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
-        card_links = soup.find_all("a", href=re.compile(r'/(?:vente|location|annonce|bien)/.*(?:\d+)'))
+        card_links = soup.find_all("a", href=re.compile(r'/(?:vente|location|annonce|bien|propriete|villa|maison|appartement|terrain|immeuble)/.*(?:\d+)'))
         seen_urls = set()
 
         for a in card_links:
             href = a.get("href", "")
-            if not href or href in seen_urls or href == "#":
+            if not href or href in seen_urls or href == "#" or href.endswith('/1') or href.endswith('/1/'):
                 continue
 
             full_url = href if href.startswith("http") else urllib.parse.urljoin(base_origin, href)
@@ -228,27 +244,70 @@ class HektorScraper(BaseScraper):
                 continue
             seen_urls.add(full_url)
 
-            m = re.search(r'/(\d+)[^/]*$', href) or re.search(r'id=(\d+)', href)
+            # Match ID from pattern /882-villa... or id=882
+            m = re.search(r'/(\d+)(?:-[^/?#]+)?(?:[?#]|$)', href) or re.search(r'id=(\d+)', href)
             ext_id = m.group(1) if m else None
 
-            title = a.get_text(strip=True) or a.get("title", "")
-            if not title:
-                parent = a.find_parent(["article", "div", "li"])
-                if parent:
-                    title_elem = parent.find(["h2", "h3", "h4", ".title"])
-                    if title_elem:
-                        title = title_elem.get_text(strip=True)
+            # Look for card container (article.item or parent div)
+            card = a.find_parent(["article", "div", "li"])
+            card_text = card.get_text(" ", strip=True) if card else ""
 
+            # Title
+            title = ""
+            if card:
+                title_elem = card.find(["h2", "h3", "h4", ".title", ".item__title"])
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
             if not title:
-                title = "Annonce Hektor"
+                title = a.get_text(strip=True) or a.get("title", "")
+            if not title or title.lower() in ["voir le bien", "en savoir plus", "détails"]:
+                # Construct title from URL slug
+                slug = href.rstrip('/').split('/')[-1]
+                clean_slug = re.sub(r'^\d+-', '', slug).replace('-', ' ').capitalize()
+                title = clean_slug if clean_slug else "Annonce Hektor"
+
+            # Price
+            price = 0.0
+            if card:
+                price_elem = card.find(class_=re.compile(r'price|prix', re.I))
+                price_text = price_elem.get_text(strip=True) if price_elem else card_text
+                p_m = re.search(r'([\d\s\u00a0]+)\s*€', price_text)
+                if p_m:
+                    try:
+                        p_val = float(re.sub(r'[^\d]', '', p_m.group(1)))
+                        if p_val > 1000:
+                            price = p_val
+                    except ValueError:
+                        pass
+
+            # Location / City
+            location = "France"
+            if card:
+                city_elem = card.find(class_=re.compile(r'city|ville|postal|location', re.I))
+                if city_elem:
+                    location = city_elem.get_text(" ", strip=True)
+                else:
+                    c_m = re.search(r'([A-Za-zÀ-ÿ\s\'-]+)\s*\(\s*(\d{5})\s*\)', card_text)
+                    if c_m:
+                        location = f"{c_m.group(1).strip()} ({c_m.group(2)})"
+
+            # Surface / Area
+            area = 0.0
+            if card:
+                surf_m = re.search(r'(\d+[\d\s,]*)\s*m²', card_text, re.I)
+                if surf_m:
+                    try:
+                        area = float(surf_m.group(1).replace(',', '.').replace(' ', ''))
+                    except ValueError:
+                        pass
 
             listings.append({
                 "external_id": f"hektor_{ext_id}" if ext_id else None,
                 "title": title,
                 "url": full_url,
-                "price": 0.0,
-                "location": "France",
-                "area": 0.0
+                "price": price,
+                "location": location,
+                "area": area
             })
 
         return listings
@@ -303,8 +362,33 @@ class HektorScraper(BaseScraper):
             except Exception as e:
                 print(f"[HektorScraper] GraphQL query failed for {url}: {e}")
 
-        # ── 2. Fallback: HTML / OpenGraph Extraction ──────────────────────────
-        return await self._parse_html_property(url)
+        # ── 2. HTML Extraction: Direct HTTP Fast Path ─────────────────────────
+        html = ""
+        try:
+            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                resp = await client.get(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    }
+                )
+                if resp.status_code == 200 and len(resp.text) > 1000:
+                    html = resp.text
+        except Exception as e:
+            print(f"[HektorScraper] Direct HTTP fetch failed for {url}: {e}")
+
+        # ── 3. Fallback: Browserless / Playwright Rendering ───────────────────
+        if not html:
+            snapshot = await self.extract_page_content(url)
+            if snapshot:
+                html = snapshot.get("html", "")
+
+        if not html:
+            return {}
+
+        return self._parse_html_property(html, url)
 
     def _parse_graphql_property(self, prop: Dict, sender: Optional[Dict], url: str) -> Dict:
         """
@@ -473,74 +557,246 @@ class HektorScraper(BaseScraper):
 
         return details
 
-    async def _parse_html_property(self, url: str) -> Dict:
+    def _parse_html_property(self, html: str, url: str) -> Dict:
         """
-        Fallback parser for Hektor public web pages (e.g. /vente/123-titre).
+        Parser for Hektor and Immorêve public web pages (e.g. /vente/160-chavanay/maison/882-villa...).
         """
-        snapshot = await self.extract_page_content(url)
-        if not snapshot:
-            return {}
-
-        html = snapshot.get("html", "")
-        if not html:
-            return {}
-
         soup = BeautifulSoup(html, 'html.parser')
         details = {"url": url}
 
-        # Clean tags
+        # Keep a raw copy for regex searches before removing script/style
+        raw_html = html
+
         for tag in soup(["script", "style"]):
             tag.decompose()
 
-        # External ID
-        m = re.search(r'/(\d+)[^/]*$', url) or re.search(r'id=(\d+)', url)
+        # 1. External ID
+        # Matches /882-villa... or id=882 or idann=882
+        m = re.search(r'/(\d+)(?:-[^/?#]+)?(?:[?#]|$)', url)
+        if not m:
+            m = re.search(r'id(?:ann)?=(\d+)', url)
+        if not m:
+            m = re.search(r'idann=(\d+)', raw_html)
+
         if m:
             details["external_id"] = f"hektor_{m.group(1)}"
 
-        # Title
+        # 2. Title
         og_title = soup.find("meta", property="og:title")
         if og_title and og_title.get("content"):
             details["title"] = og_title["content"].strip()
         else:
-            title_tag = soup.find("title")
-            details["title"] = title_tag.text.strip() if title_tag else "Annonce Hektor"
+            title_el = soup.find(class_=re.compile(r'properties-detail__title|title-detail', re.I)) or soup.find("h1")
+            if title_el:
+                details["title"] = title_el.get_text(" ", strip=True)
+            else:
+                title_tag = soup.find("title")
+                raw_title = title_tag.text.strip() if title_tag else "Annonce Hektor"
+                details["title"] = re.sub(r'\s*\|\s*Immor[^\s]+.*$', '', raw_title, flags=re.I).strip()
 
-        # Description
+        # 3. Price
+        price_el = soup.find(class_=re.compile(r'properties-detail__price|price_finance|finance_content--prix_honoraires_inclus', re.I))
+        if price_el:
+            p_text = price_el.get_text(strip=True)
+            p_m = re.search(r'([\d\s\u00a0]+)\s*€', p_text)
+            if p_m:
+                try:
+                    p_val = float(re.sub(r'[^\d]', '', p_m.group(1)))
+                    if p_val > 1000:
+                        details["price"] = p_val
+                except ValueError:
+                    pass
+
+        if "price" not in details:
+            price_match = re.search(r'([\d\s\u00a0]+)\s*€', soup.get_text())
+            if price_match:
+                try:
+                    p_val = float(re.sub(r'[^\d]', '', price_match.group(1)))
+                    if p_val > 1000:
+                        details["price"] = p_val
+                except ValueError:
+                    pass
+
+        # 4. Location / City / Postal code
+        city_el = soup.find(class_=re.compile(r'properties-detail__city|item__block--city|detail-city', re.I))
+        if city_el:
+            city_raw = city_el.get_text(" ", strip=True)
+            # Format: "Chavanay (42410)" or "42410 Chavanay"
+            m_cp = re.search(r'([^\d()]+?)\s*\(\s*(\d{5})\s*\)', city_raw)
+            if m_cp:
+                details["city"] = m_cp.group(1).strip()
+                details["postal_code"] = m_cp.group(2).strip()
+            else:
+                m_cp2 = re.search(r'\b(\d{5})\b', city_raw)
+                if m_cp2:
+                    details["postal_code"] = m_cp2.group(1)
+                    details["city"] = city_raw.replace(details["postal_code"], '').strip(' -_()')
+                else:
+                    details["city"] = city_raw.strip()
+
+        if not details.get("city"):
+            # Fallback to breadcrumbs
+            breadcrumbs = soup.find_all(class_=re.compile(r'breadcrumb__item|breadcrumb', re.I))
+            for bc in breadcrumbs:
+                bc_text = bc.get_text(" ", strip=True)
+                parts = [p.strip() for p in bc_text.split() if p.strip() and p.strip().lower() not in ['accueil', 'vente', 'location', 'nos', 'biens', 'maison', 'appartement', 'terrain', 'immeuble']]
+                if parts:
+                    details["city"] = parts[0]
+                    break
+
+        city = details.get("city", "")
+        postal_code = details.get("postal_code", "")
+        if city and postal_code:
+            details["location"] = f"{city} ({postal_code})"
+        elif city or postal_code:
+            details["location"] = city or postal_code
+
+        # 5. Description
         og_desc = soup.find("meta", property="og:description") or soup.find("meta", attrs={"name": "description"})
         if og_desc and og_desc.get("content"):
             details["description_text"] = og_desc["content"].strip()
         else:
-            desc_elem = soup.find(class_=re.compile(r'description|detail-data-description', re.I))
+            desc_elem = soup.find(class_=re.compile(r'detail_description|properties-detail__description|description|detail-data-description', re.I))
             if desc_elem:
-                details["description_text"] = desc_elem.get_text(strip=True)
+                details["description_text"] = desc_elem.get_text("\n", strip=True)
 
-        # Photos
+        # 6. Characteristics & Amenities
+        carac_items = soup.find_all(class_=re.compile(r'list_item|detail_caracteristiques|caracteristiques', re.I))
+        all_carac_text = " ".join([ci.get_text(" ", strip=True) for ci in carac_items])
+        body_text = soup.get_text(" ", strip=True)
+
+        # Surface habitable
+        surf_m = re.search(r'Surface\s*(\d+[\d\s,]*)\s*m²', all_carac_text, re.I) or re.search(r'(\d+[\d\s,]*)\s*m²\s*habitable', body_text, re.I) or re.search(r'(\d+[\d\s,]*)\s*m²', all_carac_text, re.I)
+        if surf_m:
+            try:
+                details["area"] = float(surf_m.group(1).replace(',', '.').replace(' ', ''))
+            except ValueError:
+                pass
+
+        # Carrez surface
+        carrez_m = re.search(r'carrez\s*(\d+[\d\s,]*)\s*m²', all_carac_text, re.I)
+        if carrez_m:
+            try:
+                details["carrez_surface"] = float(carrez_m.group(1).replace(',', '.').replace(' ', ''))
+            except ValueError:
+                pass
+
+        # Land area / Terrain
+        land_m = re.search(r'terrain\s*(\d+[\d\s,]*)\s*m²', all_carac_text, re.I)
+        if land_m:
+            try:
+                details["land_area"] = float(land_m.group(1).replace(',', '.').replace(' ', ''))
+            except ValueError:
+                pass
+
+        # Rooms / Pièces
+        rooms_m = re.search(r'(\d+)\s*pi[èe]ce(?:\(s\)|s)?', body_text, re.I)
+        if rooms_m:
+            try:
+                details["rooms"] = int(rooms_m.group(1))
+            except ValueError:
+                pass
+
+        # Bedrooms / Chambres
+        beds_m = re.search(r'(\d+)\s*chambre(?:\(s\)|s)?', all_carac_text, re.I) or re.search(r'(\d+)\s*chambre(?:\(s\)|s)?', body_text, re.I)
+        if beds_m:
+            try:
+                details["bedrooms"] = int(beds_m.group(1))
+            except ValueError:
+                pass
+
+        # Bathrooms / Salles de bain / Salles d'eau
+        baths_m = re.search(r'(\d+)\s*salle(?:\(s\)|s)?\s*(?:de\s*bain|d[\'’]eau)', all_carac_text, re.I) or re.search(r'(\d+)\s*salle(?:\(s\)|s)?\s*(?:de\s*bain|d[\'’]eau)', body_text, re.I)
+        if baths_m:
+            try:
+                details["bathroom_count"] = int(baths_m.group(1))
+            except ValueError:
+                pass
+
+        # Toilets
+        wc_m = re.search(r'(\d+)\s*toilette(?:\(s\)|s)?|(\d+)\s*wc', all_carac_text, re.I) or re.search(r'(\d+)\s*toilette(?:\(s\)|s)?|(\d+)\s*wc', body_text, re.I)
+        if wc_m:
+            try:
+                details["toilets"] = int(wc_m.group(1) or wc_m.group(2))
+            except ValueError:
+                pass
+
+        # Garage / Parking
+        gar_m = re.search(r'(\d+)\s*(?:garage(?:\(s\)|s)?|parking(?:\(s\)|s)?|stationnement(?:\(s\)|s)?)', all_carac_text, re.I) or re.search(r'(\d+)\s*(?:garage(?:\(s\)|s)?|parking(?:\(s\)|s)?|stationnement(?:\(s\)|s)?)', body_text, re.I)
+        if gar_m:
+            try:
+                details["parking_count"] = int(gar_m.group(1))
+            except ValueError:
+                pass
+
+        # Floors / Niveaux
+        niv_m = re.search(r'(\d+)\s*niveau(?:\(x\)|x)?', all_carac_text, re.I) or re.search(r'(\d+)\s*niveau(?:\(x\)|x)?', body_text, re.I)
+        if niv_m:
+            try:
+                details["total_floors"] = int(niv_m.group(1))
+            except ValueError:
+                pass
+
+
+        # Amenities flags
+        details["terrace"] = bool(re.search(r'\bterrasse\b', all_carac_text, re.I))
+        details["balcony"] = bool(re.search(r'\bbalcon\b', all_carac_text, re.I))
+        details["garden"] = bool(re.search(r'\bjardin\b|\barboré\b', all_carac_text, re.I))
+        details["pool"] = bool(re.search(r'\bpiscine\b|\bpiscinable\b', all_carac_text, re.I))
+        details["cellar"] = bool(re.search(r'\bcave\b|\bsous-sol\b', all_carac_text, re.I) or re.search(r'sous-sol', details.get("title", ""), re.I))
+        details["elevator"] = bool(re.search(r'\bascenseur\b', all_carac_text, re.I))
+
+        # Property type
+        if re.search(r'\bmaison\b|\bvilla\b', details.get("title", "") + " " + all_carac_text, re.I):
+            details["property_type"] = "Maison"
+        elif re.search(r'\bappartement\b', details.get("title", "") + " " + all_carac_text, re.I):
+            details["property_type"] = "Appartement"
+        elif re.search(r'\bterrain\b', details.get("title", "") + " " + all_carac_text, re.I):
+            details["property_type"] = "Terrain"
+        elif re.search(r'\bimmeuble\b', details.get("title", "") + " " + all_carac_text, re.I):
+            details["property_type"] = "Immeuble"
+
+        # Energy costs
+        energy_m = re.search(r'compris entre\s*([\d\s]+)\s*€\s*et\s*([\d\s]+)\s*€', body_text, re.I)
+        if energy_m:
+            try:
+                details["estimated_annual_energy_cost_min"] = float(energy_m.group(1).replace(' ', ''))
+                details["estimated_annual_energy_cost_max"] = float(energy_m.group(2).replace(' ', ''))
+            except ValueError:
+                pass
+
+        # Agency & Contact
+        agency_title = soup.find(class_=re.compile(r'card-contact__title', re.I))
+        if agency_title:
+            details["agency_name"] = agency_title.get_text(strip=True)
+        else:
+            agency_el = soup.find(class_=re.compile(r'detail-contact__property-contact', re.I))
+            if agency_el:
+                details["agency_name"] = agency_el.get_text(strip=True).split('\n')[0]
+
+        phone_m = re.search(r'(\b0[1-9](?:[\s.-]?\d{2}){4}\b)', body_text)
+        if phone_m:
+            details["contact_phone"] = phone_m.group(1).replace('.', ' ').replace('-', ' ')
+
+        email_m = re.search(r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', raw_html)
+        if email_m:
+            details["contact_email"] = email_m.group(1)
+
+        # 7. Photos
         photo_urls = []
-        for img in soup.find_all("img"):
-            src = img.get("data-src") or img.get("src") or img.get("data-lazy")
-            if src and any(kw in src for kw in ["biens", "photos", "photo_"]):
-                full_src = src if src.startswith("http") else ("https:" + src if src.startswith("//") else src)
+        main_media = soup.find(class_=re.compile(r'properties-detail-v2__media|property-detail-v2__slide|slider__main|property-slider__list|modal-swiper-gallery', re.I)) or soup
+        for img in main_media.find_all("img"):
+            if img.find_parent(class_=re.compile(r'item__block|card-similar|suggestions|footer', re.I)):
+                continue
+            src = img.get("data-splide-lazy") or img.get("data-src") or img.get("src") or img.get("data-lazy")
+            if src and any(kw in src for kw in ["biens", "photo_"]) and "dpe.php" not in src:
+                full_src = src if src.startswith("http") else ("https:" + src if src.startswith("//") else urllib.parse.urljoin(url, src))
+                # Convert thumbnails / dimensions to high-resolution original
                 full_src = re.sub(r'/(?:\d+x\w+|thumbnail)/', '/original/', full_src)
                 if full_src not in photo_urls:
                     photo_urls.append(full_src)
+
         details["photo_urls"] = photo_urls
 
-        # Price
-        price_match = re.search(r'([\d\s\u00a0]+)\s*€', soup.get_text())
-        if price_match:
-            try:
-                p_val = float(re.sub(r'[^\d]', '', price_match.group(1)))
-                if p_val > 1000:
-                    details["price"] = p_val
-            except ValueError:
-                pass
-
-        # Surface
-        surf_match = re.search(r'(\d+[\d\s,]*)\s*m²', soup.get_text(), re.I)
-        if surf_match:
-            try:
-                details["area"] = float(surf_match.group(1).replace(',', '.').replace(' ', ''))
-            except ValueError:
-                pass
-
         return details
+

@@ -7,7 +7,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b0f1a">
     <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
-    <title>{{ title|default(t(request, 'auto_searches.title')) }} — {{ t(request, 'app.title') }}</title>
+    <title>{{ t(request, 'auto_searches.title', 'Recherches Automatiques') }} — {{ t(request, 'app.title', 'Immo-Boussole') }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
@@ -362,18 +362,28 @@
         .query-item .src { color: var(--text-2); font-size: 0.7rem; display: flex; justify-content: space-between; align-items: center; }
 
         /* Pill Filters */
-        .filter-pills-bar {
+        .filters-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.15rem 1.25rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .filter-pills-bar, .sources-pills-bar {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            margin-bottom: 1.5rem;
             flex-wrap: wrap;
         }
         .pill-btn {
             display: inline-flex;
             align-items: center;
             gap: 0.45rem;
-            padding: 0.45rem 0.9rem;
+            padding: 0.45rem 0.85rem;
             border-radius: 999px;
             border: 1px solid var(--border);
             background: var(--surface-2);
@@ -382,7 +392,9 @@
             font-weight: 600;
             cursor: pointer;
             transition: var(--trans);
-            min-height: 44px;
+            min-height: 40px;
+            text-decoration: none;
+            user-select: none;
         }
         .pill-btn:hover {
             color: var(--text);
@@ -399,6 +411,12 @@
             border-color: var(--orange);
             color: #fff;
         }
+        .pill-empty-source {
+            opacity: 0.65;
+        }
+        .pill-empty-source:hover {
+            opacity: 1;
+        }
         .pill-count {
             background: rgba(255, 255, 255, 0.12);
             padding: 0.15rem 0.5rem;
@@ -410,9 +428,30 @@
             background: rgba(248, 168, 75, 0.2);
             color: var(--orange);
         }
+        .pill-count.count-zero {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-2);
+            opacity: 0.7;
+        }
         .pill-btn.active .pill-count {
             background: rgba(0, 0, 0, 0.25);
             color: #fff;
+        }
+        .pill-date {
+            font-size: 0.7rem;
+            color: var(--text-2);
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .pill-btn.active .pill-date {
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.9);
         }
 
         /* Compare Grid */
@@ -425,11 +464,18 @@
             .compare-grid {
                 grid-template-columns: 1fr !important;
             }
-            .filter-pills-bar {
+            .filters-panel {
+                padding: 1rem;
+            }
+            .filter-pills-bar, .sources-pills-bar {
                 gap: 0.4rem !important;
             }
+            .sources-pills-bar .pill-btn {
+                flex: 1 1 calc(50% - 0.4rem);
+                justify-content: center;
+            }
             .filter-pills-bar .pill-btn {
-                flex: 1 1 calc(50% - 0.5rem);
+                flex: 1 1 calc(50% - 0.4rem);
                 justify-content: center;
             }
         }
@@ -453,7 +499,7 @@
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1>{{ title|default(t(request, 'auto_searches.title')) }}</h1>
+                <h1>{{ t(request, 'auto_searches.title', 'Recherches Automatiques') }}</h1>
             </div>
             <div class="topbar-right" style="display: flex; align-items: center; gap: 1rem;">
                 <!-- Rafraichissement auto : config cron -->
@@ -485,26 +531,88 @@
         </header>
 
         <div class="content">
-            {% if grouped_listings %}
-                <!-- Barre de filtres rapides -->
-                <div class="filter-pills-bar">
-                    <button class="pill-btn active" id="pillAll" onclick="setFilter('all')">
-                        <i class="fa-solid fa-list-ul"></i>
-                        <span>{{ t(request, 'auto_searches.filter_all', 'Toutes') }}</span>
-                        <span class="pill-count" id="countAll">{{ count_total }}</span>
-                    </button>
-                    <button class="pill-btn pill-warning" id="pillDuplicates" onclick="setFilter('duplicates')">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span>{{ t(request, 'auto_searches.filter_duplicates', 'Duplicats potentiels') }}</span>
-                        <span class="pill-count count-dup" id="countDuplicates">{{ count_duplicates }}</span>
-                    </button>
-                    <button class="pill-btn" id="pillUnique" onclick="setFilter('unique')">
-                        <i class="fa-solid fa-sparkles"></i>
-                        <span>{{ t(request, 'auto_searches.filter_unique', 'Sans duplicat') }}</span>
-                        <span class="pill-count" id="countUnique">{{ count_unique }}</span>
-                    </button>
+            <!-- Zone complète de filtres interactifs (Sources + Recherches Prêtes + Duplicats) -->
+            <div class="filters-panel">
+                    
+                    <!-- Ligne 1 : Filtres par Source / Plateforme avec date de dernière offre -->
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                            <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.06em; display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="fa-solid fa-globe" style="color: var(--accent);"></i> {{ t(request, 'auto_searches.sources_summary_title', 'Sources & Dernières offres') }}
+                            </span>
+                            <span id="activeFilterBadge" style="display: none; font-size: 0.72rem; color: var(--accent); background: rgba(79, 142, 247, 0.12); padding: 0.15rem 0.55rem; border-radius: 999px; font-weight: 600;"></span>
+                        </div>
+
+                        <div class="sources-pills-bar">
+                            <!-- Toutes les sources -->
+                            <button class="pill-btn source-pill active" id="sourcePill-all" onclick="setSourceFilter('all')">
+                                <i class="fa-solid fa-layer-group"></i>
+                                <span>{{ t(request, 'auto_searches.all_sources', 'Toutes les sources') }}</span>
+                                <span class="pill-count" id="countSource-all">{{ count_total }}</span>
+                            </button>
+
+                            {% for src in sources_stats %}
+                            <button class="pill-btn source-pill {% if not src.has_new %}pill-empty-source{% endif %}" 
+                                    id="sourcePill-{{ src.key }}" 
+                                    onclick="setSourceFilter('{{ src.key }}')"
+                                    data-source-key="{{ src.key }}"
+                                    title="{% if src.last_offer %}{{ t(request, 'auto_searches.last_offer_prefix', 'Dernière offre :') }} {{ src.last_offer.strftime('%d/%m/%Y à %H:%M') }}{% else %}{{ t(request, 'auto_searches.no_offer_recorded', 'Aucune offre') }}{% endif %}">
+                                <i class="{{ src.icon }}" style="color: {{ src.color }};"></i>
+                                <span>{{ src.label }}</span>
+                                <span class="pill-count {% if src.count == 0 %}count-zero{% endif %}" id="countSource-{{ src.key }}">{{ src.count }}</span>
+                                {% if src.last_offer %}
+                                <span class="pill-date">
+                                    <i class="fa-regular fa-clock" style="font-size: 0.65rem; opacity: 0.7;"></i>{{ src.last_offer.strftime('%d/%m %H:%M') }}
+                                </span>
+                                {% endif %}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Ligne 2 : Filtre duplicat + Sélecteur de Recherches Prêtes -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--border); padding-top: 0.85rem; flex-wrap: wrap;">
+                        <!-- Duplicats Pills -->
+                        <div class="filter-pills-bar" style="margin-bottom: 0; gap: 0.4rem;">
+                            <button class="pill-btn sm active" id="pillAll" onclick="setDupFilter('all')">
+                                <i class="fa-solid fa-list-ul"></i>
+                                <span>{{ t(request, 'auto_searches.filter_all', 'Toutes') }}</span>
+                                <span class="pill-count" id="countAll">{{ count_total }}</span>
+                            </button>
+                            <button class="pill-btn sm pill-warning" id="pillDuplicates" onclick="setDupFilter('duplicates')">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>{{ t(request, 'auto_searches.filter_duplicates', 'Duplicats potentiels') }}</span>
+                                <span class="pill-count count-dup" id="countDuplicates">{{ count_duplicates }}</span>
+                            </button>
+                            <button class="pill-btn sm" id="pillUnique" onclick="setDupFilter('unique')">
+                                <i class="fa-solid fa-sparkles"></i>
+                                <span>{{ t(request, 'auto_searches.filter_unique', 'Sans duplicat') }}</span>
+                                <span class="pill-count" id="countUnique">{{ count_unique }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Dropdown de ciblage par Recherche Prête -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="position: relative; min-width: 260px;">
+                                <select id="readySearchSelect" onchange="setReadySearchFilter(this.value)" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.5rem 2rem 0.5rem 0.85rem; color: var(--text); font-size: 0.8rem; font-weight: 500; appearance: none; cursor: pointer; transition: var(--trans);">
+                                    <option value="all">🔍 {{ t(request, 'auto_searches.filter_by_ready_search', 'Toutes les recherches prêtes') }}</option>
+                                    {% for rs in ready_searches_stats %}
+                                    <option value="{{ rs.id }}" data-platform="{{ rs.platform }}">
+                                        {{ rs.platform_label }} — {{ rs.criteria }} {% if rs.count > 0 %}({{ rs.count }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position: absolute; right: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-2); pointer-events: none; font-size: 0.75rem;"></i>
+                            </div>
+
+                            <button id="resetFiltersBtn" class="btn sm" onclick="resetAllFilters()" style="display: none; color: var(--text-2); background: transparent; border-color: var(--border);">
+                                <i class="fa-solid fa-xmark"></i> {{ t(request, 'listing.cancel', 'Réinitialiser') }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
+            {% if grouped_listings %}
                 <div id="filteredEmptyState" class="empty" style="display: none; text-align: center; padding: 4rem 2rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 2rem;">
                     <i class="fa-solid fa-filter" style="font-size: 2.5rem; color: var(--text-2); margin-bottom: 1rem; display: block;"></i>
                     <h2 style="font-size: 1.1rem; margin-bottom: 0.5rem;">{{ t(request, 'duplicates.empty_title', 'Aucune annonce ne correspond à ce filtre') }}</h2>
@@ -523,6 +631,8 @@
                         <div class="card horizontal-listing" 
                              id="listing-card-{{ listing.id }}" 
                              data-id="{{ listing.id }}" 
+                             data-platform="{{ (listing._platform_key or listing._platform or '')|lower }}"
+                             data-ready-search-id="{{ listing.source_ready_search_id or '' }}"
                              data-has-dup="{% if listing._duplicate %}true{% else %}false{% endif %}"
                              {% if listing._duplicate %}
                              data-dup-json='{{ {
@@ -758,39 +868,118 @@
             mergeAsDuplicate: "{{ t(request, 'auto_searches.merge_as_duplicate', 'Fusionner comme duplicat') }}"
         };
 
-        let currentFilter = 'all';
+        let currentDupFilter = 'all';
+        let currentSourceFilter = 'all';
+        let currentReadySearchFilter = 'all';
 
-        function setFilter(filter) {
-            currentFilter = filter;
-            
-            document.querySelectorAll('.pill-btn').forEach(btn => btn.classList.remove('active'));
-            if (filter === 'all') document.getElementById('pillAll')?.classList.add('active');
-            else if (filter === 'duplicates') document.getElementById('pillDuplicates')?.classList.add('active');
-            else if (filter === 'unique') document.getElementById('pillUnique')?.classList.add('active');
-            
+        function applyAllFilters() {
             const cards = document.querySelectorAll('.horizontal-listing');
+            let totalVisible = 0;
+
             cards.forEach(card => {
                 const hasDup = card.dataset.hasDup === 'true';
-                if (filter === 'all') {
-                    card.style.display = 'flex';
-                } else if (filter === 'duplicates') {
-                    card.style.display = hasDup ? 'flex' : 'none';
-                } else if (filter === 'unique') {
-                    card.style.display = !hasDup ? 'flex' : 'none';
+                const cardPlatform = (card.dataset.platform || '').toLowerCase();
+                const cardReadySearchId = card.dataset.readySearchId || '';
+
+                // Check Duplicates condition
+                let matchDup = true;
+                if (currentDupFilter === 'duplicates') matchDup = hasDup;
+                else if (currentDupFilter === 'unique') matchDup = !hasDup;
+
+                // Check Source condition
+                let matchSource = true;
+                if (currentSourceFilter !== 'all') {
+                    matchSource = (cardPlatform === currentSourceFilter);
+                }
+
+                // Check ReadySearch condition
+                let matchReadySearch = true;
+                if (currentReadySearchFilter !== 'all') {
+                    matchReadySearch = (cardReadySearchId === currentReadySearchFilter);
+                }
+
+                const isVisible = matchDup && matchSource && matchReadySearch;
+                card.style.display = isVisible ? 'flex' : 'none';
+
+                if (isVisible) {
+                    totalVisible++;
                 }
             });
 
-            let totalVisible = 0;
+            // Update date-groups visibility
             document.querySelectorAll('.date-group').forEach(group => {
                 const visibleCards = Array.from(group.querySelectorAll('.horizontal-listing')).filter(c => c.style.display !== 'none');
                 group.style.display = visibleCards.length > 0 ? 'block' : 'none';
-                totalVisible += visibleCards.length;
             });
 
+            // Show empty state if no listings visible
             const emptyState = document.getElementById('filteredEmptyState');
             if (emptyState) {
                 emptyState.style.display = (totalVisible === 0 && cards.length > 0) ? 'block' : 'none';
             }
+
+            // Update active styles on Source Pills
+            document.querySelectorAll('.source-pill').forEach(btn => btn.classList.remove('active'));
+            const activeSourceBtn = document.getElementById(`sourcePill-${currentSourceFilter}`);
+            if (activeSourceBtn) activeSourceBtn.classList.add('active');
+
+            // Update active styles on Dup Pills
+            document.querySelectorAll('.filter-pills-bar .pill-btn').forEach(btn => btn.classList.remove('active'));
+            if (currentDupFilter === 'all') document.getElementById('pillAll')?.classList.add('active');
+            else if (currentDupFilter === 'duplicates') document.getElementById('pillDuplicates')?.classList.add('active');
+            else if (currentDupFilter === 'unique') document.getElementById('pillUnique')?.classList.add('active');
+
+            // Show / Hide reset button
+            const isFiltered = (currentDupFilter !== 'all' || currentSourceFilter !== 'all' || currentReadySearchFilter !== 'all');
+            const resetBtn = document.getElementById('resetFiltersBtn');
+            if (resetBtn) resetBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+        }
+
+        function setDupFilter(filter) {
+            currentDupFilter = filter;
+            applyAllFilters();
+        }
+
+        // Backward compatibility for existing setFilter calls
+        function setFilter(filter) {
+            setDupFilter(filter);
+        }
+
+        function setSourceFilter(sourceKey) {
+            currentSourceFilter = sourceKey;
+            // If selecting a platform, check if current readySearchSelect belongs to it; if not, reset select to 'all'
+            const selectEl = document.getElementById('readySearchSelect');
+            if (selectEl && selectEl.value !== 'all') {
+                const opt = selectEl.options[selectEl.selectedIndex];
+                const optPlatform = opt?.dataset.platform;
+                if (sourceKey !== 'all' && optPlatform && optPlatform.toLowerCase() !== sourceKey.toLowerCase()) {
+                    selectEl.value = 'all';
+                    currentReadySearchFilter = 'all';
+                }
+            }
+            applyAllFilters();
+        }
+
+        function setReadySearchFilter(rsId) {
+            currentReadySearchFilter = rsId;
+            if (rsId !== 'all') {
+                const selectEl = document.getElementById('readySearchSelect');
+                const opt = selectEl?.options[selectEl.selectedIndex];
+                const optPlatform = opt?.dataset.platform;
+                if (optPlatform) {
+                    currentSourceFilter = optPlatform.toLowerCase();
+                }
+            }
+            applyAllFilters();
+        }
+
+        function resetAllFilters() {
+            currentDupFilter = 'all';
+            currentSourceFilter = 'all';
+            currentReadySearchFilter = 'all';
+            const selectEl = document.getElementById('readySearchSelect');
+            if (selectEl) selectEl.value = 'all';
+            applyAllFilters();
         }
 
         let currentCompareData = null;
