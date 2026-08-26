@@ -261,6 +261,131 @@
             return photos;
         }
 
+        static _parseHeatingString(text) {
+            if (!text || typeof text !== 'string') return { type: null, mode: null };
+            const t = text.trim();
+            if (!t) return { type: null, mode: null };
+            const tLow = t.toLowerCase();
+            let mode = null;
+            if (tLow.includes('individuel')) mode = 'Individuel';
+            else if (tLow.includes('collectif')) mode = 'Collectif';
+
+            let type = null;
+            if (tLow.includes('pompe à chaleur') || tLow.includes('pompe a chaleur') || /\bpac\b/i.test(tLow)) type = 'Pompe à chaleur';
+            else if (tLow.includes('climatisation') || tLow.includes('clim réversible') || tLow.includes('clim reversible')) type = 'Climatisation réversible';
+            else if (tLow.includes('gaz')) type = 'Gaz';
+            else if (tLow.includes('électrique') || tLow.includes('electrique') || tLow.includes('convecteur') || tLow.includes('radiateur')) type = 'Électrique';
+            else if (tLow.includes('fioul') || tLow.includes('fuel') || tLow.includes('mazout')) type = 'Fioul';
+            else if (tLow.includes('bois') || tLow.includes('granulé') || tLow.includes('pellet') || tLow.includes('poêle') || tLow.includes('poele')) type = 'Bois / Granulés';
+            else if (tLow.includes('au sol') || tLow.includes('plancher chauffant')) type = 'Au sol';
+            else if (tLow.includes('solaire')) type = 'Solaire';
+            else if (tLow.includes('urbain') || tLow.includes('géothermie') || tLow.includes('geothermie')) type = 'Géothermie / Réseau urbain';
+            else if (!mode && t.length < 40) {
+                type = t.charAt(0).toUpperCase() + t.slice(1);
+            }
+            return { type, mode };
+        }
+
+        static _parseYear(val) {
+            if (val === null || val === undefined) return null;
+            if (typeof val === 'number') {
+                const ival = Math.floor(val);
+                return (ival >= 1700 && ival <= 2099) ? ival : null;
+            }
+            const m = String(val).match(/\b(1[789]\d{2}|20\d{2})\b/);
+            return m ? parseInt(m[1], 10) : null;
+        }
+
+        static _extractBuildingYear(node, depth = 0) {
+            if (!node || depth > 8) return null;
+            if (typeof node === 'object') {
+                for (const k of ['buildingYear', 'constructionYear', 'yearBuilt', 'anneeConstruction', 'year']) {
+                    if (node[k] !== undefined && node[k] !== null) {
+                        const y = SelogerParser._parseYear(node[k]);
+                        if (y) return y;
+                    }
+                }
+                if (node.building) {
+                    const y = SelogerParser._extractBuildingYear(node.building, depth + 1);
+                    if (y) return y;
+                }
+                if (node.general) {
+                    const y = SelogerParser._extractBuildingYear(node.general, depth + 1);
+                    if (y) return y;
+                }
+                for (const k of ['criterias', 'criteria', 'characteristics', 'features', 'tags', 'specifications']) {
+                    if (Array.isArray(node[k])) {
+                        for (const item of node[k]) {
+                            if (typeof item === 'object' && item) {
+                                const label = String(item.label || item.key || item.name || item.title || '').toLowerCase();
+                                if (label.includes('construction') || label.includes('annee') || label.includes('année') || label.includes('year')) {
+                                    const y = SelogerParser._parseYear(item.value || item.text || item.val);
+                                    if (y) return y;
+                                }
+                            } else if (typeof item === 'string' && (item.includes('construction') || item.includes('année') || item.includes('annee'))) {
+                                const y = SelogerParser._parseYear(item);
+                                if (y) return y;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        static _extractHeating(node, depth = 0) {
+            if (!node || depth > 8) return { type: null, mode: null };
+            let type = null;
+            let mode = null;
+            if (typeof node === 'object' && node) {
+                const energy = node.energy;
+                if (typeof energy === 'object' && energy) {
+                    for (const k of ['heating', 'heatingType', 'heatingMode', 'heatingSystem']) {
+                        if (energy[k]) {
+                            const res = SelogerParser._parseHeatingString(String(energy[k]));
+                            if (res.type && !type) type = res.type;
+                            if (res.mode && !mode) mode = res.mode;
+                        }
+                    }
+                }
+                for (const k of ['heating', 'heatingType', 'heatingMode', 'heatingSystem', 'chauffage']) {
+                    if (node[k]) {
+                        if (typeof node[k] === 'object') {
+                            const res1 = SelogerParser._parseHeatingString(String(node[k].type || node[k].label || node[k].value || ''));
+                            const res2 = SelogerParser._parseHeatingString(String(node[k].mode || ''));
+                            if (res1.type && !type) type = res1.type;
+                            if (res2.type && !type) type = res2.type;
+                            if (res1.mode && !mode) mode = res1.mode;
+                            if (res2.mode && !mode) mode = res2.mode;
+                        } else {
+                            const res = SelogerParser._parseHeatingString(String(node[k]));
+                            if (res.type && !type) type = res.type;
+                            if (res.mode && !mode) mode = res.mode;
+                        }
+                    }
+                }
+                for (const k of ['criterias', 'criteria', 'characteristics', 'features', 'tags', 'specifications']) {
+                    if (Array.isArray(node[k])) {
+                        for (const item of node[k]) {
+                            if (typeof item === 'object' && item) {
+                                const label = String(item.label || item.key || item.name || item.title || '').toLowerCase();
+                                if (label.includes('chauffage') || label.includes('heating')) {
+                                    const res = SelogerParser._parseHeatingString(String(item.value || item.text || item.val || ''));
+                                    if (res.type && !type) type = res.type;
+                                    if (res.mode && !mode) mode = res.mode;
+                                }
+                            } else if (typeof item === 'string' && item.toLowerCase().includes('chauffage')) {
+                                const res = SelogerParser._parseHeatingString(item);
+                                if (res.type && !type) type = res.type;
+                                if (res.mode && !mode) mode = res.mode;
+                            }
+                        }
+                    }
+                }
+            }
+            return { type, mode };
+        }
+
         static async parse() {
             const listings = [];
             const pathname = window.location.pathname;
@@ -457,6 +582,13 @@
                 if (!photos.includes(fpUrl)) photos.push(fpUrl);
             });
 
+            // Building Year & Heating
+            const buildingYear = SelogerParser._extractBuildingYear(classified) || (fullData ? SelogerParser._extractBuildingYear(fullData) : null);
+            let heating = SelogerParser._extractHeating(classified);
+            if (!heating.type && !heating.mode && fullData) {
+                heating = SelogerParser._extractHeating(fullData);
+            }
+
             return {
                 url: cleanUrl,
                 external_id: classified.id ? `sl_${classified.id}` : undefined,
@@ -476,6 +608,9 @@
                 ges_rating: ges ? String(ges).toUpperCase().charAt(0) : null,
                 land_tax: landTax ? parseFloat(landTax) : null,
                 charges: charges ? parseFloat(charges) : null,
+                heating_type: heating.type || null,
+                heating_mode: heating.mode || null,
+                building_year: buildingYear || null,
                 photos: photos,
                 floorplans: floorplans,
                 source: 'seloger'
@@ -514,6 +649,16 @@
             const bedsMatch = bodyText.match(/(\d+)\s*chambre/i);
             if (bedsMatch) bedrooms = parseInt(bedsMatch[1], 10);
 
+            // Building Year & Heating from DOM & text
+            let buildingYear = null;
+            const yearMatch = bodyText.match(/(?:année(?:\s*de)?\s*construction|construite?\s*(?:en|dans\s*les\s*années)?|bâtie?\s*en)\s*[:\s]*(\d{4})\b/i) || bodyText.match(/\bconstruction\s*(?:de\s*)?(\d{4})\b/i);
+            if (yearMatch) buildingYear = SelogerParser._parseYear(yearMatch[1]);
+
+            let heating = { type: null, mode: null };
+            const heatMatch = bodyText.match(/chauffage\s*(?:[:\s]|est\s*de\s*type\s*)?\s*([a-zA-ZÀ-ÿ\s\(\)\/]+?)(?:\.|\n|,|$|;)/i);
+            if (heatMatch) heating = SelogerParser._parseHeatingString(heatMatch[0]);
+            if (!heating.type) heating = SelogerParser._parseHeatingString(bodyText);
+
             // Photos & Floorplans
             const photos = [];
             const floorplans = [];
@@ -549,6 +694,9 @@
                 postal_code: zipcode || null,
                 location: locationStr || city || 'France',
                 description: description,
+                heating_type: heating.type || null,
+                heating_mode: heating.mode || null,
+                building_year: buildingYear || null,
                 photos: photos,
                 floorplans: floorplans,
                 source: 'seloger'

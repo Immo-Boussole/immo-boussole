@@ -211,6 +211,13 @@ class SelogerScraper(BaseScraper):
             if len(found_photos) > len(details.get("photo_urls", [])):
                 details["photo_urls"] = found_photos
 
+        # 6. Fallback DOM & description extraction for building year and heating
+        if not details.get("building_year") or not details.get("heating_type"):
+            char_fallback = self._extract_characteristics_from_html(soup, details.get("description_text", ""))
+            for k, v in char_fallback.items():
+                if not details.get(k) and v is not None:
+                    details[k] = v
+
         return details
 
     # ─── Private Helpers ──────────────────────────────────────────────────────
@@ -473,6 +480,20 @@ class SelogerScraper(BaseScraper):
                 details["land_area"] = classified.get("landSurface") or classified.get("landArea") or classified.get("groundArea")
                 details["property_type"] = classified.get("propertyType") or classified.get("estateType") or classified.get("type")
 
+                # Building year
+                year = self._extract_building_year_from_json(classified) or self._extract_building_year_from_json(data)
+                if year:
+                    details["building_year"] = year
+
+                # Heating
+                h_type, h_mode = self._extract_heating_from_json(classified)
+                if not h_type and not h_mode:
+                    h_type, h_mode = self._extract_heating_from_json(data)
+                if h_type:
+                    details["heating_type"] = h_type
+                if h_mode:
+                    details["heating_mode"] = h_mode
+
                 # Energy / DPE / GES
                 energy = classified.get("energy", {})
                 if isinstance(energy, dict):
@@ -544,3 +565,204 @@ class SelogerScraper(BaseScraper):
                 print(f"[SeLoger] Error parsing details from JSON: {e}")
 
         return details
+
+    @staticmethod
+    def _parse_heating_string(text: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+        """
+        Parses heating text into (heating_type, heating_mode).
+        Examples:
+          'Individuel Gaz' -> ('Gaz', 'Individuel')
+          'Collectif fuel' -> ('Fioul', 'Collectif')
+          'Pompe à chaleur' -> ('Pompe à chaleur', None)
+          'Électrique individuel' -> ('Électrique', 'Individuel')
+          'Climatisation réversible' -> ('Climatisation réversible', None)
+          'Poêle à granulés' -> ('Bois / Granulés', None)
+          'Au sol' -> ('Au sol', None)
+        """
+        if not text or not isinstance(text, str):
+            return None, None
+        t = text.strip()
+        if not t:
+            return None, None
+        
+        t_low = t.lower()
+        mode = None
+        if "individuel" in t_low:
+            mode = "Individuel"
+        elif "collectif" in t_low:
+            mode = "Collectif"
+
+        htype = None
+        if "pompe à chaleur" in t_low or "pompe a chaleur" in t_low or re.search(r'\bpac\b', t_low):
+            htype = "Pompe à chaleur"
+        elif "climatisation" in t_low or "clim réversible" in t_low or "clim reversible" in t_low:
+            htype = "Climatisation réversible"
+        elif "gaz" in t_low:
+            htype = "Gaz"
+        elif "électrique" in t_low or "electrique" in t_low or "convecteur" in t_low or "radiateur électrique" in t_low:
+            htype = "Électrique"
+        elif "fioul" in t_low or "fuel" in t_low or "mazout" in t_low:
+            htype = "Fioul"
+        elif "bois" in t_low or "granulé" in t_low or "granule" in t_low or "pellet" in t_low or "poêle" in t_low or "poele" in t_low:
+            htype = "Bois / Granulés"
+        elif "au sol" in t_low or "plancher chauffant" in t_low:
+            htype = "Au sol"
+        elif "solaire" in t_low:
+            htype = "Solaire"
+        elif "urbain" in t_low or "géothermie" in t_low or "geothermie" in t_low:
+            htype = "Géothermie / Réseau urbain"
+        elif not mode:
+            cleaned = re.sub(r'^(?:chauffage\s*(?:central|d\'appoint)?\s*[:\s]*)', '', t, flags=re.I).strip()
+            if cleaned and len(cleaned) < 50:
+                htype = cleaned.capitalize()
+
+        return htype, mode
+
+    @staticmethod
+    def _parse_year(val: any) -> Optional[int]:
+        if val is None:
+            return None
+        if isinstance(val, (int, float)):
+            ival = int(val)
+            if 1700 <= ival <= 2099:
+                return ival
+            return None
+        s = str(val).strip()
+        m = re.search(r'\b(1[789]\d{2}|20\d{2})\b', s)
+        if m:
+            return int(m.group(1))
+        return None
+
+    def _extract_building_year_from_json(self, node, depth=0) -> Optional[int]:
+        if not node or depth > 8:
+            return None
+        if isinstance(node, dict):
+            for k in ['buildingYear', 'constructionYear', 'yearBuilt', 'anneeConstruction', 'annee_construction', 'year']:
+                if k in node:
+                    y = self._parse_year(node[k])
+                    if y:
+                        return y
+            if isinstance(node.get("building"), dict):
+                y = self._extract_building_year_from_json(node["building"], depth + 1)
+                if y:
+                    return y
+            if isinstance(node.get("general"), dict):
+                y = self._extract_building_year_from_json(node["general"], depth + 1)
+                if y:
+                    return y
+            for k in ['criterias', 'criteria', 'characteristics', 'features', 'tags', 'specifications', 'details', 'elements']:
+                if isinstance(node.get(k), list):
+                    for item in node[k]:
+                        if isinstance(item, dict):
+                            label = str(item.get("label") or item.get("key") or item.get("name") or item.get("title") or "").lower()
+                            if any(w in label for w in ["construction", "annee", "année", "built", "year"]):
+                                val = item.get("value") or item.get("text") or item.get("val") or item.get("content")
+                                y = self._parse_year(val)
+                                if y:
+                                    return y
+                        elif isinstance(item, str):
+                            if "construction" in item.lower() or "année" in item.lower() or "annee" in item.lower():
+                                y = self._parse_year(item)
+                                if y:
+                                    return y
+        elif isinstance(node, list):
+            for elem in node:
+                y = self._extract_building_year_from_json(elem, depth + 1)
+                if y:
+                    return y
+        return None
+
+    def _extract_heating_from_json(self, node, depth=0) -> tuple[Optional[str], Optional[str]]:
+        if not node or depth > 8:
+            return None, None
+        htype, hmode = None, None
+        if isinstance(node, dict):
+            energy = node.get("energy")
+            if isinstance(energy, dict):
+                for k in ["heating", "heatingType", "heatingMode", "heatingSystem", "typeChauffage", "modeChauffage"]:
+                    if energy.get(k):
+                        t, m = self._parse_heating_string(str(energy[k]))
+                        if t and not htype: htype = t
+                        if m and not hmode: hmode = m
+            for k in ["heating", "heatingType", "heatingMode", "heatingSystem", "chauffage", "typeChauffage", "modeChauffage"]:
+                if node.get(k):
+                    if isinstance(node[k], dict):
+                        sub_t = node[k].get("type") or node[k].get("label") or node[k].get("value")
+                        sub_m = node[k].get("mode")
+                        t1, m1 = self._parse_heating_string(str(sub_t) if sub_t else "")
+                        t2, m2 = self._parse_heating_string(str(sub_m) if sub_m else "")
+                        if t1 and not htype: htype = t1
+                        if t2 and not htype: htype = t2
+                        if m1 and not hmode: hmode = m1
+                        if m2 and not hmode: hmode = m2
+                    else:
+                        t, m = self._parse_heating_string(str(node[k]))
+                        if t and not htype: htype = t
+                        if m and not hmode: hmode = m
+
+            for k in ['criterias', 'criteria', 'characteristics', 'features', 'tags', 'specifications', 'details', 'elements']:
+                if isinstance(node.get(k), list):
+                    for item in node[k]:
+                        if isinstance(item, dict):
+                            label = str(item.get("label") or item.get("key") or item.get("name") or item.get("title") or "").lower()
+                            if "chauffage" in label or "heating" in label:
+                                val = item.get("value") or item.get("text") or item.get("val") or item.get("content")
+                                t, m = self._parse_heating_string(str(val))
+                                if t and not htype: htype = t
+                                if m and not hmode: hmode = m
+                        elif isinstance(item, str) and "chauffage" in item.lower():
+                            t, m = self._parse_heating_string(item)
+                            if t and not htype: htype = t
+                            if m and not hmode: hmode = m
+        elif isinstance(node, list):
+            for elem in node:
+                t, m = self._extract_heating_from_json(elem, depth + 1)
+                if t and not htype: htype = t
+                if m and not hmode: hmode = m
+                if htype and hmode: break
+
+        return htype, hmode
+
+    def _extract_characteristics_from_html(self, soup: BeautifulSoup, description: str = "") -> Dict:
+        result = {}
+        if soup:
+            elements = soup.find_all(['div', 'li', 'tr', 'dl', 'p', 'span'], recursive=True)
+            for el in elements:
+                txt = el.get_text(separator=" ", strip=True)
+                txt_low = txt.lower()
+                if not result.get("building_year") and ("année de construction" in txt_low or "annee de construction" in txt_low):
+                    y = self._parse_year(txt)
+                    if y:
+                        result["building_year"] = y
+                if not result.get("heating_type") and "chauffage" in txt_low and len(txt) < 100:
+                    t, m = self._parse_heating_string(txt)
+                    if t:
+                        result["heating_type"] = t
+                    if m and not result.get("heating_mode"):
+                        result["heating_mode"] = m
+
+        combined_text = (description + "\n" + (soup.get_text(separator=" ", strip=True) if soup else ""))
+        if not result.get("building_year") and combined_text:
+            m_year = re.search(r'(?:année(?:\s*de)?\s*construction|construite?\s*(?:en|dans\s*les\s*années)?|bâtie?\s*en)\s*[:\s]*(\d{4})\b', combined_text, re.I)
+            if m_year:
+                y = self._parse_year(m_year.group(1))
+                if y:
+                    result["building_year"] = y
+
+        if not result.get("heating_type") and combined_text:
+            m_heat = re.search(r'chauffage\s*(?:[:\s]|est\s*de\s*type\s*)?\s*([a-zA-ZÀ-ÿ\s\(\)\/]+?)(?:\.|\n|,|$|;)', combined_text, re.I)
+            if m_heat:
+                t, m = self._parse_heating_string(m_heat.group(0))
+                if t:
+                    result["heating_type"] = t
+                if m and not result.get("heating_mode"):
+                    result["heating_mode"] = m
+            if not result.get("heating_type"):
+                t, m = self._parse_heating_string(combined_text)
+                if t:
+                    result["heating_type"] = t
+                if m and not result.get("heating_mode"):
+                    result["heating_mode"] = m
+
+        return result
+

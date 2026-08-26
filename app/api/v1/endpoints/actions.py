@@ -391,6 +391,9 @@ async def submit_external_listing_api(
             ges_rating=request.ges_rating,
             land_tax=request.land_tax,
             charges=request.charges,
+            heating_type=request.heating_type,
+            heating_mode=request.heating_mode,
+            building_year=request.building_year,
             source=source_val,
             status=models.ListingStatus.NEW,
             price_per_sqm=price_per_sqm
@@ -447,6 +450,12 @@ async def submit_external_listing_api(
             existing.land_tax = request.land_tax
         if request.charges is not None:
             existing.charges = request.charges
+        if request.heating_type:
+            existing.heating_type = request.heating_type
+        if request.heating_mode:
+            existing.heating_mode = request.heating_mode
+        if request.building_year is not None:
+            existing.building_year = request.building_year
         if photos_to_store:
             existing.original_photo_urls = json.dumps(photos_to_store)
 

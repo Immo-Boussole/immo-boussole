@@ -21,6 +21,7 @@ SAMPLE_SELOGER_JSON = {
                 "livingArea": 140.0,
                 "landSurface": 629.0,
                 "propertyType": "Maison",
+                "buildingYear": 1985,
                 "rooms": {
                     "total": 5,
                     "bedrooms": 3,
@@ -46,7 +47,8 @@ SAMPLE_SELOGER_JSON = {
                     "ges": {
                         "grade": "A",
                         "emission": 2.0
-                    }
+                    },
+                    "heating": "Individuel Pompe à chaleur"
                 },
                 "domains": {
                     "medias": {
@@ -82,6 +84,9 @@ def test_seloger_json_extraction():
     assert details["land_tax"] == 1170.0
     assert details["dpe_rating"] == "A"
     assert details["ges_rating"] == "A"
+    assert details["building_year"] == 1985
+    assert details["heating_type"] == "Pompe à chaleur"
+    assert details["heating_mode"] == "Individuel"
     assert "floorplans" in details
     assert "https://img.seloger.com/floorplan1.jpg" in details["floorplans"]
     assert "https://img.seloger.com/floorplan1.jpg" in details["photo_urls"]
@@ -116,6 +121,9 @@ def test_create_listing_with_floorplans():
     assert listing.price == 349000.0
     assert listing.price_per_sqm == round(349000.0 / 140.0, 2)
     assert listing.postal_code == "38370"
+    assert listing.building_year == 1985
+    assert listing.heating_type == "Pompe à chaleur"
+    assert listing.heating_mode == "Individuel"
     assert "floorplan1.jpg" in listing.original_photo_urls
 
     db.close()
@@ -175,6 +183,9 @@ def test_external_listing_submit_with_floorplans_and_details():
         "ges_rating": "A",
         "land_tax": 1170.0,
         "charges": 0.0,
+        "building_year": 1985,
+        "heating_type": "Pompe à chaleur",
+        "heating_mode": "Individuel",
         "source": "seloger"
     }
 
@@ -197,8 +208,38 @@ def test_external_listing_submit_with_floorplans_and_details():
     assert listing.land_tax == 1170.0
     assert listing.dpe_rating == "A"
     assert listing.ges_rating == "A"
+    assert listing.building_year == 1985
+    assert listing.heating_type == "Pompe à chaleur"
+    assert listing.heating_mode == "Individuel"
     assert "floorplan1.jpg" in listing.original_photo_urls
     db2.close()
+
+
+def test_seloger_heating_and_year_helpers():
+    scraper = SelogerScraper()
+
+    # Test heating parsing
+    h1 = scraper._parse_heating_string("Individuel Gaz")
+    assert h1 == ("Gaz", "Individuel")
+
+    h2 = scraper._parse_heating_string("Chauffage collectif fuel")
+    assert h2 == ("Fioul", "Collectif")
+
+    h3 = scraper._parse_heating_string("Pompe à chaleur")
+    assert h3 == ("Pompe à chaleur", None)
+
+    h4 = scraper._parse_heating_string("Climatisation réversible")
+    assert h4 == ("Climatisation réversible", None)
+
+    h5 = scraper._parse_heating_string("Plancher chauffant / Chauffage au sol")
+    assert h5[0] == "Au sol"
+
+    # Test year parsing
+    assert scraper._parse_year(1975) == 1975
+    assert scraper._parse_year("1985") == 1985
+    assert scraper._parse_year("Construite en 1980") == 1980
+    assert scraper._parse_year("Année de construction : 2012") == 2012
+    assert scraper._parse_year("inconnu") is None
 
 
 def test_seloger_multi_photo_and_hd_normalization():

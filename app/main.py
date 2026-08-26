@@ -190,6 +190,8 @@ class ListingUpdateRequest(BaseModel):
     charges: Optional[float] = None
     agency_fee: Optional[float] = None
     heating_type: Optional[str] = None
+    heating_mode: Optional[str] = None
+    building_year: Optional[int] = None
     condition: Optional[str] = None
     parking_count: Optional[int] = None
 

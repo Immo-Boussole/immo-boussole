@@ -1838,7 +1838,7 @@
                     </div>
                     <div class="attr-list">
                         {% if listing.kitchen_type %}<div class="cost-item"><i class="fa-solid fa-utensils"></i> {{ t(request, 'listing.kitchen') }} <strong>{{ listing.kitchen_type }}</strong></div>{% endif %}
-                        {% if listing.heating_type %}<div class="cost-item"><i class="fa-solid fa-fire"></i> {{ t(request, 'listing.heating') }} <strong>{{ listing.heating_type }}</strong> ({{ listing.heating_mode or '-' }})</div>{% endif %}
+                        {% if listing.heating_type or listing.heating_mode %}<div class="cost-item"><i class="fa-solid fa-fire"></i> {{ t(request, 'listing.heating') }} <strong>{{ listing.heating_type or '-' }}</strong>{% if listing.heating_mode %} ({{ listing.heating_mode }}){% endif %}</div>{% endif %}
                         {% if listing.furnished %}<div class="cost-item"><i class="fa-solid fa-couch"></i> <strong>{{ t(request, 'listing.furnished') }}</strong></div>{% endif %}
                     </div>
                 </div>
@@ -2690,6 +2690,18 @@
                 <div class="form-row" style="margin-bottom: 0;">
                     <label>{{ t(request, 'listing.edit_condition') }}</label>
                     <input type="text" id="edit-condition" value="{{ listing.condition or '' }}">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label>{{ t(request, 'listing.edit_building_year') }}</label>
+                    <input type="number" id="edit-building-year" value="{{ listing.building_year or '' }}" placeholder="Ex: 1985">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label>{{ t(request, 'listing.edit_heating_type') }}</label>
+                    <input type="text" id="edit-heating-type" value="{{ listing.heating_type or '' }}" placeholder="Ex: Gaz, Pompe à chaleur, Électrique">
+                </div>
+                <div class="form-row" style="margin-bottom: 0;">
+                    <label>{{ t(request, 'listing.edit_heating_mode') }}</label>
+                    <input type="text" id="edit-heating-mode" value="{{ listing.heating_mode or '' }}" placeholder="Ex: Individuel, Collectif">
                 </div>
                 
                 <div class="form-row" style="margin-bottom: 0;">
@@ -4175,6 +4187,9 @@
             latitude: valNum('edit-latitude'),
             longitude: valNum('edit-longitude'),
             condition: valStr('edit-condition'),
+            building_year: valNum('edit-building-year') ? parseInt(valNum('edit-building-year'), 10) : null,
+            heating_type: valStr('edit-heating-type'),
+            heating_mode: valStr('edit-heating-mode'),
             dpe_rating: valStr('edit-dpe') ? valStr('edit-dpe').toUpperCase() : null,
             ges_rating: valStr('edit-ges') ? valStr('edit-ges').toUpperCase() : null,
             land_tax: valNum('edit-tax'),

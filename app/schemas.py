@@ -37,6 +37,9 @@ class ExternalListingSubmitRequest(BaseModel):
     bathroom_count: Optional[int] = None
     land_tax: Optional[float] = None
     charges: Optional[float] = None
+    heating_type: Optional[str] = None
+    heating_mode: Optional[str] = None
+    building_year: Optional[int] = None
 
     @field_validator("url")
     @classmethod
@@ -115,6 +118,8 @@ class ListingUpdateRequest(BaseModel):
     charges: Optional[float] = None
     agency_fee: Optional[float] = None
     heating_type: Optional[str] = None
+    heating_mode: Optional[str] = None
+    building_year: Optional[int] = None
     condition: Optional[str] = None
     parking_count: Optional[int] = None
     is_favorite: Optional[bool] = None
