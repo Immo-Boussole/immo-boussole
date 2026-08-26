@@ -48,8 +48,20 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 
 ## 5. Agent Autonomy & Deployment Policy
 
-- **Full Automation on Dev & Local**: The agent is authorized to execute all tasks autonomously without prompting for user confirmation (running tests, modifying files, creating commits, pushing to remote, and deploying to the **Dev** environment).
-- **Manual Confirmation for Production**: Once local tests, GitHub Actions CI, and the Dev deployment are all **OK**, the agent must **never auto-deploy to Production**. Instead, propose and prompt the user to trigger or approve the Production deployment.
+- **Full Automation on Dev & Local**: The agent is authorized to execute all tasks autonomously without prompting for user confirmation (running tests, modifying files, creating commits, pushing to remote, and updating the **Dev** environment).
+- **Environment Update Commands**:
+  - **Dev update**:
+    ```bash
+    ssh immo-dev "sudo bash /opt/immo-boussole/dev/scripts/auto_update.sh /opt/immo-boussole/dev/ docker-compose.cloudflared.yml" --force
+    ```
+  - **Production update**:
+    ```bash
+    ssh immo-dev "sudo bash /opt/immo-boussole/prod/scripts/auto_update.sh /opt/immo-boussole/prod/ docker-compose.cloudflared.yml" --force
+    ```
+- **Post-Change Workflow**:
+  - Once a code change is made, committed, and pushed:
+    1. Propose / execute the **Dev** update command.
+    2. Once local tests, GitHub Actions CI, and the Dev deployment are verified **OK**, propose and prompt the user to execute the **Production** update command (never auto-deploy to Production without user confirmation).
 
 ---
 
