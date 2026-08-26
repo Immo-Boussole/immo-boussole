@@ -1126,11 +1126,11 @@
         const map = L.map('map', { zoomControl: false }).setView([46.603354, 1.888334], 6); // Default France view
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // Dark Theme CartoDB Tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 20
+        // Dark Theme Tiles (Esri World Dark Gray - No API Key required)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 19,
+            maxNativeZoom: 16
         }).addTo(map);
 
         // ── Autocomplete Search Logic ──
