@@ -756,7 +756,10 @@
         "save_and_filter": "Enregistrer et vérifier",
         "extension_tip": "Astuce : si l'extension Immo-Boussole est installée, ouvrez l'annonce pour synchroniser la localisation en 1 clic.",
         "success_saved": "Localisation enregistrée avec succès.",
-        "rejected_notice": "Cette annonce a été automatiquement rejetée conformément aux règles de zones / départements."
+        "rejected_notice": "Cette annonce a été automatiquement rejetée conformément aux règles de zones / départements.",
+        "hide_rejected": "Masquer les annonces rejetées",
+        "hide_rejected_tooltip": "Masquer les vérifications et réparations sur les annonces rejetées",
+        "badge_rejected": "Rejetée"
     },
     "missing_location_modal": {
         "title": "Erreur de scraping : Localisation manquante",

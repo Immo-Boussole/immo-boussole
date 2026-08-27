@@ -52,65 +52,61 @@ def is_missing_location(listing) -> bool:
 
 
 
-def identify_problems(db: Session):
+def identify_problems(db: Session, hide_rejected: bool = True):
     """
     Identifies problematic listings.
+    If hide_rejected is True (default), only active/new listings are analyzed.
+    If hide_rejected is False, all listings (including rejected) are analyzed.
     Returns counts for each problem type and lists of IDs.
     """
-    active_listings_all = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])
-    ).all()
+    if hide_rejected:
+        target_listings = db.query(Listing).filter(
+            Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])
+        ).all()
+    else:
+        target_listings = db.query(Listing).all()
+
+    target_listing_ids = {l.id for l in target_listings}
 
     # Empty description
     empty_desc_listings = [
-        l for l in active_listings_all if not l.description_text or not l.description_text.strip()
+        l for l in target_listings if not l.description_text or not l.description_text.strip()
     ]
     
     # Generic / Error titles (e.g. "Annonce Le Figaro", "Annonce (...) - Erreur 403", "leboncoin.fr", etc.)
     generic_title_listings = [
-        l for l in active_listings_all if is_error_or_generic_title(l.title)
+        l for l in target_listings if is_error_or_generic_title(l.title)
     ]
 
     # Aggregate search pages (e.g. "685 Maisons à Vendre...", "Maisons en Vente", search URLs)
-    all_listings_in_db = db.query(Listing).all()
     aggregate_search_listings = [
-        l for l in all_listings_in_db if is_search_page_title(l.title) or (l.url and not is_valid_listing_url(l.url)[0])
+        l for l in target_listings if is_search_page_title(l.title) or (l.url and not is_valid_listing_url(l.url)[0])
     ]
 
     # Duplicate postal code in location (e.g., "Chavanay (42) (42)")
-    # Broad SQL filter first
-    dup_city_candidates = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        Listing.location.like("% (%) (%)")
-    ).all()
-    
-    # Precise regex filter in Python
     duplicate_city_listings = []
-    for l in dup_city_candidates:
-        if l.location:
-            # Matches " (42) (42)" at the end
+    for l in target_listings:
+        if l.location and (" (" in l.location):
             match = re.search(r'\s*\((\d{2,5})\)\s*\(\1\)$', l.location)
             if match:
                 duplicate_city_listings.append(l)
 
     # Anomalous price (e.g. > 10M € or concatenated phone number)
-    anomalous_price_listings = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        Listing.price > 10000000
-    ).all()
+    anomalous_price_listings = [
+        l for l in target_listings if l.price and l.price > 10000000
+    ]
 
     # Orphaned duplicates (is_duplicate=True but no parent)
-    linked_ads_none_ids = [l.id for l in db.query(Listing).filter(
-        Listing.is_duplicate == True,
-        Listing.duplicate_of_id == None
-    ).all()]
+    linked_ads_none_ids = [
+        l.id for l in target_listings
+        if l.is_duplicate and l.duplicate_of_id is None
+    ]
 
     # Missing city map pins
-    cities_in_active_listings = db.query(Listing.city).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        Listing.city != None,
-        Listing.city != ""
-    ).distinct().all()
+    cities_in_target_listings = {
+        l.city.strip() for l in target_listings
+        if l.city and l.city.strip()
+    }
     
     existing_city_pins = db.query(MapPin).filter(MapPin.pin_type == "city").all()
     
@@ -123,36 +119,29 @@ def identify_problems(db: Session):
         existing_pin_names.add(p_name_clean)
         
     missing_city_names = []
-    for (city_val,) in cities_in_active_listings:
-        c_clean = city_val.strip()
-        if not c_clean:
-            continue
-        c_lower = c_clean.lower()
+    for city_val in cities_in_target_listings:
+        c_lower = city_val.lower()
         c_lower_clean = re.sub(r'\s*\(\d+\)$', '', c_lower).strip()
         if c_lower not in existing_pin_names and c_lower_clean not in existing_pin_names:
-            missing_city_names.append(c_clean)
+            missing_city_names.append(city_val)
                 
     # Unstandardized cities (missing official zip code or standardized format in either city or location)
-    unstd_city_candidates = db.query(Listing).filter(
-        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"]),
-        ((Listing.city != None) & (Listing.city != "")) | ((Listing.location != None) & (Listing.location != ""))
-    ).all()
     unstd_city_listings = []
-    for l in unstd_city_candidates:
-        city_val = l.city.strip() if l.city else ""
-        loc_val = l.location.strip() if l.location else ""
-        
-        city_ok = bool(city_val and re.match(r'^.+\s\(\d{5}\)$', city_val))
-        loc_ok = bool(loc_val and re.match(r'^.+\s\(\d{5}\)$', loc_val))
-        
-        if not city_ok or not loc_ok:
-            unstd_city_listings.append(l)
+    for l in target_listings:
+        if (l.city and l.city.strip()) or (l.location and l.location.strip()):
+            city_val = l.city.strip() if l.city else ""
+            loc_val = l.location.strip() if l.location else ""
+            
+            city_ok = bool(city_val and re.match(r'^.+\s\(\d{5}\)$', city_val))
+            loc_ok = bool(loc_val and re.match(r'^.+\s\(\d{5}\)$', loc_val))
+            
+            if not city_ok or not loc_ok:
+                unstd_city_listings.append(l)
 
     # Forbidden Department
     forbidden_dept_listings = []
     from app.main import _is_city_in_allowed_departments
-    active_listings_all = db.query(Listing).filter(Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])).all()
-    for l in empty_desc_listings + generic_title_listings + duplicate_city_listings + anomalous_price_listings + unstd_city_listings + active_listings_all:
+    for l in target_listings:
         city_to_check = l.location or l.city
         if city_to_check and not _is_city_in_allowed_departments(city_to_check, db):
             if l not in forbidden_dept_listings:
@@ -169,7 +158,7 @@ def identify_problems(db: Session):
     ).all()}
 
     forbidden_zone_listings = []
-    for l in active_listings_all:
+    for l in target_listings:
         if l.to_visit:
             continue
         zone_match = False
@@ -188,7 +177,7 @@ def identify_problems(db: Session):
 
     # Incorrect price per sqm
     incorrect_price_sqm_listings = []
-    for l in active_listings_all:
+    for l in target_listings:
         if l.price and l.area and l.price > 0 and l.area > 0:
             expected = round(l.price / l.area, 2)
             if l.price_per_sqm is None or l.price_per_sqm <= 0 or abs(l.price_per_sqm - expected) > 0.02:
@@ -196,12 +185,12 @@ def identify_problems(db: Session):
 
     # Missing location (city and location are empty or placeholders)
     missing_loc_listings = [
-        l for l in active_listings_all if is_missing_location(l)
+        l for l in target_listings if is_missing_location(l)
     ]
 
     # Missing or corrupted photos
     missing_photos_listings = []
-    for l in active_listings_all:
+    for l in target_listings:
         if is_missing_or_corrupt_photos(l):
             missing_photos_listings.append(l)
 
@@ -209,7 +198,8 @@ def identify_problems(db: Session):
     all_visits = db.query(Visit).all()
     past_first_visits = [
         v for v in all_visits
-        if (v.step in ("1ere_visite", "1ère visite effectuée", "1ère Visite effectuée") or
+        if (not hide_rejected or v.listing_id in target_listing_ids)
+        and (v.step in ("1ere_visite", "1ère visite effectuée", "1ère Visite effectuée") or
             (v.step_family == "visite" and v.step in ("1ere_visite", None, "")))
         and v.status != "effectuee"
         and _is_past_date(v.scheduled_at)
@@ -319,6 +309,8 @@ def _listing_summary(listing) -> dict:
         except Exception:
             pass
 
+    status_val = listing.status.value if hasattr(listing.status, "value") else str(listing.status or "")
+
     return {
         "id": listing.id,
         "title": listing.title or "Sans titre",
@@ -329,6 +321,7 @@ def _listing_summary(listing) -> dict:
         "price": listing.price,
         "area": listing.area,
         "photo": photo_url,
+        "status": status_val,
     }
 
 
@@ -399,13 +392,13 @@ def get_missing_location_summary(db: Session, current_user = None) -> dict:
     }
 
 
-def identify_problems_with_details(db: Session) -> dict:
+def identify_problems_with_details(db: Session, hide_rejected: bool = True) -> dict:
     """
     Like identify_problems() but enriches each problem type with listing details
-    (title, city, url) suitable for display in the user-facing repair view.
+    (title, city, url, status) suitable for display in the user-facing repair view.
     MISSING_CITY_PINS is special: ids are city name strings, not listing IDs.
     """
-    raw = identify_problems(db)
+    raw = identify_problems(db, hide_rejected=hide_rejected)
     result = {}
 
     for problem_type, data in raw.items():
@@ -415,7 +408,7 @@ def identify_problems_with_details(db: Session) -> dict:
         if problem_type == MISSING_CITY_PINS:
             # ids are city name strings
             listings_info = [
-                {"id": None, "title": city, "city": city, "url": None}
+                {"id": None, "title": city, "city": city, "url": None, "status": "active"}
                 for city in ids
             ]
         else:
@@ -448,7 +441,7 @@ repair_progress = {
     "problem_type": None
 }
 
-async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: bool = False):
+async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: bool = False, hide_rejected: bool = True):
     """
     Background task to repair listings in batches.
     Manages its own database session.
@@ -457,7 +450,7 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
     
     db = SessionLocal()
     try:
-        problems = identify_problems(db)
+        problems = identify_problems(db, hide_rejected=hide_rejected)
         if problem_type not in problems:
             if not is_part_of_sequence:
                 repair_progress["is_running"] = False
@@ -603,7 +596,7 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
         db.close()
 
 
-async def repair_all_sequential_task():
+async def repair_all_sequential_task(hide_rejected: bool = True):
     """
     Finds all outstanding problems, sorts them by count ASC (excluding 0 count),
     and repairs them sequentially one after another.
@@ -612,7 +605,7 @@ async def repair_all_sequential_task():
     
     db = SessionLocal()
     try:
-        problems = identify_problems(db)
+        problems = identify_problems(db, hide_rejected=hide_rejected)
         
         # Get list of (type, count) for types that have count > 0, sorted by count ascending
         sorted_types = sorted(
@@ -629,14 +622,14 @@ async def repair_all_sequential_task():
         repair_progress["is_running"] = True
         
         for p_type, count in sorted_types:
-            await repair_listings_batch_task(p_type, is_part_of_sequence=True)
+            await repair_listings_batch_task(p_type, is_part_of_sequence=True, hide_rejected=hide_rejected)
             await asyncio.sleep(2)
             
     finally:
         repair_progress["is_running"] = False
         db.close()
 
-async def repair_selected_sequential_task(problem_types: list[str]):
+async def repair_selected_sequential_task(problem_types: list[str], hide_rejected: bool = True):
     """
     Repairs the selected problem types sequentially one after another.
     """
@@ -653,7 +646,7 @@ async def repair_selected_sequential_task(problem_types: list[str]):
         repair_progress["is_running"] = True
         
         for p_type in problem_types:
-            await repair_listings_batch_task(p_type, is_part_of_sequence=True)
+            await repair_listings_batch_task(p_type, is_part_of_sequence=True, hide_rejected=hide_rejected)
             await asyncio.sleep(1)
             
     finally:

@@ -81,7 +81,7 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 | Route | View Name | Description |
 |---|---|---|
 | `/duplicates/hunt` | **Duplicate Hunt** | Perceptual visual hashing (dHash/pHash) and fuzzy attribute matching to detect cross-portal duplicates and merge listings |
-| `/listings/repair` | **Listings Repair** | Diagnostic maintenance suite to fix missing GPS coordinates, repair broken thumbnails, and re-scrape outdated entries |
+| `/listings/repair` | **Listings Repair** | Diagnostic maintenance suite to fix missing GPS coordinates, repair broken thumbnails, and re-scrape outdated entries (with rejected listings filter) |
 
 ### 6. ⚙️ User Management, Administration & Settings
 | Route | View Name | Description |

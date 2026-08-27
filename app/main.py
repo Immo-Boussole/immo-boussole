@@ -2852,11 +2852,12 @@ def get_db_repair_status(_auth = Depends(admin_required)):
 @app.get("/api/db/problems")
 def get_db_problems_user(
     request: Request,
+    hide_rejected: bool = True,
     db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
     """Returns problem counts + listing details for the user-facing repair view."""
-    problems = db_maintenance.identify_problems_with_details(db)
+    problems = db_maintenance.identify_problems_with_details(db, hide_rejected=hide_rejected)
     settings = db.query(models.GlobalSettings).first()
     if not settings:
         settings = models.GlobalSettings()
@@ -2895,11 +2896,12 @@ def get_db_problems_user(
 
 @app.post("/api/db/check")
 def check_db_problems_user(
+    hide_rejected: bool = True,
     db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
     """Runs a full check and updates timestamps — accessible to all users."""
-    problems = db_maintenance.identify_problems(db)
+    problems = db_maintenance.identify_problems(db, hide_rejected=hide_rejected)
     settings = db.query(models.GlobalSettings).first()
     if not settings:
         settings = models.GlobalSettings()
@@ -2940,6 +2942,7 @@ async def repair_db_problems_user(
     request: Request,
     problem_type: str,
     background_tasks: BackgroundTasks,
+    hide_rejected: bool = True,
     db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
@@ -2956,12 +2959,13 @@ async def repair_db_problems_user(
     if status["is_running"]:
         raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
 
-    background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type)
+    background_tasks.add_task(db_maintenance.repair_listings_batch_task, problem_type, False, hide_rejected)
     return {"status": "started", "problem_type": problem_type}
 
 
 class RepairBatchPayload(BaseModel):
     problem_types: list[str]
+    hide_rejected: bool = True
 
 
 @app.post("/api/db/repair-batch")
@@ -2986,7 +2990,7 @@ async def repair_db_problems_batch(
     if status["is_running"]:
         raise HTTPException(status_code=400, detail="Une réparation est déjà en cours.")
 
-    background_tasks.add_task(db_maintenance.repair_selected_sequential_task, payload.problem_types)
+    background_tasks.add_task(db_maintenance.repair_selected_sequential_task, payload.problem_types, payload.hide_rejected)
     return {"status": "started", "problem_types": payload.problem_types}
 
 

@@ -836,6 +836,61 @@
             border: 1px solid rgba(242, 92, 105, 0.3);
         }
 
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: .25s;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        .badge-rejetee {
+            background: rgba(248, 168, 75, 0.15);
+            color: #f8a84b;
+            border: 1px solid rgba(248, 168, 75, 0.3);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex-shrink: 0;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .topbar { padding: 1rem 1.25rem; }
@@ -896,13 +951,27 @@
                             Vérifications &amp; Réparations des Données
                         </h2>
 
-                        <div class="toolbar">
-                            <button class="btn" id="btn_check" onclick="runCheck()">
-                                <i class="fas fa-search"></i> Relancer les vérifications
-                            </button>
-                            <span style="font-size: 0.83rem; color: var(--text-2); font-style: italic;">
-                                Dernière vérification&nbsp;: <span id="last_check_time">—</span>
-                            </span>
+                        <div class="toolbar" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                                <button class="btn" id="btn_check" onclick="runCheck()">
+                                    <i class="fas fa-search"></i> Relancer les vérifications
+                                </button>
+                                <span style="font-size: 0.83rem; color: var(--text-2); font-style: italic;">
+                                    Dernière vérification&nbsp;: <span id="last_check_time">—</span>
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <label style="display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; user-select: none; font-size: 0.86rem; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 8px; transition: var(--trans);" title="{{ t(request, 'repairs.hide_rejected_tooltip', 'Masquer les vérifications et réparations sur les annonces rejetées') }}">
+                                    <div class="switch">
+                                        <input type="checkbox" id="toggle_hide_rejected" onchange="onHideRejectedToggle(this.checked)">
+                                        <span class="slider"></span>
+                                    </div>
+                                    <span style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 500;">
+                                        <i class="fa-solid fa-ban" style="color: #f8a84b; font-size: 0.85rem;"></i>
+                                        {{ t(request, 'repairs.hide_rejected', 'Masquer les annonces rejetées') }}
+                                    </span>
+                                </label>
+                            </div>
                         </div>
 
                         <div id="loading_state" style="text-align:center;padding:2rem;color:var(--text-2);font-size:0.9rem;">
@@ -1193,6 +1262,24 @@
         let analyticsData = null;
         let analyticsLoaded = false;
 
+        // ── Filter Hide Rejected State ─────────────────────────────────────────
+        let hideRejected = true;
+        const storedHideRejected = localStorage.getItem('immo_repairs_hide_rejected');
+        if (storedHideRejected !== null) {
+            hideRejected = (storedHideRejected === 'true');
+        }
+
+        function initHideRejectedToggle() {
+            const cb = document.getElementById('toggle_hide_rejected');
+            if (cb) cb.checked = hideRejected;
+        }
+
+        function onHideRejectedToggle(checked) {
+            hideRejected = checked;
+            localStorage.setItem('immo_repairs_hide_rejected', String(checked));
+            loadProblems();
+        }
+
         // ── Selection functions ──────────────────────────────────────────────
         function toggleSelectAllErrors(checked) {
             const checkboxes = document.querySelectorAll('.error-item-checkbox');
@@ -1243,7 +1330,7 @@
         // ── Load Problems (Database Checks Tab) ───────────────────────────────
         async function loadProblems() {
             try {
-                const res = await fetch('/api/db/problems');
+                const res = await fetch(`/api/db/problems?hide_rejected=${hideRejected}`);
                 if (!res.ok) throw new Error('Erreur réseau');
                 problemsData = await res.json();
                 renderProblems();
@@ -1259,7 +1346,7 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification…';
             try {
-                const res = await fetch('/api/db/check', { method: 'POST' });
+                const res = await fetch(`/api/db/check?hide_rejected=${hideRejected}`, { method: 'POST' });
                 if (!res.ok) throw new Error('Erreur lors du check');
                 await loadProblems();
                 showAlert('Vérifications mises à jour avec succès.', 'success');
@@ -1337,13 +1424,18 @@
                             <i class="fa-solid fa-circle-info" style="color: var(--accent); font-size: 1.1rem; flex-shrink: 0;"></i>
                             <span>Saisissez la commune ou le code postal ci-dessous. Dès l'enregistrement, les règles automatiques (départements autorisés &amp; zones interdites) s'appliqueront immédiatement pour filtrer ou rejeter l'annonce.</span>
                         </div>
-                    ` + listings.map(l => `
+                    ` + listings.map(l => {
+                        const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
+                        return `
                         <div class="missing-loc-repair-card" id="missing_loc_card_${l.id}">
                             <div class="missing-loc-top">
                                 <div class="missing-loc-title-area">
                                     ${l.photo ? `<img src="${l.photo}" class="missing-loc-thumb" alt="Photo">` : `<div class="missing-loc-no-thumb"><i class="fa-regular fa-image"></i></div>`}
                                     <div class="missing-loc-info">
-                                        <a href="${l.url}" target="_blank" class="missing-loc-ad-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                            ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
+                                            <a href="${l.url}" target="_blank" class="missing-loc-ad-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                                        </div>
                                         <div class="missing-loc-meta-pills">
                                             <span class="missing-loc-portal-badge">${escapeHtml(l.source || 'manuel')}</span>
                                             ${l.price ? `<span><strong>${Number(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
@@ -1371,15 +1463,19 @@
                             </div>
                             <div id="loc_feedback_${l.id}" class="missing-loc-status-feedback"></div>
                         </div>
-                    `).join('');
+                    `;}).join('');
                 } else {
                     detailHtml = listings.map(l => {
                         if (type === 'missing_city_pins') {
                             return `<div class="listing-row"><span class="listing-city"><i class="fa-solid fa-location-dot"></i> ${l.city || l.title}</span></div>`;
                         }
-                        return `<div class="listing-row">
-                            <a href="${l.url || '#'}" target="_blank" class="listing-title">${escapeHtml(l.title || 'Sans titre')}</a>
-                            <span class="listing-city">${escapeHtml(l.city || '')}</span>
+                        const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
+                        return `<div class="listing-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
+                                ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
+                                <a href="${l.url || '#'}" target="_blank" class="listing-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.title || 'Sans titre')}</a>
+                            </div>
+                            <span class="listing-city" style="flex-shrink: 0;">${escapeHtml(l.city || '')}</span>
                         </div>`;
                     }).join('');
                 }
@@ -1614,7 +1710,7 @@
                 const res = await fetch('/api/db/repair-batch', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ problem_types: types })
+                    body: JSON.stringify({ problem_types: types, hide_rejected: hideRejected })
                 });
                 if (!res.ok) throw new Error('Erreur API');
                 showAlert(`Réparation lancée pour ${types.length} catégorie(s).`, 'success');
@@ -1927,12 +2023,16 @@
                 listEl.innerHTML = '<div class="listings-empty">Aucune annonce détaillée disponible.</div>';
             } else {
                 anomalyData.items.forEach(l => {
+                    const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
                     const item = document.createElement('div');
                     item.className = 'drilldown-item';
                     item.id = `drilldown_item_${l.id}`;
                     item.innerHTML = `
                         <div class="drilldown-meta">
-                            <a href="${l.url || '#'}" target="_blank" class="drilldown-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                            <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap;">
+                                ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
+                                <a href="${l.url || '#'}" target="_blank" class="drilldown-title" style="margin-bottom: 0;">${escapeHtml(l.title || 'Sans titre')}</a>
+                            </div>
                             <div class="drilldown-sub">
                                 <i class="fa-solid fa-location-dot"></i> ${escapeHtml(l.city || '')}
                                 ${l.price ? `&bull; <strong>${Number(l.price).toLocaleString('fr-FR')} €</strong>` : ''}
@@ -2124,6 +2224,7 @@
         }
 
         // ── Init ──────────────────────────────────────────────────────────────
+        initHideRejectedToggle();
         loadProblems().then(() => pollRepairStatus(true));
     </script>
 </body>

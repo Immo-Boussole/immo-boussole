@@ -81,7 +81,7 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 | Route | Nom de la Vue | Description |
 |---|---|---|
 | `/duplicates/hunt` | **Chasse aux duplicats** | Hachage visuel perceptuel (dHash/pHash) et corrélation floue pour détecter et fusionner les annonces en doublon |
-| `/listings/repair` | **Réparations** | Boîte à outils de maintenance : correction du géocodage GPS, réparation d'images et actualisation des anciennes annonces |
+| `/listings/repair` | **Réparations** | Boîte à outils de maintenance : correction du géocodage GPS, réparation d'images et actualisation des anciennes annonces (avec filtre des annonces rejetées) |
 
 ### 6. ⚙️ Gestion Utilisateurs, Administration & Paramètres
 | Route | Nom de la Vue | Description |

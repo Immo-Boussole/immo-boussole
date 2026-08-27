@@ -756,7 +756,10 @@
         "save_and_filter": "Save & verify rules",
         "extension_tip": "Tip: with the Immo-Boussole extension installed, open the listing to sync location in 1 click.",
         "success_saved": "Location saved successfully.",
-        "rejected_notice": "This listing has been automatically rejected according to zone/department rules."
+        "rejected_notice": "This listing has been automatically rejected according to zone/department rules.",
+        "hide_rejected": "Hide rejected listings",
+        "hide_rejected_tooltip": "Hide checks and repairs on rejected listings",
+        "badge_rejected": "Rejected"
     },
     "missing_location_modal": {
         "title": "Scraping Error: Missing Location",
