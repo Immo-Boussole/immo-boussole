@@ -2140,6 +2140,7 @@
                 const dpe = document.getElementById('filter-dpe') ? document.getElementById('filter-dpe').value : '';
                 const contacted = document.getElementById('filter-contacted') ? document.getElementById('filter-contacted').value : '';
                 const visitStatus = document.getElementById('filter-visit-status') ? document.getElementById('filter-visit-status').value : '';
+                const repairTag = document.getElementById('filter-repair-tag') ? document.getElementById('filter-repair-tag').value : '';
 
                 const cards = document.querySelectorAll('.card');
                 let visible = 0;
@@ -2167,7 +2168,16 @@
                         }
                     }
 
-                    const show = matchStatus && matchSearch && matchSource && matchDpe && matchContacted && matchVisit;
+                    let matchRepair = true;
+                    if (repairTag) {
+                        let tags = [];
+                        try {
+                            tags = JSON.parse(card.dataset.repairTags || '[]');
+                        } catch (e) {}
+                        matchRepair = Array.isArray(tags) && tags.includes(repairTag);
+                    }
+
+                    const show = matchStatus && matchSearch && matchSource && matchDpe && matchContacted && matchVisit && matchRepair;
                     card.style.display = show ? '' : 'none';
                     if (show) visible++;
                 });
@@ -2192,6 +2202,8 @@
                 if (cntEl) cntEl.value = '';
                 const vstEl = document.getElementById('filter-visit-status');
                 if (vstEl) vstEl.value = '';
+                const rprEl = document.getElementById('filter-repair-tag');
+                if (rprEl) rprEl.value = '';
 
                 selectedStatuses = new Set(['nouvelle', 'active']);
                 document.querySelectorAll('.tbl-filter-chip').forEach(chip => {
@@ -2207,6 +2219,14 @@
             }
 
             document.addEventListener('DOMContentLoaded', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const tagParam = urlParams.get('tag');
+                if (tagParam) {
+                    const rprEl = document.getElementById('filter-repair-tag');
+                    if (rprEl) {
+                        rprEl.value = tagParam;
+                    }
+                }
                 applyListingFilters();
             });
 
