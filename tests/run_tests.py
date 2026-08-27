@@ -24,7 +24,8 @@ TEST_GROUPS = {
         "test_db_integration.py",
         "test_parser_lbc.py",
         "test_duplicate_relations.py",
-        "test_search_page_validation.py"
+        "test_search_page_validation.py",
+        "test_missing_location_repair.py"
     ],
     "Network": [
         "test_tls.py"

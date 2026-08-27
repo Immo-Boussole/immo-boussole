@@ -666,6 +666,176 @@
         .ios-slider-thumb.dragging { cursor: grabbing; box-shadow: 0 4px 18px rgba(242,92,105,0.7); }
         .ios-slider-thumb.confirmed { background: var(--green); }
 
+        /* Missing Location Interactive Repair Rows */
+        .missing-loc-repair-card {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+        }
+        .missing-loc-repair-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .missing-loc-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .missing-loc-title-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 250px;
+        }
+        .missing-loc-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+        .missing-loc-no-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-2);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .missing-loc-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .missing-loc-ad-title {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: var(--text);
+            text-decoration: none;
+        }
+        .missing-loc-ad-title:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+        .missing-loc-meta-pills {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            font-size: 0.76rem;
+            color: var(--text-2);
+        }
+        .missing-loc-portal-badge {
+            background: rgba(79, 142, 247, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(79, 142, 247, 0.3);
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+        .missing-loc-ext-badge {
+            background: rgba(16, 217, 164, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(16, 217, 164, 0.3);
+            border-radius: 4px;
+            padding: 0.1rem 0.45rem;
+            font-size: 0.74rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: default;
+        }
+        .missing-loc-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.25rem;
+        }
+        .missing-loc-input {
+            flex: 1;
+            min-width: 260px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.55rem 0.85rem;
+            color: var(--text);
+            font-size: 0.88rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .missing-loc-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.2);
+        }
+        .loc-dropdown-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-width: 480px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            z-index: 1000;
+            max-height: 220px;
+            overflow-y: auto;
+            margin-top: 4px;
+            display: none;
+        }
+        .loc-dropdown-item {
+            padding: 0.55rem 0.85rem;
+            font-size: 0.84rem;
+            color: var(--text);
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .loc-dropdown-item:hover {
+            background: var(--surface-2);
+            color: var(--accent);
+        }
+        .missing-loc-status-feedback {
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: none;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 6px;
+            margin-top: 0.25rem;
+        }
+        .missing-loc-status-feedback.success {
+            display: inline-flex;
+            background: rgba(16, 217, 164, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(16, 217, 164, 0.3);
+        }
+        .missing-loc-status-feedback.rejected {
+            display: inline-flex;
+            background: rgba(242, 92, 105, 0.15);
+            color: var(--red);
+            border: 1px solid rgba(242, 92, 105, 0.3);
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .topbar { padding: 1rem 1.25rem; }
@@ -985,6 +1155,7 @@
 
         // ── Problem metadata ──────────────────────────────────────────────────
         const PROBLEM_META = {
+            missing_location:        { label: 'Annonces sans localisation',         desc: 'Annonces actives sans ville ou code postal (empêche le filtrage automatique et la cartographie).' },
             empty_description:       { label: 'Descriptions vides',                 desc: 'Annonces actives sans texte de description.' },
             generic_title_figaro:    { label: 'Titres génériques Le Figaro',        desc: 'Annonces avec un titre non informatif (ex\u00a0: «\u00a0Annonce Le Figaro\u00a0»).' },
             aggregate_search_page:   { label: 'Pages de recherche agrégées',        desc: 'Annonces créées à partir d\'une page de résultats (titres «\u00a0685 Maisons à Vendre…\u00a0» ou URLs de recherche). Éclatées en annonces unitaires ou purgées.' },
@@ -1160,15 +1331,58 @@
 
             let detailHtml = '';
             if (listings && listings.length > 0) {
-                detailHtml = listings.map(l => {
-                    if (type === 'missing_city_pins') {
-                        return `<div class="listing-row"><span class="listing-city"><i class="fa-solid fa-location-dot"></i> ${l.city || l.title}</span></div>`;
-                    }
-                    return `<div class="listing-row">
-                        <a href="${l.url || '#'}" target="_blank" class="listing-title">${escapeHtml(l.title || 'Sans titre')}</a>
-                        <span class="listing-city">${escapeHtml(l.city || '')}</span>
-                    </div>`;
-                }).join('');
+                if (type === 'missing_location') {
+                    detailHtml = `
+                        <div style="background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-2); display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="fa-solid fa-circle-info" style="color: var(--accent); font-size: 1.1rem; flex-shrink: 0;"></i>
+                            <span>Saisissez la commune ou le code postal ci-dessous. Dès l'enregistrement, les règles automatiques (départements autorisés &amp; zones interdites) s'appliqueront immédiatement pour filtrer ou rejeter l'annonce.</span>
+                        </div>
+                    ` + listings.map(l => `
+                        <div class="missing-loc-repair-card" id="missing_loc_card_${l.id}">
+                            <div class="missing-loc-top">
+                                <div class="missing-loc-title-area">
+                                    ${l.photo ? `<img src="${l.photo}" class="missing-loc-thumb" alt="Photo">` : `<div class="missing-loc-no-thumb"><i class="fa-regular fa-image"></i></div>`}
+                                    <div class="missing-loc-info">
+                                        <a href="${l.url}" target="_blank" class="missing-loc-ad-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                                        <div class="missing-loc-meta-pills">
+                                            <span class="missing-loc-portal-badge">${escapeHtml(l.source || 'manuel')}</span>
+                                            ${l.price ? `<span><strong>${Number(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
+                                            ${l.area ? `<span>${l.area} m²</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <span class="missing-loc-ext-badge" title="Si l'extension Immo-Boussole est installée sur votre navigateur, ouvrez la page source pour synchroniser la localisation en 1 clic">
+                                        <i class="fa-solid fa-compass"></i> Extension 1-Clic
+                                    </span>
+                                    <a href="${l.original_url || l.url}" target="_blank" class="btn sm secondary" style="gap: 0.35rem;">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir l'annonce source ↗
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="missing-loc-input-group">
+                                <div style="position: relative; flex: 1; min-width: 250px;">
+                                    <input type="text" id="loc_search_input_${l.id}" class="missing-loc-input" placeholder="Rechercher une commune, code postal ou adresse..." autocomplete="off" oninput="handleLocInput(${l.id})" onfocus="handleLocInput(${l.id})">
+                                    <div id="loc_dropdown_${l.id}" class="loc-dropdown-results"></div>
+                                </div>
+                                <button type="button" class="btn sm accent" id="btn_save_loc_${l.id}" onclick="saveSingleListingLocation(${l.id})" style="gap: 0.4rem; min-height: 38px;">
+                                    <i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier
+                                </button>
+                            </div>
+                            <div id="loc_feedback_${l.id}" class="missing-loc-status-feedback"></div>
+                        </div>
+                    `).join('');
+                } else {
+                    detailHtml = listings.map(l => {
+                        if (type === 'missing_city_pins') {
+                            return `<div class="listing-row"><span class="listing-city"><i class="fa-solid fa-location-dot"></i> ${l.city || l.title}</span></div>`;
+                        }
+                        return `<div class="listing-row">
+                            <a href="${l.url || '#'}" target="_blank" class="listing-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                            <span class="listing-city">${escapeHtml(l.city || '')}</span>
+                        </div>`;
+                    }).join('');
+                }
             } else if (isError) {
                 detailHtml = '<div class="listings-empty">Détails des annonces non disponibles.</div>';
             }
@@ -1244,6 +1458,119 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        // ── Location Autocomplete & Manual Repair ─────────────────────────────
+        let debounceTimer = null;
+        function handleLocInput(listingId) {
+            clearTimeout(debounceTimer);
+            const input = document.getElementById(`loc_search_input_${listingId}`);
+            const dropdown = document.getElementById(`loc_dropdown_${listingId}`);
+            if (!input || !dropdown) return;
+            const val = input.value.trim();
+            if (val.length < 2) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(val)}&limit=6`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const results = data.results || [];
+                    if (results.length === 0) {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    dropdown.innerHTML = results.map(r => `
+                        <div class="loc-dropdown-item" onclick="selectLocSuggestion(${listingId}, '${escapeHtml(r.label || r.city)}', ${r.lat || 'null'}, ${r.lon || 'null'}, '${escapeHtml(r.postcode || '')}')">
+                            <span><strong>${escapeHtml(r.label || r.city)}</strong> <small style="color:var(--text-2);">(${escapeHtml(r.postcode || r.context || '')})</small></span>
+                            <span style="font-size:0.72rem;background:rgba(255,255,255,0.06);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(r.display_type || 'Ville')}</span>
+                        </div>
+                    `).join('');
+                    dropdown.style.display = 'block';
+                } catch (e) {
+                    console.warn('Autocomplete error:', e);
+                }
+            }, 250);
+        }
+
+        function selectLocSuggestion(listingId, label, lat, lon, postcode) {
+            const input = document.getElementById(`loc_search_input_${listingId}`);
+            const dropdown = document.getElementById(`loc_dropdown_${listingId}`);
+            if (input) {
+                input.value = label;
+                input.setAttribute('data-lat', lat || '');
+                input.setAttribute('data-lon', lon || '');
+                input.setAttribute('data-postcode', postcode || '');
+            }
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.missing-loc-input-group')) {
+                document.querySelectorAll('.loc-dropdown-results').forEach(d => d.style.display = 'none');
+            }
+        });
+
+        async function saveSingleListingLocation(listingId) {
+            const input = document.getElementById(`loc_search_input_${listingId}`);
+            const btn = document.getElementById(`btn_save_loc_${listingId}`);
+            const feedback = document.getElementById(`loc_feedback_${listingId}`);
+            if (!input || !input.value.trim()) {
+                showAlert('Veuillez entrer une localisation.', 'error');
+                return;
+            }
+
+            const payload = {
+                location: input.value.trim(),
+                postal_code: input.getAttribute('data-postcode') || null,
+                latitude: input.getAttribute('data-lat') ? parseFloat(input.getAttribute('data-lat')) : null,
+                longitude: input.getAttribute('data-lon') ? parseFloat(input.getAttribute('data-lon')) : null
+            };
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement…';
+            }
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/set-location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    if (data.listing && data.listing.is_rejected) {
+                        feedback.className = 'missing-loc-status-feedback rejected';
+                        feedback.innerHTML = `<i class="fa-solid fa-ban"></i> Localisation enregistrée : « ${escapeHtml(data.listing.city)} ». Rejetée automatiquement selon vos règles de zone/département.`;
+                    } else {
+                        feedback.className = 'missing-loc-status-feedback success';
+                        feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Localisation enregistrée : « ${escapeHtml(data.listing.city)} ». Données géographiques et règles validées.`;
+                    }
+                    if (btn) {
+                        btn.className = 'btn sm secondary';
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistré';
+                    }
+                    // Auto reload count after 1.5s
+                    setTimeout(() => {
+                        loadProblems();
+                    }, 1500);
+                } else {
+                    showAlert(data.detail || 'Erreur lors de la mise à jour.', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier';
+                    }
+                }
+            } catch (e) {
+                showAlert('Erreur réseau lors de la mise à jour.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier';
+                }
+            }
         }
 
         // ── Modals & Repairs Execution ────────────────────────────────────────

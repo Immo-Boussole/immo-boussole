@@ -253,6 +253,11 @@ _MIGRATIONS = [
     ("global_settings", "last_storage_cleanup",            "TEXT"),
     ("global_settings", "last_db_optimization",           "TEXT"),
     ("global_settings", "last_maintenance_metrics_json",   "TEXT DEFAULT '{}'"),
+
+    # users — missing location notification & session tracking v32
+    ("users", "last_seen_missing_loc_count",               "INTEGER DEFAULT 0"),
+    ("users", "missing_loc_snooze_until",                  "DATETIME"),
+    ("users", "last_login_at",                             "DATETIME"),
 ]
 
 

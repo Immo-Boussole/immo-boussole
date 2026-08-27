@@ -748,7 +748,31 @@
         "title": "Listings Repair",
         "subtitle": "Non-destructive verification and diagnostic repair tools for listings and media",
         "audit_btn": "Audit Database",
-        "repair_btn": "Repair Inconsistencies"
+        "repair_btn": "Repair Inconsistencies",
+        "missing_location_title": "Listings Without Location",
+        "missing_location_desc": "Active listings whose municipality or postal code could not be extracted during scraping.",
+        "input_placeholder": "Search city, postal code or street address...",
+        "open_original": "Open source listing",
+        "save_and_filter": "Save & verify rules",
+        "extension_tip": "Tip: with the Immo-Boussole extension installed, open the listing to sync location in 1 click.",
+        "success_saved": "Location saved successfully.",
+        "rejected_notice": "This listing has been automatically rejected according to zone/department rules."
+    },
+    "missing_location_modal": {
+        "title": "Scraping Error: Missing Location",
+        "description": "Some active listings lack location data. Without this, automatic rejection filters (allowed departments, forbidden zones) and route calculations cannot function.",
+        "affected_count": "listing(s) without location",
+        "delta_positive": "+{delta} since your last visit",
+        "delta_negative": "{delta} since your last visit",
+        "delta_neutral": "Stable since your last visit",
+        "btn_fix": "Go to repair page",
+        "btn_ignore": "Ignore",
+        "btn_github": "Report issue on GitHub",
+        "snooze_session": "For this session",
+        "snooze_1h": "1 hour",
+        "snooze_24h": "24 hours",
+        "snooze_3d": "3 days",
+        "snooze_7d": "7 days"
     },
     "filter": {
         "yes": "Yes",

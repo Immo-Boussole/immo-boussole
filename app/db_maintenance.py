@@ -35,11 +35,20 @@ ANOMALOUS_PRICE = "anomalous_price"
 LINKED_ADS_NONE = "linked_ads_none"
 MISSING_CITY_PINS = "missing_city_pins"
 UNSTANDARDIZED_CITY = "unstandardized_city"
+MISSING_LOCATION = "missing_location"
 FORBIDDEN_DEPARTMENT = "forbidden_department"
 FORBIDDEN_ZONE = "forbidden_zone"
 INCORRECT_PRICE_PER_SQM = "incorrect_price_per_sqm"
 MISSING_PHOTOS = "missing_photos"
 PAST_FIRST_VISIT_NOT_DONE = "past_first_visit_not_done"
+
+
+def is_missing_location(listing) -> bool:
+    """Checks if a listing lacks city and location data."""
+    c = (listing.city or "").strip()
+    loc = (listing.location or "").strip()
+    placeholders = {"inconnu", "unknown", "france", "none", "null", "undefined", ""}
+    return c.lower() in placeholders and loc.lower() in placeholders
 
 
 
@@ -185,6 +194,11 @@ def identify_problems(db: Session):
             if l.price_per_sqm is None or l.price_per_sqm <= 0 or abs(l.price_per_sqm - expected) > 0.02:
                 incorrect_price_sqm_listings.append(l)
 
+    # Missing location (city and location are empty or placeholders)
+    missing_loc_listings = [
+        l for l in active_listings_all if is_missing_location(l)
+    ]
+
     # Missing or corrupted photos
     missing_photos_listings = []
     for l in active_listings_all:
@@ -203,6 +217,10 @@ def identify_problems(db: Session):
     past_first_visit_listing_ids = list(dict.fromkeys(v.listing_id for v in past_first_visits if v.listing_id))
 
     return {
+        MISSING_LOCATION: {
+            "count": len(missing_loc_listings),
+            "ids": [l.id for l in missing_loc_listings]
+        },
         EMPTY_DESCRIPTION: {
             "count": len(empty_desc_listings),
             "ids": [l.id for l in empty_desc_listings]
@@ -260,6 +278,7 @@ def identify_problems(db: Session):
 
 # Problem types that are safe for all authenticated users (non-destructive repairs)
 SAFE_PROBLEM_TYPES = [
+    MISSING_LOCATION,
     EMPTY_DESCRIPTION,
     GENERIC_TITLE_FIGARO,
     AGGREGATE_SEARCH_PAGE,
@@ -282,11 +301,101 @@ DANGEROUS_PROBLEM_TYPES = [
 
 def _listing_summary(listing) -> dict:
     """Return a minimal dict with listing info for display in repair views."""
+    photo_url = None
+    if listing.photos_local:
+        try:
+            import json
+            photos = json.loads(listing.photos_local)
+            if photos and isinstance(photos, list) and len(photos) > 0:
+                photo_url = photos[0]
+        except Exception:
+            pass
+    if not photo_url and listing.original_photo_urls:
+        try:
+            import json
+            photos = json.loads(listing.original_photo_urls)
+            if photos and isinstance(photos, list) and len(photos) > 0:
+                photo_url = photos[0]
+        except Exception:
+            pass
+
     return {
         "id": listing.id,
         "title": listing.title or "Sans titre",
         "city": listing.city or listing.location or "",
         "url": f"/listing/{listing.id}",
+        "original_url": listing.original_url or listing.url or "",
+        "source": listing.source.value if hasattr(listing.source, "value") else str(listing.source or ""),
+        "price": listing.price,
+        "area": listing.area,
+        "photo": photo_url,
+    }
+
+
+def get_missing_location_summary(db: Session, current_user = None) -> dict:
+    """
+    Returns statistics and state for missing location notification overlay:
+    - total count of affected listings
+    - delta since user's last connection
+    - distribution per source portal
+    - snooze status
+    - pre-filled GitHub issue URL
+    """
+    active_listings_all = db.query(Listing).filter(
+        Listing.status.in_([ListingStatus.ACTIVE, ListingStatus.NEW, "active", "nouvelle"])
+    ).all()
+
+    missing_loc_listings = [l for l in active_listings_all if is_missing_location(l)]
+    total_count = len(missing_loc_listings)
+
+    # Source breakdown
+    sources_breakdown = {}
+    for l in missing_loc_listings:
+        src = l.source.value if hasattr(l.source, "value") else str(l.source or "inconnu")
+        sources_breakdown[src] = sources_breakdown.get(src, 0) + 1
+
+    # Check user snooze and delta
+    is_snoozed = False
+    prev_count = 0
+    delta = total_count
+    if current_user:
+        prev_count = getattr(current_user, "last_seen_missing_loc_count", 0) or 0
+        delta = total_count - prev_count
+        snooze_until = getattr(current_user, "missing_loc_snooze_until", None)
+        if snooze_until:
+            now_utc = datetime.now(timezone.utc)
+            if snooze_until.tzinfo is None:
+                snooze_until = snooze_until.replace(tzinfo=timezone.utc)
+            if snooze_until > now_utc:
+                is_snoozed = True
+
+    # Pre-filled GitHub issue URL with diagnostic report
+    sources_str = ", ".join([f"{k}: {v}" for k, v in sources_breakdown.items()]) if sources_breakdown else "N/A"
+    issue_title = f"[Scraping] Erreur de localisation manquante ({total_count} annonce{'s' if total_count > 1 else ''})"
+    issue_body = (
+        f"### Description du problème\n\n"
+        f"Le scraping n'a pas pu extraire la localisation (ville / code postal) pour **{total_count} annonce(s)** active(s).\n\n"
+        f"**Répartition par portail :**\n{sources_str}\n\n"
+        f"### Impact\n"
+        f"- Les règles de filtrage par départements et zones interdites ne peuvent pas être appliquées automatiquement.\n"
+        f"- Le positionnement cartographique et le calcul des temps de trajet sont indisponibles.\n\n"
+        f"---\n*Signalé automatiquement depuis l'instance Immo-Boussole.*"
+    )
+    import urllib.parse
+    params = {
+        "title": issue_title,
+        "body": issue_body,
+        "labels": "bug,scraping"
+    }
+    github_issue_url = f"https://github.com/Immo-Boussole/immo-boussole/issues/new?{urllib.parse.urlencode(params)}"
+
+    return {
+        "count": total_count,
+        "prev_count": prev_count,
+        "delta": delta,
+        "sources": sources_breakdown,
+        "is_snoozed": is_snoozed,
+        "github_issue_url": github_issue_url,
     }
 
 
@@ -449,6 +558,30 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                         if derived:
                                             listing.last_visit_status = derived
                                     db.commit()
+                            elif problem_type == MISSING_LOCATION:
+                                from app.geo import standardize_and_enrich_city, get_coordinates
+                                found_city = None
+                                if listing.title:
+                                    zip_match = re.search(r'\b(0[1-9]|[1-8]\d|9[0-5]|97[1-8]|2[ABab])\d{3}\b', listing.title)
+                                    if zip_match:
+                                        std_city, _, _ = standardize_and_enrich_city(zip_match.group(0))
+                                        if std_city:
+                                            found_city = std_city
+                                if not found_city and listing.description_text:
+                                    zip_match = re.search(r'\b(0[1-9]|[1-8]\d|9[0-5]|97[1-8]|2[ABab])\d{3}\b', listing.description_text[:500])
+                                    if zip_match:
+                                        std_city, _, _ = standardize_and_enrich_city(zip_match.group(0))
+                                        if std_city:
+                                            found_city = std_city
+                                if found_city:
+                                    listing.city = found_city
+                                    listing.location = found_city
+                                    coords = get_coordinates(found_city)
+                                    if coords:
+                                        listing.latitude, listing.longitude = coords
+                                    db.commit()
+                                else:
+                                    await refresh_listing_status(listing, db, force_update=True)
                             elif problem_type == GENERIC_TITLE_FIGARO:
                                 await repair_listing_title(listing, db)
                                 await refresh_listing_status(listing, db, force_update=True)

@@ -655,6 +655,12 @@ def login(
             request.session["authenticated"] = True
             request.session["username"] = username
             request.session["role"] = user.role
+            try:
+                from datetime import datetime, timezone
+                user.last_login_at = datetime.now(timezone.utc)
+                db.commit()
+            except Exception:
+                pass
             target_url = "/"
             if next_url and next_url.startswith("/") and not next_url.startswith("//"):
                 target_url = next_url
@@ -2987,6 +2993,190 @@ async def repair_db_problems_batch(
 @app.get("/api/db/repair/status")
 def get_db_repair_status_user(_auth = Depends(login_required)):
     return db_maintenance.get_repair_status()
+
+
+# ─── Missing Location Notification & Manual Repair ───────────────────────────
+
+@app.get("/api/maintenance/missing-location-notification")
+def get_missing_location_notification(
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Returns missing location stats, delta since last connection, snooze status and GitHub issue URL."""
+    username = request.session.get("username")
+    current_user = db.query(models.User).filter(models.User.username == username).first() if username else None
+    summary = db_maintenance.get_missing_location_summary(db, current_user=current_user)
+    return summary
+
+
+class SnoozeMissingLocationRequest(BaseModel):
+    duration: str = "24h"  # "session", "1h", "24h", "3d", "7d"
+
+
+@app.post("/api/maintenance/snooze-missing-location")
+def snooze_missing_location_notification(
+    body: SnoozeMissingLocationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Snoozes the missing location overlay notification for the specified duration and updates last seen count."""
+    from datetime import datetime, timezone, timedelta
+    username = request.session.get("username")
+    current_user = db.query(models.User).filter(models.User.username == username).first() if username else None
+
+    # Calculate current count to store as baseline
+    summary = db_maintenance.get_missing_location_summary(db, current_user=current_user)
+    current_count = summary["count"]
+
+    dur = body.duration.lower()
+    now_utc = datetime.now(timezone.utc)
+    if dur == "1h":
+        snooze_until = now_utc + timedelta(hours=1)
+    elif dur == "24h":
+        snooze_until = now_utc + timedelta(hours=24)
+    elif dur == "3d":
+        snooze_until = now_utc + timedelta(days=3)
+    elif dur == "7d":
+        snooze_until = now_utc + timedelta(days=7)
+    elif dur == "session":
+        snooze_until = now_utc + timedelta(hours=12)
+    else:
+        snooze_until = now_utc + timedelta(hours=24)
+
+    if current_user:
+        current_user.missing_loc_snooze_until = snooze_until
+        current_user.last_seen_missing_loc_count = current_count
+        db.commit()
+
+    return {
+        "success": True,
+        "snooze_until": snooze_until.isoformat(),
+        "last_seen_count": current_count
+    }
+
+
+class SetListingLocationRequest(BaseModel):
+    location: str
+    postal_code: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+
+@app.post("/api/listings/{listing_id}/set-location")
+def set_listing_location_endpoint(
+    listing_id: int,
+    body: SetListingLocationRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Sets or updates the location for a listing, runs standardization, geocoding,
+    recalculates SNCF routing, and triggers automatic rejection rules (departments and forbidden zones).
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Annonce introuvable.")
+
+    loc_input = body.location.strip()
+    if not loc_input:
+        raise HTTPException(status_code=400, detail="Veuillez fournir une localisation valide.")
+
+    from app.geo import standardize_and_enrich_city, get_coordinates
+    from app.services import fetch_sncf_times_for_city
+    from app.models import ZoneRule, ListingStatus
+    from app.geo import is_city_in_forbidden_set
+
+    std_city, std_postal_code, _ = standardize_and_enrich_city(loc_input)
+    final_city = std_city or loc_input
+
+    listing.city = final_city
+    listing.location = final_city
+    if body.postal_code:
+        listing.postal_code = body.postal_code.strip()
+    elif std_postal_code:
+        listing.postal_code = std_postal_code
+
+    listing.address_precision = "city"
+    listing.manual_address_override = True
+
+    # Geocoding
+    if body.latitude is not None and body.longitude is not None:
+        listing.latitude = body.latitude
+        listing.longitude = body.longitude
+    else:
+        coords = get_coordinates(final_city)
+        if coords:
+            listing.latitude, listing.longitude = coords
+
+    # SNCF Station routing calculation
+    try:
+        forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+            ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+        ).all()}
+        sncf_data = fetch_sncf_times_for_city(final_city, forbidden_stations)
+        if sncf_data is not None:
+            listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
+            listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
+            listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
+            listing.car_time_sncf = sncf_data.get('car_time_sncf')
+            listing.second_sncf_station = sncf_data.get('second_sncf_station')
+            listing.walk_time_sncf_2 = sncf_data.get('walk_time_sncf_2')
+            listing.bike_time_sncf_2 = sncf_data.get('bike_time_sncf_2')
+            listing.car_time_sncf_2 = sncf_data.get('car_time_sncf_2')
+    except Exception as e:
+        print(f"[set-location] Error calculating SNCF station for listing #{listing_id}: {e}")
+
+    # Check automatic rejection rules (Allowed departments & Forbidden zones)
+    was_rejected = False
+    rejection_reason = None
+    if not listing.to_visit:
+        if not _is_city_in_allowed_departments(final_city, db):
+            listing.status = ListingStatus.REJECTED
+            was_rejected = True
+            rejection_reason = "department_forbidden"
+        else:
+            forbidden_cities = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+                ZoneRule.zone_type == "city", ZoneRule.rule == "forbidden"
+            ).all()}
+            forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+                ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+            ).all()}
+
+            if is_city_in_forbidden_set(final_city, forbidden_cities):
+                listing.status = ListingStatus.REJECTED
+                was_rejected = True
+                rejection_reason = "city_forbidden"
+            elif forbidden_stations:
+                s1 = (listing.nearest_sncf_station or "").strip().lower()
+                s2 = (listing.second_sncf_station or "").strip().lower()
+                if any(fs in s1 or fs == s1 for fs in forbidden_stations) or any(fs in s2 or fs == s2 for fs in forbidden_stations):
+                    listing.status = ListingStatus.REJECTED
+                    was_rejected = True
+                    rejection_reason = "station_forbidden"
+
+    # Price per sqm
+    listing.update_price_per_sqm()
+
+    db.commit()
+    db.refresh(listing)
+
+    return {
+        "success": True,
+        "listing": {
+            "id": listing.id,
+            "title": listing.title,
+            "city": listing.city,
+            "location": listing.location,
+            "postal_code": listing.postal_code,
+            "latitude": listing.latitude,
+            "longitude": listing.longitude,
+            "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status),
+            "is_rejected": was_rejected,
+            "rejection_reason": rejection_reason
+        }
+    }
 
 
 # ─── Scrapers: Statistical Analytics & Parser Health ───────────────────────────

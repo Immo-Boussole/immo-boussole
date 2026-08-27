@@ -38,6 +38,11 @@ class User(Base):
     # Notifications
     apprise_url = Column(String, nullable=True)  # Apprise-compatible URL (tgram://, discord://, ntfy://, mailto://, etc.)
 
+    # Missing location notifications & session tracking
+    last_seen_missing_loc_count = Column(Integer, default=0, nullable=False)
+    missing_loc_snooze_until = Column(DateTime(timezone=True), nullable=True)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+
 
 class ListingStatus(str, enum.Enum):
     NEW = "nouvelle"

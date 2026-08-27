@@ -748,7 +748,31 @@
         "title": "Réparations d'Annonces",
         "subtitle": "Vérification et réparation non-destructive des données et annonces",
         "audit_btn": "Auditer la base",
-        "repair_btn": "Réparer les anomalies"
+        "repair_btn": "Réparer les anomalies",
+        "missing_location_title": "Annonces sans localisation",
+        "missing_location_desc": "Annonces actives dont la commune ou le code postal n'ont pas pu être extraits lors du scraping.",
+        "input_placeholder": "Rechercher une commune, code postal ou adresse...",
+        "open_original": "Ouvrir l'annonce source",
+        "save_and_filter": "Enregistrer et vérifier",
+        "extension_tip": "Astuce : si l'extension Immo-Boussole est installée, ouvrez l'annonce pour synchroniser la localisation en 1 clic.",
+        "success_saved": "Localisation enregistrée avec succès.",
+        "rejected_notice": "Cette annonce a été automatiquement rejetée conformément aux règles de zones / départements."
+    },
+    "missing_location_modal": {
+        "title": "Erreur de scraping : Localisation manquante",
+        "description": "Certaines annonces n'ont pas de localisation renseignée. Sans cette information, les filtres de rejet automatique (départements autorisés, zones interdites) et les calculs d'itinéraires ne peuvent pas fonctionner.",
+        "affected_count": "annonce(s) sans localisation",
+        "delta_positive": "+{delta} depuis votre dernière visite",
+        "delta_negative": "{delta} depuis votre dernière visite",
+        "delta_neutral": "Stable depuis votre dernière visite",
+        "btn_fix": "Accéder aux réparations",
+        "btn_ignore": "Ignorer",
+        "btn_github": "Signaler un bug sur GitHub",
+        "snooze_session": "Pour cette session",
+        "snooze_1h": "1 heure",
+        "snooze_24h": "24 heures",
+        "snooze_3d": "3 jours",
+        "snooze_7d": "7 jours"
     },
     "filter": {
         "yes": "Oui",
