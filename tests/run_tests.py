@@ -25,7 +25,8 @@ TEST_GROUPS = {
         "test_parser_lbc.py",
         "test_duplicate_relations.py",
         "test_search_page_validation.py",
-        "test_missing_location_repair.py"
+        "test_missing_location_repair.py",
+        "test_source_preview_proxy.py"
     ],
     "Network": [
         "test_tls.py"

@@ -292,20 +292,26 @@ DANGEROUS_PROBLEM_TYPES = [
 def _listing_summary(listing) -> dict:
     """Return a minimal dict with listing info for display in repair views."""
     photo_url = None
+    all_photos = []
     if listing.photos_local:
         try:
             import json
             photos = json.loads(listing.photos_local)
-            if photos and isinstance(photos, list) and len(photos) > 0:
-                photo_url = photos[0]
+            if photos and isinstance(photos, list):
+                all_photos = [p for p in photos if p]
+                if len(all_photos) > 0:
+                    photo_url = all_photos[0]
         except Exception:
             pass
     if not photo_url and listing.original_photo_urls:
         try:
             import json
             photos = json.loads(listing.original_photo_urls)
-            if photos and isinstance(photos, list) and len(photos) > 0:
-                photo_url = photos[0]
+            if photos and isinstance(photos, list):
+                if not all_photos:
+                    all_photos = [p for p in photos if p]
+                if len(all_photos) > 0 and not photo_url:
+                    photo_url = all_photos[0]
         except Exception:
             pass
 
@@ -320,7 +326,11 @@ def _listing_summary(listing) -> dict:
         "source": listing.source.value if hasattr(listing.source, "value") else str(listing.source or ""),
         "price": listing.price,
         "area": listing.area,
+        "rooms": listing.rooms,
+        "property_type": listing.property_type,
+        "description": listing.description_text or "",
         "photo": photo_url,
+        "photos": all_photos,
         "status": status_val,
     }
 

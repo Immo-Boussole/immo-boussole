@@ -759,7 +759,12 @@
         "rejected_notice": "This listing has been automatically rejected according to zone/department rules.",
         "hide_rejected": "Hide rejected listings",
         "hide_rejected_tooltip": "Hide checks and repairs on rejected listings",
-        "badge_rejected": "Rejected"
+        "badge_rejected": "Rejected",
+        "open_in_drawer": "Review in side panel",
+        "open_drawer_btn": "Open review panel",
+        "drawer_prev": "Previous listing",
+        "drawer_next": "Next listing",
+        "all_missing_loc_repaired": "All listings without location have been repaired!"
     },
     "missing_location_modal": {
         "title": "Scraping Error: Missing Location",

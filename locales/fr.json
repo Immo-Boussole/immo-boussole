@@ -759,7 +759,12 @@
         "rejected_notice": "Cette annonce a été automatiquement rejetée conformément aux règles de zones / départements.",
         "hide_rejected": "Masquer les annonces rejetées",
         "hide_rejected_tooltip": "Masquer les vérifications et réparations sur les annonces rejetées",
-        "badge_rejected": "Rejetée"
+        "badge_rejected": "Rejetée",
+        "open_in_drawer": "Examiner dans le volet",
+        "open_drawer_btn": "Ouvrir le volet de révision",
+        "drawer_prev": "Annonce précédente",
+        "drawer_next": "Annonce suivante",
+        "all_missing_loc_repaired": "Toutes les annonces sans localisation ont été réparées !"
     },
     "missing_location_modal": {
         "title": "Erreur de scraping : Localisation manquante",

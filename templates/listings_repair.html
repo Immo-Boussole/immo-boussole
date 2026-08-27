@@ -836,6 +836,161 @@
             border: 1px solid rgba(242, 92, 105, 0.3);
         }
 
+        /* ── Side Drawer ── */
+        .side-drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 2100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.28s ease, visibility 0.28s ease;
+        }
+        .side-drawer-backdrop.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        .side-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 58vw;
+            min-width: 480px;
+            max-width: 950px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            box-shadow: -10px 0 36px rgba(0, 0, 0, 0.55);
+            z-index: 2200;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .side-drawer.open {
+            transform: translateX(0);
+        }
+        .side-drawer-header {
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            padding: 0.9rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+        .side-drawer-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+        .side-drawer-title-area {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            overflow: hidden;
+            flex: 1;
+        }
+        .drawer-counter {
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--text-2);
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .drawer-ad-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
+        }
+        .side-drawer-nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+        .drawer-nav-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .drawer-close-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drawer-close-btn:hover {
+            background: rgba(242, 92, 105, 0.2);
+            color: var(--red);
+        }
+        .drawer-input-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+        }
+        .side-drawer-body {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        .drawer-loading-spinner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 10;
+            transition: opacity 0.2s;
+        }
+        .drawer-loading-spinner.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .drawer-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        @media (max-width: 768px) {
+            .side-drawer {
+                width: 100vw;
+                min-width: 100vw;
+            }
+            .side-drawer-header {
+                padding: 0.75rem 1rem;
+            }
+            .drawer-input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
         /* Toggle Switch */
         .switch {
             position: relative;
@@ -1204,6 +1359,54 @@
         </div>
     </div>
 
+    <!-- ── Right Side Panel Drawer for Listing Preview & Repair ── -->
+    <div class="side-drawer-backdrop" id="side_drawer_backdrop" onclick="closeSideDrawer()"></div>
+    <aside class="side-drawer" id="side_drawer" aria-label="Aperçu de l'annonce et saisie de localisation">
+        <div class="side-drawer-header">
+            <div class="side-drawer-topbar">
+                <div class="side-drawer-title-area">
+                    <span class="missing-loc-portal-badge" id="drawer_portal_badge">Source</span>
+                    <span class="drawer-counter" id="drawer_counter">1 / 1</span>
+                    <h3 class="drawer-ad-title" id="drawer_ad_title">Titre de l'annonce</h3>
+                </div>
+                <div class="side-drawer-nav-actions">
+                    <button type="button" class="btn sm secondary drawer-nav-btn" id="btn_drawer_prev" onclick="navigateDrawer(-1)" title="Annonce précédente (Alt + ←)">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button" class="btn sm secondary drawer-nav-btn" id="btn_drawer_next" onclick="navigateDrawer(1)" title="Annonce suivante (Alt + →)">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <a href="#" target="_blank" class="btn sm secondary" id="drawer_external_link" title="Ouvrir sur le site d'origine dans un nouvel onglet">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                    <button type="button" class="drawer-close-btn" onclick="closeSideDrawer()" title="Fermer le volet (Échap)">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Location Input inside Side Drawer Header -->
+            <div class="drawer-input-row">
+                <div style="position: relative; flex: 1; min-width: 220px;">
+                    <input type="text" id="drawer_loc_input" class="missing-loc-input" placeholder="Rechercher une commune ou code postal..." autocomplete="off" oninput="handleDrawerLocInput()" onkeydown="handleDrawerKeyDown(event)">
+                    <div id="drawer_loc_dropdown" class="loc-dropdown-results"></div>
+                </div>
+                <button type="button" class="btn sm accent" id="btn_drawer_save" onclick="saveDrawerListingLocation()" style="gap: 0.4rem; min-height: 38px;">
+                    <i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier
+                </button>
+            </div>
+            <div id="drawer_loc_feedback" class="missing-loc-status-feedback"></div>
+        </div>
+
+        <div class="side-drawer-body">
+            <div class="drawer-loading-spinner" id="drawer_loading">
+                <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--accent);"></i>
+                <span style="font-size: 0.88rem; color: var(--text-2); margin-top: 0.5rem;">Chargement de l'annonce…</span>
+            </div>
+            <iframe id="drawer_iframe" class="drawer-iframe" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" onload="onDrawerIframeLoaded()"></iframe>
+        </div>
+    </aside>
+
     <script>
         // ── Tabs Navigation ───────────────────────────────────────────────────
         let activeTab = 'db_checks';
@@ -1419,10 +1622,16 @@
             let detailHtml = '';
             if (listings && listings.length > 0) {
                 if (type === 'missing_location') {
+                    missingLocationList = listings;
                     detailHtml = `
-                        <div style="background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-2); display: flex; align-items: center; gap: 0.6rem;">
-                            <i class="fa-solid fa-circle-info" style="color: var(--accent); font-size: 1.1rem; flex-shrink: 0;"></i>
-                            <span>Saisissez la commune ou le code postal ci-dessous. Dès l'enregistrement, les règles automatiques (départements autorisés &amp; zones interdites) s'appliqueront immédiatement pour filtrer ou rejeter l'annonce.</span>
+                        <div style="background: rgba(79, 142, 247, 0.08); border: 1px solid rgba(79, 142, 247, 0.2); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-2); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <i class="fa-solid fa-circle-info" style="color: var(--accent); font-size: 1.1rem; flex-shrink: 0;"></i>
+                                <span>Saisissez la commune ou le code postal ci-dessous, ou ouvrez le volet latéral interactif pour inspecter l'annonce en direct.</span>
+                            </div>
+                            <button type="button" class="btn sm accent" onclick="openSideDrawerForListing(${listings[0].id})" style="gap: 0.4rem; white-space: nowrap;">
+                                <i class="fa-solid fa-table-columns"></i> Ouvrir le volet de révision
+                            </button>
                         </div>
                     ` + listings.map(l => {
                         const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
@@ -1430,11 +1639,11 @@
                         <div class="missing-loc-repair-card" id="missing_loc_card_${l.id}">
                             <div class="missing-loc-top">
                                 <div class="missing-loc-title-area">
-                                    ${l.photo ? `<img src="${l.photo}" class="missing-loc-thumb" alt="Photo">` : `<div class="missing-loc-no-thumb"><i class="fa-regular fa-image"></i></div>`}
+                                    ${l.photo ? `<img src="${l.photo}" class="missing-loc-thumb" alt="Photo" onclick="openSideDrawerForListing(${l.id})" style="cursor: pointer;" title="Examiner dans le volet latéral">` : `<div class="missing-loc-no-thumb" onclick="openSideDrawerForListing(${l.id})" style="cursor: pointer;" title="Examiner dans le volet latéral"><i class="fa-regular fa-image"></i></div>`}
                                     <div class="missing-loc-info">
                                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                                             ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
-                                            <a href="${l.url}" target="_blank" class="missing-loc-ad-title">${escapeHtml(l.title || 'Sans titre')}</a>
+                                            <a href="javascript:void(0)" onclick="openSideDrawerForListing(${l.id})" class="missing-loc-ad-title" title="Examiner dans le volet latéral">${escapeHtml(l.title || 'Sans titre')}</a>
                                         </div>
                                         <div class="missing-loc-meta-pills">
                                             <span class="missing-loc-portal-badge">${escapeHtml(l.source || 'manuel')}</span>
@@ -1444,11 +1653,14 @@
                                     </div>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn sm accent" onclick="openSideDrawerForListing(${l.id})" style="gap: 0.35rem;" title="Inspecter l'annonce source dans le volet latéral droit">
+                                        <i class="fa-solid fa-table-columns"></i> Examiner dans le volet
+                                    </button>
                                     <span class="missing-loc-ext-badge" title="Si l'extension Immo-Boussole est installée sur votre navigateur, ouvrez la page source pour synchroniser la localisation en 1 clic">
                                         <i class="fa-solid fa-compass"></i> Extension 1-Clic
                                     </span>
                                     <a href="${l.original_url || l.url}" target="_blank" class="btn sm secondary" style="gap: 0.35rem;">
-                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir l'annonce source ↗
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Source ↗
                                     </a>
                                 </div>
                             </div>
@@ -1668,6 +1880,241 @@
                 }
             }
         }
+
+        // ── Side Panel Drawer Controller ──────────────────────────────────────
+        let missingLocationList = [];
+        let currentDrawerIndex = -1;
+
+        function openSideDrawerForListing(listingId) {
+            if (!missingLocationList || missingLocationList.length === 0) {
+                if (problemsData && problemsData.problems && problemsData.problems.missing_location && problemsData.problems.missing_location.listings) {
+                    missingLocationList = problemsData.problems.missing_location.listings;
+                }
+            }
+            const idx = missingLocationList.findIndex(l => l.id === listingId);
+            if (idx === -1) return;
+            currentDrawerIndex = idx;
+            loadListingInDrawer(currentDrawerIndex);
+
+            // Tier 1: Communicate with WebExtension if installed
+            try {
+                const listing = missingLocationList[currentDrawerIndex];
+                const targetUrl = listing.original_url || listing.url;
+                window.postMessage({
+                    type: 'IMMO_BOUSSOLE_OPEN_SIDEPANEL',
+                    url: targetUrl,
+                    listing_id: listing.id
+                }, '*');
+            } catch (e) {}
+
+            document.getElementById('side_drawer_backdrop').classList.add('open');
+            document.getElementById('side_drawer').classList.add('open');
+        }
+
+        function closeSideDrawer() {
+            document.getElementById('side_drawer_backdrop').classList.remove('open');
+            document.getElementById('side_drawer').classList.remove('open');
+            const iframe = document.getElementById('drawer_iframe');
+            if (iframe) iframe.src = 'about:blank';
+        }
+
+        function loadListingInDrawer(idx) {
+            if (idx < 0 || idx >= missingLocationList.length) return;
+            currentDrawerIndex = idx;
+            const l = missingLocationList[idx];
+
+            // Header elements
+            document.getElementById('drawer_counter').textContent = `${idx + 1} / ${missingLocationList.length}`;
+            document.getElementById('drawer_portal_badge').textContent = l.source || 'manuel';
+            document.getElementById('drawer_ad_title').textContent = l.title || 'Sans titre';
+            document.getElementById('drawer_external_link').href = l.original_url || l.url || '#';
+
+            // Navigation buttons state
+            document.getElementById('btn_drawer_prev').disabled = (idx === 0);
+            document.getElementById('btn_drawer_next').disabled = (idx === missingLocationList.length - 1);
+
+            // Reset input and feedback
+            const input = document.getElementById('drawer_loc_input');
+            input.value = '';
+            input.removeAttribute('data-lat');
+            input.removeAttribute('data-lon');
+            input.removeAttribute('data-postcode');
+            input.focus();
+
+            const dropdown = document.getElementById('drawer_loc_dropdown');
+            dropdown.style.display = 'none';
+
+            const feedback = document.getElementById('drawer_loc_feedback');
+            feedback.className = 'missing-loc-status-feedback';
+            feedback.style.display = 'none';
+
+            const btnSave = document.getElementById('btn_drawer_save');
+            btnSave.disabled = false;
+            btnSave.className = 'btn sm accent';
+            btnSave.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier';
+
+            // Load iframe with Tier 2 Proxy HTML
+            const loading = document.getElementById('drawer_loading');
+            loading.classList.remove('hidden');
+            const iframe = document.getElementById('drawer_iframe');
+            iframe.src = `/api/listings/${l.id}/source-preview-html`;
+        }
+
+        function onDrawerIframeLoaded() {
+            const loading = document.getElementById('drawer_loading');
+            if (loading) loading.classList.add('hidden');
+        }
+
+        function navigateDrawer(delta) {
+            const newIdx = currentDrawerIndex + delta;
+            if (newIdx >= 0 && newIdx < missingLocationList.length) {
+                loadListingInDrawer(newIdx);
+            }
+        }
+
+        let drawerDebounceTimer = null;
+        function handleDrawerLocInput() {
+            clearTimeout(drawerDebounceTimer);
+            const input = document.getElementById('drawer_loc_input');
+            const dropdown = document.getElementById('drawer_loc_dropdown');
+            if (!input || !dropdown) return;
+            const val = input.value.trim();
+            if (val.length < 2) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            drawerDebounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/geo/autocomplete?q=${encodeURIComponent(val)}&limit=6`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const results = data.results || [];
+                    if (results.length === 0) {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    dropdown.innerHTML = results.map(r => `
+                        <div class="loc-dropdown-item" onclick="selectDrawerLocSuggestion('${escapeHtml(r.label || r.city)}', ${r.lat || 'null'}, ${r.lon || 'null'}, '${escapeHtml(r.postcode || '')}')">
+                            <span><strong>${escapeHtml(r.label || r.city)}</strong> <small style="color:var(--text-2);">(${escapeHtml(r.postcode || r.context || '')})</small></span>
+                            <span style="font-size:0.72rem;background:rgba(255,255,255,0.06);padding:0.1rem 0.4rem;border-radius:4px;">${escapeHtml(r.display_type || 'Ville')}</span>
+                        </div>
+                    `).join('');
+                    dropdown.style.display = 'block';
+                } catch (e) {
+                    console.warn('Autocomplete error:', e);
+                }
+            }, 250);
+        }
+
+        function selectDrawerLocSuggestion(label, lat, lon, postcode) {
+            const input = document.getElementById('drawer_loc_input');
+            const dropdown = document.getElementById('drawer_loc_dropdown');
+            if (input) {
+                input.value = label;
+                input.setAttribute('data-lat', lat || '');
+                input.setAttribute('data-lon', lon || '');
+                input.setAttribute('data-postcode', postcode || '');
+            }
+            if (dropdown) dropdown.style.display = 'none';
+        }
+
+        function handleDrawerKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveDrawerListingLocation();
+            }
+        }
+
+        async function saveDrawerListingLocation() {
+            if (currentDrawerIndex < 0 || currentDrawerIndex >= missingLocationList.length) return;
+            const l = missingLocationList[currentDrawerIndex];
+            const input = document.getElementById('drawer_loc_input');
+            const btn = document.getElementById('btn_drawer_save');
+            const feedback = document.getElementById('drawer_loc_feedback');
+
+            if (!input || !input.value.trim()) {
+                showAlert('Veuillez entrer une localisation.', 'error');
+                return;
+            }
+
+            const payload = {
+                location: input.value.trim(),
+                postal_code: input.getAttribute('data-postcode') || null,
+                latitude: input.getAttribute('data-lat') ? parseFloat(input.getAttribute('data-lat')) : null,
+                longitude: input.getAttribute('data-lon') ? parseFloat(input.getAttribute('data-lon')) : null
+            };
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement…';
+            }
+
+            try {
+                const res = await fetch(`/api/listings/${l.id}/set-location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    feedback.style.display = 'inline-flex';
+                    if (data.listing && data.listing.is_rejected) {
+                        feedback.className = 'missing-loc-status-feedback rejected';
+                        feedback.innerHTML = `<i class="fa-solid fa-ban"></i> « ${escapeHtml(data.listing.city)} » : Rejetée automatiquement selon vos règles.`;
+                    } else {
+                        feedback.className = 'missing-loc-status-feedback success';
+                        feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> « ${escapeHtml(data.listing.city)} » : Enregistrée avec succès.`;
+                    }
+                    if (btn) {
+                        btn.className = 'btn sm secondary';
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistré';
+                    }
+
+                    // Remove repaired listing from list and advance to next or close
+                    missingLocationList.splice(currentDrawerIndex, 1);
+                    setTimeout(() => {
+                        if (missingLocationList.length > 0) {
+                            if (currentDrawerIndex >= missingLocationList.length) {
+                                currentDrawerIndex = missingLocationList.length - 1;
+                            }
+                            loadListingInDrawer(currentDrawerIndex);
+                        } else {
+                            closeSideDrawer();
+                            showAlert('Toutes les annonces sans localisation ont été réparées !', 'success');
+                        }
+                        loadProblems();
+                    }, 900);
+                } else {
+                    showAlert(data.detail || 'Erreur lors de la mise à jour.', 'error');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier';
+                    }
+                }
+            } catch (e) {
+                showAlert('Erreur réseau lors de la mise à jour.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Enregistrer &amp; Vérifier';
+                }
+            }
+        }
+
+        // Global Keyboard Shortcut listener for Drawer
+        document.addEventListener('keydown', (e) => {
+            const drawer = document.getElementById('side_drawer');
+            if (!drawer || !drawer.classList.contains('open')) return;
+
+            if (e.key === 'Escape') {
+                closeSideDrawer();
+            } else if (e.altKey && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                navigateDrawer(-1);
+            } else if (e.altKey && e.key === 'ArrowRight') {
+                e.preventDefault();
+                navigateDrawer(1);
+            }
+        });
 
         // ── Modals & Repairs Execution ────────────────────────────────────────
         function openConfirmModal(types) {
