@@ -3444,6 +3444,12 @@ def reject_duplicate(
         )
         db.add(rej)
         db.commit()
+
+    try:
+        from app.notifications import refresh_standard_user_tasks_notifications
+        refresh_standard_user_tasks_notifications(db)
+    except Exception:
+        pass
         
     return {"status": "success"}
 

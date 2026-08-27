@@ -240,3 +240,124 @@ def auto_mark_read_expired_notifications(db: Session) -> int:
 
     db.commit()
     return total_updated
+
+
+def get_to_qualify_zones_count(db: Session) -> int:
+    """Calculates un-qualified zones (cities and stations) from active listings."""
+    from app.models import ZoneRule, Listing
+    from app.main import _group_zones
+    from sqlalchemy import func
+
+    zone_rules = db.query(ZoneRule).all()
+    city_counts_raw = db.query(Listing.city, func.count(Listing.id)).filter(Listing.city != None).group_by(Listing.city).all()
+
+    station_counts_dict = {}
+    nearest_stations = db.query(Listing.nearest_sncf_station, func.count(Listing.id)).filter(Listing.nearest_sncf_station != None).group_by(Listing.nearest_sncf_station).all()
+    second_stations = db.query(Listing.second_sncf_station, func.count(Listing.id)).filter(Listing.second_sncf_station != None).group_by(Listing.second_sncf_station).all()
+
+    for name, count in nearest_stations:
+        if name: station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+    for name, count in second_stations:
+        if name: station_counts_dict[name] = station_counts_dict.get(name, 0) + count
+
+    existing_city_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'city'}
+    existing_station_rules = {r.name.lower().strip() for r in zone_rules if r.zone_type == 'station'}
+
+    to_qualify_cities_raw = [(c, cnt) for c, cnt in city_counts_raw if c and c.lower().strip() not in existing_city_rules]
+    to_qualify_stations_raw = [(s, cnt) for s, cnt in station_counts_dict.items() if s and s.lower().strip() not in existing_station_rules]
+
+    grouped_cities = _group_zones(to_qualify_cities_raw)
+    grouped_stations = _group_zones(to_qualify_stations_raw)
+
+    return len(grouped_cities) + len(grouped_stations)
+
+
+def get_potential_duplicates_count(db: Session) -> int:
+    """Calculates potential duplicate pairs for manual review."""
+    from app.services import find_potential_duplicates
+    pairs = find_potential_duplicates(db)
+    return len(pairs)
+
+
+def refresh_standard_user_tasks_notifications(db: Session) -> None:
+    """
+    Creates, updates, or resolves in-app notifications targeting standard users (`role="user"`).
+    Excludes admins, read-only users, and agency/agent accounts.
+    Covers:
+      1. Zones to qualify (`to_qualify_count`) -> Link `/zones`
+      2. Duplicates to review (`duplicate_pairs_count`) -> Link `/duplicates/hunt`
+    """
+    from datetime import datetime, timezone
+    from app.models import Notification
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Zones to qualify
+    try:
+        z_count = get_to_qualify_zones_count(db)
+        existing_z = db.query(Notification).filter(
+            Notification.target_role == "user",
+            Notification.category == "systeme",
+            Notification.link_url == "/zones"
+        ).first()
+
+        if z_count > 0:
+            title = "🧭 Zones à qualifier"
+            msg = f"Vous avez {z_count} zone{'s' if z_count > 1 else ''} (villes/gares) en attente de qualification."
+            if existing_z:
+                existing_z.title = title
+                existing_z.message = msg
+                existing_z.is_read = False
+                existing_z.created_at = now
+            else:
+                new_n = Notification(
+                    target_role="user",
+                    title=title,
+                    message=msg,
+                    category="systeme",
+                    link_url="/zones",
+                    is_read=False,
+                )
+                db.add(new_n)
+        else:
+            if existing_z and not existing_z.is_read:
+                existing_z.is_read = True
+                existing_z.read_at = now
+    except Exception as exc:
+        logger.warning(f"[Notifications] Error updating zones notification: {exc}")
+
+    # 2. Duplicates to review
+    try:
+        d_count = get_potential_duplicates_count(db)
+        existing_d = db.query(Notification).filter(
+            Notification.target_role == "user",
+            Notification.category == "systeme",
+            Notification.link_url == "/duplicates/hunt"
+        ).first()
+
+        if d_count > 0:
+            title = "👯 Duplicats à revoir"
+            msg = f"Vous avez {d_count} paire{'s' if d_count > 1 else ''} de doublons potentiels en attente de révision."
+            if existing_d:
+                existing_d.title = title
+                existing_d.message = msg
+                existing_d.is_read = False
+                existing_d.created_at = now
+            else:
+                new_n = Notification(
+                    target_role="user",
+                    title=title,
+                    message=msg,
+                    category="systeme",
+                    link_url="/duplicates/hunt",
+                    is_read=False,
+                )
+                db.add(new_n)
+        else:
+            if existing_d and not existing_d.is_read:
+                existing_d.is_read = True
+                existing_d.read_at = now
+    except Exception as exc:
+        logger.warning(f"[Notifications] Error updating duplicates notification: {exc}")
+
+    db.commit()

@@ -112,3 +112,53 @@ def test_notifications_endpoints():
     assert count_res.status_code == 200
     data = count_res.json()
     assert "unread_count" in data
+
+
+def test_standard_user_task_notifications():
+    run_migrations()
+    db = SessionLocal()
+
+    try:
+        from app.notifications import refresh_standard_user_tasks_notifications, get_user_notifications_query
+        from app.models import User, Notification, Listing, ListingStatus
+
+        # 1. Create standard user and admin user
+        std_user = db.query(User).filter(User.username == "std_test_user").first()
+        if not std_user:
+            std_user = User(username="std_test_user", password_hash=b"hash", salt=b"salt", role="user")
+            db.add(std_user)
+
+        admin_user = db.query(User).filter(User.username == "admin_test_user").first()
+        if not admin_user:
+            admin_user = User(username="admin_test_user", password_hash=b"hash", salt=b"salt", role="admin")
+            db.add(admin_user)
+
+        db.commit()
+
+        # 2. Add an un-qualified listing
+        l = Listing(
+            title="Appartement à qualifier",
+            url="https://test-qualify.com/1",
+            city="VilleInconnueTest",
+            status=ListingStatus.ACTIVE
+        )
+        db.add(l)
+        db.commit()
+
+        # 3. Refresh task notifications
+        refresh_standard_user_tasks_notifications(db)
+
+        # 4. Standard user query should retrieve the "Zones à qualifier" notification
+        std_notifs = get_user_notifications_query(db, std_user).all()
+        zones_notif = next((n for n in std_notifs if n.link_url == "/zones"), None)
+        assert zones_notif is not None
+        assert "zone" in zones_notif.message.lower()
+        assert zones_notif.target_role == "user"
+
+        # 5. Non-standard user query (e.g. role admin) with target_role="user" should be excluded when filtering by role
+        admin_notifs = get_user_notifications_query(db, admin_user).all()
+        admin_zones_notif = next((n for n in admin_notifs if n.link_url == "/zones" and n.target_role == "user"), None)
+        assert admin_zones_notif is None
+
+    finally:
+        db.close()

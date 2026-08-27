@@ -15,6 +15,7 @@ from app.notifications import (
     auto_mark_read_expired_notifications,
     get_unread_notifications_count,
     get_user_notifications_query,
+    refresh_standard_user_tasks_notifications,
 )
 
 from app.translations import get_text
@@ -125,11 +126,12 @@ async def notifications_view(
         if username:
             current_user = db.query(models.User).filter(models.User.username == username).first()
 
-    # 2. Run auto-read policy for expired notifications
+    # 2. Run auto-read policy & refresh standard user task notifications
     try:
         auto_mark_read_expired_notifications(db)
+        refresh_standard_user_tasks_notifications(db)
     except Exception as exc:
-        print(f"[Notifications] Error during auto-mark-read: {exc}")
+        print(f"[Notifications] Error during auto-mark-read/refresh: {exc}")
 
     # 3. Retrieve notifications visible to the user
     query = get_user_notifications_query(db, current_user)
@@ -170,6 +172,11 @@ async def get_unread_count(
         username = request.session.get("username")
         if username:
             current_user = db.query(models.User).filter(models.User.username == username).first()
+
+    try:
+        refresh_standard_user_tasks_notifications(db)
+    except Exception:
+        pass
 
     count = get_unread_notifications_count(db, current_user)
     return JSONResponse({"unread_count": count})

@@ -56,6 +56,8 @@ def scraping_job():
 
     try:
         asyncio.run(run_scrapers())
+        from app.notifications import refresh_standard_user_tasks_notifications
+        refresh_standard_user_tasks_notifications(db)
     except Exception as e:
         print(f"Erreur durant l'exécution des tâches de scraping : {e}")
     finally:
@@ -245,8 +247,9 @@ def notifications_auto_read_job():
     print("[Scheduler] Démarrage du marquage automatique des notifications expirées...")
     db = SessionLocal()
     try:
-        from app.notifications import auto_mark_read_expired_notifications
+        from app.notifications import auto_mark_read_expired_notifications, refresh_standard_user_tasks_notifications
         updated = auto_mark_read_expired_notifications(db)
+        refresh_standard_user_tasks_notifications(db)
         print(f"[Scheduler] Auto-marquage des notifications terminé ({updated} mise(s) à jour)")
     except Exception as e:
         print(f"[Scheduler] Erreur durant l'auto-marquage des notifications: {e}")
