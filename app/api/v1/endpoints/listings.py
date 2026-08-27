@@ -172,13 +172,20 @@ def _render_native_fallback_preview(listing: models.Listing, reason: str = "") -
 
     photos_html = ""
     if photos:
+        thumb_items = "".join(
+            '<img src="{src}" class="thumb-item {cls}" onclick="selectThumb(this, \'{src}\')" alt="Thumb">'.format(
+                src=html.escape(p),
+                cls="active" if i == 0 else ""
+            )
+            for i, p in enumerate(photos[:12])
+        )
         photos_html = f"""
         <div class="gallery">
             <div class="main-photo-wrap">
                 <img id="mainPreviewImg" src="{html.escape(photos[0])}" class="main-photo" alt="Photo">
             </div>
             <div class="thumbnails">
-                {"".join([f'<img src="{html.escape(p)}" class="thumb-item {"active" if i==0 else ""}" onclick="selectThumb(this, \'{html.escape(p)}\')" alt="Thumb">' for i, p in enumerate(photos[:12])])}
+                {thumb_items}
             </div>
         </div>
         """
