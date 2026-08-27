@@ -78,7 +78,7 @@ def init_test_data():
         is_duplicate=False,
         duplicate_of_id=None,
         status=ListingStatus.ACTIVE,
-        photos_local="[]"
+        photos_local='["uploads/listings/2/p1.jpg", "uploads/listings/2/p2.jpg"]'
     )
     # Listing 144: Duplicate child of #2 (first sibling)
     l144 = Listing(
@@ -89,7 +89,7 @@ def init_test_data():
         is_duplicate=True,
         duplicate_of_id=2,
         status=ListingStatus.ACTIVE,
-        photos_local="[]"
+        photos_local='["uploads/listings/144/p1.jpg"]'
     )
     # Listing 145: Sibling duplicate child of #2 (second sibling)
     l145 = Listing(
@@ -100,7 +100,7 @@ def init_test_data():
         is_duplicate=True,
         duplicate_of_id=2,
         status=ListingStatus.ACTIVE,
-        photos_local="[]"
+        photos_local='[]'
     )
     # Listing 142: Normal listing (not a duplicate)
     l142 = Listing(
@@ -111,7 +111,7 @@ def init_test_data():
         is_duplicate=False,
         duplicate_of_id=None,
         status=ListingStatus.ACTIVE,
-        photos_local="[]"
+        photos_local='["uploads/listings/142/p1.jpg"]'
     )
     
     db.add(l2)
@@ -192,11 +192,38 @@ def test_ui_rendering():
     assert "/listings/145" in html_2, "Should link to child duplicate #145 under Annonces liées"
     print("Listing #2 (Parent duplicate) correctly renders children links under Annonces liées: PASSED")
 
+def test_duplicate_photos_aggregation():
+    print("Testing duplicate photo aggregation and overlay banner in HTML...")
+    # 1. Listing 2 (Parent) has 2 main photos + 1 duplicate photo from #144 (total 3 photos)
+    response = client.get("/listings/2")
+    assert response.status_code == 200
+    html_2 = response.text
+    assert "duplicate-photo-banner" in html_2, "Listing #2 should display duplicate photo banner"
+    assert "Annonce 144" in html_2, "Listing #2 should display banner for Annonce 144 photo"
+    assert "3 photos (2 + 1 duplicat)" in html_2, "Listing #2 should report aggregated photo count"
+
+    # 2. Listing 144 (Child) has 1 main photo + 2 duplicate photos from parent #2 (total 3 photos)
+    response_144 = client.get("/listings/144")
+    assert response_144.status_code == 200
+    html_144 = response_144.text
+    assert "duplicate-photo-banner" in html_144, "Listing #144 should display duplicate photo banner"
+    assert "Annonce 2" in html_144, "Listing #144 should display banner for Annonce 2 photo"
+    assert "3 photos (1 + 2 duplicat)" in html_144, "Listing #144 should report aggregated photo count"
+
+    # 3. Listing 142 (No duplicates)
+    response_142 = client.get("/listings/142")
+    assert response_142.status_code == 200
+    html_142 = response_142.text
+    assert 'class="duplicate-photo-banner"' not in html_142, "Listing #142 should not render duplicate photo banner element"
+    assert "1 photo" in html_142, "Listing #142 photo count display"
+    print("Duplicate photo aggregation test: PASSED")
+
 if __name__ == "__main__":
     try:
         init_test_data()
         test_duplicate_queries()
         test_ui_rendering()
+        test_duplicate_photos_aggregation()
         print("All tests passed successfully!")
     finally:
         # Dispose of engine to release connection pool locks

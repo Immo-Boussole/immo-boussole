@@ -1608,7 +1608,7 @@ def listing_detail_page(
         listing.nearest_sncf_station = "NOT_FOUND" 
         db.commit()
 
-    photos = json_to_photos(listing.photos_local)
+    main_photos = json_to_photos(listing.photos_local)
     attachments = db.query(ListingAttachment).filter(ListingAttachment.listing_id == listing_id).order_by(ListingAttachment.created_at.desc()).all()
     links = db.query(ListingLink).filter(ListingLink.listing_id == listing_id).order_by(ListingLink.created_at.asc()).all()
     reviews = db.query(Review).filter(Review.listing_id == listing_id).all()
@@ -1633,6 +1633,36 @@ def listing_detail_page(
         duplicate_children = db.query(Listing).filter(
             Listing.duplicate_of_id == listing.id
         ).all()
+
+    # Aggregate photos: main listing photos first, followed by photos from duplicate listings
+    photos = [
+        {
+            "url": p,
+            "is_duplicate": False,
+            "listing_id": listing.id,
+            "badge_text": None,
+            "portal_name": listing.source.value if hasattr(listing.source, 'value') else str(listing.source) if listing.source else None,
+        }
+        for p in main_photos
+    ]
+    duplicate_photos_count = 0
+    duplicate_listings = []
+    if duplicate_original:
+        duplicate_listings.append(duplicate_original)
+    if duplicate_children:
+        duplicate_listings.extend(duplicate_children)
+
+    for dup in duplicate_listings:
+        dup_photos = json_to_photos(dup.photos_local)
+        for dp in dup_photos:
+            photos.append({
+                "url": dp,
+                "is_duplicate": True,
+                "listing_id": dup.id,
+                "badge_text": f"Annonce {dup.id}",
+                "portal_name": dup.source.value if hasattr(dup.source, 'value') else str(dup.source) if dup.source else None,
+            })
+            duplicate_photos_count += 1
 
     # Sidebars context
     queries = db.query(SearchQuery).all()
@@ -1715,6 +1745,8 @@ def listing_detail_page(
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
+        "main_photos_count": len(main_photos),
+        "duplicate_photos_count": duplicate_photos_count,
         "attachments": attachments,
         "links": links,
         "reviews": reviews,
