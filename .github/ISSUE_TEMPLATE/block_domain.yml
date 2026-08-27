@@ -1,0 +1,28 @@
+name: "Propose a Blocked Domain / Proposer un domaine à interdire"
+description: "Submit a domain that should be forbidden from being imported (e.g. loan simulators, tax advisory forms)."
+title: "[Block Domain]: "
+labels: ["block-domain"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to propose a domain to be added to the blocked domains list (`app/data/blocked_domains.csv`).
+        An automated GitHub Action will generate a Pull Request for maintainer review.
+
+  - type: input
+    id: domain
+    attributes:
+      label: Domain name / Nom de domaine
+      description: "Enter the domain name without scheme or path (e.g. pretto.fr, fcms.typeform.com)"
+      placeholder: "e.g. pretto.fr"
+    validations:
+      required: true
+
+  - type: input
+    id: description
+    attributes:
+      label: Description / Reason
+      description: "Briefly describe why this domain should be blocked (e.g. Simulation de prêts, Publicité, etc.)"
+      placeholder: "e.g. Simulation de prêts"
+    validations:
+      required: true

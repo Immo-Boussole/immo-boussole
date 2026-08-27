@@ -90,3 +90,10 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 - **Technology & Action Emojis**: Always prefix step titles with the corresponding Unicode emoji (e.g. 🐍 Python, 🧪 Tests, 🐳 Docker, 🐙 GitHub, ⚙️ CI/CD, 🧩 WebExtension, 🌐 Frontend/Web, 🔍 Research, 📝 Docs/i18n, 🚀 Deploy/Release, 🛡️ Security, 🧭 Immo-Boussole Domain).
 - **Detailed Reference**: See [.agents/rules/step_progress_and_formatting.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/step_progress_and_formatting.md).
 
+---
+
+## 9. Automatic Local Workspace Cleanup
+
+- **Post-Action Cleanup**: After completing actions or running test suites, ensure the local project root is clean of temporary test DB files (`test_*.db`), cloud synchronization conflict files (`*[conflicted]*`), orphan SQLite journal files (`*.db-shm`, `*.db-wal`), and root `__pycache__` directories.
+- **Isolated Test DB Locations**: Always configure tests to use `tempfile.TemporaryDirectory(ignore_cleanup_errors=True)` to prevent creating database files in the project root directory.
+- **Detailed Reference**: See [.agents/rules/local_cleanup.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/local_cleanup.md).

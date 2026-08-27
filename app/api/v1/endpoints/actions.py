@@ -9,6 +9,7 @@ from app.database import get_db
 from app.api.deps import get_current_user_api
 from app.services import normalize_listing_url
 from app.translations import get_text
+from app.blocked_domains import is_domain_blocked
 
 router = APIRouter()
 
@@ -118,6 +119,16 @@ def check_listing_api(
     """
     Check if a listing already exists in Immo-Boussole database.
     """
+    blocked, domain, desc = is_domain_blocked(url)
+    if blocked:
+        return {
+            "exists": False,
+            "blocked": True,
+            "domain": domain,
+            "description": desc,
+            "message": f"Import forbidden for domain '{domain}' ({desc})" if desc else f"Import forbidden for domain '{domain}'"
+        }
+
     existing = find_existing_listing(url, db)
     if existing:
         return {
@@ -154,6 +165,13 @@ async def submit_url_api(
     Trigger scraping for a given URL.
     Returns immediately, task runs in background.
     """
+    blocked, domain, desc = is_domain_blocked(request.url)
+    if blocked:
+        detail_msg = f"Import forbidden for domain '{domain}'"
+        if desc:
+            detail_msg += f" ({desc})"
+        raise HTTPException(status_code=400, detail=detail_msg)
+
     existing = find_existing_listing(request.url, db)
     is_already_exists = False
 

@@ -13,7 +13,10 @@ from app.models import Listing, ListingStatus, ReadySearch, User, Source
 from app.main import app, login_required
 
 
-TEST_DB_FILE = "test_auto_searches_page.db"
+import tempfile
+
+temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+TEST_DB_FILE = os.path.join(temp_dir.name, "test_auto_searches_page.db")
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{TEST_DB_FILE}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -22,18 +25,13 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    if os.path.exists(TEST_DB_FILE):
-        try:
-            os.remove(TEST_DB_FILE)
-        except Exception:
-            pass
     Base.metadata.create_all(bind=engine)
     yield
-    if os.path.exists(TEST_DB_FILE):
-        try:
-            os.remove(TEST_DB_FILE)
-        except Exception:
-            pass
+    engine.dispose()
+    try:
+        temp_dir.cleanup()
+    except Exception:
+        pass
 
 
 @pytest.fixture

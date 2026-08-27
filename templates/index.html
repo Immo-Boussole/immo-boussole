@@ -1493,6 +1493,25 @@
                 </select>
             </div>
 
+            <div class="filter-group">
+                <label for="filter-repair-tag">{{ t(request, 'dashboard.repair_tag_filter', 'Erreur de données') }}</label>
+                <select id="filter-repair-tag" class="filter-select" onchange="applyListingFilters()">
+                    <option value="">{{ t(request, 'dashboard.repair_tag_all', 'Toutes erreurs') }}</option>
+                    <option value="missing_location">📍 {{ t(request, 'dashboard.repair_tag_missing_location', 'Sans localisation') }}</option>
+                    <option value="empty_description">📝 {{ t(request, 'dashboard.repair_tag_empty_description', 'Description vide') }}</option>
+                    <option value="generic_title_figaro">🏷️ {{ t(request, 'dashboard.repair_tag_generic_title_figaro', 'Titre générique Le Figaro') }}</option>
+                    <option value="aggregate_search_page">🔗 {{ t(request, 'dashboard.repair_tag_aggregate_search_page', 'Page de recherche agrégée') }}</option>
+                    <option value="duplicate_city_zip">🗂️ {{ t(request, 'dashboard.repair_tag_duplicate_city_zip', 'Code postal doublé') }}</option>
+                    <option value="anomalous_price">💰 {{ t(request, 'dashboard.repair_tag_anomalous_price', 'Prix anormal') }}</option>
+                    <option value="linked_ads_none">🔗 {{ t(request, 'dashboard.repair_tag_linked_ads_none', 'Doublon orphelin') }}</option>
+                    <option value="missing_city_pins">🗺️ {{ t(request, 'dashboard.repair_tag_missing_city_pins', 'Ville non visible sur la carte') }}</option>
+                    <option value="unstandardized_city">🏙️ {{ t(request, 'dashboard.repair_tag_unstandardized_city', 'Ville non standardisée') }}</option>
+                    <option value="incorrect_price_per_sqm">📐 {{ t(request, 'dashboard.repair_tag_incorrect_price_per_sqm', 'Prix au m² incorrect') }}</option>
+                    <option value="missing_photos">🖼️ {{ t(request, 'dashboard.repair_tag_missing_photos', 'Images manquantes') }}</option>
+                    <option value="past_first_visit_not_done">📅 {{ t(request, 'dashboard.repair_tag_past_first_visit_not_done', '1ère visite passée non validée') }}</option>
+                </select>
+            </div>
+
             <button class="btn-reset-filter" id="btn-reset-filter" onclick="resetListingFilters()">
                 <i class="fa-solid fa-xmark"></i> {{ t(request, 'filter.reset', 'Réinitialiser') }}
             </button>
@@ -1518,6 +1537,7 @@
                     data-to-visit="{{ 'true' if listing.to_visit else 'false' }}"
                     data-visit-status="{{ listing.last_visit_status or '' }}"
                     data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
+                    data-repair-tags="{{ listing.repair_tags or '[]' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
                     <div class="card-img">

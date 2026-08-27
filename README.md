@@ -185,6 +185,15 @@ Immo-Boussole includes a complete REST API powered by **FastAPI**:
 
 ---
 
+## 🚫 Blocked Domains & Prohibited URL Filtering
+
+Immo-Boussole maintains a configurable list of blocked domains (`app/data/blocked_domains.csv`) to prevent importing non-listing URLs (e.g. loan simulators, tax advisory forms).
+
+* **Manual Addition**: Contributors can edit `app/data/blocked_domains.csv` directly via a Pull Request.
+* **Automated GitHub Issue -> PR Workflow**: Anyone can open a GitHub Issue using our **[Propose a Blocked Domain](.github/ISSUE_TEMPLATE/block_domain.yml)** issue form template. A GitHub Action automatically parses the submission, updates `blocked_domains.csv`, and submits a Pull Request for review.
+
+---
+
 ## 🧪 Testing
 
 The repository provides a test suite for API endpoints, scraping logic, database operations, and integrations:

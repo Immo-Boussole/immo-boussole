@@ -14,13 +14,11 @@ from app.database import Base, get_db
 from app.models import Listing, ListingStatus, User
 from app.main import app, templates
 
-# Use file-based SQLite database for testing to avoid multi-thread isolation of :memory:
-SQLALCHEMY_DATABASE_URL = "sqlite:///test_duplicate_relations.db"
-if os.path.exists("test_duplicate_relations.db"):
-    try:
-        os.remove("test_duplicate_relations.db")
-    except Exception:
-        pass
+import tempfile
+
+temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+TEST_DB_FILE = os.path.join(temp_dir.name, "test_duplicate_relations.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{TEST_DB_FILE}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -206,10 +204,7 @@ if __name__ == "__main__":
             engine.dispose()
         except Exception:
             pass
-        # Clean up database files
-        for filename in ["test_duplicate_relations.db", "test_duplicate_relations.db-shm", "test_duplicate_relations.db-wal"]:
-            if os.path.exists(filename):
-                try:
-                    os.remove(filename)
-                except Exception:
-                    pass
+        try:
+            temp_dir.cleanup()
+        except Exception:
+            pass

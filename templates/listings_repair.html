@@ -1679,7 +1679,27 @@
                 } else {
                     detailHtml = listings.map(l => {
                         if (type === 'missing_city_pins') {
-                            return `<div class="listing-row"><span class="listing-city"><i class="fa-solid fa-location-dot"></i> ${l.city || l.title}</span></div>`;
+                            const cityName = l.missing_city || l.city || l.title || '';
+                            const carteUrl = `/carte?city=${encodeURIComponent(cityName)}`;
+                            if (l.id) {
+                                // Has a real listing ID — show listing link + map link
+                                const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
+                                return `<div class="listing-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
+                                        ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
+                                        <a href="${l.url || '#'}" target="_blank" class="listing-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.title || 'Sans titre')}</a>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                                        <span class="listing-city"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(cityName)}</span>
+                                        <a href="${carteUrl}" target="_blank" class="btn sm secondary" style="gap: 0.35rem; font-size: 0.78rem;" title="Voir sur la carte">
+                                            <i class="fa-solid fa-map-location-dot"></i> Carte
+                                        </a>
+                                    </div>
+                                </div>`;
+                            } else {
+                                // City-only fallback
+                                return `<div class="listing-row"><span class="listing-city"><i class="fa-solid fa-location-dot"></i> <a href="${carteUrl}" target="_blank" style="color: var(--accent); text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(cityName)}</a></span></div>`;
+                            }
                         }
                         const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
                         return `<div class="listing-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
@@ -1716,6 +1736,9 @@
                         <button class="expand-btn" onclick="toggleDetail('${type}')">
                             <i class="fas fa-list"></i> <span id="expand_label_${type}">Voir (${listings.length})</span>
                         </button>` : ''}
+                        <button class="btn sm secondary" onclick="window.open('/?tag=${type}', '_blank')" title="Afficher ces annonces dans le Tableau de bord" ${count === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-table-columns"></i> Tableau de bord
+                        </button>
                         ${isError ? `
                         <button class="btn sm secondary" onclick="openConfirmModal(['${type}'])">
                             <i class="fas fa-wrench"></i> Corriger
@@ -1741,6 +1764,9 @@
                         </div>
                     </div>
                     <div class="problem-actions">
+                        <button class="btn sm secondary" onclick="window.open('/?tag=${type}', '_blank')" title="Afficher ces annonces dans le Tableau de bord" ${count === 0 ? 'disabled' : ''}>
+                            <i class="fas fa-table-columns"></i> Tableau de bord
+                        </button>
                         <button class="btn sm danger" onclick="openDangerModal(['${type}'])">
                             <i class="fa-solid fa-triangle-exclamation"></i> Exécuter
                         </button>

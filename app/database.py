@@ -258,6 +258,9 @@ _MIGRATIONS = [
     ("users", "last_seen_missing_loc_count",               "INTEGER DEFAULT 0"),
     ("users", "missing_loc_snooze_until",                  "DATETIME"),
     ("users", "last_login_at",                             "DATETIME"),
+
+    # listings — repair tags (data quality errors) v33
+    ("listings", "repair_tags",                            "TEXT"),
 ]
 
 

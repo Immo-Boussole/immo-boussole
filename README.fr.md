@@ -185,6 +185,15 @@ Immo-Boussole intègre une API REST complète propulsée par **FastAPI** :
 
 ---
 
+## 🚫 Domaines interdits et filtrage des d'URLs
+
+Immo-Boussole maintient une liste configurable de domaines interdits (`app/data/blocked_domains.csv`) afin d'empêcher l'import d'URLs qui ne sont pas des annonces immobilières (simulateurs de prêts, formulaires de défiscalisation, etc.).
+
+* **Ajout manuel** : Les contributeurs peuvent modifier directement `app/data/blocked_domains.csv` via une Pull Request.
+* **Workflow automatisé GitHub Issue -> PR** : Tout le monde peut ouvrir un ticket GitHub avec notre formulaire **[Proposer un domaine à interdire](.github/ISSUE_TEMPLATE/block_domain.yml)**. Une GitHub Action extrait automatiquement les informations, met à jour `blocked_domains.csv` et génère une Pull Request prête à être relue.
+
+---
+
 ## 🧪 Tests
 
 Une suite de tests automatisés couvre les endpoints API, le scraping, la base de données et les intégrations :

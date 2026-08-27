@@ -1,0 +1,62 @@
+name: Auto Add Blocked Domain PR
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  create-blocked-domain-pr:
+    if: contains(github.event.issue.labels.*.name, 'block-domain')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Process Issue and Update CSV
+        id: update_csv
+        run: |
+          python scripts/add_blocked_domain.py "${{ github.event.issue.body }}"
+          git status
+
+      - name: Check for CSV Changes
+        id: check_changes
+        run: |
+          if git diff --quiet app/data/blocked_domains.csv; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to CSV."
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "CSV updated successfully."
+          fi
+
+      - name: Create Branch, Commit & Open PR
+        if: steps.check_changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BRANCH_NAME="feat/block-domain-issue-${ISSUE_NUMBER}"
+          git checkout -b "$BRANCH_NAME"
+          git add app/data/blocked_domains.csv
+          git commit -m "feat(security): add blocked domain requested in issue #${ISSUE_NUMBER}"
+          git push origin "$BRANCH_NAME"
+          
+          gh pr create \
+            --title "feat(security): block domain (Issue #${ISSUE_NUMBER})" \
+            --body "Automated Pull Request generated from issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}.\n\nCloses #${ISSUE_NUMBER}." \
+            --head "$BRANCH_NAME" \
+            --base main

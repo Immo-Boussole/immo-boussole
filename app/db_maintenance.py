@@ -119,11 +119,16 @@ def identify_problems(db: Session, hide_rejected: bool = True):
         existing_pin_names.add(p_name_clean)
         
     missing_city_names = []
+    missing_city_pin_listing_ids = []
     for city_val in cities_in_target_listings:
         c_lower = city_val.lower()
         c_lower_clean = re.sub(r'\s*\(\d+\)$', '', c_lower).strip()
         if c_lower not in existing_pin_names and c_lower_clean not in existing_pin_names:
             missing_city_names.append(city_val)
+            # collect listing IDs for this city (for repair_tags tagging)
+            for l in target_listings:
+                if l.city and l.city.strip() == city_val:
+                    missing_city_pin_listing_ids.append(l.id)
                 
     # Unstandardized cities (missing official zip code or standardized format in either city or location)
     unstd_city_listings = []
@@ -206,7 +211,7 @@ def identify_problems(db: Session, hide_rejected: bool = True):
     ]
     past_first_visit_listing_ids = list(dict.fromkeys(v.listing_id for v in past_first_visits if v.listing_id))
 
-    return {
+    result = {
         MISSING_LOCATION: {
             "count": len(missing_loc_listings),
             "ids": [l.id for l in missing_loc_listings]
@@ -237,7 +242,8 @@ def identify_problems(db: Session, hide_rejected: bool = True):
         },
         MISSING_CITY_PINS: {
             "count": len(missing_city_names),
-            "ids": missing_city_names
+            "ids": missing_city_names,  # city name strings (for display)
+            "listing_ids": missing_city_pin_listing_ids,  # actual listing IDs (for repair_tags)
         },
         UNSTANDARDIZED_CITY: {
             "count": len(unstd_city_listings),
@@ -264,6 +270,41 @@ def identify_problems(db: Session, hide_rejected: bool = True):
             "ids": past_first_visit_listing_ids
         }
     }
+
+    # ── Update repair_tags on each listing ────────────────────────────────────
+    # Build a mapping: listing_id -> set of active error types
+    import json as _json
+    repair_tags_by_id: dict[int, list[str]] = {}
+
+    for problem_type, data in result.items():
+        # Use listing_ids for missing_city_pins (not city name strings)
+        if problem_type == MISSING_CITY_PINS:
+            ids = data.get("listing_ids", [])
+        else:
+            ids = data.get("ids", [])
+
+        for lid in ids:
+            if not isinstance(lid, int):
+                continue
+            if lid not in repair_tags_by_id:
+                repair_tags_by_id[lid] = []
+            if problem_type not in repair_tags_by_id[lid]:
+                repair_tags_by_id[lid].append(problem_type)
+
+    # Apply to all target listings (clear tags for listings with no errors)
+    try:
+        for listing in target_listings:
+            new_tags = repair_tags_by_id.get(listing.id, [])
+            new_tags_json = _json.dumps(new_tags) if new_tags else None
+            if listing.repair_tags != new_tags_json:
+                listing.repair_tags = new_tags_json
+        db.commit()
+    except Exception as e:
+        print(f"[identify_problems] Warning: could not update repair_tags: {e}")
+        db.rollback()
+
+    return result
+
 
 
 # Problem types that are safe for all authenticated users (non-destructive repairs)
@@ -416,11 +457,22 @@ def identify_problems_with_details(db: Session, hide_rejected: bool = True) -> d
         ids = data["ids"]
 
         if problem_type == MISSING_CITY_PINS:
-            # ids are city name strings
-            listings_info = [
-                {"id": None, "title": city, "city": city, "url": None, "status": "active"}
-                for city in ids
-            ]
+            # ids are city name strings; listing_ids are actual listing IDs
+            listing_ids_for_cities = data.get("listing_ids", [])
+            if listing_ids_for_cities:
+                city_listings = db.query(Listing).filter(Listing.id.in_(listing_ids_for_cities)).all()
+                # Group by city name to preserve city context in each item
+                listings_info = [_listing_summary(l) for l in city_listings]
+                # Attach the missing city name to each entry for display
+                city_by_id = {l.id: (l.city or l.location or "") for l in city_listings}
+                for info in listings_info:
+                    info["missing_city"] = city_by_id.get(info["id"], "")
+            else:
+                # Fallback: show city names only (no listing IDs available)
+                listings_info = [
+                    {"id": None, "title": city, "city": city, "url": None, "status": "active"}
+                    for city in ids
+                ]
         else:
             # ids are listing IDs — fetch details in one query
             if ids:

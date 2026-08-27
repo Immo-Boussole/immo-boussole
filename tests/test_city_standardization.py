@@ -16,12 +16,11 @@ from app.geo import standardize_and_enrich_city
 from app.db_maintenance import identify_problems, repair_listings_batch_task, UNSTANDARDIZED_CITY
 from app.services import create_listing_from_details, Source
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///test_city_std.db"
-if os.path.exists("test_city_std.db"):
-    try:
-        os.remove("test_city_std.db")
-    except Exception:
-        pass
+import tempfile
+
+temp_dir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+TEST_DB_FILE = os.path.join(temp_dir.name, "test_city_std.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{TEST_DB_FILE}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -134,8 +133,8 @@ if __name__ == "__main__":
         asyncio.run(test_listing_creation_and_maintenance())
         print("\nAll city standardization tests PASSED successfully!")
     finally:
-        if os.path.exists("test_city_std.db"):
-            try:
-                os.remove("test_city_std.db")
-            except Exception:
-                pass
+        engine.dispose()
+        try:
+            temp_dir.cleanup()
+        except Exception:
+            pass
