@@ -438,13 +438,16 @@
 
     <main class="main">
         <header class="topbar">
-            <div style="display:flex; align-items:center; gap:0.75rem;">
-                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" style="background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; display:none;">
+            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1><i class="fa-solid fa-ban" style="color:var(--red); margin-right:0.5rem;"></i> {{ t(request, 'zones.page_title', 'Gestion des Zones Interdites') }}</h1>
+                <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                    <h1><i class="fa-solid fa-ban" style="color:var(--red); margin-right:0.5rem;"></i> {{ t(request, 'zones.page_title', 'Gestion des Zones Interdites') }}</h1>
+                    <p style="font-size:0.8rem; color:var(--text-2); margin: 0;">{{ t(request, 'zones.subtitle', 'Définissez les villes et gares SNCF interdites — impact immédiat sur toute l\'application') }}</p>
+                </div>
             </div>
-            <p style="font-size:0.85rem; color:var(--text-2);">{{ t(request, 'zones.subtitle', 'Définissez les villes et gares SNCF interdites — impact immédiat sur toute l\'application') }}</p>
+            <div class="topbar-right"></div>
         </header>
 
         <div class="content-wrapper">

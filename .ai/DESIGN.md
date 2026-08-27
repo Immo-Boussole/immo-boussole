@@ -84,6 +84,37 @@ The sidebar is **identical across all templates**. Every page MUST include the e
 
 > **CRITICAL**: When creating or modifying any template, always copy the complete sidebar from `index.html` as the reference. Never create a partial sidebar missing any of the 6 sections above.
 
+### Topbar Architecture & Action Layout (`.topbar`)
+Every template must structure its top header line with the `.topbar` container obeying the following layout principles:
+- **Title on Far Left (`.topbar-left`)**: Contains the mobile menu hamburger button (on mobile), followed by the page title `<h1>`. The title stays strictly on the left.
+- **Action Buttons on Far Right (`.topbar-right`)**: All top-level action buttons (e.g. "+ Add Listing", "Refresh", modals, filters triggers) MUST be grouped in `<div class="topbar-right">` aligned to the far right (`margin-left: auto`). No action buttons should sit immediately adjacent to `<h1>` in `.topbar-left`.
+- **Expanding Search Bar (`.topbar-search`)**: For views featuring a top-level instant search/filter, place the search input container immediately after `<h1>` inside `.topbar-left` (or between `.topbar-left` and `.topbar-right`). The container must dynamically expand (`flex: 1`, with responsive min/max constraints) to fill all available horizontal space up to the right-aligned action buttons.
+
+```html
+<header class="topbar">
+    <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1>{{ Page Title }}</h1>
+        <div class="topbar-search">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input id="filter-search" type="text" class="topbar-search-input" placeholder="Search...">
+        </div>
+    </div>
+    <div class="topbar-right">
+        <button class="btn" id="btnAction">...</button>
+        <button class="btn primary" id="btnPrimaryAction">...</button>
+    </div>
+</header>
+```
+
+### Listing Filter Bars & Status Multi-Selection (`.filter-bar`)
+- **Multi-Selection Status Chips**: Listing status chips (`Nouvelle`, `Active`, `Disparue`, `Rejetée`) must support parallel multi-selection.
+- **Default State**: By default, `Nouvelle` and `Active` are both activated simultaneously on page load.
+- **Filter Reset**: The Reset button (`#btn-reset-filter`) must cleanly restore the view to its initial default state (`Nouvelle` + `Active` selected, search input cleared, dropdown filters reset to "All").
+- **Consistency**: Both the Dashboard (`/`) and Listings Table (`/listings/table`) views must share identical status filtering semantics and visual styling.
+
 - **Spacing Scale**: Usually proportional by `rem` (`0.25rem`, `0.5rem`, `0.75rem`, `1rem`, `1.25rem`, `1.5rem`).
 - **Gaps**: Grid layouts employ `1.25rem` gaps between display cards. Flex clusters use tighter `0.5rem` to `1rem` spacing.
 - **CSS Custom Properties**: Hardcoded colors shouldn't exist in markup. Everything references standard custom props from `:root` (e.g. `var(--surface)`).

@@ -474,13 +474,14 @@
 
         <main class="main">
             <header class="topbar">
-                <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                <div class="topbar-left">
                     <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')"
                         title="Menu">
                         <i class="fas fa-bars"></i>
                     </button>
                     <h1>{{ t(request, 'admin_users.title') }}</h1>
                 </div>
+                <div class="topbar-right"></div>
             </header>
 
             <div class="content">

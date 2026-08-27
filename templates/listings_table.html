@@ -486,6 +486,62 @@
             white-space: nowrap;
         }
 
+        .tbl-filter-chips {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .tbl-filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-2);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--trans);
+            user-select: none;
+        }
+
+        .tbl-filter-chip:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tbl-filter-chip.active {
+            font-weight: 700;
+        }
+
+        .tbl-filter-chip.active#tbl-f-nouvelle {
+            background: rgba(16, 217, 164, 0.15);
+            border-color: var(--green);
+            color: var(--green) !important;
+        }
+
+        .tbl-filter-chip.active#tbl-f-active {
+            background: rgba(79, 142, 247, 0.15);
+            border-color: var(--accent);
+            color: var(--accent) !important;
+        }
+
+        .tbl-filter-chip.active#tbl-f-disparue {
+            background: rgba(242, 92, 105, 0.15);
+            border-color: var(--red);
+            color: var(--red) !important;
+        }
+
+        .tbl-filter-chip.active#tbl-f-rejetee {
+            background: rgba(248, 168, 75, 0.15);
+            border-color: var(--orange);
+            color: var(--orange) !important;
+        }
+
         .filter-input,
         .filter-select {
             background: var(--surface-2);
@@ -603,25 +659,25 @@
 
     <div class="main">
         <header class="topbar">
-            <div class="topbar-left" style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="topbar-left">
                 <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>{{ t(request, 'nav.listings_table') }}</h1>
+                <div class="topbar-search">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input id="filter-search" class="topbar-search-input" type="text"
+                        placeholder="{{ t(request, 'filter.search_placeholder', 'Rechercher…') }}"
+                        oninput="applyFilters()">
+                </div>
             </div>
+            <div class="topbar-right"></div>
         </header>
 
         <div class="content">
 
             <!-- Filter Bar -->
             <div class="filter-bar" id="filter-bar">
-                <div class="filter-group" style="flex: 2; min-width: 220px;">
-                    <label for="filter-search"><i class="fa-solid fa-magnifying-glass"></i></label>
-                    <input id="filter-search" class="filter-input" type="text"
-                        placeholder="{{ t(request, 'filter.search_placeholder', 'Rechercher…') }}"
-                        oninput="applyFilters()">
-                </div>
-
                 <div class="filter-group">
                     <label for="filter-source">{{ t(request, 'table.source') }}</label>
                     <select id="filter-source" class="filter-select" onchange="applyFilters()">
@@ -634,13 +690,13 @@
                     </select>
                 </div>
 
-                <div class="filter-group filter-chips-group" style="flex: auto; min-width: auto;">
+                <div class="filter-group filter-chips-group">
                     <label style="margin-right: 0.25rem;">{{ t(request, 'table.status', 'Statut') }}</label>
                     <div class="tbl-filter-chips">
-                        <button type="button" class="tbl-filter-chip" id="tbl-f-nouvelle" onclick="toggleTableStatusFilter('nouvelle', this)" style="color: var(--green);" title="{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}">
+                        <button type="button" class="tbl-filter-chip active" id="tbl-f-nouvelle" onclick="toggleTableStatusFilter('nouvelle', this)" style="color: var(--green);" title="{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}">
                             <i class="fa-solid fa-star"></i> <span>{{ t(request, 'dashboard.filters.new', 'Nouvelles') }}</span>
                         </button>
-                        <button type="button" class="tbl-filter-chip" id="tbl-f-active" onclick="toggleTableStatusFilter('active', this)" style="color: var(--accent);" title="{{ t(request, 'dashboard.filters.active', 'Actives') }}">
+                        <button type="button" class="tbl-filter-chip active" id="tbl-f-active" onclick="toggleTableStatusFilter('active', this)" style="color: var(--accent);" title="{{ t(request, 'dashboard.filters.active', 'Actives') }}">
                             <i class="fa-solid fa-eye"></i> <span>{{ t(request, 'dashboard.filters.active', 'Actives') }}</span>
                         </button>
                         <button type="button" class="tbl-filter-chip" id="tbl-f-disparue" onclick="toggleTableStatusFilter('disparue', this)" style="color: var(--red);" title="{{ t(request, 'dashboard.filters.disappeared', 'Disparues') }}">
@@ -968,40 +1024,53 @@
         }
 
         /* ── Filter ── */
-        const TOTAL = document.querySelectorAll('#table-body tr:not(#no-results-row)').length;
+        let selectedTableStatuses = new Set(['nouvelle', 'active']);
+
+        function toggleTableStatusFilter(status, btn) {
+            if (selectedTableStatuses.has(status)) {
+                selectedTableStatuses.delete(status);
+                btn.classList.remove('active');
+            } else {
+                selectedTableStatuses.add(status);
+                btn.classList.add('active');
+            }
+            applyFilters();
+        }
 
         function applyFilters() {
-            const search = document.getElementById('filter-search').value.toLowerCase().trim();
-            const source = document.getElementById('filter-source').value;
-            const status = document.getElementById('filter-status').value;
-            const dpe = document.getElementById('filter-dpe').value;
-            const contacted = document.getElementById('filter-contacted').value;
+            const searchInput = document.getElementById('filter-search');
+            const search = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            const source = document.getElementById('filter-source') ? document.getElementById('filter-source').value : '';
+            const dpe = document.getElementById('filter-dpe') ? document.getElementById('filter-dpe').value : '';
+            const contacted = document.getElementById('filter-contacted') ? document.getElementById('filter-contacted').value : '';
             const visitStatus = document.getElementById('filter-visit-status') ? document.getElementById('filter-visit-status').value : '';
 
             const rows = document.querySelectorAll('#table-body tr:not(#no-results-row)');
             let visible = 0;
 
             rows.forEach(row => {
+                const rowStatus = (row.dataset.status || '').toLowerCase();
+                const matchStatus = selectedTableStatuses.size === 0 || selectedTableStatuses.has(rowStatus);
+
                 const searchVal = search.replace('#', '');
                 const matchSearch = !search ||
-                    row.dataset.title.includes(search) ||
-                    row.dataset.location.includes(search) ||
-                    row.dataset.id === searchVal;
-                const matchSource = !source || row.dataset.source === source;
-                const matchStatus = !status || row.dataset.status === status;
-                const matchDpe = !dpe || row.dataset.dpe === dpe;
-                const matchContacted = !contacted || row.dataset.contacted === contacted;
+                    (row.dataset.title || '').includes(search) ||
+                    (row.dataset.location || '').includes(search) ||
+                    (row.dataset.id || '') === searchVal;
+                const matchSource = !source || (row.dataset.source || '') === source;
+                const matchDpe = !dpe || (row.dataset.dpe || '') === dpe;
+                const matchContacted = !contacted || (row.dataset.contacted || '') === contacted;
 
                 let matchVisit = true;
                 if (visitStatus) {
                     if (visitStatus === 'none') {
                         matchVisit = !row.dataset.visitStatus;
                     } else {
-                        matchVisit = row.dataset.visitStatus === visitStatus;
+                        matchVisit = (row.dataset.visitStatus || '') === visitStatus;
                     }
                 }
 
-                const show = matchSearch && matchSource && matchStatus && matchDpe && matchContacted && matchVisit;
+                const show = matchStatus && matchSearch && matchSource && matchDpe && matchContacted && matchVisit;
                 row.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
@@ -1011,16 +1080,34 @@
         }
 
         function resetFilters() {
-            document.getElementById('filter-search').value = '';
-            document.getElementById('filter-source').value = '';
-            document.getElementById('filter-status').value = '';
-            document.getElementById('filter-dpe').value = '';
-            document.getElementById('filter-contacted').value = '';
+            const searchEl = document.getElementById('filter-search');
+            if (searchEl) searchEl.value = '';
+            const srcEl = document.getElementById('filter-source');
+            if (srcEl) srcEl.value = '';
+            const dpeEl = document.getElementById('filter-dpe');
+            if (dpeEl) dpeEl.value = '';
+            const cntEl = document.getElementById('filter-contacted');
+            if (cntEl) cntEl.value = '';
             if (document.getElementById('filter-visit-status')) {
                 document.getElementById('filter-visit-status').value = '';
             }
+
+            selectedTableStatuses = new Set(['nouvelle', 'active']);
+            document.querySelectorAll('.tbl-filter-chips .tbl-filter-chip').forEach(chip => {
+                const st = chip.id.replace('tbl-f-', '').replace('f-', '');
+                if (selectedTableStatuses.has(st)) {
+                    chip.classList.add('active');
+                } else {
+                    chip.classList.remove('active');
+                }
+            });
+
             applyFilters();
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyFilters();
+        });
 
         /* ── Sort ── */
         let currentSortCol = null;

@@ -231,13 +231,49 @@
         overflow-x: auto;
     }
 
-    /* Modal adjusts */
-    .modal {
-        padding: 1.5rem !important;
-        width: 95% !important;
+    .topbar-search {
+        width: 100% !important;
+        min-width: 0 !important;
+        order: 3;
     }
 }
 
+/* Universal Topbar & Expanding Search Styles */
+.topbar-search {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 140px;
+    background: var(--surface-2, #1a2236);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    border-radius: 9px;
+    padding: 0.4rem 0.75rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.topbar-search:focus-within {
+    border-color: var(--accent, #4f8ef7);
+    box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.2);
+}
+.topbar-search .search-icon {
+    color: var(--text-2, #8b9cc8);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.topbar-search .topbar-search-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text, #eef2ff);
+    font-size: 0.85rem;
+    font-family: inherit;
+    width: 100%;
+    min-width: 50px;
+}
+.topbar-search .topbar-search-input::placeholder {
+    color: var(--text-2, #8b9cc8);
+    opacity: 0.7;
+}
 
 /* Hide mobile menu button on desktop */
 .mobile-menu-btn {

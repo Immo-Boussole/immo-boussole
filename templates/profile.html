@@ -234,12 +234,13 @@
 
     <main class="main">
         <header class="topbar">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" style="background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; display:none;">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')">
                     <i class="fas fa-bars"></i>
                 </button>
                 <h1>{{ t(request, 'profile.title', 'Mon Profil') }}</h1>
             </div>
+            <div class="topbar-right"></div>
         </header>
 
         <div class="content">

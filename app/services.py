@@ -16,7 +16,7 @@ from app.scrapers import (
     OrpiScraper, ProvimoScraper, HektorScraper
 )
 from app.media import download_listing_photos, photos_to_json, json_to_photos, calculate_images_similarity, compute_image_dhash, compute_image_ahash
-from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data
+from app.geo import fetch_sncf_times_for_city, get_coordinates, get_insee_code, fetch_georisques_data, get_commune_coordinates, standardize_and_enrich_city
 from app.notifications import send_new_listing_notifications
 import httpx
 from bs4 import BeautifulSoup
@@ -822,41 +822,86 @@ async def fetch_basic_metadata(url: str) -> dict:
 def ensure_city_map_pin(city_name: str, db: Session):
     """
     Checks if a MapPin of type 'city' exists for the given city name (case-insensitive, cleaned).
-    If not, geocodes the city name and creates the MapPin.
+    If not, determines coordinates using:
+      1. Priority 1 (Approche 2): Existing listings for this city with valid coordinates (lat/lon).
+      2. Priority 2 (Approche 1 - fallback): Official geo.api.gouv.fr French commune coordinates.
+    Then creates the MapPin if missing.
     """
     if not city_name:
         return
     
     import re
-    cleaned = city_name.strip()
-    cleaned = re.sub(r'\s*\(\d+\)\s*', '', cleaned)
-    cleaned = re.sub(r'\b\d{5}\b', '', cleaned)
-    cleaned = cleaned.strip()
-    if not cleaned:
-        return
-    
     from sqlalchemy import func
-    from app.models import MapPin
+    from app.models import MapPin, Listing
+
+    raw_city = city_name.strip()
+    if not raw_city:
+        return
+
+    # Extract base city name without zip code for broader matching
+    clean_name = re.sub(r'\s*\(\d+\)\s*', '', raw_city)
+    clean_name = re.sub(r'\b\d{5}\b', '', clean_name).strip()
+    if not clean_name:
+        return
+
+    # Check if a MapPin already exists for this city under any variant
+    # (e.g. "Vienne", "Vienne (38200)", "VIENNE")
     existing_pin = db.query(MapPin).filter(
         MapPin.pin_type == "city",
-        func.lower(MapPin.title) == cleaned.lower()
+        (
+            (func.lower(MapPin.title) == raw_city.lower()) |
+            (func.lower(MapPin.title) == clean_name.lower()) |
+            (MapPin.title.ilike(f"{clean_name} (%)")) |
+            (func.lower(MapPin.address) == raw_city.lower())
+        )
     ).first()
     
-    if not existing_pin:
-        coords = get_coordinates(cleaned)
+    if existing_pin:
+        return
+
+    # Standardize name with zip if possible (e.g., "Vienne (38200)")
+    std_title = raw_city
+    if not re.search(r'\(\d{5}\)', raw_city):
+        std_city, _, _ = standardize_and_enrich_city(raw_city)
+        if std_city:
+            std_title = std_city
+
+    # ── Priority 1: Coordinates from existing listings for this city ──
+    listing_with_coords = db.query(Listing).filter(
+        (
+            (Listing.city == raw_city) |
+            (Listing.city == std_title) |
+            (Listing.city.ilike(f"{clean_name}%")) |
+            (Listing.location.ilike(f"{clean_name}%"))
+        ),
+        Listing.latitude.isnot(None),
+        Listing.longitude.isnot(None)
+    ).first()
+
+    lat, lon = None, None
+    if listing_with_coords:
+        lat, lon = listing_with_coords.latitude, listing_with_coords.longitude
+
+    # ── Priority 2 (Fallback): Official geo.api.gouv.fr coordinates ──
+    if lat is None or lon is None:
+        coords = get_commune_coordinates(std_title or raw_city)
         if coords:
             lat, lon = coords
-            new_pin = MapPin(
-                title=cleaned.title(),
-                address=cleaned.title(),
-                lat=lat,
-                lon=lon,
-                pin_type="city",
-                created_by="System"
-            )
-            db.add(new_pin)
-            db.commit()
-            print(f"[Services] Automatically created MapPin for city: {cleaned.title()} at {lat}, {lon}")
+
+    if lat is not None and lon is not None:
+        pin_title = std_title.title() if '(' not in std_title else std_title
+        pin_address = f"{std_title}, France" if not std_title.lower().endswith("france") else std_title
+        new_pin = MapPin(
+            title=pin_title,
+            address=pin_address,
+            lat=lat,
+            lon=lon,
+            pin_type="city",
+            created_by="System"
+        )
+        db.add(new_pin)
+        db.commit()
+        print(f"[Services] Automatically created MapPin for city: {pin_title} at {lat}, {lon}")
 
 
 async def create_listing_from_details(

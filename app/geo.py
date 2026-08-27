@@ -739,6 +739,100 @@ def standardize_and_enrich_city(city_str: str) -> Tuple[str, Optional[str], Opti
     return standardized_display, selected_zip, insee_code
 
 
+@lru_cache(maxsize=1024)
+def get_commune_coordinates(city_str: str) -> Optional[Tuple[float, float]]:
+    """
+    Retrieves GPS coordinates (lat, lon) of a French commune via geo.api.gouv.fr.
+    Handles 'City (ZipCode)', 'City Dept', or simple city names.
+    Falls back to get_coordinates() if not resolved.
+    """
+    if not city_str:
+        return None
+
+    import re
+    city_str_cleaned = city_str.strip()
+    if not city_str_cleaned:
+        return None
+
+    name, zip_code, dept_code = parse_city_input(city_str_cleaned)
+    name_cleaned = clean_arrondissement(name)
+    expanded_name = expand_saint_abbr(name_cleaned)
+    norm_input = normalize_city_name(name_cleaned)
+
+    results = []
+
+    # Strategy 1: Search by expanded name and department if we have a department code
+    if expanded_name:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            params = {"nom": expanded_name, "boost": "population", "fields": "nom,code,codesPostaux,codeDepartement,centre", "limit": 10}
+            if dept_code:
+                params["codeDepartement"] = dept_code
+            res = httpx.get(url, params=params, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] get_commune_coordinates by name {expanded_name} failed: {e}")
+
+    # Strategy 1b: Search by name only if name+dept returned nothing
+    if not results and expanded_name and dept_code:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            res = httpx.get(url, params={"nom": expanded_name, "boost": "population", "fields": "nom,code,codesPostaux,codeDepartement,centre", "limit": 10}, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] get_commune_coordinates by name only {expanded_name} failed: {e}")
+
+    # Strategy 2: Search by zip code
+    if not results and zip_code:
+        try:
+            url = "https://geo.api.gouv.fr/communes"
+            res = httpx.get(url, params={"codePostal": zip_code, "fields": "nom,code,codesPostaux,codeDepartement,centre"}, timeout=5.0)
+            if res.status_code == 200:
+                results = res.json()
+        except Exception as e:
+            print(f"[Geo API] get_commune_coordinates by zip {zip_code} failed: {e}")
+
+    best_commune = None
+    if results:
+        # Match exact normalized name
+        if norm_input:
+            for c in results:
+                c_norm = normalize_city_name(c.get("nom", ""))
+                if c_norm == norm_input:
+                    if zip_code and zip_code in c.get("codesPostaux", []):
+                        best_commune = c
+                        break
+                    elif dept_code and c.get("codeDepartement") == dept_code:
+                        best_commune = c
+                        break
+                    elif not best_commune:
+                        best_commune = c
+
+        if not best_commune:
+            for c in results:
+                c_norm = normalize_city_name(c.get("nom", ""))
+                if norm_input in c_norm or c_norm in norm_input:
+                    if zip_code and zip_code in c.get("codesPostaux", []):
+                        best_commune = c
+                        break
+                    elif not best_commune:
+                        best_commune = c
+
+        if not best_commune and results:
+            best_commune = results[0]
+
+    if best_commune and "centre" in best_commune and "coordinates" in best_commune["centre"]:
+        coords = best_commune["centre"]["coordinates"]
+        if len(coords) >= 2:
+            return float(coords[1]), float(coords[0])  # (lat, lon)
+
+    # Fallback to general get_coordinates
+    query_fallback = f"{city_str_cleaned}, France" if not city_str_cleaned.lower().endswith("france") else city_str_cleaned
+    return get_coordinates(query_fallback)
+
+
 def is_city_in_forbidden_set(city_or_location: str, forbidden_cities: set) -> bool:
     """
     Checks if a city or location name matches any city in a set of forbidden cities.

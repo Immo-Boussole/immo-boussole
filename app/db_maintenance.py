@@ -109,7 +109,7 @@ def identify_problems(db: Session):
         p_name = pin.title.lower().strip()
         existing_pin_names.add(p_name)
         # also match without postal code if there is one
-        p_name_clean = re.sub(r'\s*\(\d{5}\)$', '', p_name).strip()
+        p_name_clean = re.sub(r'\s*\(\d+\)$', '', p_name).strip()
         existing_pin_names.add(p_name_clean)
         
     missing_city_names = []
@@ -118,10 +118,9 @@ def identify_problems(db: Session):
         if not c_clean:
             continue
         c_lower = c_clean.lower()
-        if c_lower not in existing_pin_names:
-            c_lower_clean = re.sub(r'\s*\(\d{5}\)$', '', c_lower).strip()
-            if c_lower_clean not in existing_pin_names:
-                missing_city_names.append(c_clean)
+        c_lower_clean = re.sub(r'\s*\(\d+\)$', '', c_lower).strip()
+        if c_lower not in existing_pin_names and c_lower_clean not in existing_pin_names:
+            missing_city_names.append(c_clean)
                 
     # Unstandardized cities (missing official zip code or standardized format in either city or location)
     unstd_city_candidates = db.query(Listing).filter(
@@ -390,33 +389,8 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                 if problem_type == MISSING_CITY_PINS:
                     city_name = lid
                     try:
-                        # Find coordinates from an active listing in same city
-                        listing_with_coords = db.query(Listing).filter(
-                            Listing.city == city_name,
-                            Listing.latitude.isnot(None),
-                            Listing.longitude.isnot(None)
-                        ).first()
-                        
-                        lat, lon = None, None
-                        if listing_with_coords:
-                            lat, lon = listing_with_coords.latitude, listing_with_coords.longitude
-                        else:
-                            from app.geo import get_coordinates
-                            coords = get_coordinates(f"{city_name}, France")
-                            if coords:
-                                lat, lon = coords
-                                
-                        if lat is not None and lon is not None:
-                            pin = MapPin(
-                                title=city_name.title(),
-                                address=f"{city_name.title()}, France",
-                                lat=lat,
-                                lon=lon,
-                                created_by="system",
-                                pin_type="city"
-                            )
-                            db.add(pin)
-                            db.commit()
+                        from app.services import ensure_city_map_pin
+                        ensure_city_map_pin(city_name, db)
                     except Exception as e:
                         print(f"[DB Maintenance] Error creating map pin for city {city_name}: {e}")
                 else:
