@@ -214,7 +214,7 @@ def test_duplicate_photos_aggregation():
     response_142 = client.get("/listings/142")
     assert response_142.status_code == 200
     html_142 = response_142.text
-    assert 'class="duplicate-photo-banner"' not in html_142, "Listing #142 should not render duplicate photo banner element"
+    assert 'title="Voir l\'annonce #' not in html_142, "Listing #142 should not render duplicate photo banner link"
     assert "1 photo" in html_142, "Listing #142 photo count display"
     print("Duplicate photo aggregation test: PASSED")
 
