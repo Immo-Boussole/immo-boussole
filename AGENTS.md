@@ -82,3 +82,11 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 - **Immediate Failure Resolution**: Inspect failure logs (`gh run view <run-id> --log-failed`), diagnose the root cause, apply fixes, commit and push, and monitor until all workflows are 100% green.
 - **Detailed Reference**: See [.agents/rules/github_workflow_verification.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/github_workflow_verification.md).
 
+---
+
+## 8. Response Formatting & Step Progress Tracking
+
+- **Standardized Step Headers**: Every multi-step response or status update must begin with a Level 3 heading adhering to `### [[current_step]/[total_steps]] [EMOJI] [Descriptive Step Title]`.
+- **Technology & Action Emojis**: Always prefix step titles with the corresponding Unicode emoji (e.g. 🐍 Python, 🧪 Tests, 🐳 Docker, 🐙 GitHub, ⚙️ CI/CD, 🧩 WebExtension, 🌐 Frontend/Web, 🔍 Research, 📝 Docs/i18n, 🚀 Deploy/Release, 🛡️ Security, 🧭 Immo-Boussole Domain).
+- **Detailed Reference**: See [.agents/rules/step_progress_and_formatting.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/step_progress_and_formatting.md).
+
