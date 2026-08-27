@@ -617,9 +617,9 @@ def get_storage_metrics(db) -> dict:
     }
 
 
-def purge_orphaned_and_rejected_media(db, purge_rejected: bool = True) -> dict:
+def purge_orphaned_and_rejected_media(db, purge_orphaned: bool = True, purge_rejected: bool = False) -> dict:
     """
-    Purges orphaned listing media directories and optionally removes local photos and attachments
+    Purges orphaned listing media directories and/or local photos and attachments
     of rejected listings to reclaim disk space while preserving descriptive metadata.
     """
     import shutil
@@ -661,15 +661,16 @@ def purge_orphaned_and_rejected_media(db, purge_rejected: bool = True) -> dict:
 
             # Case 1: Orphaned directory (listing was deleted from DB)
             if lid not in existing_listing_ids:
-                dir_size, file_count = get_dir_size_and_count(child)
-                try:
-                    shutil.rmtree(child, ignore_errors=True)
-                    freed_bytes += dir_size
-                    deleted_files_count += file_count
-                    purged_orphaned_dirs += 1
-                    print(f"[Storage Maintenance] Purged orphaned media directory #{lid} ({format_bytes_human(dir_size)})")
-                except Exception as e:
-                    print(f"[Storage Maintenance] Failed to remove orphaned directory {child}: {e}")
+                if purge_orphaned:
+                    dir_size, file_count = get_dir_size_and_count(child)
+                    try:
+                        shutil.rmtree(child, ignore_errors=True)
+                        freed_bytes += dir_size
+                        deleted_files_count += file_count
+                        purged_orphaned_dirs += 1
+                        print(f"[Storage Maintenance] Purged orphaned media directory #{lid} ({format_bytes_human(dir_size)})")
+                    except Exception as e:
+                        print(f"[Storage Maintenance] Failed to remove orphaned directory {child}: {e}")
 
             # Case 2: Rejected listing with local media
             elif lid in rejected_listing_map and purge_rejected:
@@ -691,7 +692,7 @@ def purge_orphaned_and_rejected_media(db, purge_rejected: bool = True) -> dict:
                     print(f"[Storage Maintenance] Failed to purge rejected listing media #{lid}: {e}")
 
             # Case 3: Existing non-rejected listing -> clean orphaned attachments and 0-byte files
-            else:
+            elif purge_orphaned:
                 att_dir = child / "attachments"
                 if att_dir.exists() and att_dir.is_dir():
                     for att_file in list(att_dir.iterdir()):

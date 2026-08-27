@@ -754,8 +754,11 @@
 
                     <!-- Manual Actions -->
                     <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.75rem;">
-                        <button class="btn" id="btn_run_storage_cleanup" onclick="runStorageCleanup()">
-                            <i class="fas fa-broom"></i> Nettoyer les médias orphelins & rejetés
+                        <button class="btn" id="btn_run_orphan_cleanup" onclick="runOrphanCleanup()">
+                            <i class="fas fa-broom"></i> Nettoyer les médias orphelins
+                        </button>
+                        <button class="btn secondary" id="btn_run_rejected_cleanup" onclick="runRejectedCleanup()">
+                            <i class="fas fa-ban"></i> Purger les photos des annonces rejetées
                         </button>
                         <button class="btn secondary" id="btn_run_db_optimize" onclick="runDbOptimization()">
                             <i class="fas fa-tachometer-alt"></i> Optimiser la base SQLite (VACUUM & ANALYZE)
@@ -784,7 +787,7 @@
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-2); font-size: 0.85rem;">
-                                <input type="checkbox" id="auto_maintenance_purge_rejected" style="width: auto; margin: 0;" checked>
+                                <input type="checkbox" id="auto_maintenance_purge_rejected" style="width: auto; margin: 0;">
                                 Purger également les photos locales des annonces rejetées (garde le titre & les métadonnées)
                             </label>
                         </div>
@@ -1536,19 +1539,18 @@
                     document.getElementById('auto_maintenance_time').value = data.auto_maintenance_time;
                 }
                 if (document.getElementById('auto_maintenance_purge_rejected')) {
-                    document.getElementById('auto_maintenance_purge_rejected').checked = data.auto_maintenance_purge_rejected !== false;
+                    document.getElementById('auto_maintenance_purge_rejected').checked = !!data.auto_maintenance_purge_rejected;
                 }
             } catch (e) {
                 console.error("Error loading storage/db stats:", e);
             }
         }
 
-        async function runStorageCleanup() {
-            const btn = document.getElementById('btn_run_storage_cleanup');
+        async function runOrphanCleanup() {
+            const btn = document.getElementById('btn_run_orphan_cleanup');
             const origHtml = btn.innerHTML;
-            const purgeRejected = document.getElementById('auto_maintenance_purge_rejected') ? document.getElementById('auto_maintenance_purge_rejected').checked : true;
 
-            if (!confirm('Voulez-vous lancer le nettoyage des médias orphelins' + (purgeRejected ? ' et des photos des annonces rejetées ?' : ' ?'))) return;
+            if (!confirm('Voulez-vous lancer la suppression des médias orphelins (fichiers d\'annonces supprimées de la base) ?')) return;
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Nettoyage en cours...';
@@ -1557,17 +1559,47 @@
                 const res = await fetch('/api/admin/maintenance/storage-cleanup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ purge_rejected: purgeRejected })
+                    body: JSON.stringify({ purge_orphaned: true, purge_rejected: false })
                 });
                 const result = await res.json();
                 if (res.ok) {
-                    showAlert('Nettoyage terminé avec succès ! Espace libéré : ' + (result.freed_human || '0 o') + ' (' + (result.deleted_files_count || 0) + ' fichiers supprimés).', 'success');
+                    showAlert('Nettoyage des orphelins terminé avec succès ! Espace libéré : ' + (result.freed_human || '0 o') + ' (' + (result.deleted_files_count || 0) + ' fichiers supprimés).', 'success');
                     await loadStorageAndDbStats();
                 } else {
-                    showAlert('Erreur lors du nettoyage du stockage : ' + (result.detail || 'Inconnue'), 'error');
+                    showAlert('Erreur lors du nettoyage des médias orphelins : ' + (result.detail || 'Inconnue'), 'error');
                 }
             } catch (err) {
                 showAlert('Erreur de connexion lors du nettoyage : ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        async function runRejectedCleanup() {
+            const btn = document.getElementById('btn_run_rejected_cleanup');
+            const origHtml = btn.innerHTML;
+
+            if (!confirm('Voulez-vous purger les photos locales des annonces marquées comme rejetées ? (Leurs titres, descriptions et métadonnées seront conservés en base)')) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Purge en cours...';
+
+            try {
+                const res = await fetch('/api/admin/maintenance/storage-cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ purge_orphaned: false, purge_rejected: true })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showAlert('Purge des photos des annonces rejetées terminée avec succès ! Espace libéré : ' + (result.freed_human || '0 o') + ' (' + (result.purged_rejected_listings || 0) + ' annonces traitées).', 'success');
+                    await loadStorageAndDbStats();
+                } else {
+                    showAlert('Erreur lors de la purge des annonces rejetées : ' + (result.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion lors de la purge : ' + err.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = origHtml;

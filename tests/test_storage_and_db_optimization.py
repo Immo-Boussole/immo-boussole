@@ -96,16 +96,19 @@ def test_storage_metrics_and_purge(db_session):
     assert metrics["rejected_listings_count"] >= 1
     assert metrics["reclaimable_size_bytes"] > 0
 
-    # Purge orphaned and rejected media
-    purge_res = purge_orphaned_and_rejected_media(db_session, purge_rejected=True)
-    assert purge_res["purged_orphaned_dirs"] >= 1
-    assert purge_res["purged_rejected_listings"] >= 1
-    assert purge_res["freed_bytes"] > 0
-
-    # Verify orphan directory is gone
+    # Step A: Purge orphaned only (purge_rejected=False)
+    purge_orphan_res = purge_orphaned_and_rejected_media(db_session, purge_orphaned=True, purge_rejected=False)
+    assert purge_orphan_res["purged_orphaned_dirs"] >= 1
+    assert purge_orphan_res["purged_rejected_listings"] == 0
     assert not orphan_dir.exists()
-    # Verify rejected directory is gone
+    # Rejected listing media should still exist
+    assert rejected_dir.exists()
+
+    # Step B: Purge rejected only (purge_orphaned=False, purge_rejected=True)
+    purge_rej_res = purge_orphaned_and_rejected_media(db_session, purge_orphaned=False, purge_rejected=True)
+    assert purge_rej_res["purged_rejected_listings"] >= 1
     assert not rejected_dir.exists()
+
     # Verify rejected listing in DB now has photos_local cleared
     db_session.refresh(rejected_listing)
     assert rejected_listing.photos_local in ("[]", None)
@@ -192,3 +195,35 @@ def test_http_gzip_and_cache_headers():
     # Test GZip header acceptance on large responses
     resp_gzip = client.get("/", headers={"Accept-Encoding": "gzip"})
     assert resp_gzip.status_code in (200, 302, 307)
+
+
+def test_storage_cleanup_api_endpoints(db_session):
+    from app.main import app, admin_required
+    app.dependency_overrides[admin_required] = lambda: {"username": "admin", "role": "admin"}
+    client = TestClient(app)
+
+    try:
+        # Test GET stats
+        resp_stats = client.get("/api/admin/maintenance/storage-stats")
+        assert resp_stats.status_code == 200
+        stats_json = resp_stats.json()
+        assert "storage" in stats_json
+        assert "database" in stats_json
+        assert "auto_maintenance_purge_rejected" in stats_json
+
+        # Test POST storage cleanup with separate parameters
+        resp_clean_orphan = client.post(
+            "/api/admin/maintenance/storage-cleanup",
+            json={"purge_orphaned": True, "purge_rejected": False}
+        )
+        assert resp_clean_orphan.status_code == 200
+        assert "freed_human" in resp_clean_orphan.json()
+
+        resp_clean_rejected = client.post(
+            "/api/admin/maintenance/storage-cleanup",
+            json={"purge_orphaned": False, "purge_rejected": True}
+        )
+        assert resp_clean_rejected.status_code == 200
+        assert "freed_human" in resp_clean_rejected.json()
+    finally:
+        app.dependency_overrides.pop(admin_required, None)

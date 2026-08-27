@@ -917,13 +917,14 @@ def get_admin_storage_and_db_stats(
         "last_db_optimization": settings.last_db_optimization if settings else None,
         "auto_maintenance_enabled": settings.auto_maintenance_enabled if settings and settings.auto_maintenance_enabled is not None else True,
         "auto_maintenance_time": settings.auto_maintenance_time if settings else "03:30",
-        "auto_maintenance_purge_rejected": settings.auto_maintenance_purge_rejected if settings and settings.auto_maintenance_purge_rejected is not None else True,
+        "auto_maintenance_purge_rejected": settings.auto_maintenance_purge_rejected if settings and settings.auto_maintenance_purge_rejected is not None else False,
         "history": history,
     }
 
 
 class StorageCleanupRequest(BaseModel):
-    purge_rejected: bool = True
+    purge_orphaned: bool = True
+    purge_rejected: bool = False
 
 
 @app.post("/api/admin/maintenance/storage-cleanup")
@@ -933,11 +934,12 @@ def run_admin_storage_cleanup(
     _auth = Depends(admin_required)
 ):
     """
-    Purges orphaned listing media directories and local photos of rejected listings.
+    Purges orphaned listing media directories and/or local photos of rejected listings.
     """
     from app.media import purge_orphaned_and_rejected_media
-    purge_rejected = body.purge_rejected if body is not None else True
-    res = purge_orphaned_and_rejected_media(db, purge_rejected=purge_rejected)
+    purge_orphaned = body.purge_orphaned if body is not None else True
+    purge_rejected = body.purge_rejected if body is not None else False
+    res = purge_orphaned_and_rejected_media(db, purge_orphaned=purge_orphaned, purge_rejected=purge_rejected)
 
     # Update GlobalSettings timestamp
     settings = db.query(models.GlobalSettings).first()

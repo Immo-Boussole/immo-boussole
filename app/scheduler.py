@@ -129,10 +129,10 @@ def nightly_system_maintenance_job():
         from datetime import datetime, timezone
 
         settings = db.query(GlobalSettings).first()
-        purge_rejected = bool(settings.auto_maintenance_purge_rejected) if settings and settings.auto_maintenance_purge_rejected is not None else True
+        purge_rejected = bool(settings.auto_maintenance_purge_rejected) if settings and settings.auto_maintenance_purge_rejected is not None else False
 
         # 1. Media Cleanup
-        storage_res = purge_orphaned_and_rejected_media(db, purge_rejected=purge_rejected)
+        storage_res = purge_orphaned_and_rejected_media(db, purge_orphaned=True, purge_rejected=purge_rejected)
         now_iso = datetime.now(timezone.utc).isoformat()
 
         # 2. SQLite Database Optimization

@@ -249,7 +249,7 @@ _MIGRATIONS = [
     # global_settings — automated nightly maintenance & storage optimization v31
     ("global_settings", "auto_maintenance_enabled",        "BOOLEAN DEFAULT 1"),
     ("global_settings", "auto_maintenance_time",           "TEXT DEFAULT '03:30'"),
-    ("global_settings", "auto_maintenance_purge_rejected", "BOOLEAN DEFAULT 1"),
+    ("global_settings", "auto_maintenance_purge_rejected", "BOOLEAN DEFAULT 0"),
     ("global_settings", "last_storage_cleanup",            "TEXT"),
     ("global_settings", "last_db_optimization",           "TEXT"),
     ("global_settings", "last_maintenance_metrics_json",   "TEXT DEFAULT '{}'"),
