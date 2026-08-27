@@ -114,12 +114,19 @@ class TestSearchPageValidation(unittest.TestCase):
         from app.models import Listing, ListingStatus, Source
         from app.services import split_or_purge_aggregate_listing
         from datetime import datetime, timezone
+        import uuid
 
         db = SessionLocal()
         try:
+            # Clean any leftover mock aggregate listing
+            db.query(Listing).filter(Listing.external_id.like("agg_test_%")).delete()
+            db.query(Listing).filter(Listing.url == "https://immobilier.lefigaro.fr/annonces/immobilier-vente-maison-malleval+42520.html").delete()
+            db.commit()
+
+            test_ext_id = f"agg_test_{uuid.uuid4().hex[:8]}"
             # Create a mock aggregate listing
             aggregate = Listing(
-                external_id="agg_test_123",
+                external_id=test_ext_id,
                 title="685 Maisons à Vendre à Malleval (42520) 🏡 : Maisons en Vente",
                 url="https://immobilier.lefigaro.fr/annonces/immobilier-vente-maison-malleval+42520.html",
                 original_url="https://immobilier.lefigaro.fr/annonces/immobilier-vente-maison-malleval+42520.html",
