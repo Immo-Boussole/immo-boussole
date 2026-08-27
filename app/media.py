@@ -479,3 +479,253 @@ async def save_floorplans_as_attachments(
     return created
 
 
+def format_bytes_human(num_bytes: int) -> str:
+    """Formats bytes into human readable string (KB, MB, GB)."""
+    if num_bytes < 1024:
+        return f"{num_bytes} o"
+    elif num_bytes < 1024 * 1024:
+        return f"{num_bytes / 1024:.1f} Ko"
+    elif num_bytes < 1024 * 1024 * 1024:
+        return f"{num_bytes / (1024 * 1024):.2f} Mo"
+    else:
+        return f"{num_bytes / (1024 * 1024 * 1024):.2f} Go"
+
+
+def get_dir_size_and_count(dir_path: Path) -> tuple[int, int]:
+    """Calculates total size in bytes and file count for a directory."""
+    total_size = 0
+    file_count = 0
+    if not dir_path.exists():
+        return 0, 0
+    for root, _, files in os.walk(dir_path):
+        for f in files:
+            fp = os.path.join(root, f)
+            try:
+                if os.path.isfile(fp) and not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+                    file_count += 1
+            except (OSError, PermissionError):
+                pass
+    return total_size, file_count
+
+
+def get_storage_metrics(db) -> dict:
+    """
+    Computes storage analytics for static/media directory and database references.
+    Identifies total size, orphaned listing folders, rejected listings with local media,
+    and orphaned attachments.
+    """
+    from app.models import Listing, ListingStatus, ListingAttachment
+
+    media_base = MEDIA_BASE_DIR
+    if not media_base.exists():
+        media_base.mkdir(parents=True, exist_ok=True)
+
+    total_media_size, total_media_files = get_dir_size_and_count(media_base)
+
+    # Fetch DB IDs
+    existing_listing_ids = set(r[0] for r in db.query(Listing.id).all())
+    rejected_listing_ids = set(
+        r[0]
+        for r in db.query(Listing.id)
+        .filter(Listing.status.in_([ListingStatus.REJECTED, "rejetee"]))
+        .all()
+    )
+
+    valid_attachments = set()
+    for (fpath,) in db.query(ListingAttachment.file_path).filter(ListingAttachment.file_path != None).all():
+        if fpath:
+            norm = fpath.strip().lstrip("/\\").replace("\\", "/")
+            valid_attachments.add(norm)
+
+    orphaned_dirs = []
+    orphaned_dirs_size = 0
+    orphaned_dirs_files = 0
+
+    rejected_with_media = []
+    rejected_media_size = 0
+    rejected_media_files = 0
+
+    orphaned_attachments = []
+    orphaned_attachments_size = 0
+
+    zero_byte_files_count = 0
+
+    # Inspect media directories
+    for child in media_base.iterdir():
+        if not child.is_dir():
+            continue
+        # Skip special app assets directory
+        if child.name in ("app", "tmp"):
+            continue
+
+        if child.name.isdigit():
+            lid = int(child.name)
+            dir_size, file_count = get_dir_size_and_count(child)
+
+            if lid not in existing_listing_ids:
+                orphaned_dirs.append(lid)
+                orphaned_dirs_size += dir_size
+                orphaned_dirs_files += file_count
+            elif lid in rejected_listing_ids:
+                rejected_with_media.append(lid)
+                rejected_media_size += dir_size
+                rejected_media_files += file_count
+            else:
+                # Listing is active/new/disappeared — check attachments directory
+                att_dir = child / "attachments"
+                if att_dir.exists() and att_dir.is_dir():
+                    for att_file in att_dir.iterdir():
+                        if att_file.is_file():
+                            web_rel = f"static/media/{lid}/attachments/{att_file.name}"
+                            if web_rel not in valid_attachments:
+                                orphaned_attachments.append(str(att_file))
+                                try:
+                                    orphaned_attachments_size += att_file.stat().st_size
+                                except OSError:
+                                    pass
+
+                # Check for 0-byte photos
+                for f in child.iterdir():
+                    if f.is_file():
+                        try:
+                            if f.stat().st_size == 0:
+                                zero_byte_files_count += 1
+                        except OSError:
+                            pass
+
+    reclaimable_size = orphaned_dirs_size + rejected_media_size + orphaned_attachments_size
+    reclaimable_files = orphaned_dirs_files + rejected_media_files + len(orphaned_attachments) + zero_byte_files_count
+
+    return {
+        "total_media_size_bytes": total_media_size,
+        "total_media_size_human": format_bytes_human(total_media_size),
+        "total_media_files": total_media_files,
+        "orphaned_dirs_count": len(orphaned_dirs),
+        "orphaned_dirs_size_bytes": orphaned_dirs_size,
+        "orphaned_dirs_size_human": format_bytes_human(orphaned_dirs_size),
+        "rejected_listings_count": len(rejected_with_media),
+        "rejected_media_size_bytes": rejected_media_size,
+        "rejected_media_size_human": format_bytes_human(rejected_media_size),
+        "orphaned_attachments_count": len(orphaned_attachments),
+        "orphaned_attachments_size_bytes": orphaned_attachments_size,
+        "orphaned_attachments_size_human": format_bytes_human(orphaned_attachments_size),
+        "zero_byte_files_count": zero_byte_files_count,
+        "reclaimable_size_bytes": reclaimable_size,
+        "reclaimable_size_human": format_bytes_human(reclaimable_size),
+        "reclaimable_files_count": reclaimable_files,
+    }
+
+
+def purge_orphaned_and_rejected_media(db, purge_rejected: bool = True) -> dict:
+    """
+    Purges orphaned listing media directories and optionally removes local photos and attachments
+    of rejected listings to reclaim disk space while preserving descriptive metadata.
+    """
+    import shutil
+    from app.models import Listing, ListingStatus, ListingAttachment
+
+    media_base = MEDIA_BASE_DIR
+    if not media_base.exists():
+        return {
+            "freed_bytes": 0,
+            "freed_human": "0 o",
+            "deleted_files_count": 0,
+            "purged_orphaned_dirs": 0,
+            "purged_rejected_listings": 0,
+            "purged_orphaned_attachments": 0,
+        }
+
+    freed_bytes = 0
+    deleted_files_count = 0
+    purged_orphaned_dirs = 0
+    purged_rejected_listings = 0
+    purged_orphaned_attachments = 0
+
+    existing_listing_ids = set(r[0] for r in db.query(Listing.id).all())
+    rejected_listings = db.query(Listing).filter(Listing.status.in_([ListingStatus.REJECTED, "rejetee"])).all()
+    rejected_listing_map = {l.id: l for l in rejected_listings}
+
+    valid_attachments = set()
+    for (fpath,) in db.query(ListingAttachment.file_path).filter(ListingAttachment.file_path != None).all():
+        if fpath:
+            norm = fpath.strip().lstrip("/\\").replace("\\", "/")
+            valid_attachments.add(norm)
+
+    for child in list(media_base.iterdir()):
+        if not child.is_dir() or child.name in ("app", "tmp"):
+            continue
+
+        if child.name.isdigit():
+            lid = int(child.name)
+
+            # Case 1: Orphaned directory (listing was deleted from DB)
+            if lid not in existing_listing_ids:
+                dir_size, file_count = get_dir_size_and_count(child)
+                try:
+                    shutil.rmtree(child, ignore_errors=True)
+                    freed_bytes += dir_size
+                    deleted_files_count += file_count
+                    purged_orphaned_dirs += 1
+                    print(f"[Storage Maintenance] Purged orphaned media directory #{lid} ({format_bytes_human(dir_size)})")
+                except Exception as e:
+                    print(f"[Storage Maintenance] Failed to remove orphaned directory {child}: {e}")
+
+            # Case 2: Rejected listing with local media
+            elif lid in rejected_listing_map and purge_rejected:
+                dir_size, file_count = get_dir_size_and_count(child)
+                try:
+                    shutil.rmtree(child, ignore_errors=True)
+                    freed_bytes += dir_size
+                    deleted_files_count += file_count
+                    purged_rejected_listings += 1
+
+                    # Update listing in DB to clear local photo array
+                    listing = rejected_listing_map[lid]
+                    listing.photos_local = "[]"
+
+                    # Delete attachment records for this rejected listing
+                    db.query(ListingAttachment).filter(ListingAttachment.listing_id == lid).delete()
+                    print(f"[Storage Maintenance] Purged local media for rejected listing #{lid} ({format_bytes_human(dir_size)})")
+                except Exception as e:
+                    print(f"[Storage Maintenance] Failed to purge rejected listing media #{lid}: {e}")
+
+            # Case 3: Existing non-rejected listing -> clean orphaned attachments and 0-byte files
+            else:
+                att_dir = child / "attachments"
+                if att_dir.exists() and att_dir.is_dir():
+                    for att_file in list(att_dir.iterdir()):
+                        if att_file.is_file():
+                            web_rel = f"static/media/{lid}/attachments/{att_file.name}"
+                            if web_rel not in valid_attachments:
+                                try:
+                                    fsize = att_file.stat().st_size
+                                    att_file.unlink()
+                                    freed_bytes += fsize
+                                    deleted_files_count += 1
+                                    purged_orphaned_attachments += 1
+                                except Exception as e:
+                                    print(f"[Storage Maintenance] Failed to delete orphaned attachment {att_file}: {e}")
+
+                for f in list(child.iterdir()):
+                    if f.is_file():
+                        try:
+                            if f.stat().st_size == 0:
+                                f.unlink()
+                                deleted_files_count += 1
+                        except Exception:
+                            pass
+
+    db.commit()
+
+    return {
+        "freed_bytes": freed_bytes,
+        "freed_human": format_bytes_human(freed_bytes),
+        "deleted_files_count": deleted_files_count,
+        "purged_orphaned_dirs": purged_orphaned_dirs,
+        "purged_rejected_listings": purged_rejected_listings,
+        "purged_orphaned_attachments": purged_orphaned_attachments,
+    }
+
+
+

@@ -3,13 +3,40 @@ Database configuration and automatic schema migration for SQLite.
 Since we don't use Alembic, this module handles ALTER TABLE migrations
 so the existing DB survives model updates without needing to be deleted.
 """
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+import sqlite3
 from app.config import settings
 
 engine = create_engine(
     settings.DATABASE_URL, connect_args={"check_same_thread": False}
 )
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """
+    Configures high-performance SQLite PRAGMAs on every new database connection.
+    Enables WAL mode, fast synchronous writes, 64MB memory cache, 256MB memory mapped I/O,
+    busy timeout, and foreign key constraints.
+    """
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode = WAL;")
+            cursor.execute("PRAGMA synchronous = NORMAL;")
+            cursor.execute("PRAGMA cache_size = -64000;")  # 64MB cache
+            cursor.execute("PRAGMA temp_store = MEMORY;")
+            cursor.execute("PRAGMA mmap_size = 268435456;")  # 256MB mmap
+            cursor.execute("PRAGMA busy_timeout = 5000;")
+            cursor.execute("PRAGMA foreign_keys = ON;")
+        except Exception as e:
+            print(f"[Database] Warning: could not set SQLite PRAGMAs: {e}")
+        finally:
+            cursor.close()
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -218,6 +245,14 @@ _MIGRATIONS = [
 
     # global_settings — public services integrations v30
     ("global_settings", "public_services_json",         "TEXT DEFAULT '{}'"),
+
+    # global_settings — automated nightly maintenance & storage optimization v31
+    ("global_settings", "auto_maintenance_enabled",        "BOOLEAN DEFAULT 1"),
+    ("global_settings", "auto_maintenance_time",           "TEXT DEFAULT '03:30'"),
+    ("global_settings", "auto_maintenance_purge_rejected", "BOOLEAN DEFAULT 1"),
+    ("global_settings", "last_storage_cleanup",            "TEXT"),
+    ("global_settings", "last_db_optimization",           "TEXT"),
+    ("global_settings", "last_maintenance_metrics_json",   "TEXT DEFAULT '{}'"),
 ]
 
 
@@ -225,7 +260,8 @@ _MIGRATIONS = [
 def run_migrations():
     """
     Applies Base.metadata.create_all and ADD COLUMN migrations to existing SQLite tables.
-    Safe to run on every startup — skips columns that already exist.
+    Also ensures high-performance indexes are created.
+    Safe to run on every startup — skips columns and indexes that already exist.
     """
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
@@ -245,6 +281,32 @@ def run_migrations():
                 except Exception as e:
                     print(f"[Migration] Warning: could not add '{column}' to '{table}': {e}")
             # else: column already exists, skip silently
+
+        # Strategic Indexes for High Performance Queries
+        _INDEXES = [
+            ("idx_listings_status", "CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);"),
+            ("idx_listings_is_duplicate", "CREATE INDEX IF NOT EXISTS idx_listings_is_duplicate ON listings(is_duplicate);"),
+            ("idx_listings_duplicate_of_id", "CREATE INDEX IF NOT EXISTS idx_listings_duplicate_of_id ON listings(duplicate_of_id);"),
+            ("idx_listings_to_visit", "CREATE INDEX IF NOT EXISTS idx_listings_to_visit ON listings(to_visit);"),
+            ("idx_listings_is_favorite", "CREATE INDEX IF NOT EXISTS idx_listings_is_favorite ON listings(is_favorite);"),
+            ("idx_listings_is_liked", "CREATE INDEX IF NOT EXISTS idx_listings_is_liked ON listings(is_liked);"),
+            ("idx_listings_city", "CREATE INDEX IF NOT EXISTS idx_listings_city ON listings(city);"),
+            ("idx_listings_price", "CREATE INDEX IF NOT EXISTS idx_listings_price ON listings(price);"),
+            ("idx_listings_price_per_sqm", "CREATE INDEX IF NOT EXISTS idx_listings_price_per_sqm ON listings(price_per_sqm);"),
+            ("idx_listings_date_added", "CREATE INDEX IF NOT EXISTS idx_listings_date_added ON listings(date_added DESC);"),
+            ("idx_listings_active_composite", "CREATE INDEX IF NOT EXISTS idx_listings_active_composite ON listings(status, is_duplicate, date_added DESC);"),
+            ("idx_attachments_listing_id", "CREATE INDEX IF NOT EXISTS idx_attachments_listing_id ON listing_attachments(listing_id);"),
+            ("idx_visits_listing_id", "CREATE INDEX IF NOT EXISTS idx_visits_listing_id ON visits(listing_id);"),
+            ("idx_visits_scheduled_at", "CREATE INDEX IF NOT EXISTS idx_visits_scheduled_at ON visits(scheduled_at);"),
+            ("idx_map_pins_pin_type", "CREATE INDEX IF NOT EXISTS idx_map_pins_pin_type ON map_pins(pin_type);"),
+        ]
+
+        for idx_name, idx_sql in _INDEXES:
+            try:
+                conn.execute(text(idx_sql))
+                conn.commit()
+            except Exception as e:
+                print(f"[Migration] Warning: could not create index '{idx_name}': {e}")
 
         # Backfill price_per_sqm for listings where it's missing or 0
         try:

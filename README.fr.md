@@ -87,7 +87,7 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 | Route | Nom de la Vue | Description |
 |---|---|---|
 | `/admin/users` | **Gestion Utilisateurs** | Gestion des accès, attribution des rôles (Admin/User) et révocation des clés d'API |
-| `/admin/maintenance` | **Administration & Maintenance** | Moniteur de proxies, sauvegarde/restauration intégrale en 1 clic (archive ZIP) et gestion des caches |
+| `/admin/maintenance` | **Administration & Maintenance** | Nettoyage automatisé nocturne du stockage (médias orphelins & annonces rejetées), optimisation SQLite (VACUUM, ANALYZE, purge WAL), moniteur de proxies et sauvegarde/restauration en 1 clic (ZIP) |
 | `/profile` | **Mon Profil & Sécurité** | Gestion du compte, jetons de connexion Google OAuth (Calendar & Contacts) et clés d'API personnelles |
 
 ---

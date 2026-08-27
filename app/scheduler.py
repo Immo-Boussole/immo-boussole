@@ -113,6 +113,50 @@ def db_repair_job():
         print(f"[Scheduler] Erreur durant la réparation auto : {e}")
 
 
+def nightly_system_maintenance_job():
+    """
+    Automated nightly system maintenance:
+    1. Reclaims disk space by purging orphaned media directories and rejected listings photos
+    2. Optimizes SQLite database (VACUUM, ANALYZE, PRAGMA optimize, wal_checkpoint)
+    3. Records maintenance metrics and timestamps in GlobalSettings
+    """
+    print("[Scheduler] Démarrage de la maintenance système nocturne (Stockage + SQLite)...")
+    db = SessionLocal()
+    try:
+        from app.media import purge_orphaned_and_rejected_media
+        from app.db_maintenance import optimize_sqlite_database
+        import json
+        from datetime import datetime, timezone
+
+        settings = db.query(GlobalSettings).first()
+        purge_rejected = bool(settings.auto_maintenance_purge_rejected) if settings and settings.auto_maintenance_purge_rejected is not None else True
+
+        # 1. Media Cleanup
+        storage_res = purge_orphaned_and_rejected_media(db, purge_rejected=purge_rejected)
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        # 2. SQLite Database Optimization
+        db_res = optimize_sqlite_database()
+
+        # 3. Update Settings History
+        if settings:
+            settings.last_storage_cleanup = now_iso
+            settings.last_db_optimization = now_iso
+            metrics = {
+                "last_run": now_iso,
+                "storage": storage_res,
+                "database": db_res,
+            }
+            settings.last_maintenance_metrics_json = json.dumps(metrics)
+            db.commit()
+
+        print(f"[Scheduler] Maintenance système terminée avec succès : {storage_res.get('freed_human')} libérés, DB {db_res.get('status')}")
+    except Exception as e:
+        print(f"[Scheduler] Erreur durant la maintenance système nocturne : {e}")
+    finally:
+        db.close()
+
+
 def _parse_interval(interval_str):
     if not interval_str: return 1440
     s = interval_str.lower().strip()
@@ -160,6 +204,31 @@ def sync_db_maintenance_jobs(scheduler):
                 name="Réparation DB automatique"
             )
             print(f"[Scheduler] Job {job_id} configuré (toutes les {minutes} min)")
+        else:
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+                print(f"[Scheduler] Job {job_id} supprimé")
+
+        # 3. Nightly System Maintenance Job (Default 03:30)
+        job_id = "nightly_system_maintenance_job"
+        auto_enabled = True if settings.auto_maintenance_enabled is None else settings.auto_maintenance_enabled
+        if auto_enabled:
+            time_str = settings.auto_maintenance_time or "03:30"
+            try:
+                parts = time_str.strip().split(":")
+                hour = int(parts[0])
+                minute = int(parts[1]) if len(parts) > 1 else 0
+            except Exception:
+                hour, minute = 3, 30
+
+            scheduler.add_job(
+                nightly_system_maintenance_job,
+                trigger=CronTrigger(hour=hour, minute=minute),
+                id=job_id,
+                replace_existing=True,
+                name=f"Maintenance nocturne (Stockage + DB) à {hour:02d}:{minute:02d}"
+            )
+            print(f"[Scheduler] Job {job_id} configuré (tous les jours à {hour:02d}:{minute:02d})")
         else:
             if scheduler.get_job(job_id):
                 scheduler.remove_job(job_id)

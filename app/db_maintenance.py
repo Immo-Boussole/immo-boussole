@@ -532,3 +532,107 @@ def get_repair_status():
     return repair_progress
 
 
+def get_db_file_path() -> Optional[str]:
+    """Resolves local SQLite file path from DATABASE_URL."""
+    from app.config import settings
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("sqlite:///"):
+        return db_url.replace("sqlite:///", "")
+    return None
+
+
+def get_db_stats() -> dict:
+    """Calculates database file size, WAL size, and total SQLite footprint."""
+    import os
+    from app.media import format_bytes_human
+
+    db_path = get_db_file_path()
+    size_bytes = 0
+    wal_size_bytes = 0
+    if db_path and os.path.exists(db_path):
+        size_bytes = os.path.getsize(db_path)
+        wal_path = f"{db_path}-wal"
+        if os.path.exists(wal_path):
+            wal_size_bytes = os.path.getsize(wal_path)
+
+    return {
+        "db_size_bytes": size_bytes,
+        "db_size_human": format_bytes_human(size_bytes),
+        "wal_size_bytes": wal_size_bytes,
+        "wal_size_human": format_bytes_human(wal_size_bytes),
+        "total_db_size_bytes": size_bytes + wal_size_bytes,
+        "total_db_size_human": format_bytes_human(size_bytes + wal_size_bytes),
+    }
+
+
+def optimize_sqlite_database() -> dict:
+    """
+    Executes SQLite database optimizations:
+    1. VACUUM to defragment pages and reclaim unallocated disk space
+    2. ANALYZE & PRAGMA optimize to refresh query planner statistics
+    3. PRAGMA wal_checkpoint(TRUNCATE) to flush and truncate the WAL journal
+    4. PRAGMA integrity_check to verify database health
+    """
+    import os
+    import time
+    import sqlite3
+    from sqlalchemy import text
+    from app.database import engine
+    from app.media import format_bytes_human
+
+    t0 = time.time()
+    initial_stats = get_db_stats()
+    initial_total = initial_stats["total_db_size_bytes"]
+
+    integrity_result = "ok"
+
+    db_path = get_db_file_path()
+    if db_path and os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path, isolation_level=None)
+            cursor = conn.cursor()
+            cursor.execute("VACUUM;")
+            cursor.execute("ANALYZE;")
+            cursor.execute("PRAGMA optimize;")
+            cursor.execute("PRAGMA wal_checkpoint(TRUNCATE);")
+            cursor.execute("PRAGMA integrity_check;")
+            row = cursor.fetchone()
+            if row and row[0]:
+                integrity_result = str(row[0])
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"[DB Maintenance] Error during SQLite VACUUM/optimize: {e}")
+            integrity_result = f"error: {e}"
+    else:
+        try:
+            with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+                conn.execute(text("VACUUM;"))
+                conn.execute(text("ANALYZE;"))
+                conn.execute(text("PRAGMA optimize;"))
+                conn.execute(text("PRAGMA wal_checkpoint(TRUNCATE);"))
+                res = conn.execute(text("PRAGMA integrity_check;")).scalar()
+                if res:
+                    integrity_result = str(res)
+        except Exception as e:
+            print(f"[DB Maintenance] Fallback optimize error: {e}")
+            integrity_result = f"error: {e}"
+
+    duration = round(time.time() - t0, 2)
+    final_stats = get_db_stats()
+    final_total = final_stats["total_db_size_bytes"]
+    freed_bytes = max(0, initial_total - final_total)
+
+    return {
+        "status": "success" if "ok" in str(integrity_result).lower() else "warning",
+        "integrity": integrity_result,
+        "duration_seconds": duration,
+        "initial_size_bytes": initial_total,
+        "initial_size_human": format_bytes_human(initial_total),
+        "final_size_bytes": final_total,
+        "final_size_human": format_bytes_human(final_total),
+        "freed_bytes": freed_bytes,
+        "freed_human": format_bytes_human(freed_bytes),
+    }
+
+

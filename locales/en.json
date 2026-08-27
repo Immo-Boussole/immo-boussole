@@ -480,7 +480,9 @@
         "email_title": "Email Configuration (Resend.com)",
         "google_title": "Google Integration (Calendar & Contacts)",
         "missing_photos_title": "Missing or Corrupted Images",
-        "missing_photos_desc": "affected listings"
+        "missing_photos_desc": "affected listings",
+        "storage_opt_title": "System Optimization & Storage Cleanup",
+        "storage_opt_desc": "Reclaim disk space by purging orphaned media files (deleted listings) or rejected listings, and optimize SQLite database performance (VACUUM defragmentation, ANALYZE planner statistics, and WAL journal flush)."
     },
     "auth": {
         "login_title": "Login — Immo-Boussole",

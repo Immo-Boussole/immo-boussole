@@ -441,6 +441,14 @@ class GlobalSettings(Base):
     # Public Data Services Integrations (JSON string, e.g. {"dvf": true, "cadastre": true, "georisques": false})
     public_services_json = Column(Text, nullable=True, default="{}")
 
+    # Automated Nightly Maintenance & Storage Optimization Settings
+    auto_maintenance_enabled = Column(Boolean, default=True)
+    auto_maintenance_time = Column(String, default="03:30")
+    auto_maintenance_purge_rejected = Column(Boolean, default=True)
+    last_storage_cleanup = Column(String, nullable=True)
+    last_db_optimization = Column(String, nullable=True)
+    last_maintenance_metrics_json = Column(Text, nullable=True, default="{}")
+
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 

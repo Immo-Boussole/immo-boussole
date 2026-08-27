@@ -710,6 +710,92 @@
 
 
 
+                <!-- Storage & Database Speed Optimization Card -->
+                <div class="card">
+                    <h2><i class="fas fa-bolt" style="color: #f59e0b; margin-right: 0.5rem;"></i> {{ t(request, 'admin_maintenance.storage_opt_title', 'Optimisation Système & Nettoyage Stockage') }}</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.25rem;">
+                        {{ t(request, 'admin_maintenance.storage_opt_desc', 'Récupérez de l\'espace disque en purgeant les fichiers médias orphelins (annonces supprimées) ou rejetées, et optimisez les performances d\'accès SQLite (défragmentation VACUUM, statistiques ANALYZE et vidage du journal WAL).') }}
+                    </p>
+
+                    <!-- Metrics Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-2); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">
+                                <i class="fas fa-images" style="color: var(--accent);"></i> Médias Stockés
+                            </div>
+                            <div id="stat_total_media_size" style="font-size: 1.2rem; font-weight: 800; color: var(--text);">--</div>
+                            <div id="stat_total_media_files" style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.2rem;">-- fichiers</div>
+                        </div>
+
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-2); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">
+                                <i class="fas fa-trash-alt" style="color: var(--red);"></i> Espace Libérable
+                            </div>
+                            <div id="stat_reclaimable_size" style="font-size: 1.2rem; font-weight: 800; color: var(--green);">--</div>
+                            <div id="stat_reclaimable_detail" style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.2rem;">-- orphelins / rejetés</div>
+                        </div>
+
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-2); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">
+                                <i class="fas fa-database" style="color: var(--accent-2);"></i> Base SQLite
+                            </div>
+                            <div id="stat_db_size" style="font-size: 1.2rem; font-weight: 800; color: var(--text);">--</div>
+                            <div id="stat_db_detail" style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.2rem;">WAL: -- | Intégrité: OK</div>
+                        </div>
+
+                        <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-2); font-weight: 700; text-transform: uppercase; margin-bottom: 0.35rem;">
+                                <i class="fas fa-clock" style="color: var(--text-2);"></i> Dernière Maintenance
+                            </div>
+                            <div id="stat_last_maint_date" style="font-size: 0.95rem; font-weight: 700; color: var(--text);">--</div>
+                            <div id="stat_last_maint_res" style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.2rem;">Aucun historique</div>
+                        </div>
+                    </div>
+
+                    <!-- Manual Actions -->
+                    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.75rem;">
+                        <button class="btn" id="btn_run_storage_cleanup" onclick="runStorageCleanup()">
+                            <i class="fas fa-broom"></i> Nettoyer les médias orphelins & rejetés
+                        </button>
+                        <button class="btn secondary" id="btn_run_db_optimize" onclick="runDbOptimization()">
+                            <i class="fas fa-tachometer-alt"></i> Optimiser la base SQLite (VACUUM & ANALYZE)
+                        </button>
+                        <button class="btn secondary" onclick="loadStorageAndDbStats()" title="Actualiser les métriques" style="padding: 0.6rem 0.8rem;">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+
+                    <!-- Automation Settings Form -->
+                    <div style="background: rgba(0, 0, 0, 0.18); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+                        <h3 style="font-size: 0.9rem; font-weight: 700; margin: 0 0 1rem 0; color: var(--text); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-calendar-check" style="color: var(--accent);"></i> Automatisation Nocturne Quotidienne (Scheduler)
+                        </h3>
+                        <div class="form-row" style="align-items: center; margin-bottom: 0.75rem;">
+                            <div class="form-group" style="min-width: 200px; flex: 1;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text); font-weight: 600;">
+                                    <input type="checkbox" id="auto_maintenance_enabled" style="width: auto; margin: 0;" checked>
+                                    Activer la maintenance automatique nocturne
+                                </label>
+                            </div>
+                            <div class="form-group" style="min-width: 150px; max-width: 220px;">
+                                <label for="auto_maintenance_time">Heure d'exécution quotidienne</label>
+                                <input type="time" id="auto_maintenance_time" value="03:30" style="padding: 0.45rem 0.75rem;">
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-2); font-size: 0.85rem;">
+                                <input type="checkbox" id="auto_maintenance_purge_rejected" style="width: auto; margin: 0;" checked>
+                                Purger également les photos locales des annonces rejetées (garde le titre & les métadonnées)
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button class="btn" onclick="saveAutoMaintenanceSettings()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
+                                <i class="fas fa-save"></i> Enregistrer la planification
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <h2>{{ t(request, 'admin_users.backup_restore_title', 'Sauvegarde & Restauration') }}</h2>
                     <p style="font-size: 0.85rem; color: var(--text-2); margin-bottom: 1.5rem;">
@@ -1402,12 +1488,153 @@
             }
         }
 
+        // ── Storage & Database Speed Optimization ──
+        async function loadStorageAndDbStats() {
+            try {
+                const res = await fetch('/api/admin/maintenance/storage-stats');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const storage = data.storage || {};
+                const dbStats = data.database || {};
+
+                // Storage stats
+                document.getElementById('stat_total_media_size').textContent = storage.total_media_size_human || '0 o';
+                document.getElementById('stat_total_media_files').textContent = (storage.total_media_files || 0) + ' fichier(s)';
+
+                document.getElementById('stat_reclaimable_size').textContent = storage.reclaimable_size_human || '0 o';
+                document.getElementById('stat_reclaimable_detail').textContent = 
+                    (storage.orphaned_dirs_count || 0) + ' orphelin(s), ' + 
+                    (storage.rejected_listings_count || 0) + ' rejeté(s) (' + (storage.reclaimable_files_count || 0) + ' fichiers)';
+
+                // Database stats
+                document.getElementById('stat_db_size').textContent = dbStats.total_db_size_human || '0 o';
+                document.getElementById('stat_db_detail').textContent = 
+                    'Fichier: ' + (dbStats.db_size_human || '0 o') + ' | WAL: ' + (dbStats.wal_size_human || '0 o');
+
+                // Maintenance history
+                if (data.last_storage_cleanup || data.last_db_optimization) {
+                    const lastDate = data.last_storage_cleanup || data.last_db_optimization;
+                    const d = new Date(lastDate);
+                    document.getElementById('stat_last_maint_date').textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    let resSummary = 'Exécutée avec succès';
+                    if (data.history && data.history.storage && data.history.storage.freed_human) {
+                        resSummary = 'Libéré : ' + data.history.storage.freed_human;
+                    }
+                    document.getElementById('stat_last_maint_res').textContent = resSummary;
+                } else {
+                    document.getElementById('stat_last_maint_date').textContent = 'Jamais exécutée';
+                    document.getElementById('stat_last_maint_res').textContent = 'Planifiée à ' + (data.auto_maintenance_time || '03:30');
+                }
+
+                // Settings form inputs
+                if (document.getElementById('auto_maintenance_enabled')) {
+                    document.getElementById('auto_maintenance_enabled').checked = data.auto_maintenance_enabled !== false;
+                }
+                if (document.getElementById('auto_maintenance_time') && data.auto_maintenance_time) {
+                    document.getElementById('auto_maintenance_time').value = data.auto_maintenance_time;
+                }
+                if (document.getElementById('auto_maintenance_purge_rejected')) {
+                    document.getElementById('auto_maintenance_purge_rejected').checked = data.auto_maintenance_purge_rejected !== false;
+                }
+            } catch (e) {
+                console.error("Error loading storage/db stats:", e);
+            }
+        }
+
+        async function runStorageCleanup() {
+            const btn = document.getElementById('btn_run_storage_cleanup');
+            const origHtml = btn.innerHTML;
+            const purgeRejected = document.getElementById('auto_maintenance_purge_rejected') ? document.getElementById('auto_maintenance_purge_rejected').checked : true;
+
+            if (!confirm('Voulez-vous lancer le nettoyage des médias orphelins' + (purgeRejected ? ' et des photos des annonces rejetées ?' : ' ?'))) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Nettoyage en cours...';
+
+            try {
+                const res = await fetch('/api/admin/maintenance/storage-cleanup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ purge_rejected: purgeRejected })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showAlert('Nettoyage terminé avec succès ! Espace libéré : ' + (result.freed_human || '0 o') + ' (' + (result.deleted_files_count || 0) + ' fichiers supprimés).', 'success');
+                    await loadStorageAndDbStats();
+                } else {
+                    showAlert('Erreur lors du nettoyage du stockage : ' + (result.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion lors du nettoyage : ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        async function runDbOptimization() {
+            const btn = document.getElementById('btn_run_db_optimize');
+            const origHtml = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Optimisation SQLite en cours...';
+
+            try {
+                const res = await fetch('/api/admin/maintenance/db-optimize', {
+                    method: 'POST'
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    showAlert('Optimisation SQLite terminée en ' + result.duration_seconds + 's ! Espace récupéré : ' + (result.freed_human || '0 o') + ', intégrité : ' + result.integrity + '.', 'success');
+                    await loadStorageAndDbStats();
+                } else {
+                    showAlert('Erreur lors de l\'optimisation SQLite : ' + (result.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion lors de l\'optimisation : ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        async function saveAutoMaintenanceSettings() {
+            const autoEnabled = document.getElementById('auto_maintenance_enabled').checked;
+            const autoTime = document.getElementById('auto_maintenance_time').value || '03:30';
+            const purgeRejected = document.getElementById('auto_maintenance_purge_rejected').checked;
+
+            try {
+                const res = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        auto_maintenance_enabled: autoEnabled,
+                        auto_maintenance_time: autoTime,
+                        auto_maintenance_purge_rejected: purgeRejected
+                    })
+                });
+
+                if (res.ok) {
+                    showAlert('Planification de la maintenance automatique enregistrée (tous les jours à ' + autoTime + ') !', 'success');
+                    loadStorageAndDbStats();
+                } else {
+                    const err = await res.json();
+                    showAlert('Erreur lors de l\'enregistrement : ' + (err.detail || 'Inconnue'), 'error');
+                }
+            } catch (err) {
+                showAlert('Erreur de connexion lors de l\'enregistrement', 'error');
+            }
+        }
+
         // Initialize
         loadEnvSettings();
         loadEmailSettings();
         loadPublicServicesSettings();
         loadProxySettings();
         loadGoogleAuthStatus();
+        loadStorageAndDbStats();
     </script>
 </body>
 

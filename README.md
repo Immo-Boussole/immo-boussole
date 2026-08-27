@@ -87,7 +87,7 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 | Route | View Name | Description |
 |---|---|---|
 | `/admin/users` | **User Management** | Account provisioning, role-based access control (Admin/User), and API key management |
-| `/admin/maintenance` | **System Maintenance** | Proxy pool health monitor, 1-click full database & photo backup/restore (ZIP archive), and cache tools |
+| `/admin/maintenance` | **System Maintenance** | Automated nightly storage cleanup (orphaned & rejected media purge), SQLite performance optimization (VACUUM, ANALYZE, WAL flush), proxy pool monitor, and full 1-click backup/restore (ZIP) |
 | `/profile` | **User Profile & Security** | Password management, Google OAuth token connections (Calendar & Contacts), and personal API key generator |
 
 ---

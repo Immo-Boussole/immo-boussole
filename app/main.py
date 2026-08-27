@@ -96,6 +96,8 @@ async def lifespan(app: FastAPI):
         app_scheduler.shutdown()
 
 
+from starlette.middleware.gzip import GZipMiddleware
+
 app = FastAPI(title="Immo-Boussole", lifespan=lifespan)
 
 class SecureHeadersMiddleware(BaseHTTPMiddleware):
@@ -105,9 +107,15 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        
+        # High-performance Cache-Control for static files & local media photos
+        if request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "public, max-age=86400, stale-while-revalidate=604800"
+            
         return response
 
 app.add_middleware(SecureHeadersMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Allow Cross-Origin Requests from browser extensions and bookmarklets
 app.add_middleware(
@@ -363,6 +371,11 @@ class GlobalSettingsRequest(BaseModel):
 
     # Public Services Integrations (JSON)
     public_services_json: Optional[str] = None
+
+    # Automated Nightly Maintenance & Storage Optimization
+    auto_maintenance_enabled: Optional[bool] = None
+    auto_maintenance_time: Optional[str] = None
+    auto_maintenance_purge_rejected: Optional[bool] = None
 
 
 class DuplicateMergeRequest(BaseModel):
@@ -861,6 +874,10 @@ def update_global_settings(
     if body.public_services_json is not None:
         settings.public_services_json = body.public_services_json.strip() or "{}"
 
+    if body.auto_maintenance_enabled is not None: settings.auto_maintenance_enabled = body.auto_maintenance_enabled
+    if body.auto_maintenance_time is not None: settings.auto_maintenance_time = body.auto_maintenance_time.strip() or "03:30"
+    if body.auto_maintenance_purge_rejected is not None: settings.auto_maintenance_purge_rejected = body.auto_maintenance_purge_rejected
+
     db.commit()
 
     # Sync scheduler jobs
@@ -869,6 +886,102 @@ def update_global_settings(
         sync_db_maintenance_jobs(app_scheduler)
 
     return {"status": "updated"}
+
+
+@app.get("/api/admin/maintenance/storage-stats")
+def get_admin_storage_and_db_stats(
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    """
+    Returns live storage metrics for static/media, database file size, and maintenance history.
+    """
+    from app.media import get_storage_metrics
+    from app.db_maintenance import get_db_stats
+
+    storage = get_storage_metrics(db)
+    database_stats = get_db_stats()
+    settings = db.query(models.GlobalSettings).first()
+
+    history = {}
+    if settings and settings.last_maintenance_metrics_json:
+        try:
+            history = json.loads(settings.last_maintenance_metrics_json)
+        except Exception:
+            history = {}
+
+    return {
+        "storage": storage,
+        "database": database_stats,
+        "last_storage_cleanup": settings.last_storage_cleanup if settings else None,
+        "last_db_optimization": settings.last_db_optimization if settings else None,
+        "auto_maintenance_enabled": settings.auto_maintenance_enabled if settings and settings.auto_maintenance_enabled is not None else True,
+        "auto_maintenance_time": settings.auto_maintenance_time if settings else "03:30",
+        "auto_maintenance_purge_rejected": settings.auto_maintenance_purge_rejected if settings and settings.auto_maintenance_purge_rejected is not None else True,
+        "history": history,
+    }
+
+
+class StorageCleanupRequest(BaseModel):
+    purge_rejected: bool = True
+
+
+@app.post("/api/admin/maintenance/storage-cleanup")
+def run_admin_storage_cleanup(
+    body: Optional[StorageCleanupRequest] = None,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    """
+    Purges orphaned listing media directories and local photos of rejected listings.
+    """
+    from app.media import purge_orphaned_and_rejected_media
+    purge_rejected = body.purge_rejected if body is not None else True
+    res = purge_orphaned_and_rejected_media(db, purge_rejected=purge_rejected)
+
+    # Update GlobalSettings timestamp
+    settings = db.query(models.GlobalSettings).first()
+    if settings:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        settings.last_storage_cleanup = now_iso
+        try:
+            metrics = json.loads(settings.last_maintenance_metrics_json or "{}")
+        except Exception:
+            metrics = {}
+        metrics["last_storage_cleanup"] = now_iso
+        metrics["storage_cleanup_result"] = res
+        settings.last_maintenance_metrics_json = json.dumps(metrics)
+        db.commit()
+
+    return res
+
+
+@app.post("/api/admin/maintenance/db-optimize")
+def run_admin_db_optimize(
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    """
+    Executes SQLite VACUUM, ANALYZE, PRAGMA optimize, and WAL Checkpoint.
+    """
+    from app.db_maintenance import optimize_sqlite_database
+    res = optimize_sqlite_database()
+
+    # Update GlobalSettings timestamp
+    settings = db.query(models.GlobalSettings).first()
+    if settings:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        settings.last_db_optimization = now_iso
+        try:
+            metrics = json.loads(settings.last_maintenance_metrics_json or "{}")
+        except Exception:
+            metrics = {}
+        metrics["last_db_optimization"] = now_iso
+        metrics["db_optimize_result"] = res
+        settings.last_maintenance_metrics_json = json.dumps(metrics)
+        db.commit()
+
+    return res
 
 
 @app.post("/api/admin/settings/test-email")
