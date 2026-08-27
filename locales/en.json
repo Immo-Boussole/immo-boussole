@@ -8,6 +8,7 @@
         "close": "Close"
     },
     "nav": {
+        "notifications": "Notifications",
         "dashboard": "Dashboard",
         "listings_table": "Listings Table",
         "ideal_profile": "Ideal Property Profile",

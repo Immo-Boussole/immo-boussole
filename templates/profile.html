@@ -60,6 +60,73 @@
         .sidebar-lang-selector .lang-item span {
             font-size: 1rem;
         }
+
+        .radio-pill {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.45rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: var(--trans);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .radio-pill:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
+        .radio-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .radio-pill input[type="radio"] { display: none; }
+
+        .slide-track {
+            position: relative;
+            width: 100%;
+            height: 52px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 26px;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+        .slide-fill {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(242,92,105,0.25), var(--red));
+            transition: width 0.05s ease;
+        }
+        .slide-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-2);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .slide-handle {
+            position: absolute;
+            left: 4px; top: 4px;
+            width: 44px; height: 44px;
+            background: var(--red);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            z-index: 3;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            transition: background 0.2s ease;
+        }
+        .slide-handle:active { cursor: grabbing; }
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
@@ -317,19 +384,62 @@
                     <div class="card">
                         <div class="card-header">
                             <i class="fa-solid fa-bell"></i>
-                            <h2>{{ t(request, 'profile.notifications_title', 'Notifications (Push, Email, etc.)') }}</h2>
+                            <h2>{{ t(request, 'profile.notifications_title', 'Notifications') }}</h2>
                         </div>
                         <div class="form-group">
-                            <label>{{ t(request, 'profile.apprise_url_label', 'URL Apprise') }}</label>
+                            <label>{{ t(request, 'profile.apprise_url_label', 'URL Apprise (Push / Email)') }}</label>
                             <input type="text" id="apprise_url" name="apprise_url" value="{{ user.apprise_url or '' }}" placeholder="Ex: tgram://bottoken/chatid ou mailto://user:pass@domain.com"> <!-- pragma: allowlist secret -->
                             <p style="font-size: 0.75rem; color: var(--text-2); margin-top: 0.5rem;">
                                 <i class="fa-solid fa-info-circle"></i> Recevez des alertes pour chaque nouvelle annonce via Telegram, Discord, Push, Email, etc. <br>
                                 <a href="https://github.com/caronc/apprise/wiki" target="_blank" style="color: var(--accent); text-decoration: none;">Voir la liste des services supportés et formats d'URL</a>.
                             </p>
                         </div>
-                        <button type="button" class="btn" onclick="testAppriseNotification()" id="testNotifBtn">
+                        <button type="button" class="btn" onclick="testAppriseNotification()" id="testNotifBtn" style="margin-bottom: 1.5rem;">
                             <i class="fa-solid fa-paper-plane"></i> {{ t(request, 'profile.test_notif_btn', 'Tester la notification') }}
                         </button>
+
+                        <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+                        <!-- In-App Notifications Configuration -->
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="font-weight: 700; margin-bottom: 0.5rem; display: block;">
+                                <i class="fa-solid fa-clock-rotate-left"></i> Marquer comme lu après
+                            </label>
+                            <p style="font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.75rem;">
+                                Les notifications non lues datant de plus que ce délai seront automatiquement marquées comme lues.
+                            </p>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                {% set auto_days = user.auto_read_after_days if user.auto_read_after_days is defined else 30 %}
+                                <label class="radio-pill {% if auto_days == 2 %}active{% endif %}">
+                                    <input type="radio" name="auto_read_after_days" value="2" {% if auto_days == 2 %}checked{% endif %} onchange="updateRadioPills(this)">
+                                    2 jours
+                                </label>
+                                <label class="radio-pill {% if auto_days == 7 %}active{% endif %}">
+                                    <input type="radio" name="auto_read_after_days" value="7" {% if auto_days == 7 %}checked{% endif %} onchange="updateRadioPills(this)">
+                                    7 jours
+                                </label>
+                                <label class="radio-pill {% if auto_days == 30 or not auto_days %}active{% endif %}">
+                                    <input type="radio" name="auto_read_after_days" value="30" {% if auto_days == 30 or not auto_days %}checked{% endif %} onchange="updateRadioPills(this)">
+                                    30 jours
+                                </label>
+                                <label class="radio-pill {% if auto_days == 60 %}active{% endif %}">
+                                    <input type="radio" name="auto_read_after_days" value="60" {% if auto_days == 60 %}checked{% endif %} onchange="updateRadioPills(this)">
+                                    60 jours
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label style="font-weight: 700; color: var(--red); margin-bottom: 0.5rem; display: block;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Purge des messages
+                            </label>
+                            <p style="font-size: 0.75rem; color: var(--text-2); margin-bottom: 0.75rem;">
+                                Supprimer définitivement toutes les notifications associées à ce compte.
+                            </p>
+                            <button type="button" class="btn btn-danger" onclick="openPurgeModal()">
+                                <i class="fa-solid fa-trash-can"></i> Supprimer tous les messages
+                            </button>
+                        </div>
                     </div>
                     <!-- Section: Bookmarklet Navigateur (Anti-DataDome) -->
                     <div class="card" id="bookmarkletCard">
@@ -441,6 +551,30 @@
                 </div>
                 <button type="submit" class="btn primary" style="width:100%; justify-content:center;">Ajouter le profil</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal d'information & confirmation Purge globale des notifications -->
+    <div id="purgeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
+        <div class="card" style="width: 90%; max-width: 480px; position:relative; padding: 1.75rem; border: 1px solid rgba(242, 92, 105, 0.4);">
+            <button onclick="closePurgeModal()" style="position:absolute; top:1rem; right:1rem; background:none; border:none; color:var(--text-2); cursor:pointer; font-size:1.2rem;"><i class="fa-solid fa-times"></i></button>
+            <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--red); font-size: 1.25rem; font-weight: 800; margin-bottom: 1rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i> Supprimer tous les messages
+            </div>
+            <p style="font-size: 0.875rem; color: var(--text-2); line-height: 1.5; margin-bottom: 1.5rem;">
+                <strong>Attention :</strong> Cette action va supprimer définitivement l'ensemble des notifications enregistrées pour votre compte. Cette opération est irréversible.
+            </p>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); display: block; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+                    Confirmation par glissement
+                </label>
+                <div class="slide-track" id="slideTrack">
+                    <div class="slide-fill" id="slideFill"></div>
+                    <div class="slide-text" id="slideText">Glissez pour tout supprimer</div>
+                    <div class="slide-handle" id="slideHandle"><i class="fa-solid fa-angles-right"></i></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -638,6 +772,126 @@
             renderPois();
         }
 
+        function updateRadioPills(radio) {
+            document.querySelectorAll('input[name="auto_read_after_days"]').forEach(r => {
+                const parent = r.closest('.radio-pill');
+                if (parent) parent.classList.toggle('active', r.checked);
+            });
+        }
+
+        function openPurgeModal() {
+            const modal = document.getElementById('purgeModal');
+            modal.style.display = 'flex';
+            resetSlide();
+        }
+
+        function closePurgeModal() {
+            document.getElementById('purgeModal').style.display = 'none';
+        }
+
+        let isSlideDragging = false;
+        let slideStartX = 0;
+        let slideMaxX = 0;
+
+        function resetSlide() {
+            const handle = document.getElementById('slideHandle');
+            const fill = document.getElementById('slideFill');
+            const text = document.getElementById('slideText');
+            if (!handle || !fill || !text) return;
+            handle.style.left = '4px';
+            fill.style.width = '0%';
+            text.innerText = 'Glissez pour tout supprimer';
+            text.style.color = 'var(--text-2)';
+            handle.style.background = 'var(--red)';
+            handle.innerHTML = '<i class="fa-solid fa-angles-right"></i>';
+            isSlideDragging = false;
+        }
+
+        function initSlideHandle() {
+            const track = document.getElementById('slideTrack');
+            const handle = document.getElementById('slideHandle');
+            const fill = document.getElementById('slideFill');
+            const text = document.getElementById('slideText');
+
+            if (!track || !handle) return;
+
+            function startDrag(e) {
+                isSlideDragging = true;
+                slideStartX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                const rect = track.getBoundingClientRect();
+                slideMaxX = rect.width - handle.offsetWidth - 8;
+            }
+
+            function moveDrag(e) {
+                if (!isSlideDragging) return;
+                const currentClientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                let deltaX = currentClientX - slideStartX;
+                if (deltaX < 0) deltaX = 0;
+                if (deltaX > slideMaxX) deltaX = slideMaxX;
+
+                handle.style.left = (deltaX + 4) + 'px';
+                const percent = (deltaX / slideMaxX) * 100;
+                fill.style.width = percent + '%';
+
+                if (percent >= 90) {
+                    isSlideDragging = false;
+                    handle.style.left = (slideMaxX + 4) + 'px';
+                    fill.style.width = '100%';
+                    handle.style.background = '#10d9a4';
+                    handle.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    text.innerText = 'Confirmation validée !';
+                    text.style.color = '#fff';
+                    triggerPurgeAll();
+                }
+            }
+
+            function endDrag() {
+                if (!isSlideDragging) return;
+                isSlideDragging = false;
+                handle.style.transition = 'left 0.25s ease';
+                fill.style.transition = 'width 0.25s ease';
+                handle.style.left = '4px';
+                fill.style.width = '0%';
+                setTimeout(() => {
+                    handle.style.transition = '';
+                    fill.style.transition = '';
+                }, 250);
+            }
+
+            handle.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', moveDrag);
+            window.addEventListener('mouseup', endDrag);
+
+            handle.addEventListener('touchstart', startDrag);
+            window.addEventListener('touchmove', moveDrag);
+            window.addEventListener('touchend', endDrag);
+        }
+
+        async function triggerPurgeAll() {
+            try {
+                const res = await fetch('/api/v1/notifications/purge-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    setTimeout(() => {
+                        closePurgeModal();
+                        alert('Toutes les notifications ont été supprimées avec succès.');
+                    }, 300);
+                } else {
+                    alert('Erreur lors de la suppression des notifications.');
+                    resetSlide();
+                }
+            } catch(e) {
+                alert('Erreur réseau lors de la suppression.');
+                resetSlide();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSlideHandle();
+        });
+
         async function saveProfile(e) {
             e.preventDefault();
             const btn = document.getElementById('saveBtn');
@@ -646,14 +900,18 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enregistrement...';
 
+            const selectedDaysRadio = document.querySelector('input[name="auto_read_after_days"]:checked');
+            const autoReadDays = selectedDaysRadio ? parseInt(selectedDaysRadio.value) : 30;
+
             const payload = {
                 work_address: document.getElementById('work_address').value,
-                poi: pois,
+                pois: pois,
                 apprise_url: document.getElementById('apprise_url').value,
                 email: document.getElementById('email').value,
                 phone: document.getElementById('phone').value,
                 sfr_identifier: document.getElementById('sfr_identifier').value,
-                sfr_password: document.getElementById('sfr_password').value
+                sfr_password: document.getElementById('sfr_password').value,
+                auto_read_after_days: autoReadDays
             };
 
             try {

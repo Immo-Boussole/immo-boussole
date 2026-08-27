@@ -237,6 +237,23 @@ def sync_db_maintenance_jobs(scheduler):
         db.close()
 
 
+def notifications_auto_read_job():
+    """
+    Periodic job to auto-mark expired unread notifications as read.
+    Runs once every hour.
+    """
+    print("[Scheduler] Démarrage du marquage automatique des notifications expirées...")
+    db = SessionLocal()
+    try:
+        from app.notifications import auto_mark_read_expired_notifications
+        updated = auto_mark_read_expired_notifications(db)
+        print(f"[Scheduler] Auto-marquage des notifications terminé ({updated} mise(s) à jour)")
+    except Exception as e:
+        print(f"[Scheduler] Erreur durant l'auto-marquage des notifications: {e}")
+    finally:
+        db.close()
+
+
 def start_scheduler():
     """
     Registers cron jobs and interval jobs.
@@ -250,6 +267,15 @@ def start_scheduler():
         trigger=CronTrigger(hour="6-22", minute="0,30"),
         id="scraping_job_30min",
         name=f"Scraping auto — {get_text(None, 'auto_searches.auto_refresh_value')}",
+        replace_existing=True,
+    )
+
+    # Hourly auto-read notifications cleanup
+    scheduler.add_job(
+        notifications_auto_read_job,
+        trigger=IntervalTrigger(minutes=60),
+        id="notifications_auto_read_job",
+        name="Auto-marquage des notifications expirées",
         replace_existing=True,
     )
 

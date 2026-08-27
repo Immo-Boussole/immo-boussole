@@ -163,9 +163,26 @@ if ":" in _raw_version:
     _raw_version = _raw_version.split(":")[-1][:8]
 templates.env.globals["app_version"] = _raw_version
 
+def get_unread_count_global(request: Request) -> int:
+    try:
+        db = next(database.get_db())
+        current_user = None
+        if request and hasattr(request, "session") and request.session.get("authenticated") is True:
+            username = request.session.get("username")
+            if username:
+                current_user = db.query(models.User).filter(models.User.username == username).first()
+        from app.notifications import get_unread_notifications_count
+        return get_unread_notifications_count(db, current_user)
+    except Exception:
+        return 0
+
+templates.env.globals["get_unread_count"] = get_unread_count_global
+
 from app.api.v1.router import api_router
+from app.api.v1.endpoints import notifications as notifications_endpoint
 app.include_router(api_router, prefix="/api/v1")
 app.include_router(api_router, prefix="/api")
+app.include_router(notifications_endpoint.router)
 
 
 # ─── Pydantic Schemas ─────────────────────────────────────────────────────────
@@ -307,6 +324,7 @@ class ProfileUpdateRequest(BaseModel):
     phone: Optional[str] = None
     sfr_identifier: Optional[str] = None
     sfr_password: Optional[str] = None
+    auto_read_after_days: Optional[int] = None
 
 
 class StationChoice(BaseModel):
@@ -4185,6 +4203,8 @@ async def update_profile(
     if body.phone is not None: user.phone = body.phone.strip() or None
     if body.sfr_identifier is not None: user.sfr_identifier = body.sfr_identifier.strip() or None
     if body.sfr_password is not None: user.sfr_password = body.sfr_password.strip() or None
+    if body.auto_read_after_days is not None and body.auto_read_after_days in (2, 7, 30, 60):
+        user.auto_read_after_days = body.auto_read_after_days
 
     db.commit()
     

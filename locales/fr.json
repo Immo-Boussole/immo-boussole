@@ -8,6 +8,7 @@
         "close": "Fermer"
     },
     "nav": {
+        "notifications": "Notifications",
         "dashboard": "Tableau de bord",
         "listings_table": "Tableau des annonces",
         "ideal_profile": "Fiche Bien Idéal",

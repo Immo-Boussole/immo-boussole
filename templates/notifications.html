@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="{{ request.session.get('lang', 'fr') }}" style="height: 100%; overflow: hidden;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
+    <title>{{ title }}</title>
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a; --surface: #131929; --surface-2: #1a2236;
+            --border: rgba(255,255,255,0.08); --text: #eef2ff; --text-2: #8b9cc8;
+            --accent: #4f8ef7; --accent-2: #6366f1;
+            --green: #10d9a4; --red: #f25c69; --orange: #f8a84b; --yellow: #f9d04f;
+            --shadow: 0 8px 32px rgba(0,0,0,0.5); --radius: 14px;
+            --trans: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg); color: var(--text);
+            display: flex; height: 100vh; width: 100vw;
+            overflow: hidden; margin: 0; position: fixed;
+        }
+
+        .main-layout {
+            display: flex; width: 100%; height: 100vh; overflow: hidden;
+        }
+
+        .content-area {
+            flex: 1; display: flex; flex-direction: column;
+            height: 100vh; overflow-y: auto; position: relative;
+            padding: 1.5rem 2rem 3rem 2rem; box-sizing: border-box;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.75rem; gap: 1rem; flex-wrap: wrap;
+        }
+        .page-title {
+            display: flex; align-items: center; gap: 0.75rem;
+            font-size: 1.5rem; font-weight: 800; color: var(--text);
+        }
+        .page-title i {
+            color: var(--orange); font-size: 1.6rem;
+        }
+
+        .header-actions {
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.65rem 1.1rem; border-radius: 10px; font-size: 0.875rem;
+            font-weight: 600; cursor: pointer; transition: var(--trans); border: none;
+            min-height: 44px; text-decoration: none;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #3b7be6; transform: translateY(-1px); }
+        .btn-secondary {
+            background: var(--surface-2); color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.18); }
+        .btn-danger { background: rgba(242, 92, 105, 0.15); color: var(--red); border: 1px solid rgba(242, 92, 105, 0.3); }
+        .btn-danger:hover { background: var(--red); color: #fff; }
+
+        /* ── Batch Floating Action Bar ── */
+        .batch-action-bar {
+            display: none; align-items: center; justify-content: space-between;
+            background: var(--surface-2); border: 1px solid var(--accent);
+            border-radius: 12px; padding: 0.75rem 1.25rem; margin-bottom: 1.5rem;
+            box-shadow: 0 4px 20px rgba(79, 142, 247, 0.2); animation: fadeIn 0.25s ease;
+        }
+        .batch-action-bar.visible { display: flex; }
+        .batch-info { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; font-size: 0.9rem; }
+        .batch-count-badge {
+            background: var(--accent); color: #fff; border-radius: 20px;
+            padding: 0.25rem 0.65rem; font-size: 0.8rem; font-weight: 800;
+        }
+        .batch-buttons { display: flex; align-items: center; gap: 0.5rem; }
+
+        /* ── Timeline Container ── */
+        .timeline-container {
+            position: relative; max-width: 900px; margin: 0 auto; width: 100%;
+        }
+        .timeline-period {
+            margin-bottom: 2rem;
+        }
+        .period-header {
+            display: flex; align-items: center; gap: 0.75rem;
+            font-size: 0.85rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--text-2); margin-bottom: 1rem;
+            position: relative; padding-left: 2.25rem;
+        }
+        .period-header::before {
+            content: ''; position: absolute; left: 0.75rem; top: 50%;
+            width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+            transform: translateY(-50%); box-shadow: 0 0 8px var(--accent);
+        }
+
+        .timeline-list {
+            position: relative; padding-left: 2.25rem;
+        }
+        .timeline-list::before {
+            content: ''; position: absolute; left: 0.95rem; top: 0; bottom: 0;
+            width: 2px; background: var(--border);
+        }
+
+        .notif-card {
+            position: relative; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 12px;
+            padding: 1.1rem 1.25rem; margin-bottom: 1rem;
+            display: flex; align-items: flex-start; gap: 1rem;
+            transition: var(--trans);
+        }
+        .notif-card:hover {
+            border-color: rgba(255,255,255,0.18); transform: translateX(3px);
+        }
+        .notif-card.unread {
+            background: rgba(79, 142, 247, 0.05);
+            border-left: 4px solid var(--orange);
+        }
+
+        .notif-node-icon {
+            position: absolute; left: -2.25rem; top: 1.1rem;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--surface-2); border: 2px solid var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; color: var(--text-2); z-index: 2;
+            transform: translateX(-50%);
+        }
+        .notif-card.unread .notif-node-icon {
+            background: var(--orange); color: #0b0f1a;
+            box-shadow: 0 0 10px rgba(248, 168, 75, 0.5);
+        }
+
+        .notif-icon-badge {
+            width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; background: var(--surface-2); color: var(--text-2);
+        }
+        .cat-annonce { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .cat-visite { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .cat-systeme { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+
+        .notif-body { flex: 1; min-width: 0; }
+        .notif-header-line {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 0.35rem; gap: 0.5rem;
+        }
+        .notif-title {
+            font-size: 0.95rem; font-weight: 700; color: var(--text);
+            line-height: 1.3;
+        }
+        .notif-card.unread .notif-title { font-weight: 800; }
+        .notif-date {
+            font-size: 0.75rem; color: var(--text-2); white-space: nowrap; font-weight: 500;
+        }
+        .notif-message {
+            font-size: 0.85rem; color: var(--text-2); line-height: 1.45;
+            white-space: pre-line; margin-bottom: 0.5rem;
+        }
+        .notif-link {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.8rem; font-weight: 600; color: var(--accent);
+            text-decoration: none; margin-top: 0.25rem;
+        }
+        .notif-link:hover { text-decoration: underline; }
+
+        .notif-checkbox-wrapper {
+            display: flex; align-items: center; padding-top: 0.25rem;
+        }
+        .notif-checkbox {
+            width: 20px; height: 20px; border-radius: 5px;
+            accent-color: var(--accent); cursor: pointer;
+        }
+
+        .empty-state {
+            text-align: center; padding: 4rem 2rem; background: var(--surface);
+            border: 1px dashed var(--border); border-radius: 16px; margin-top: 2rem;
+        }
+        .empty-state i { font-size: 3rem; color: var(--text-2); margin-bottom: 1rem; opacity: 0.5; }
+        .empty-state h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .empty-state p { color: var(--text-2); font-size: 0.9rem; max-width: 400px; margin: 0 auto; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 1rem; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .batch-action-bar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .notif-card { padding: 0.85rem; }
+            .timeline-list { padding-left: 1.75rem; }
+            .notif-node-icon { left: -1.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        {% include 'components/sidebar.html' %}
+
+        <div class="content-area">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="page-title">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>{{ t(request, 'nav.notifications', 'Notifications') }}</span>
+                    {% if unread_cnt > 0 %}
+                    <span style="background: var(--orange); color: #0b0f1a; font-size: 0.75rem; font-weight: 800; border-radius: 12px; padding: 0.2rem 0.6rem;">
+                        {{ unread_cnt }} non lue{{ 's' if unread_cnt > 1 else '' }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="header-actions">
+                    {% if total_cnt > 0 %}
+                    <button type="button" class="btn btn-secondary" onclick="markAllAsRead()">
+                        <i class="fa-solid fa-check-double"></i> {{ t(request, 'notifications.mark_all_read', 'Marquer tout comme lu') }}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Floating Batch Action Bar -->
+            <div class="batch-action-bar" id="batchActionBar">
+                <div class="batch-info">
+                    <span class="batch-count-badge" id="batchCountBadge">0</span>
+                    <span>notification(s) sélectionnée(s)</span>
+                </div>
+                <div class="batch-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="markSelectedRead()">
+                        <i class="fa-solid fa-envelope-open"></i> Marquer comme lu
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="deleteSelected()">
+                        <i class="fa-solid fa-trash"></i> Supprimer
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="deselectAll()" style="padding: 0.5rem 0.75rem;" title="Désélectionner tout">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Timeline Content -->
+            <div class="timeline-container">
+                {% if grouped_periods and grouped_periods|length > 0 %}
+                    {% for period in grouped_periods %}
+                    <div class="timeline-period">
+                        <div class="period-header">{{ period.label }}</div>
+                        <div class="timeline-list">
+                            {% for item in period.notif_list %}
+                            <div class="notif-card {% if not item.is_read %}unread{% endif %}" id="notif-card-{{ item.id }}">
+                                <div class="notif-node-icon">
+                                    <i class="fa-solid {% if not item.is_read %}fa-circle{% else %}fa-check{% endif %}"></i>
+                                </div>
+                                <div class="notif-icon-badge cat-{{ item.category or 'systeme' }}">
+                                    {% if item.category == 'annonce' %}
+                                    <i class="fa-solid fa-house"></i>
+                                    {% elif item.category == 'visite' %}
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                    {% else %}
+                                    <i class="fa-solid fa-bell"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="notif-body">
+                                    <div class="notif-header-line">
+                                        <div class="notif-title">{{ item.title }}</div>
+                                        <div class="notif-date">
+                                            {% if item.created_at %}
+                                            {{ item.created_at.strftime('%d/%m/%Y à %H:%M') }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="notif-message">{{ item.message }}</div>
+                                    {% if item.link_url %}
+                                    <a href="{{ item.link_url }}" class="notif-link">
+                                        Voir l'élément <i class="fa-solid fa-arrow-right"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                                <div class="notif-checkbox-wrapper">
+                                    <input type="checkbox" class="notif-checkbox" value="{{ item.id }}" onchange="updateBatchActionBar()">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fa-solid fa-bell-slash"></i>
+                        <h3>Aucune notification</h3>
+                        <p>Vous n'avez actuellement aucune notification en attente.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getSelectedIds() {
+            const checkboxes = document.querySelectorAll('.notif-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+
+        function updateBatchActionBar() {
+            const selectedIds = getSelectedIds();
+            const bar = document.getElementById('batchActionBar');
+            const badge = document.getElementById('batchCountBadge');
+
+            if (selectedIds.length > 0) {
+                badge.innerText = selectedIds.length;
+                bar.classList.add('visible');
+            } else {
+                bar.classList.remove('visible');
+            }
+        }
+
+        function deselectAll() {
+            document.querySelectorAll('.notif-checkbox:checked').forEach(cb => cb.checked = false);
+            updateBatchActionBar();
+        }
+
+        async function markAllAsRead() {
+            try {
+                const res = await fetch('/api/v1/notifications/mark-all-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error('Erreur lors du marquage comme lu:', e);
+            }
+        }
+
+        async function markSelectedRead() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+
+            try {
+                const res = await fetch('/api/v1/notifications/mark-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_ids: ids })
+                });
+                if (res.ok) {
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error('Erreur lors du marquage de la sélection:', e);
+            }
+        }
+
+        async function deleteSelected() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) return;
+
+            if (!confirm(`Voulez-vous vraiment supprimer ces ${ids.length} notification(s) ?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/v1/notifications/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_ids: ids })
+                });
+                if (res.ok) {
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error('Erreur lors de la suppression de la sélection:', e);
+            }
+        }
+
+        // Periodically refresh unread count on sidebar if badge exists
+        async function refreshSidebarBadge() {
+            try {
+                const res = await fetch('/api/v1/notifications/unread-count');
+                if (res.ok) {
+                    const data = await res.json();
+                    const badge = document.getElementById('sidebar-notif-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.innerText = data.unread_count;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+    </script>
+</body>
+</html>

@@ -37,6 +37,7 @@ class User(Base):
 
     # Notifications
     apprise_url = Column(String, nullable=True)  # Apprise-compatible URL (tgram://, discord://, ntfy://, mailto://, etc.)
+    auto_read_after_days = Column(Integer, default=30, nullable=False)
 
     # Missing location notifications & session tracking
     last_seen_missing_loc_count = Column(Integer, default=0, nullable=False)
@@ -551,5 +552,26 @@ class ListingLink(Base):
 
     # Relationships
     listing = relationship("Listing", back_populates="links")
+
+
+class Notification(Base):
+    """
+    Stores in-app notifications targeting specific users, roles/groups, or AI profiles.
+    """
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    target_role = Column(String(20), nullable=True, index=True)  # "admin", "user", or None for all
+    target_profile_id = Column(Integer, ForeignKey("ai_profiles.id", ondelete="CASCADE"), nullable=True, index=True)
+
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    category = Column(String(30), nullable=False, default="systeme")  # "annonce", "visite", "systeme"
+    link_url = Column(String(500), nullable=True)
+
+    is_read = Column(Boolean, nullable=False, default=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    read_at = Column(DateTime(timezone=True), nullable=True)
 
 

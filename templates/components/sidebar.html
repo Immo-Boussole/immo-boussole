@@ -148,6 +148,23 @@
         text-align: center;
     }
 
+    .nav-link-badge {
+        margin-left: auto;
+        background: var(--orange, #f8a84b);
+        color: #0b0f1a;
+        font-size: 0.72rem;
+        font-weight: 800;
+        min-width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 6px;
+        line-height: 1;
+        box-shadow: 0 2px 6px rgba(248, 168, 75, 0.35);
+    }
+
     .sidebar-lang-selector {
         display: flex;
         background: var(--surface-2, #1a2236);
@@ -231,6 +248,15 @@
 
     <div class="sidebar-section-title">{{ t(request, 'nav.navigation', 'Navigation') }}</div>
     <nav>
+        {% set _unread_cnt = get_unread_count(request) if get_unread_count is defined else 0 %}
+        <a href="/notifications" class="nav-link{% if request.url.path == '/notifications' %} active{% endif %}">
+            <i class="fa-solid fa-bell"></i>
+            <span>{{ t(request, 'nav.notifications', 'Notifications') }}</span>
+            <span class="nav-link-badge" id="sidebar-notif-badge" {% if not _unread_cnt or _unread_cnt == 0 %}style="display: none;"{% endif %}>{{ _unread_cnt }}</span>
+        </a>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 0.5rem 0;">
+
         <a href="/" class="nav-link{% if request.url.path == '/' %} active{% endif %}"><i class="fa-solid fa-house"></i> {{ t(request, 'nav.dashboard', 'Tableau de bord') }}</a>
         <a href="/listings/table" class="nav-link{% if request.url.path == '/listings/table' %} active{% endif %}"><i class="fa-solid fa-table-list"></i> {{ t(request, 'nav.listings_table', 'Tableau des annonces') }}</a>
         <a href="/a-voir" class="nav-link{% if request.url.path == '/a-voir' %} active{% endif %}"><i class="fa-solid fa-eye"></i> {{ t(request, 'nav.a_voir', 'À voir') }}</a>

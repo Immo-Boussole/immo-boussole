@@ -259,6 +259,9 @@ _MIGRATIONS = [
     ("users", "missing_loc_snooze_until",                  "DATETIME"),
     ("users", "last_login_at",                             "DATETIME"),
 
+    # users — auto read notifications policy v34
+    ("users", "auto_read_after_days",                      "INTEGER DEFAULT 30"),
+
     # listings — repair tags (data quality errors) v33
     ("listings", "repair_tags",                            "TEXT"),
 ]
@@ -307,6 +310,10 @@ def run_migrations():
             ("idx_visits_listing_id", "CREATE INDEX IF NOT EXISTS idx_visits_listing_id ON visits(listing_id);"),
             ("idx_visits_scheduled_at", "CREATE INDEX IF NOT EXISTS idx_visits_scheduled_at ON visits(scheduled_at);"),
             ("idx_map_pins_pin_type", "CREATE INDEX IF NOT EXISTS idx_map_pins_pin_type ON map_pins(pin_type);"),
+            ("idx_notifications_user_id", "CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);"),
+            ("idx_notifications_target_role", "CREATE INDEX IF NOT EXISTS idx_notifications_target_role ON notifications(target_role);"),
+            ("idx_notifications_is_read", "CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);"),
+            ("idx_notifications_created_at", "CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);"),
         ]
 
         for idx_name, idx_sql in _INDEXES:
