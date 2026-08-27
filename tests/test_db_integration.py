@@ -1,10 +1,12 @@
 import asyncio
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
+from app.database import SessionLocal, run_migrations
 from app.models import SearchQuery, Source
 from app.services import scrape_and_diff
 
 async def test_full_scrape():
+    # 0. Ensure schema exists
+    run_migrations()
     # 1. Obtenir une session DB
     db: Session = SessionLocal()
     

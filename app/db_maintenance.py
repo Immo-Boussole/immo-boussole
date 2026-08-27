@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.models import Listing, ListingStatus, MapPin, Visit
 from app.services import (
     refresh_listing_status,

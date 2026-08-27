@@ -9,6 +9,11 @@ from app.services import is_valid_listing_url, is_search_page_title
 
 class TestSearchPageValidation(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        from app.database import run_migrations
+        run_migrations()
+
     def test_valid_listing_urls(self):
         """Test that single listing page URLs are correctly validated."""
         valid_urls = [
