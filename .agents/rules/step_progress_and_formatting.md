@@ -9,8 +9,12 @@ This document outlines the mandatory formatting rules for AI agent responses, st
 Every response or multi-step execution turn must clearly indicate progress and current execution context using standardized Level 3 Markdown headings:
 
 ```markdown
-### [[current_step]/[total_steps]] [EMOJI] [Descriptive Step Title]
+### [X/Y] <EMOJI> <Descriptive Step Title>
 ```
+*Where `X` is the current step index (integer) and `Y` is the total number of steps (integer).*
+
+> [!IMPORTANT]
+> **Single Bracket Pair Only**: Use single outer square brackets surrounding the fraction `[X/Y]` (e.g. `[1/5]`, `[2/2]`). Never use nested or double brackets such as `[[1]/[5]]` or `[[2]/[2]]`.
 
 ### Examples:
 - `### [1/5] 🔍 Codebase Analysis & Investigation`

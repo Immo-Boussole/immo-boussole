@@ -86,7 +86,7 @@ For any change affecting the UI, CSS, JavaScript, templates, or frontend routes:
 
 ## 8. Response Formatting & Step Progress Tracking
 
-- **Standardized Step Headers**: Every multi-step response or status update must begin with a Level 3 heading adhering to `### [[current_step]/[total_steps]] [EMOJI] [Descriptive Step Title]`.
+- **Standardized Step Headers**: Every multi-step response or status update must begin with a Level 3 heading adhering to `### [X/Y] [EMOJI] [Descriptive Step Title]` (single square bracket pair around the fraction, e.g. `### [1/5] ...`, never double brackets like `[[1]/[5]]`).
 - **Technology & Action Emojis**: Always prefix step titles with the corresponding Unicode emoji (e.g. 🐍 Python, 🧪 Tests, 🐳 Docker, 🐙 GitHub, ⚙️ CI/CD, 🧩 WebExtension, 🌐 Frontend/Web, 🔍 Research, 📝 Docs/i18n, 🚀 Deploy/Release, 🛡️ Security, 🧭 Immo-Boussole Domain).
 - **Detailed Reference**: See [.agents/rules/step_progress_and_formatting.md](file:///c:/tools/GitHub/Immo-Boussole/immo-boussole/.agents/rules/step_progress_and_formatting.md).
 
