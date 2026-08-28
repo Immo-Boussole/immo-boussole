@@ -13,6 +13,7 @@ from app.services import (
     split_or_purge_aggregate_listing
 )
 from app.database import SessionLocal
+import json
 import asyncio
 import re
 from datetime import datetime, timezone
@@ -49,6 +50,56 @@ def is_missing_location(listing) -> bool:
     loc = (listing.location or "").strip()
     placeholders = {"inconnu", "unknown", "france", "none", "null", "undefined", ""}
     return c.lower() in placeholders and loc.lower() in placeholders
+
+
+def get_listing_repair_issues(listing) -> list[dict]:
+    """
+    Returns a list of structured repair issues for a given listing.
+    Each item is a dict with 'key', 'label', and 'icon'.
+    """
+    issues = []
+    seen_keys = set()
+
+    tags = []
+    raw_tags = getattr(listing, 'repair_tags', None)
+    if raw_tags:
+        if isinstance(raw_tags, list):
+            tags = raw_tags
+        elif isinstance(raw_tags, str):
+            try:
+                tags = json.loads(raw_tags)
+                if not isinstance(tags, list):
+                    tags = []
+            except Exception:
+                tags = []
+
+    meta_map = {
+        "missing_location": {"label": "Localisation manquante", "icon": "fa-location-dot"},
+        "empty_description": {"label": "Description vide", "icon": "fa-file-lines"},
+        "generic_title_figaro": {"label": "Titre générique", "icon": "fa-heading"},
+        "aggregate_search_page": {"label": "Page de recherche agrégée", "icon": "fa-layer-group"},
+        "duplicate_city_zip": {"label": "Code postal dupliqué", "icon": "fa-map-pin"},
+        "anomalous_price": {"label": "Prix anormal", "icon": "fa-tag"},
+        "unstandardized_city": {"label": "Ville non standardisée", "icon": "fa-city"},
+        "incorrect_price_per_sqm": {"label": "Prix/m² incorrect", "icon": "fa-calculator"},
+        "missing_photos": {"label": "Photos manquantes", "icon": "fa-image"},
+        "past_first_visit_not_done": {"label": "Visite non validée", "icon": "fa-calendar-xmark"},
+    }
+
+    excluded_keys = {"forbidden_zone", "forbidden_department"}
+
+    for t in tags:
+        if t in meta_map and t not in seen_keys and t not in excluded_keys:
+            issues.append({"key": t, "label": meta_map[t]["label"], "icon": meta_map[t]["icon"]})
+            seen_keys.add(t)
+
+    # Dynamic check for missing location if not yet tagged
+    if is_missing_location(listing) and "missing_location" not in seen_keys:
+        issues.append({"key": "missing_location", "label": "Localisation manquante", "icon": "fa-location-dot"})
+        seen_keys.add("missing_location")
+
+    return issues
+
 
 
 

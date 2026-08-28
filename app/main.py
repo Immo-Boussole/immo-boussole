@@ -1740,7 +1740,9 @@ def listing_detail_page(
             public_services = {}
 
     from app.services import is_search_page_title, is_valid_listing_url
+    from app.db_maintenance import get_listing_repair_issues
     is_aggregate_search = is_search_page_title(listing.title) or (bool(listing.url) and not is_valid_listing_url(listing.url)[0])
+    listing_repair_issues = get_listing_repair_issues(listing)
 
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
@@ -1768,6 +1770,7 @@ def listing_detail_page(
         "all_agencies": all_agencies,
         "public_services": public_services,
         "is_aggregate_search": is_aggregate_search,
+        "listing_repair_issues": listing_repair_issues,
     })
 
 

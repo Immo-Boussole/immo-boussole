@@ -1628,22 +1628,55 @@
 
     <div class="layout">
 
-        <!-- ── Zone Rule Banner ── -->
-        {% if city_rule == 'forbidden' %}
-        <div style="grid-column: 1 / -1; background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45); border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-            <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.4rem; flex-shrink: 0;"></i>
-            <div>
-                <strong style="color: var(--red); font-size: 0.95rem;">&#9888; En zone interdite</strong>
-                <p style="font-size: 0.82rem; color: rgba(242,92,105,0.85); margin-top: 0.2rem;">Cette annonce est localisée dans une zone géographique marquée comme interdite.</p>
+        <!-- ── Zone & Repair Status Banner ── -->
+        {% if city_rule == 'forbidden' or city_rule == 'allowed' or listing_repair_issues %}
+        <div class="zone-repair-banner" style="grid-column: 1 / -1; width: 100%; min-height: 48px; border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; {% if city_rule == 'forbidden' %}background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45);{% elif city_rule == 'allowed' %}background: rgba(16,217,164,0.08); border: 1.5px solid rgba(16,217,164,0.3);{% else %}background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.35);{% endif %}">
+            
+            <!-- Left: Zone info -->
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+                {% if city_rule == 'forbidden' %}
+                    <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--red); font-size: 0.9rem;">&#9888; En zone interdite</strong>
+                    </div>
+                {% elif city_rule == 'allowed' %}
+                    <i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--green); font-size: 0.9rem;">Zone autorisée</strong>
+                    </div>
+                {% else %}
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b; font-size: 1.1rem;"></i>
+                    <div>
+                        <strong style="color: #f59e0b; font-size: 0.9rem;">Zone non qualifiée</strong>
+                    </div>
+                {% endif %}
             </div>
-            <a href="/zones" style="margin-left:auto; color:var(--red); font-size:0.8rem; font-weight:600; text-decoration:none; white-space:nowrap; opacity:0.8;">Gérer les zones &rarr;</a>
-        </div>
-        {% elif city_rule == 'allowed' %}
-        <div style="grid-column: 1 / -1; background: rgba(16,217,164,0.1); border: 1.5px solid rgba(16,217,164,0.3); border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-            <i class="fa-solid fa-circle-check" style="color: var(--green); font-size: 1.2rem; flex-shrink: 0;"></i>
-            <div>
-                <strong style="color: var(--green); font-size: 0.88rem;">Zone autorisée</strong>
+
+            <!-- Center: Error badges if any -->
+            {% if listing_repair_issues %}
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1; justify-content: center;">
+                {% for issue in listing_repair_issues %}
+                <span class="badge-repair-issue" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; background: rgba(242,92,105,0.15); border: 1px solid rgba(242,92,105,0.35); color: var(--red); font-size: 0.78rem; font-weight: 600; border-radius: 20px;" title="{{ issue.label }}">
+                    <i class="fa-solid {{ issue.icon }}"></i> {{ issue.label }}
+                </span>
+                {% endfor %}
             </div>
+            {% endif %}
+
+            <!-- Right: Action button & navigation links -->
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0;">
+                {% if listing_repair_issues %}
+                <button type="button" class="btn btn-repair-action" onclick="openEditModal()" style="background: var(--accent); color: white; border: none; border-radius: 8px; padding: 0.45rem 0.95rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: var(--trans);" title="Corriger les informations de l'annonce">
+                    <i class="fa-solid fa-wrench"></i> <span>Corriger l'annonce</span>
+                </button>
+                {% endif %}
+                {% if city_rule == 'forbidden' %}
+                <a href="/zones" style="color: var(--red); font-size: 0.8rem; font-weight: 600; text-decoration: none; white-space: nowrap; opacity: 0.85;" title="Gérer les zones">
+                    Gérer les zones &rarr;
+                </a>
+                {% endif %}
+            </div>
+
         </div>
         {% endif %}
 

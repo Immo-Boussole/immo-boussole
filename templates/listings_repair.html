@@ -1166,6 +1166,20 @@
                             </details>
                         </div>
 
+                        <!-- ── Section 3: Graphique de répartition des erreurs par plate-forme ── -->
+                        <div id="error_distribution_section" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem;">
+                                <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                                    <i class="fa-solid fa-chart-pie" style="color: var(--accent);"></i>
+                                    Répartition des erreurs par plate-forme d'annonces
+                                </h3>
+                                <div style="font-size: 0.82rem; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 20px;">
+                                    Total : <strong id="dist_total_errors_count" style="color: var(--red);">0</strong> erreur(s) sur <strong id="dist_total_portals_count" style="color: var(--accent);">0</strong> portail(s)
+                                </div>
+                            </div>
+                            <div id="error_distribution_container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                        </div>
+
                         <!-- Progress bar -->
                         <div class="progress-container" id="progress_container">
                             <div class="progress-top">
@@ -1426,6 +1440,31 @@
         }
 
         // ── Problem metadata ──────────────────────────────────────────────────
+        const PORTAL_META = {
+            leboncoin:   { name: 'LeBonCoin',    bg: 'rgba(249, 115, 22, 0.16)', color: '#fb923c', border: 'rgba(249, 115, 22, 0.32)' },
+            lbc:          { name: 'LeBonCoin',    bg: 'rgba(249, 115, 22, 0.16)', color: '#fb923c', border: 'rgba(249, 115, 22, 0.32)' },
+            figaro:      { name: 'Le Figaro',    bg: 'rgba(16, 185, 129, 0.16)', color: '#34d399', border: 'rgba(16, 185, 129, 0.32)' },
+            lefigaro:    { name: 'Le Figaro',    bg: 'rgba(16, 185, 129, 0.16)', color: '#34d399', border: 'rgba(16, 185, 129, 0.32)' },
+            seloger:     { name: 'SeLoger',      bg: 'rgba(244, 63, 94, 0.16)', color: '#fb7185', border: 'rgba(244, 63, 94, 0.32)' },
+            bienici:     { name: 'Bien\'Ici',    bg: 'rgba(6, 182, 212, 0.16)', color: '#22d3ee', border: 'rgba(6, 182, 212, 0.32)' },
+            ouestfrance: { name: 'OuestFrance', bg: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', border: 'rgba(59, 130, 246, 0.32)' },
+            pap:         { name: 'PAP',          bg: 'rgba(168, 85, 247, 0.16)', color: '#c084fc', border: 'rgba(168, 85, 247, 0.32)' },
+            logicimmo:   { name: 'Logic-Immo',  bg: 'rgba(245, 158, 11, 0.16)', color: '#fbbf24', border: 'rgba(245, 158, 11, 0.32)' },
+            logic_immo:  { name: 'Logic-Immo',  bg: 'rgba(245, 158, 11, 0.16)', color: '#fbbf24', border: 'rgba(245, 158, 11, 0.32)' },
+            superimmo:   { name: 'Superimmo',   bg: 'rgba(99, 102, 241, 0.16)', color: '#818cf8', border: 'rgba(99, 102, 241, 0.32)' },
+        };
+
+        function getPortalBadgeHtml(sourceKey) {
+            const key = String(sourceKey || 'manuel').toLowerCase().trim();
+            const meta = PORTAL_META[key] || {
+                name: key ? (key.charAt(0).toUpperCase() + key.slice(1)) : 'Manuel',
+                bg: 'rgba(79, 142, 247, 0.15)',
+                color: 'var(--accent)',
+                border: 'rgba(79, 142, 247, 0.3)'
+            };
+            return `<span class="portal-badge" style="background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.border}; font-size: 0.73rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 4px; display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;">${escapeHtml(meta.name)}</span>`;
+        }
+
         const PROBLEM_META = {
             missing_location:        { label: 'Annonces sans localisation',         desc: 'Annonces actives sans ville ou code postal (empêche le filtrage automatique et la cartographie).' },
             empty_description:       { label: 'Descriptions vides',                 desc: 'Annonces actives sans texte de description.' },
@@ -1612,6 +1651,126 @@
             cleanSection.style.display = cleanCount > 0 ? 'block' : 'none';
 
             updateSelectedCount();
+            renderErrorDistributionChart();
+        }
+
+        // ── Error Distribution Chart by Portal ────────────────────────────────
+        function renderErrorDistributionChart() {
+            const problems = problemsData.problems || {};
+            const sectionEl = document.getElementById('error_distribution_section');
+            const containerEl = document.getElementById('error_distribution_container');
+            if (!sectionEl || !containerEl) return;
+
+            const portalStats = {};
+            let grandTotalErrors = 0;
+
+            for (const [type, data] of Object.entries(problems)) {
+                const count = typeof data === 'object' ? data.count : data;
+                const listings = (typeof data === 'object' && data.listings) ? data.listings : [];
+
+                if (count <= 0) continue;
+
+                listings.forEach(l => {
+                    const rawSource = String(l.source || 'manuel').toLowerCase().trim();
+                    const pMeta = PORTAL_META[rawSource] || { name: rawSource ? (rawSource.charAt(0).toUpperCase() + rawSource.slice(1)) : 'Manuel' };
+                    const portalName = pMeta.name;
+
+                    if (!portalStats[portalName]) {
+                        portalStats[portalName] = {
+                            key: rawSource,
+                            name: portalName,
+                            total: 0,
+                            byType: {}
+                        };
+                    }
+
+                    portalStats[portalName].total += 1;
+                    portalStats[portalName].byType[type] = (portalStats[portalName].byType[type] || 0) + 1;
+                    grandTotalErrors += 1;
+                });
+            }
+
+            if (grandTotalErrors === 0) {
+                sectionEl.style.display = 'none';
+                return;
+            }
+
+            sectionEl.style.display = 'block';
+            document.getElementById('dist_total_errors_count').textContent = grandTotalErrors;
+            document.getElementById('dist_total_portals_count').textContent = Object.keys(portalStats).length;
+
+            const ERROR_TYPE_COLORS = {
+                missing_location: '#f25c69',
+                empty_description: '#f59e0b',
+                generic_title_figaro: '#6366f1',
+                aggregate_search_page: '#ec4899',
+                duplicate_city_zip: '#8b5cf6',
+                anomalous_price: '#ef4444',
+                linked_ads_none: '#14b8a6',
+                missing_city_pins: '#3b82f6',
+                unstandardized_city: '#06b6d4',
+                incorrect_price_per_sqm: '#f97316',
+                missing_photos: '#84cc16',
+                past_first_visit_not_done: '#a855f7',
+                forbidden_department: '#dc2626',
+                forbidden_zone: '#b91c1c'
+            };
+
+            const sortedPortals = Object.values(portalStats).sort((a, b) => b.total - a.total);
+
+            let html = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+            `;
+
+            sortedPortals.forEach(portal => {
+                const pctOfTotal = Math.round((portal.total / grandTotalErrors) * 100);
+                let stackedSegmentsHtml = '';
+                let legendItemsHtml = '';
+
+                Object.entries(portal.byType).forEach(([type, count]) => {
+                    const typeMeta = PROBLEM_META[type] || { label: type };
+                    const segPct = (count / portal.total) * 100;
+                    const segColor = ERROR_TYPE_COLORS[type] || '#4f8ef7';
+
+                    stackedSegmentsHtml += `
+                        <div style="width: ${segPct}%; background: ${segColor}; height: 100%; transition: width 0.3s ease;" title="${escapeHtml(typeMeta.label)}: ${count} annonce(s) (${Math.round((count/portal.total)*100)}%)"></div>
+                    `;
+
+                    legendItemsHtml += `
+                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                            <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${segColor}; flex-shrink: 0;"></span>
+                                <span style="color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(typeMeta.label)}</span>
+                            </div>
+                            <span style="font-weight: 700; color: var(--text); margin-left: 0.5rem; background: rgba(255,255,255,0.06); padding: 0.05rem 0.4rem; border-radius: 4px; font-size: 0.74rem;">${count}</span>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <div style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                ${getPortalBadgeHtml(portal.key)}
+                            </div>
+                            <span style="font-size: 0.8rem; font-weight: 700; color: var(--red); background: rgba(242,92,105,0.12); border: 1px solid rgba(242,92,105,0.25); padding: 0.15rem 0.55rem; border-radius: 50px;">
+                                ${portal.total} erreur(s) (${pctOfTotal}%)
+                            </span>
+                        </div>
+
+                        <div style="height: 10px; background: rgba(255,255,255,0.06); border-radius: 5px; overflow: hidden; display: flex; align-items: center;">
+                            ${stackedSegmentsHtml}
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 0.1rem; margin-top: 0.25rem;">
+                            ${legendItemsHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            containerEl.innerHTML = html;
         }
 
         function createProblemItem(type, meta, count, listings, checkTime, repairTime, isError) {
@@ -1642,11 +1801,11 @@
                                     ${l.photo ? `<img src="${l.photo}" class="missing-loc-thumb" alt="Photo" onclick="openSideDrawerForListing(${l.id})" style="cursor: pointer;" title="Examiner dans le volet latéral">` : `<div class="missing-loc-no-thumb" onclick="openSideDrawerForListing(${l.id})" style="cursor: pointer;" title="Examiner dans le volet latéral"><i class="fa-regular fa-image"></i></div>`}
                                     <div class="missing-loc-info">
                                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                            ${getPortalBadgeHtml(l.source)}
                                             ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
                                             <a href="javascript:void(0)" onclick="openSideDrawerForListing(${l.id})" class="missing-loc-ad-title" title="Examiner dans le volet latéral">${escapeHtml(l.title || 'Sans titre')}</a>
                                         </div>
                                         <div class="missing-loc-meta-pills">
-                                            <span class="missing-loc-portal-badge">${escapeHtml(l.source || 'manuel')}</span>
                                             ${l.price ? `<span><strong>${Number(l.price).toLocaleString('fr-FR')} €</strong></span>` : ''}
                                             ${l.area ? `<span>${l.area} m²</span>` : ''}
                                         </div>
@@ -1686,6 +1845,7 @@
                                 const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
                                 return `<div class="listing-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
                                     <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
+                                        ${getPortalBadgeHtml(l.source)}
                                         ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
                                         <a href="${l.url || '#'}" target="_blank" class="listing-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.title || 'Sans titre')}</a>
                                     </div>
@@ -1704,6 +1864,7 @@
                         const isRejetee = (l.status === 'rejetee' || l.status === 'rejected');
                         return `<div class="listing-row" style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
                             <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1;">
+                                ${getPortalBadgeHtml(l.source)}
                                 ${isRejetee ? `<span class="badge-rejetee"><i class="fa-solid fa-ban"></i> Rejetée</span>` : ''}
                                 <a href="${l.url || '#'}" target="_blank" class="listing-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.title || 'Sans titre')}</a>
                             </div>
