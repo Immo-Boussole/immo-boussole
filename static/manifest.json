@@ -2,8 +2,11 @@
   "name": "Immo-Boussole",
   "short_name": "ImmoBoussole",
   "description": "Votre boussole immobilière pour trouver le bien idéal.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0b0f1a",
   "theme_color": "#0b0f1a",
   "icons": [

@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0b0f1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Immo-Boussole">
     <link rel="apple-touch-icon" href="/static/media/app/icon-192.png">
     <title>{{ title }}</title>
     <link href="/static/css/inter.css" rel="stylesheet">
@@ -1665,8 +1669,12 @@
         loadEmailSettings();
         loadPublicServicesSettings();
         loadProxySettings();
-        loadGoogleAuthStatus();
-        loadStorageAndDbStats();
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
     </script>
 </body>
 
