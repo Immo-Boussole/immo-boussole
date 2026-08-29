@@ -7,6 +7,16 @@
         "view_update": "View update",
         "close": "Close"
     },
+    "notifications": {
+        "title": "Notifications",
+        "mark_all_read": "Mark all as read",
+        "stat_all": "All",
+        "stat_unread": "Unread",
+        "stat_read": "Read",
+        "stat_annonces": "Listings",
+        "stat_visites": "Visits",
+        "stat_systeme": "System"
+    },
     "nav": {
         "notifications": "Notifications",
         "dashboard": "Dashboard",

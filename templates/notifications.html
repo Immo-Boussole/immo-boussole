@@ -91,6 +91,52 @@
         }
         .batch-buttons { display: flex; align-items: center; gap: 0.5rem; }
 
+        /* ── Stat / Counter Cards Bar ── */
+        .notif-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .notif-stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            cursor: pointer;
+            transition: var(--trans);
+            user-select: none;
+        }
+        .notif-stat-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            background: var(--surface-2);
+        }
+        .notif-stat-card.active {
+            border-color: var(--accent);
+            background: rgba(79, 142, 247, 0.12);
+            box-shadow: 0 0 12px rgba(79, 142, 247, 0.25);
+        }
+        .notif-stat-icon {
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; flex-shrink: 0;
+            background: var(--surface-2); color: var(--text-2);
+        }
+        .notif-stat-card.stat-all .notif-stat-icon { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+        .notif-stat-card.stat-unread .notif-stat-icon { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+        .notif-stat-card.stat-read .notif-stat-icon { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .notif-stat-card.stat-annonce .notif-stat-icon { background: rgba(79, 142, 247, 0.15); color: var(--accent); }
+        .notif-stat-card.stat-visite .notif-stat-icon { background: rgba(16, 217, 164, 0.15); color: var(--green); }
+        .notif-stat-card.stat-systeme .notif-stat-icon { background: rgba(248, 168, 75, 0.15); color: var(--orange); }
+        .notif-stat-info { display: flex; flex-direction: column; min-width: 0; }
+        .notif-stat-val { font-size: 1.1rem; font-weight: 800; color: var(--text); line-height: 1.2; }
+        .notif-stat-lbl { font-size: 0.72rem; font-weight: 600; color: var(--text-2); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
         /* ── Timeline Container ── */
         .timeline-container {
             position: relative; max-width: 900px; margin: 0 auto; width: 100%;
@@ -236,6 +282,52 @@
                 </div>
             </div>
 
+            <!-- Stat / Counter Cards Bar -->
+            <div class="notif-stats-grid">
+                <div class="notif-stat-card stat-all active" onclick="filterNotifs('all', this)" id="stat-card-all">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-layer-group"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ total_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_all', 'Toutes') }}</span>
+                    </div>
+                </div>
+                <div class="notif-stat-card stat-unread" onclick="filterNotifs('unread', this)" id="stat-card-unread">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-envelope"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ unread_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_unread', 'Non lues') }}</span>
+                    </div>
+                </div>
+                <div class="notif-stat-card stat-read" onclick="filterNotifs('read', this)" id="stat-card-read">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-envelope-open"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ read_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_read', 'Lues') }}</span>
+                    </div>
+                </div>
+                <div class="notif-stat-card stat-annonce" onclick="filterNotifs('annonce', this)" id="stat-card-annonce">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-house"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ annonce_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_annonces', 'Annonces') }}</span>
+                    </div>
+                </div>
+                <div class="notif-stat-card stat-visite" onclick="filterNotifs('visite', this)" id="stat-card-visite">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-calendar-days"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ visite_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_visites', 'Visites') }}</span>
+                    </div>
+                </div>
+                <div class="notif-stat-card stat-systeme" onclick="filterNotifs('systeme', this)" id="stat-card-systeme">
+                    <div class="notif-stat-icon"><i class="fa-solid fa-gear"></i></div>
+                    <div class="notif-stat-info">
+                        <span class="notif-stat-val">{{ systeme_cnt }}</span>
+                        <span class="notif-stat-lbl">{{ t(request, 'notifications.stat_systeme', 'Système') }}</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Floating Batch Action Bar -->
             <div class="batch-action-bar" id="batchActionBar">
                 <div class="batch-info">
@@ -263,7 +355,7 @@
                         <div class="period-header">{{ period.label }}</div>
                         <div class="timeline-list">
                             {% for item in period.notif_list %}
-                            <div class="notif-card {% if not item.is_read %}unread{% endif %}" id="notif-card-{{ item.id }}">
+                            <div class="notif-card {% if not item.is_read %}unread{% endif %}" id="notif-card-{{ item.id }}" data-is-read="{{ '0' if not item.is_read else '1' }}" data-category="{{ item.category or 'systeme' }}">
                                 <div class="notif-node-icon">
                                     <i class="fa-solid {% if not item.is_read %}fa-circle{% else %}fa-check{% endif %}"></i>
                                 </div>
@@ -312,6 +404,49 @@
     </div>
 
     <script>
+        function filterNotifs(filterType, element) {
+            document.querySelectorAll('.notif-stat-card').forEach(card => card.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            const periodBlocks = document.querySelectorAll('.timeline-period');
+            periodBlocks.forEach(period => {
+                let visibleInPeriod = 0;
+                const cards = period.querySelectorAll('.notif-card');
+                cards.forEach(card => {
+                    const isRead = card.getAttribute('data-is-read') === '1';
+                    const category = card.getAttribute('data-category');
+                    let show = false;
+
+                    if (filterType === 'all') {
+                        show = true;
+                    } else if (filterType === 'unread') {
+                        show = !isRead;
+                    } else if (filterType === 'read') {
+                        show = isRead;
+                    } else if (filterType === 'annonce') {
+                        show = (category === 'annonce');
+                    } else if (filterType === 'visite') {
+                        show = (category === 'visite');
+                    } else if (filterType === 'systeme') {
+                        show = (category !== 'annonce' && category !== 'visite');
+                    }
+
+                    if (show) {
+                        card.style.display = 'flex';
+                        visibleInPeriod++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                if (visibleInPeriod > 0) {
+                    period.style.display = 'block';
+                } else {
+                    period.style.display = 'none';
+                }
+            });
+        }
+
         function getSelectedIds() {
             const checkboxes = document.querySelectorAll('.notif-checkbox:checked');
             return Array.from(checkboxes).map(cb => parseInt(cb.value));

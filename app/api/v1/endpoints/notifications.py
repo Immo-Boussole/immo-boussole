@@ -138,6 +138,11 @@ async def notifications_view(
     notifications = query.all()
 
     unread_cnt = sum(1 for n in notifications if not n.is_read)
+    read_cnt = sum(1 for n in notifications if n.is_read)
+    annonce_cnt = sum(1 for n in notifications if n.category == "annonce")
+    visite_cnt = sum(1 for n in notifications if n.category == "visite")
+    systeme_cnt = sum(1 for n in notifications if n.category not in ("annonce", "visite"))
+
     grouped_periods = _group_notifications_by_period(notifications)
 
     from app.translations import get_text
@@ -150,7 +155,11 @@ async def notifications_view(
             "notifications": notifications,
             "grouped_periods": grouped_periods,
             "unread_cnt": unread_cnt,
+            "read_cnt": read_cnt,
             "total_cnt": len(notifications),
+            "annonce_cnt": annonce_cnt,
+            "visite_cnt": visite_cnt,
+            "systeme_cnt": systeme_cnt,
             "title": f"{get_text(request, 'nav.notifications', 'Notifications')} — {get_text(request, 'app.title')}",
         }
     )

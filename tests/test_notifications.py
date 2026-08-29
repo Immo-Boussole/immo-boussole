@@ -106,6 +106,14 @@ def test_notifications_endpoints():
     response = client.get("/notifications")
     assert response.status_code == 200
     assert "Notifications" in response.text
+    assert "notif-stats-grid" in response.text
+    assert "stat-card-all" in response.text
+    assert "stat-card-unread" in response.text
+    assert "stat-card-read" in response.text
+    assert "stat-card-annonce" in response.text
+    assert "stat-card-visite" in response.text
+    assert "stat-card-systeme" in response.text
+    assert "filterNotifs" in response.text
 
     # Test GET /api/v1/notifications/unread-count
     count_res = client.get("/api/v1/notifications/unread-count")
@@ -136,14 +144,16 @@ def test_standard_user_task_notifications():
         db.commit()
 
         # 2. Add an un-qualified listing
-        l = Listing(
-            title="Appartement à qualifier",
-            url="https://test-qualify.com/1",
-            city="VilleInconnueTest",
-            status=ListingStatus.ACTIVE
-        )
-        db.add(l)
-        db.commit()
+        l = db.query(Listing).filter(Listing.url == "https://test-qualify.com/1").first()
+        if not l:
+            l = Listing(
+                title="Appartement à qualifier",
+                url="https://test-qualify.com/1",
+                city="VilleInconnueTest",
+                status=ListingStatus.ACTIVE
+            )
+            db.add(l)
+            db.commit()
 
         # 3. Refresh task notifications
         refresh_standard_user_tasks_notifications(db)

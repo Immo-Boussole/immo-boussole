@@ -7,6 +7,16 @@
         "view_update": "Voir la mise à jour",
         "close": "Fermer"
     },
+    "notifications": {
+        "title": "Notifications",
+        "mark_all_read": "Marquer tout comme lu",
+        "stat_all": "Toutes",
+        "stat_unread": "Non lues",
+        "stat_read": "Lues",
+        "stat_annonces": "Annonces",
+        "stat_visites": "Visites",
+        "stat_systeme": "Système"
+    },
     "nav": {
         "notifications": "Notifications",
         "dashboard": "Tableau de bord",
