@@ -1,11 +1,14 @@
-const CACHE_NAME = 'immo-boussole-v2';
+const CACHE_NAME = 'immo-boussole-v3';
 const ASSETS_TO_CACHE = [
   '/',
+  '/manifest.json',
   '/static/css/inter.css',
   '/static/css/fontawesome.min.css',
   '/static/css/mobile.css?v=20260817d',
   '/static/media/app/icon-192.png',
-  '/static/media/app/icon-512.png'
+  '/static/media/app/icon-192-maskable.png',
+  '/static/media/app/icon-512.png',
+  '/static/media/app/icon-512-maskable.png'
 ];
 
 // Install event - caching core assets
