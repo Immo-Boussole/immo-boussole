@@ -534,6 +534,36 @@ class MergeContactsRequest(BaseModel):
     target_id: int
 
 
+class ParsedVcfItem(BaseModel):
+    type: str  # "agent" or "agency"
+    name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    legal_name: Optional[str] = None
+    commercial_name: Optional[str] = None
+    title: Optional[str] = None
+    phone: Optional[str] = None
+    phone_mobile: Optional[str] = None
+    phone_landline: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    postal_code: Optional[str] = None
+    agency_name: Optional[str] = None
+    internal_notes: Optional[str] = None
+    reputation_notes: Optional[str] = None
+    is_duplicate: bool = False
+    existing_id: Optional[int] = None
+    selected: bool = True
+
+
+class ConfirmVcfImportRequest(BaseModel):
+    strategy: str = "ignore"  # "ignore", "update", "create_new"
+    items: List[ParsedVcfItem]
+
+
+
 class AffiliatedAgentSummary(BaseModel):
     id: int
     name: str

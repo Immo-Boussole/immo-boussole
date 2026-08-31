@@ -646,6 +646,12 @@
     "contacts": {
         "page_title": "Gestionnaire de Contacts",
         "google_sync": "Synchronisation Google Contacts",
+        "import_vcf": "Importer (.vcf)",
+        "export_vcf": "Exporter tout (.vcf)",
+        "vcf_import_title": "Importer des fiches vCard (.vcf)",
+        "vcf_dropzone_title": "Glissez-déposez un fichier .vcf ici",
+        "vcf_dropzone_sub": "ou cliquez pour parcourir vos fichiers (.vcf, .vcard)",
+        "vcf_strategy_title": "Stratégie de gestion des doublons :",
         "merge_duplicates": "Fusionner / Doublons",
         "new_agency": "Nouvelle Agence",
         "new_agent": "Nouvel Agent",

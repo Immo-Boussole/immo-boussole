@@ -646,6 +646,12 @@
     "contacts": {
         "page_title": "Contacts Manager",
         "google_sync": "Google Contacts Sync",
+        "import_vcf": "Import (.vcf)",
+        "export_vcf": "Export All (.vcf)",
+        "vcf_import_title": "Import vCard Contacts (.vcf)",
+        "vcf_dropzone_title": "Drag & drop a .vcf file here",
+        "vcf_dropzone_sub": "or click to browse your files (.vcf, .vcard)",
+        "vcf_strategy_title": "Duplicate management strategy:",
         "merge_duplicates": "Merge / Duplicates",
         "new_agency": "New Agency",
         "new_agent": "New Agent",

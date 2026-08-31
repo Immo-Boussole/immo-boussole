@@ -507,6 +507,20 @@
             display: flex;
         }
 
+        .vcf-dropzone {
+            border: 2px dashed var(--border-hover);
+            border-radius: 12px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: var(--surface-2);
+            cursor: pointer;
+            transition: var(--trans);
+        }
+        .vcf-dropzone:hover, .vcf-dropzone.dragover {
+            border-color: var(--accent);
+            background: rgba(79, 142, 247, 0.08);
+        }
+
         .mini-listing-card {
             display: flex;
             align-items: center;
@@ -778,6 +792,8 @@
                 <span id="googleSyncBadge" class="badge badge-accent">
                     <i class="fa-brands fa-google"></i> {{ t(request, 'contacts.google_sync', 'Google Contacts Sync') }}
                 </span>
+                <button class="btn btn-secondary" onclick="openVcfImportModal()" title="Importer des fiches au format .vcf"><i class="fa-solid fa-file-import"></i> {{ t(request, 'contacts.import_vcf', 'Importer (.vcf)') }}</button>
+                <button class="btn btn-secondary" onclick="exportAllVcf()" title="Exporter toutes les fiches en .vcf"><i class="fa-solid fa-file-export"></i> {{ t(request, 'contacts.export_vcf', 'Exporter tout (.vcf)') }}</button>
                 <button class="btn btn-purple" onclick="openMergeModal()"><i class="fa-solid fa-code-merge"></i> {{ t(request, 'contacts.merge_duplicates', 'Fusionner / Doublons') }}</button>
                 <button class="btn btn-secondary" id="headerBtnNewAgency" onclick="openAgencyModal()"><i class="fa-solid fa-building"></i> {{ t(request, 'contacts.new_agency', 'Nouvelle Agence') }}</button>
                 <button class="btn btn-primary" id="headerBtnNewAgent" onclick="openAgentModal()"><i class="fa-solid fa-user-plus"></i> {{ t(request, 'contacts.new_agent', 'Nouvel Agent') }}</button>
@@ -1038,6 +1054,94 @@
         </div>
     </div>
 
+    <!-- Modal Import VCF -->
+    <div class="modal-overlay" id="vcfImportModal" style="display: none;">
+        <div class="modal" style="max-width: 780px; width: 95%;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-file-import" style="color: var(--accent);"></i>
+                    {{ t(request, 'contacts.vcf_import_title', 'Importer des fiches vCard (.vcf)') }}
+                </div>
+                <button class="modal-close" onclick="closeVcfImportModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem;">
+                <!-- Step 1: Upload Dropzone -->
+                <div id="vcfStepUpload">
+                    <div class="vcf-dropzone" id="vcfDropzone" onclick="document.getElementById('vcfFileInput').click()">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: var(--accent); margin-bottom: 0.75rem;"></i>
+                        <div style="font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 0.25rem;">
+                            {{ t(request, 'contacts.vcf_dropzone_title', 'Glissez-déposez un fichier .vcf ici') }}
+                        </div>
+                        <div style="font-size: 0.825rem; color: var(--text-2);">
+                            {{ t(request, 'contacts.vcf_dropzone_sub', 'ou cliquez pour parcourir vos fichiers (.vcf, .vcard)') }}
+                        </div>
+                        <input type="file" id="vcfFileInput" accept=".vcf,.vcard" style="display: none;" onchange="handleVcfFileSelected(this.files)">
+                    </div>
+                </div>
+
+                <!-- Step 2: Preview & Duplicate Handling -->
+                <div id="vcfStepPreview" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                        <div>
+                            <strong id="vcfDetectedCount" style="font-size: 1rem; color: var(--text);">0 fiche(s) détectée(s)</strong>
+                            <span id="vcfDupBadgeCount" class="badge badge-purple" style="margin-left: 0.5rem; display: none;"></span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-2);">
+                            <a href="javascript:void(0)" onclick="selectAllVcfItems(true)" style="color: var(--accent); text-decoration: none; font-weight: 600;">Tout cocher</a> | 
+                            <a href="javascript:void(0)" onclick="selectAllVcfItems(false)" style="color: var(--text-2); text-decoration: none;">Tout décocher</a>
+                        </div>
+                    </div>
+
+                    <!-- Strategy selector -->
+                    <div style="background: var(--surface-2); padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 1rem;">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-2); margin-bottom: 0.5rem;">
+                            {{ t(request, 'contacts.vcf_strategy_title', 'Stratégie de gestion des doublons :') }}
+                        </div>
+                        <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.85rem;">
+                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                <input type="radio" name="vcfStrategy" value="ignore" checked>
+                                <span><strong>Ignorer les doublons</strong> (Recommandé)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                <input type="radio" name="vcfStrategy" value="update">
+                                <span>Mettre à jour les existants</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                                <input type="radio" name="vcfStrategy" value="create_new">
+                                <span>Tout importer comme nouveau</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Preview table -->
+                    <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.825rem;">
+                            <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 2;">
+                                <tr style="text-align: left; color: var(--text-2); border-bottom: 1px solid var(--border);">
+                                    <th style="padding: 0.6rem 0.75rem; width: 40px;"><input type="checkbox" id="vcfCheckAll" checked onclick="toggleAllVcfCheckboxes(this.checked)"></th>
+                                    <th style="padding: 0.6rem 0.75rem;">Type</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Nom / Raison Sociale</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Contact</th>
+                                    <th style="padding: 0.6rem 0.75rem;">Agence / Infos</th>
+                                    <th style="padding: 0.6rem 0.75rem; text-align: right;">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vcfPreviewTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 1rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border);">
+                <button type="button" class="btn btn-secondary" onclick="closeVcfImportModal()">Annuler</button>
+                <button type="button" id="btnConfirmVcfImport" class="btn btn-primary" onclick="executeVcfImport()" style="display: none;">
+                    <i class="fa-solid fa-check"></i> Confirmer l'importation
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentTab = 'contacts';
         let filterToVisit = true;
@@ -1046,11 +1150,207 @@
         let agenciesData = [];
         let detectedPage = 1;
         let unassignedPage = 1;
+        let parsedVcfItems = [];
 
         document.addEventListener('DOMContentLoaded', () => {
             loadAll();
             checkGoogleStatus();
+
+            const dz = document.getElementById('vcfDropzone');
+            if (dz) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dz.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dz.classList.add('dragover');
+                    }, false);
+                });
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dz.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dz.classList.remove('dragover');
+                    }, false);
+                });
+                dz.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt ? dt.files : null;
+                    if (files && files.length) {
+                        handleVcfFileSelected(files);
+                    }
+                }, false);
+            }
         });
+
+        function exportAllVcf() {
+            const queryInput = document.getElementById('contactsSearchInput');
+            const q = queryInput ? queryInput.value.trim() : '';
+            let url = '/api/v1/contacts/export/vcf';
+            if (q) {
+                url += '?q=' + encodeURIComponent(q);
+            }
+            window.location.href = url;
+        }
+
+        function openVcfImportModal() {
+            document.getElementById('vcfStepUpload').style.display = 'block';
+            document.getElementById('vcfStepPreview').style.display = 'none';
+            document.getElementById('btnConfirmVcfImport').style.display = 'none';
+            document.getElementById('vcfFileInput').value = '';
+            parsedVcfItems = [];
+            
+            const dropzone = document.getElementById('vcfDropzone');
+            if (dropzone) {
+                dropzone.classList.remove('dragover');
+            }
+            document.getElementById('vcfImportModal').style.display = 'flex';
+        }
+
+        function closeVcfImportModal() {
+            document.getElementById('vcfImportModal').style.display = 'none';
+        }
+
+        function handleVcfFileSelected(files) {
+            if (!files || !files.length) return;
+            const file = files[0];
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            if (typeof showToast === 'function') {
+                showToast('Analyse du fichier .vcf en cours...', 'info');
+            }
+            
+            fetch('/api/v1/contacts/import/vcf/preview', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => { throw new Error(data.detail || 'Erreur lors de l\'analyse'); });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    parsedVcfItems = data.items || [];
+                    renderVcfPreview(data);
+                }
+            })
+            .catch(err => {
+                if (typeof showToast === 'function') {
+                    showToast(err.message || 'Erreur lors de la lecture du fichier VCF', 'error');
+                } else {
+                    alert(err.message);
+                }
+            });
+        }
+
+        function renderVcfPreview(data) {
+            document.getElementById('vcfStepUpload').style.display = 'none';
+            document.getElementById('vcfStepPreview').style.display = 'block';
+            document.getElementById('btnConfirmVcfImport').style.display = 'inline-flex';
+            
+            document.getElementById('vcfDetectedCount').innerText = `${data.total_detected} fiche(s) détectée(s)`;
+            
+            const dupBadge = document.getElementById('vcfDupBadgeCount');
+            if (data.duplicates_count > 0) {
+                dupBadge.innerText = `${data.duplicates_count} doublon(s) potentiel(s)`;
+                dupBadge.style.display = 'inline-block';
+            } else {
+                dupBadge.style.display = 'none';
+            }
+            
+            const tbody = document.getElementById('vcfPreviewTableBody');
+            tbody.innerHTML = parsedVcfItems.map((item, idx) => {
+                const typeLabel = item.type === 'agency' ? '<span class="badge badge-purple"><i class="fa-solid fa-building"></i> Agence</span>' : '<span class="badge badge-accent"><i class="fa-solid fa-user-tie"></i> Agent</span>';
+                const contactInfo = item.phone_mobile || item.phone_landline || item.phone || item.email || '-';
+                const details = item.type === 'agency' ? (item.city ? item.city : 'Agence') : (item.agency_name ? `Agence: ${item.agency_name}` : 'Indépendant');
+                const statusBadge = item.is_duplicate ? '<span class="badge badge-orange"><i class="fa-solid fa-copy"></i> Doublon</span>' : '<span class="badge badge-green"><i class="fa-solid fa-plus"></i> Nouveau</span>';
+                
+                return `
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 0.6rem 0.75rem;"><input type="checkbox" ${item.selected ? 'checked' : ''} onchange="toggleVcfItemSelection(${idx}, this.checked)"></td>
+                        <td style="padding: 0.6rem 0.75rem;">${typeLabel}</td>
+                        <td style="padding: 0.6rem 0.75rem; font-weight: 600;">${item.name}</td>
+                        <td style="padding: 0.6rem 0.75rem; color: var(--text-2);">${contactInfo}</td>
+                        <td style="padding: 0.6rem 0.75rem; color: var(--text-2);">${details}</td>
+                        <td style="padding: 0.6rem 0.75rem; text-align: right;">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleVcfItemSelection(idx, checked) {
+            if (parsedVcfItems[idx]) {
+                parsedVcfItems[idx].selected = checked;
+            }
+        }
+
+        function toggleAllVcfCheckboxes(checked) {
+            parsedVcfItems.forEach(it => it.selected = checked);
+            document.querySelectorAll('#vcfPreviewTableBody input[type="checkbox"]').forEach(cb => cb.checked = checked);
+        }
+
+        function selectAllVcfItems(checked) {
+            document.getElementById('vcfCheckAll').checked = checked;
+            toggleAllVcfCheckboxes(checked);
+        }
+
+        function executeVcfImport() {
+            const strategyEls = document.getElementsByName('vcfStrategy');
+            let strategy = 'ignore';
+            for (const el of strategyEls) {
+                if (el.checked) {
+                    strategy = el.value;
+                    break;
+                }
+            }
+            
+            const selectedItems = parsedVcfItems.filter(it => it.selected);
+            if (!selectedItems.length) {
+                if (typeof showToast === 'function') showToast('Veuillez cocher au moins une fiche à importer.', 'warning');
+                return;
+            }
+            
+            const btn = document.getElementById('btnConfirmVcfImport');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Importation...';
+            
+            fetch('/api/v1/contacts/import/vcf/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    strategy: strategy,
+                    items: parsedVcfItems
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(data => { throw new Error(data.detail || 'Erreur lors de l\'importation'); });
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Importation effectuée avec succès', 'success');
+                }
+                closeVcfImportModal();
+                loadContactsOverview();
+                loadAgenciesOverview();
+            })
+            .catch(err => {
+                if (typeof showToast === 'function') {
+                    showToast(err.message || 'Erreur lors de l\'importation', 'error');
+                } else {
+                    alert(err.message);
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmer l\'importation';
+            });
+        }
 
         function toggleToVisitFilter() {
             filterToVisit = !filterToVisit;
@@ -1270,6 +1570,7 @@
                         </div>
 
                         <div class="contact-card-actions">
+                            <a href="/api/v1/agents/${c.id}/vcf" class="btn btn-secondary btn-sm" title="Télécharger la fiche .vcf" download><i class="fa-solid fa-address-card"></i> .vcf</a>
                             <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('agent', ${c.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
                             <button class="btn btn-secondary btn-sm" onclick="editContact('agent', ${c.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteContact('agent', ${c.id})"><i class="fa-solid fa-trash"></i></button>
@@ -1388,6 +1689,7 @@
                         </div>
 
                         <div class="contact-card-actions">
+                            <a href="/api/v1/agencies/${ac.id}/vcf" class="btn btn-secondary btn-sm" title="Télécharger la fiche agence .vcf" download><i class="fa-solid fa-address-card"></i> .vcf</a>
                             <button class="btn btn-secondary btn-sm" onclick="openMergeWithSource('agency', ${ac.id})"><i class="fa-solid fa-code-merge"></i> Fusionner</button>
                             <button class="btn btn-secondary btn-sm" onclick="editContact('agency', ${ac.id})"><i class="fa-solid fa-pen"></i> Modifier</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteContact('agency', ${ac.id})"><i class="fa-solid fa-trash"></i></button>

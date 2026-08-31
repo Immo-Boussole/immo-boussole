@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import Agency, Agent, GlobalSettings, VisitContact, Listing, Visit, ListingStatus
 from app import schemas
 from app import google_service
+from app import vcard
 from app.media import json_to_photos
 from app.services import extract_contact_info_from_text
 
@@ -1066,3 +1067,308 @@ def google_auth_callback(code: str, request: Request, db: Session = Depends(get_
     except Exception as e:
         logger.error(f"Error handling Google OAuth callback: {e}")
         return RedirectResponse(url="/admin/maintenance?google=error")
+
+
+# --- VCF Export & Import Endpoints ---
+
+@router.get("/agents/{agent_id}/vcf")
+def export_agent_vcf(
+    agent_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Exports a single Agent as a .vcf file.
+    """
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent non trouvé")
+    
+    vcf_content = vcard.generate_agent_vcard(agent)
+    filename = f"agent_{agent.last_name}_{agent.first_name}.vcf".replace(" ", "_")
+    return Response(
+        content=vcf_content,
+        media_type="text/vcard; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/agencies/{agency_id}/vcf")
+def export_agency_vcf(
+    agency_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Exports a single Agency as a .vcf file.
+    """
+    agency = db.query(Agency).filter(Agency.id == agency_id).first()
+    if not agency:
+        raise HTTPException(status_code=404, detail="Agence non trouvée")
+    
+    vcf_content = vcard.generate_agency_vcard(agency)
+    name = agency.commercial_name or agency.legal_name
+    filename = f"agence_{name}.vcf".replace(" ", "_")
+    return Response(
+        content=vcf_content,
+        media_type="text/vcard; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/contacts/export/vcf")
+def export_all_vcf(
+    q: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Exports all agents and agencies (optionally filtered by query `q`) as a combined .vcf file.
+    """
+    agents_query = db.query(Agent)
+    agencies_query = db.query(Agency)
+    
+    if q:
+        search = f"%{q.strip()}%"
+        agents_query = agents_query.filter(
+            or_(
+                Agent.first_name.ilike(search),
+                Agent.last_name.ilike(search),
+                Agent.email.ilike(search)
+            )
+        )
+        agencies_query = agencies_query.filter(
+            or_(
+                Agency.legal_name.ilike(search),
+                Agency.commercial_name.ilike(search)
+            )
+        )
+        
+    agents = agents_query.all()
+    agencies = agencies_query.all()
+    
+    vcf_content = vcard.generate_multi_vcard(agents, agencies)
+    return Response(
+        content=vcf_content,
+        media_type="text/vcard; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="immo_boussole_contacts.vcf"'}
+    )
+
+
+@router.post("/contacts/import/vcf/preview")
+async def preview_vcf_import(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Parses an uploaded .vcf file, checks for potential duplicates against DB, and returns structured preview.
+    """
+    try:
+        content_bytes = await file.read()
+        vcf_text = content_bytes.decode("utf-8", errors="replace")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Impossible de lire le fichier: {e}")
+        
+    parsed = vcard.parse_vcard_stream(vcf_text)
+    if not parsed:
+        raise HTTPException(status_code=400, detail="Aucune fiche vCard valide détectée dans le fichier.")
+        
+    existing_agents = db.query(Agent).all()
+    existing_agencies = db.query(Agency).all()
+    
+    results = []
+    for item in parsed:
+        is_dup = False
+        existing_id = None
+        
+        if item["type"] == "agent":
+            email = (item.get("email") or "").strip().lower()
+            phone = (item.get("phone_mobile") or item.get("phone_landline") or "").replace(" ", "").strip()
+            first = (item.get("first_name") or "").strip().lower()
+            last = (item.get("last_name") or "").strip().lower()
+            
+            for ag in existing_agents:
+                ag_email = (ag.email or "").strip().lower()
+                ag_mob = (ag.phone_mobile or "").replace(" ", "").strip()
+                ag_fix = (ag.phone_landline or "").replace(" ", "").strip()
+                ag_first = (ag.first_name or "").strip().lower()
+                ag_last = (ag.last_name or "").strip().lower()
+                
+                match_email = bool(email and ag_email and email == ag_email)
+                match_phone = bool(phone and (phone == ag_mob or phone == ag_fix))
+                match_name = bool(first and last and ag_first == first and ag_last == last)
+                
+                if match_email or match_phone or match_name:
+                    is_dup = True
+                    existing_id = ag.id
+                    break
+        else:
+            email = (item.get("email") or "").strip().lower()
+            phone = (item.get("phone") or "").replace(" ", "").strip()
+            name = (item.get("name") or "").strip().lower()
+            
+            for ac in existing_agencies:
+                ac_email = (ac.email or "").strip().lower()
+                ac_phone = (ac.phone or "").replace(" ", "").strip()
+                ac_name = (ac.commercial_name or ac.legal_name or "").strip().lower()
+                
+                match_email = bool(email and ac_email and email == ac_email)
+                match_phone = bool(phone and ac_phone and phone == ac_phone)
+                match_name = bool(name and ac_name and name == ac_name)
+                
+                if match_email or match_phone or match_name:
+                    is_dup = True
+                    existing_id = ac.id
+                    break
+                    
+        item_dict = dict(item)
+        item_dict["is_duplicate"] = is_dup
+        item_dict["existing_id"] = existing_id
+        item_dict["selected"] = True
+        results.append(item_dict)
+        
+    return {
+        "status": "success",
+        "total_detected": len(results),
+        "duplicates_count": sum(1 for r in results if r["is_duplicate"]),
+        "items": results
+    }
+
+
+@router.post("/contacts/import/vcf/confirm")
+def confirm_vcf_import(
+    body: schemas.ConfirmVcfImportRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Executes VCF import based on user selection and duplicate strategy ('ignore', 'update', 'create_new').
+    """
+    imported_agents = 0
+    updated_agents = 0
+    imported_agencies = 0
+    updated_agencies = 0
+    
+    selected_items = [it for it in body.items if it.selected]
+    if not selected_items:
+        return {"status": "success", "message": "Aucun contact sélectionné pour l'importation."}
+        
+    agency_map: Dict[str, Agency] = {}
+    
+    for item in selected_items:
+        if item.type == "agency":
+            if item.is_duplicate and body.strategy == "ignore":
+                continue
+                
+            agency = None
+            if item.is_duplicate and body.strategy == "update" and item.existing_id:
+                agency = db.query(Agency).filter(Agency.id == item.existing_id).first()
+                
+            if agency:
+                if item.phone and not agency.phone:
+                    agency.phone = item.phone
+                if item.email and not agency.email:
+                    agency.email = item.email
+                if item.website and not agency.website:
+                    agency.website = item.website
+                if item.address and not agency.address:
+                    agency.address = item.address
+                if item.city and not agency.city:
+                    agency.city = item.city
+                if item.postal_code and not agency.postal_code:
+                    agency.postal_code = item.postal_code
+                if item.reputation_notes:
+                    agency.reputation_notes = f"{agency.reputation_notes}\n{item.reputation_notes}".strip() if agency.reputation_notes else item.reputation_notes
+                updated_agencies += 1
+            else:
+                agency = Agency(
+                    legal_name=item.legal_name or item.name,
+                    commercial_name=item.commercial_name or item.name,
+                    phone=item.phone,
+                    email=item.email,
+                    website=item.website,
+                    address=item.address,
+                    city=item.city,
+                    postal_code=item.postal_code,
+                    reputation_notes=item.reputation_notes
+                )
+                db.add(agency)
+                imported_agencies += 1
+                
+            db.flush()
+            agency_map[item.name.strip().lower()] = agency
+            if agency.commercial_name:
+                agency_map[agency.commercial_name.strip().lower()] = agency
+            if agency.legal_name:
+                agency_map[agency.legal_name.strip().lower()] = agency
+
+    for item in selected_items:
+        if item.type == "agent":
+            if item.is_duplicate and body.strategy == "ignore":
+                continue
+                
+            agent = None
+            if item.is_duplicate and body.strategy == "update" and item.existing_id:
+                agent = db.query(Agent).filter(Agent.id == item.existing_id).first()
+                
+            agency_id = None
+            if item.agency_name:
+                ag_name_clean = item.agency_name.strip().lower()
+                if ag_name_clean in agency_map:
+                    agency_id = agency_map[ag_name_clean].id
+                else:
+                    matched_ag = db.query(Agency).filter(
+                        or_(
+                            Agency.commercial_name.ilike(f"%{item.agency_name}%"),
+                            Agency.legal_name.ilike(f"%{item.agency_name}%")
+                        )
+                    ).first()
+                    if matched_ag:
+                        agency_id = matched_ag.id
+
+            if agent:
+                if item.phone_mobile and not agent.phone_mobile:
+                    agent.phone_mobile = item.phone_mobile
+                if item.phone_landline and not agent.phone_landline:
+                    agent.phone_landline = item.phone_landline
+                if item.email and not agent.email:
+                    agent.email = item.email
+                if item.title and not agent.title:
+                    agent.title = item.title
+                if agency_id and not agent.agency_id:
+                    agent.agency_id = agency_id
+                if item.internal_notes:
+                    agent.internal_notes = f"{agent.internal_notes}\n{item.internal_notes}".strip() if agent.internal_notes else item.internal_notes
+                updated_agents += 1
+            else:
+                agent = Agent(
+                    first_name=item.first_name or "Inconnu",
+                    last_name=item.last_name or "Contact",
+                    title=item.title,
+                    phone_mobile=item.phone_mobile,
+                    phone_landline=item.phone_landline,
+                    email=item.email,
+                    agency_id=agency_id,
+                    internal_notes=item.internal_notes
+                )
+                db.add(agent)
+                imported_agents += 1
+                
+    db.commit()
+    
+    msg_parts = []
+    if imported_agents > 0:
+        msg_parts.append(f"{imported_agents} agent(s) créé(s)")
+    if updated_agents > 0:
+        msg_parts.append(f"{updated_agents} agent(s) mis à jour")
+    if imported_agencies > 0:
+        msg_parts.append(f"{imported_agencies} agence(s) créée(s)")
+    if updated_agencies > 0:
+        msg_parts.append(f"{updated_agencies} agence(s) mise(s) à jour")
+        
+    summary_msg = "Importation réussie : " + (", ".join(msg_parts) if msg_parts else "Aucune modification nécessaire.")
+    return {
+        "status": "success",
+        "message": summary_msg,
+        "imported_agents": imported_agents,
+        "updated_agents": updated_agents,
+        "imported_agencies": imported_agencies,
+        "updated_agencies": updated_agencies
+    }
+
