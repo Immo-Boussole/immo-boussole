@@ -165,11 +165,71 @@
     .content {
         padding: 1rem !important;
     }
+    /* Mobile Compact Single-Row Filter Bar */
     .filter-bar {
-        padding: 1rem !important;
-        flex-direction: column;
-        align-items: stretch !important;
-        gap: 0.75rem;
+        padding: 0.5rem 0.75rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        scrollbar-width: none;
+        box-sizing: border-box;
+    }
+    .filter-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .filter-bar .filter-group {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+    .filter-bar .filter-group label {
+        display: none !important; /* Hide labels above select dropdowns on mobile */
+    }
+    .filter-select {
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.8rem !important;
+        border-radius: 8px !important;
+        height: 32px !important;
+        box-sizing: border-box;
+    }
+    .tbl-filter-chips {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 0.3rem !important;
+        flex-shrink: 0 !important;
+    }
+    .tbl-filter-chip {
+        padding: 0.3rem 0.55rem !important;
+        font-size: 0.75rem !important;
+        height: 32px !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+    .tbl-filter-chip span {
+        font-size: 0.75rem !important;
+    }
+    .btn-reset-filter {
+        padding: 0.35rem 0.65rem !important;
+        font-size: 0.75rem !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+        margin-left: 0 !important;
+        border-radius: 8px !important;
+        white-space: nowrap !important;
+    }
+    .results-count {
+        flex-shrink: 0 !important;
+        font-size: 0.8rem !important;
+        white-space: nowrap !important;
+        margin-left: 0.25rem !important;
     }
 
     .filter-chips {
