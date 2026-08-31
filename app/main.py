@@ -223,6 +223,7 @@ class ListingUpdateRequest(BaseModel):
     building_year: Optional[int] = None
     condition: Optional[str] = None
     parking_count: Optional[int] = None
+    orientation: Optional[str] = None
 
 
 class PhotoImportRequest(BaseModel):
@@ -1346,6 +1347,34 @@ def _enrich_listings(listings: list[Listing], viewed_ids: set[int]):
                 has_contact = True
         listing.has_contact_or_visit = has_contact
 
+        # Solar and sunshine potential enrichment
+        if not hasattr(listing, "solar") or listing.solar is None:
+            solar_data = None
+            if listing.solar_json:
+                try:
+                    solar_data = json.loads(listing.solar_json)
+                except Exception:
+                    solar_data = None
+
+            if solar_data is None:
+                # Detect orientation from text if missing
+                if not listing.orientation:
+                    from app.solar import extract_orientation
+                    listing.orientation = extract_orientation(f"{listing.title or ''} {listing.description_text or ''}")
+
+                lat, lon = listing.latitude, listing.longitude
+                if (lat is None or lon is None) and (listing.city or listing.location):
+                    from app.geo import get_commune_coordinates, get_coordinates
+                    coords = get_commune_coordinates(listing.city or listing.location) or get_coordinates(listing.city or listing.location)
+                    if coords:
+                        lat, lon = coords
+
+                if lat is not None and lon is not None:
+                    from app.solar import calculate_solar_potential
+                    solar_data = calculate_solar_potential(lat, lon, listing.orientation, listing.property_type)
+
+            listing.solar = solar_data
+
 
 @app.get("/")
 def read_root(request: Request, db: Session = Depends(get_db), _auth = Depends(login_required)):
@@ -1744,6 +1773,37 @@ def listing_detail_page(
     is_aggregate_search = is_search_page_title(listing.title) or (bool(listing.url) and not is_valid_listing_url(listing.url)[0])
     listing_repair_issues = get_listing_repair_issues(listing)
 
+    # Solar data calculation / retrieval
+    solar_data = None
+    if listing.solar_json:
+        try:
+            solar_data = json.loads(listing.solar_json)
+        except Exception:
+            solar_data = None
+
+    if solar_data is None:
+        if not listing.orientation:
+            from app.solar import extract_orientation
+            listing.orientation = extract_orientation(f"{listing.title or ''} {listing.description_text or ''}")
+
+        lat, lon = listing.latitude, listing.longitude
+        if (lat is None or lon is None) and (listing.city or listing.location):
+            from app.geo import get_commune_coordinates, get_coordinates
+            coords = get_commune_coordinates(listing.city or listing.location) or get_coordinates(listing.city or listing.location)
+            if coords:
+                lat, lon = coords
+
+        if lat is not None and lon is not None:
+            from app.solar import calculate_solar_potential
+            solar_data = calculate_solar_potential(lat, lon, listing.orientation, listing.property_type, db=db)
+            listing.solar_json = json.dumps(solar_data)
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+
+    listing.solar = solar_data
+
     return templates.TemplateResponse(request=request, name="listing_detail.html", context={
         "listing": listing,
         "photos": photos,
@@ -1759,6 +1819,7 @@ def listing_detail_page(
         "listings": all_listings,
         "users": users,
         "georisques": json.loads(listing.georisques_json) if listing.georisques_json else None,
+        "solar": solar_data,
         "title": f"{listing.title} — Immo-Boussole",
         "city_rule": city_rule,
         "station1_rule": station1_rule,
@@ -4973,7 +5034,20 @@ def update_listing(
                 listing.car_time_sncf_2 = None
             else:
                 listing.latitude, listing.longitude = None, None
-        
+
+    # Recompute solar potential if orientation or location changed
+    if "orientation" in update_data or re_geocode:
+        lat, lon = listing.latitude, listing.longitude
+        if (lat is None or lon is None) and (listing.city or listing.location):
+            from app.geo import get_commune_coordinates, get_coordinates
+            coords = get_commune_coordinates(listing.city or listing.location) or get_coordinates(listing.city or listing.location)
+            if coords:
+                lat, lon = coords
+        if lat is not None and lon is not None:
+            from app.solar import calculate_solar_potential
+            solar_data = calculate_solar_potential(lat, lon, listing.orientation, listing.property_type, db=db)
+            listing.solar_json = json.dumps(solar_data)
+
     db.commit()
     db.refresh(listing)
     sync_listing_cluster(db, listing_id)

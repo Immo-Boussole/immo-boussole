@@ -20,6 +20,7 @@
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
     <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
+    <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
         :root {
@@ -1707,6 +1708,20 @@
                                 }} {{
                                 listing.charges|int }} €</span>{% endif %}
                         </div>
+
+                        {% if listing.solar %}
+                        <div class="solar-meta-badge {{ listing.solar.solar_score_class }}" title="☀️ Ensoleillement : {{ listing.solar.sunshine_hours_per_year }} h/an • Irradiation : {{ listing.solar.solar_irradiation_kwh_m2 }} kWh/m²/an • Production 3 kWc : {{ listing.solar.pv_production_3kwc }} kWh/an (~{{ listing.solar.estimated_savings_3kwc }} €/an)">
+                            <i class="fa-solid fa-sun" style="color: #f9d04f;"></i>
+                            <span>{{ listing.solar.sunshine_hours_per_year }} h/an</span>
+                            <span class="solar-sep">•</span>
+                            <i class="fa-solid fa-solar-panel" style="color: #10d9a4;"></i>
+                            <span>3 kWc: ~{{ listing.solar.pv_production_3kwc }} kWh/an</span>
+                            {% if listing.solar.detected_orientation %}
+                            <span class="solar-sep">•</span>
+                            <span class="solar-orient"><i class="fa-regular fa-compass"></i> {{ listing.solar.detected_orientation }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
 
                         <div style="display: flex; gap: 0.4rem; margin-bottom: 0.85rem; font-size: 0.9rem;">
                             {% if listing.garden %}<i class="fa-solid fa-tree"

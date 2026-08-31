@@ -1,0 +1,359 @@
+/* ── Solar Potential & Sunshine Styles for Immo-Boussole ── */
+
+:root {
+    --solar-gold: #f9d04f;
+    --solar-orange: #f8a84b;
+    --solar-green: #10d9a4;
+    --solar-blue: #4f8ef7;
+}
+
+/* ── Card Badge (Grid View) ── */
+.solar-card-badge {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    backdrop-filter: blur(8px);
+    background: rgba(11, 15, 26, 0.85);
+    border: 1px solid rgba(249, 208, 79, 0.35);
+    color: var(--solar-gold);
+    z-index: 2;
+    transition: var(--trans, all 0.2s ease);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.solar-card-badge:hover {
+    transform: scale(1.04);
+    border-color: var(--solar-gold);
+}
+
+.solar-card-badge i {
+    font-size: 0.75rem;
+    color: var(--solar-gold);
+}
+
+.solar-card-badge.solar-exceptional {
+    border-color: rgba(249, 208, 79, 0.6);
+    color: #ffe066;
+}
+
+.solar-card-badge.solar-very-good {
+    border-color: rgba(16, 217, 164, 0.5);
+    color: #5eead4;
+}
+
+.solar-card-badge.solar-good {
+    border-color: rgba(79, 142, 247, 0.4);
+    color: #93c5fd;
+}
+
+.solar-card-badge.solar-moderate {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-2, #8b9cc8);
+}
+
+/* ── Card Meta Badge ── */
+.solar-meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-2, #8b9cc8);
+    background: rgba(249, 208, 79, 0.06);
+    border: 1px solid rgba(249, 208, 79, 0.18);
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+    margin-top: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.solar-meta-badge .solar-sep {
+    opacity: 0.35;
+}
+
+.solar-meta-badge .solar-orient {
+    color: var(--text, #eef2ff);
+    font-weight: 700;
+}
+
+/* ── Listing Detail Section ── */
+.solar-section {
+    background: var(--surface, #131929);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+    border-radius: var(--radius, 14px);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.solar-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #f9d04f, #f8a84b, #10d9a4);
+}
+
+.solar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.solar-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text, #eef2ff);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.solar-score-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.solar-score-pill.solar-exceptional {
+    background: rgba(249, 208, 79, 0.15);
+    border: 1px solid rgba(249, 208, 79, 0.4);
+    color: #f9d04f;
+}
+
+.solar-score-pill.solar-very-good {
+    background: rgba(16, 217, 164, 0.15);
+    border: 1px solid rgba(16, 217, 164, 0.4);
+    color: #10d9a4;
+}
+
+.solar-score-pill.solar-good {
+    background: rgba(79, 142, 247, 0.15);
+    border: 1px solid rgba(79, 142, 247, 0.4);
+    color: #4f8ef7;
+}
+
+.solar-score-pill.solar-moderate {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-2, #8b9cc8);
+}
+
+/* ── Solar Cards Grid ── */
+.solar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.solar-card {
+    background: var(--surface-2, #1a2236);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+    border-radius: 12px;
+    padding: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--trans, all 0.2s ease);
+}
+
+.solar-card:hover {
+    border-color: rgba(249, 208, 79, 0.3);
+    transform: translateY(-2px);
+}
+
+.solar-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.solar-card-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-2, #8b9cc8);
+    letter-spacing: 0.05em;
+}
+
+.solar-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.solar-icon-sun {
+    background: rgba(249, 208, 79, 0.15);
+    color: #f9d04f;
+}
+
+.solar-icon-orient {
+    background: rgba(79, 142, 247, 0.15);
+    color: #4f8ef7;
+}
+
+.solar-icon-pv3 {
+    background: rgba(16, 217, 164, 0.15);
+    color: #10d9a4;
+}
+
+.solar-icon-pv6 {
+    background: rgba(248, 168, 75, 0.15);
+    color: #f8a84b;
+}
+
+.solar-card-val {
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: var(--text, #eef2ff);
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+}
+
+.solar-card-val small {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-2, #8b9cc8);
+}
+
+.solar-card-sub {
+    font-size: 0.8rem;
+    color: var(--text-2, #8b9cc8);
+    line-height: 1.4;
+}
+
+.solar-savings-highlight {
+    color: #10d9a4;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* ── Roof & Suitability Banner ── */
+.solar-suitability-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: rgba(26, 34, 54, 0.8);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.solar-suitability-icon {
+    font-size: 1.4rem;
+    color: #f9d04f;
+    margin-top: 0.1rem;
+}
+
+.solar-suitability-info {
+    flex: 1;
+}
+
+.solar-suitability-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text, #eef2ff);
+    margin-bottom: 0.2rem;
+}
+
+.solar-suitability-desc {
+    font-size: 0.82rem;
+    color: var(--text-2, #8b9cc8);
+    line-height: 1.4;
+}
+
+/* ── Actions & External Simulator Link ── */
+.solar-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border, rgba(255, 255, 255, 0.07));
+}
+
+.solar-source-tag {
+    font-size: 0.75rem;
+    color: var(--text-2, #8b9cc8);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.solar-pvgis-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.45rem 0.9rem;
+    min-height: 44px; /* Accessible touch target */
+    border-radius: 8px;
+    background: rgba(79, 142, 247, 0.12);
+    border: 1px solid rgba(79, 142, 247, 0.35);
+    color: #4f8ef7;
+    text-decoration: none;
+    transition: var(--trans, all 0.2s ease);
+}
+
+.solar-pvgis-btn:hover {
+    background: #4f8ef7;
+    color: #fff;
+    border-color: #4f8ef7;
+}
+
+/* ── Responsive Adaptations ── */
+@media (max-width: 768px) {
+    .solar-section {
+        padding: 1.15rem;
+    }
+
+    .solar-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .solar-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .solar-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .solar-pvgis-btn {
+        justify-content: center;
+        width: 100%;
+    }
+}

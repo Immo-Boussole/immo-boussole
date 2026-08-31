@@ -264,6 +264,10 @@ _MIGRATIONS = [
 
     # listings — repair tags (data quality errors) v33
     ("listings", "repair_tags",                            "TEXT"),
+
+    # listings — solar & exposure v35
+    ("listings", "orientation",                            "TEXT"),
+    ("listings", "solar_json",                             "TEXT"),
 ]
 
 

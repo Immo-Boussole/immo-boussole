@@ -122,6 +122,7 @@ class ListingUpdateRequest(BaseModel):
     building_year: Optional[int] = None
     condition: Optional[str] = None
     parking_count: Optional[int] = None
+    orientation: Optional[str] = None
     is_favorite: Optional[bool] = None
     contact_made: Optional[bool] = None
     last_visit_status: Optional[str] = None

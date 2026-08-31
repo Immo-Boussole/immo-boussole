@@ -17,6 +17,7 @@
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
     <style>
         :root {
             --bg: #0b0f1a;
@@ -714,6 +715,19 @@
                                                 {% if listing.area %}<span><i class="fa-solid fa-ruler-combined"></i> {{ listing.area|int }} m²</span> • {% endif %}
                                                 <span style="color: var(--accent); font-weight: 700; text-transform: uppercase; font-size: 0.7rem;">{{ listing.source.value|upper }}</span>
                                             </div>
+                                            {% if listing.solar %}
+                                            <div class="solar-meta-badge {{ listing.solar.solar_score_class }}" style="margin-top: 0.35rem; display: inline-flex; width: fit-content;" title="☀️ Ensoleillement : {{ listing.solar.sunshine_hours_per_year }} h/an • Production 3 kWc : {{ listing.solar.pv_production_3kwc }} kWh/an (~{{ listing.solar.estimated_savings_3kwc }} €/an)">
+                                                <i class="fa-solid fa-sun" style="color: #f9d04f;"></i>
+                                                <span>{{ listing.solar.sunshine_hours_per_year }} h/an</span>
+                                                <span class="solar-sep">•</span>
+                                                <i class="fa-solid fa-solar-panel" style="color: #10d9a4;"></i>
+                                                <span>3 kWc: ~{{ listing.solar.pv_production_3kwc }} kWh/an</span>
+                                                {% if listing.solar.detected_orientation %}
+                                                <span class="solar-sep">•</span>
+                                                <span class="solar-orient"><i class="fa-regular fa-compass"></i> {{ listing.solar.detected_orientation }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div style="text-align: right; font-weight: 800; font-size: 1.1rem; color: var(--text);">
                                             {% if listing.price %}{{ "{:,.0f}".format(listing.price).replace(",", " ") }} €{% else %}{{ t(request, 'misc.nc') }}{% endif %}

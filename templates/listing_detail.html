@@ -18,6 +18,7 @@
     <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
     <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
+    <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
     <script src="/static/js/address-autocomplete.js?v=20260819a"></script>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <style>
@@ -2083,6 +2084,112 @@
                 </div>
             </div>
 
+            <!-- ── Ensoleillement & Potentiel Solaire Photovoltaïque ── -->
+            {% if solar %}
+            <div class="solar-section" id="solar-potential-section">
+                <div class="solar-header">
+                    <div class="solar-title">
+                        <i class="fa-solid fa-sun" style="color: var(--solar-gold, #f9d04f);"></i>
+                        <span>Ensoleillement & Potentiel Solaire</span>
+                    </div>
+                    <div class="solar-score-pill {{ solar.solar_score_class }}">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Potentiel {{ solar.solar_score }}</span>
+                    </div>
+                </div>
+
+                <div class="solar-grid">
+                    <!-- 1. Heures d'ensoleillement & Irradiation -->
+                    <div class="solar-card">
+                        <div class="solar-card-top">
+                            <span class="solar-card-label">Ensoleillement Moyen</span>
+                            <div class="solar-card-icon solar-icon-sun">
+                                <i class="fa-solid fa-sun"></i>
+                            </div>
+                        </div>
+                        <div class="solar-card-val">
+                            {{ "{:,.0f}".format(solar.sunshine_hours_per_year).replace(",", " ") }} <small>h / an</small>
+                        </div>
+                        <div class="solar-card-sub">
+                            Rayonnement global : <strong>{{ solar.solar_irradiation_kwh_m2 }} kWh/m²/an</strong>
+                        </div>
+                    </div>
+
+                    <!-- 2. Orientation & Exposition -->
+                    <div class="solar-card">
+                        <div class="solar-card-top">
+                            <span class="solar-card-label">Exposition Détectée</span>
+                            <div class="solar-card-icon solar-icon-orient">
+                                <i class="fa-regular fa-compass"></i>
+                            </div>
+                        </div>
+                        <div class="solar-card-val">
+                            {{ solar.detected_orientation or 'Non précisée' }}
+                        </div>
+                        <div class="solar-card-sub">
+                            Rendement d'exposition : <strong>{{ solar.orientation_efficiency_pct }}%</strong> (optimal à {{ solar.optimal_tilt_deg }}° d'inclinaison)
+                        </div>
+                    </div>
+
+                    <!-- 3. Kit Solaire Standard 3 kWc -->
+                    <div class="solar-card">
+                        <div class="solar-card-top">
+                            <span class="solar-card-label">Kit 3 kWc (~{{ solar.roof_surface_3kwc_m2 }} m²)</span>
+                            <div class="solar-card-icon solar-icon-pv3">
+                                <i class="fa-solid fa-solar-panel"></i>
+                            </div>
+                        </div>
+                        <div class="solar-card-val">
+                            {{ "{:,.0f}".format(solar.pv_production_3kwc).replace(",", " ") }} <small>kWh / an</small>
+                        </div>
+                        <div class="solar-card-sub">
+                            Économies estimées : <span class="solar-savings-highlight"><i class="fa-solid fa-coins"></i> ~{{ "{:,.0f}".format(solar.estimated_savings_3kwc).replace(",", " ") }} € / an</span>
+                        </div>
+                    </div>
+
+                    <!-- 4. Kit Solaire Confort 6 kWc -->
+                    <div class="solar-card">
+                        <div class="solar-card-top">
+                            <span class="solar-card-label">Kit 6 kWc (~{{ solar.roof_surface_6kwc_m2 }} m²)</span>
+                            <div class="solar-card-icon solar-icon-pv6">
+                                <i class="fa-solid fa-bolt-lightning"></i>
+                            </div>
+                        </div>
+                        <div class="solar-card-val">
+                            {{ "{:,.0f}".format(solar.pv_production_6kwc).replace(",", " ") }} <small>kWh / an</small>
+                        </div>
+                        <div class="solar-card-sub">
+                            Économies estimées : <span class="solar-savings-highlight"><i class="fa-solid fa-coins"></i> ~{{ "{:,.0f}".format(solar.estimated_savings_6kwc).replace(",", " ") }} € / an</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Adéquation du bâti / Toiture -->
+                <div class="solar-suitability-banner">
+                    <div class="solar-suitability-icon">
+                        <i class="fa-solid {% if solar.is_house %}fa-house-chimney{% else %}fa-building{% endif %}"></i>
+                    </div>
+                    <div class="solar-suitability-info">
+                        <div class="solar-suitability-title">{{ solar.suitability_label }}</div>
+                        <div class="solar-suitability-desc">{{ solar.suitability_hint }}</div>
+                    </div>
+                </div>
+
+                <!-- Liens & Sources -->
+                <div class="solar-actions">
+                    <div class="solar-source-tag">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span>Données issues de la modélisation PVGIS (Commission Européenne / JRC) & Open-Meteo</span>
+                    </div>
+                    {% set pvgis_link = "https://re.jrc.ec.europa.eu/pvg_tools/fr/#PVP?lat=" ~ (listing.latitude|string) ~ "&lng=" ~ (listing.longitude|string) ~ "&peakpower=3&loss=14&optimalangles=1" if (listing.latitude and listing.longitude) else "https://re.jrc.ec.europa.eu/pvg_tools/fr/" %}
+                    <a href="{{ pvgis_link }}" target="_blank" rel="noopener noreferrer" class="solar-pvgis-btn">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>Simulateur Officiel PVGIS (JRC)</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Description -->
             {% if listing.description_text %}
             <div class="info-card">
@@ -2819,6 +2926,16 @@
                 <div class="form-row" style="margin-bottom: 0;">
                     <label>{{ t(request, 'listing.edit_parking') }}</label>
                     <input type="number" id="edit-parking" value="{{ listing.parking_count or '' }}">
+                </div>
+
+                <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
+                    <label for="edit-orientation"><i class="fa-regular fa-compass" style="color: var(--solar-gold, #f9d04f);"></i> {{ t(request, 'listing.edit_orientation', 'Orientation / Exposition') }}</label>
+                    <select id="edit-orientation" style="width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 0.85rem;">
+                        <option value="">-- Non précisée (Calcul toiture optimale Sud) --</option>
+                        {% for opt in ['Sud', 'Sud-Est', 'Sud-Ouest', 'Est', 'Ouest', 'Nord-Est', 'Nord-Ouest', 'Nord'] %}
+                        <option value="{{ opt }}" {% if (listing.orientation or (solar.detected_orientation if solar else None)) == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
                 <!-- Full width Description -->
@@ -4286,6 +4403,7 @@
             charges: valNum('edit-charges'),
             agency_fee: valNum('edit-fees'),
             parking_count: valNum('edit-parking'),
+            orientation: valStr('edit-orientation'),
             description_text: valStr('edit-desc'),
         };
 

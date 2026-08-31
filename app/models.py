@@ -183,6 +183,10 @@ class Listing(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
 
+    # Solar and exposure data
+    orientation = Column(String, nullable=True)
+    solar_json = Column(Text, nullable=True)
+
     # Risk data
     georisques_json = Column(Text, nullable=True)
 
@@ -573,5 +577,22 @@ class Notification(Base):
     is_read = Column(Boolean, nullable=False, default=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     read_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class SolarCache(Base):
+    """
+    Persistent cache for geo-based solar irradiance, sunshine duration, and PV potential.
+    Keyed by rounded coordinates (lat/lon) to avoid redundant external API calls.
+    """
+    __tablename__ = "solar_cache"
+
+    id = Column(Integer, primary_key=True, index=True)
+    geo_key = Column(String, unique=True, index=True, nullable=False)
+    sunshine_hours = Column(Integer, nullable=True)
+    solar_irradiation = Column(Float, nullable=True)
+    pv_yield_per_kwc = Column(Float, nullable=True)
+    data_json = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
 
 
