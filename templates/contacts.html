@@ -774,21 +774,119 @@
             background: var(--surface);
             z-index: 5;
         }
+
+        .mobile-menu-btn {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                border: 1px solid var(--border);
+                color: var(--text);
+                border-radius: 8px;
+                padding: 0.45rem 0.65rem;
+                cursor: pointer;
+                font-size: 1.1rem;
+                flex-shrink: 0;
+            }
+
+            .header {
+                padding: 0.75rem 1rem !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 0.6rem !important;
+            }
+
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                width: 100%;
+            }
+
+            .header-title {
+                font-size: 1.1rem !important;
+            }
+
+            .header-actions {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                width: 100% !important;
+                gap: 0.4rem !important;
+                padding-bottom: 4px !important;
+                scrollbar-width: none;
+            }
+            .header-actions::-webkit-scrollbar {
+                display: none;
+            }
+            .header-actions .btn, .header-actions .badge {
+                flex-shrink: 0 !important;
+                white-space: nowrap !important;
+                padding: 0.45rem 0.75rem !important;
+                font-size: 0.8rem !important;
+                border-radius: 8px !important;
+            }
+
+            .content-body {
+                padding: 1rem !important;
+            }
+
+            .tabs-header {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                gap: 0.5rem !important;
+                padding-bottom: 0.6rem !important;
+                scrollbar-width: none;
+            }
+            .tabs-header::-webkit-scrollbar {
+                display: none;
+            }
+            .tabs-header .tab-btn {
+                padding: 0.5rem 0.85rem !important;
+                font-size: 0.85rem !important;
+                flex-shrink: 0 !important;
+            }
+            .tabs-header .search-input {
+                min-width: 140px !important;
+                padding: 0.5rem 0.85rem !important;
+                font-size: 0.85rem !important;
+                flex-shrink: 0 !important;
+            }
+            .tabs-header #btnFilterToVisit {
+                padding: 0.5rem 0.85rem !important;
+                font-size: 0.85rem !important;
+                flex-shrink: 0 !important;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <div id="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
+
     <!-- Sidebar -->
     {% include 'components/sidebar.html' %}
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="header">
-            <div class="header-title">
-                <i class="fa-solid fa-address-book" style="color: var(--accent);"></i>
-                {{ t(request, 'contacts.page_title', 'Gestionnaire de Contacts') }}
+            <div class="header-left">
+                <button class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" title="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <i class="fa-solid fa-address-book" style="color: var(--accent);"></i>
+                    {{ t(request, 'contacts.page_title', 'Gestionnaire de Contacts') }}
+                </div>
             </div>
-            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <div class="header-actions">
                 <span id="googleSyncBadge" class="badge badge-accent">
                     <i class="fa-brands fa-google"></i> {{ t(request, 'contacts.google_sync', 'Google Contacts Sync') }}
                 </span>
