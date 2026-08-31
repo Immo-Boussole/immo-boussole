@@ -253,7 +253,19 @@
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.85rem;
             align-items: center;
-            flex-wrap: wrap;
+        }
+
+        .tabs-buttons-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .tabs-search-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex: 1;
         }
 
         .tab-btn {
@@ -799,6 +811,7 @@
                 flex-direction: column !important;
                 align-items: stretch !important;
                 gap: 0.6rem !important;
+                flex-shrink: 0 !important;
             }
 
             .header-left {
@@ -835,34 +848,48 @@
 
             .content-body {
                 padding: 1rem !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                overflow-y: auto !important;
             }
 
             .tabs-header {
-                flex-wrap: nowrap !important;
-                overflow-x: auto !important;
-                -webkit-overflow-scrolling: touch !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 0.6rem !important;
+                width: 100% !important;
+                padding-bottom: 0.75rem !important;
+                border-bottom: 1px solid var(--border) !important;
+            }
+            .tabs-buttons-group {
+                display: flex !important;
                 gap: 0.5rem !important;
-                padding-bottom: 0.6rem !important;
-                scrollbar-width: none;
+                width: 100% !important;
             }
-            .tabs-header::-webkit-scrollbar {
-                display: none;
+            .tabs-buttons-group .tab-btn {
+                flex: 1 !important;
+                justify-content: center !important;
+                padding: 0.55rem 0.4rem !important;
+                font-size: 0.82rem !important;
+                white-space: nowrap !important;
             }
-            .tabs-header .tab-btn {
-                padding: 0.5rem 0.85rem !important;
-                font-size: 0.85rem !important;
+            .tabs-search-group {
+                display: flex !important;
+                gap: 0.5rem !important;
+                width: 100% !important;
+                align-items: center !important;
+            }
+            .tabs-search-group .search-input {
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding: 0.55rem 0.75rem !important;
+                font-size: 0.82rem !important;
+            }
+            .tabs-search-group #btnFilterToVisit {
+                padding: 0.55rem 0.75rem !important;
+                font-size: 0.82rem !important;
                 flex-shrink: 0 !important;
-            }
-            .tabs-header .search-input {
-                min-width: 140px !important;
-                padding: 0.5rem 0.85rem !important;
-                font-size: 0.85rem !important;
-                flex-shrink: 0 !important;
-            }
-            .tabs-header #btnFilterToVisit {
-                padding: 0.5rem 0.85rem !important;
-                font-size: 0.85rem !important;
-                flex-shrink: 0 !important;
+                white-space: nowrap !important;
             }
         }
     </style>
@@ -901,22 +928,26 @@
         <div class="content-body">
             <!-- Tabs & Search Toolbar on a single line -->
             <div class="tabs-header">
-                <!-- Onglet 1 -->
-                <button class="tab-btn active" id="tabContactsBtn" onclick="switchMainTab('contacts')">
-                    <i class="fa-solid fa-user-tie"></i> {{ t(request, 'contacts.tab_contacts', 'Fiches Contacts') }}
-                    <span class="tab-badge" id="contactsCountBadge">0</span>
-                </button>
-                <!-- Onglet 2 -->
-                <button class="tab-btn" id="tabAgenciesBtn" onclick="switchMainTab('agencies')">
-                    <i class="fa-solid fa-building"></i> {{ t(request, 'contacts.tab_agencies', 'Fiches Agences') }}
-                    <span class="tab-badge" id="agenciesCountBadge">0</span>
-                </button>
-                <!-- Moteur de recherche -->
-                <input type="text" id="searchInput" class="search-input" placeholder="{{ t(request, 'contacts.search_placeholder', 'Rechercher par nom, agence, téléphone, email, ville ou bien rattaché...') }}" oninput="filterContacts()">
-                <!-- Filtre "Biens à visiter" (Actif par défaut) -->
-                <button type="button" id="btnFilterToVisit" class="btn btn-purple" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
-                    <i class="fa-solid fa-bookmark"></i> {{ t(request, 'contacts.filter_to_visit_active', 'Biens à visiter (Actif)') }}
-                </button>
+                <div class="tabs-buttons-group">
+                    <!-- Onglet 1 -->
+                    <button class="tab-btn active" id="tabContactsBtn" onclick="switchMainTab('contacts')">
+                        <i class="fa-solid fa-user-tie"></i> {{ t(request, 'contacts.tab_contacts', 'Fiches Contacts') }}
+                        <span class="tab-badge" id="contactsCountBadge">0</span>
+                    </button>
+                    <!-- Onglet 2 -->
+                    <button class="tab-btn" id="tabAgenciesBtn" onclick="switchMainTab('agencies')">
+                        <i class="fa-solid fa-building"></i> {{ t(request, 'contacts.tab_agencies', 'Fiches Agences') }}
+                        <span class="tab-badge" id="agenciesCountBadge">0</span>
+                    </button>
+                </div>
+                <div class="tabs-search-group">
+                    <!-- Moteur de recherche -->
+                    <input type="text" id="searchInput" class="search-input" placeholder="{{ t(request, 'contacts.search_placeholder', 'Rechercher par nom, agence, téléphone, email, ville ou bien rattaché...') }}" oninput="filterContacts()">
+                    <!-- Filtre "Biens à visiter" (Actif par défaut) -->
+                    <button type="button" id="btnFilterToVisit" class="btn btn-purple" onclick="toggleToVisitFilter()" style="white-space: nowrap; font-weight: 600; flex-shrink: 0; padding: 0.6rem 1.1rem; border-radius: 10px;">
+                        <i class="fa-solid fa-bookmark"></i> {{ t(request, 'contacts.filter_to_visit_active', 'Biens à visiter (Actif)') }}
+                    </button>
+                </div>
             </div>
 
             <!-- Contacts Section -->
