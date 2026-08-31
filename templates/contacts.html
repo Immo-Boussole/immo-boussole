@@ -887,7 +887,7 @@
                 </div>
             </div>
             <div class="header-actions">
-                <span id="googleSyncBadge" class="badge badge-accent">
+                <span id="googleSyncBadge" class="badge badge-accent" style="display: none;">
                     <i class="fa-brands fa-google"></i> {{ t(request, 'contacts.google_sync', 'Google Contacts Sync') }}
                 </span>
                 <button class="btn btn-secondary" onclick="openVcfImportModal()" title="Importer des fiches au format .vcf"><i class="fa-solid fa-file-import"></i> {{ t(request, 'contacts.import_vcf', 'Importer (.vcf)') }}</button>
@@ -1512,15 +1512,19 @@
                 const res = await fetch('/api/auth/google/status');
                 const data = await res.json();
                 const badge = document.getElementById('googleSyncBadge');
-                if (data.connected) {
-                    badge.className = 'badge badge-green';
-                    badge.innerHTML = `<i class="fa-brands fa-google"></i> Google: Connecté (${data.pilot_email || 'OK'})`;
-                } else {
-                    badge.className = 'badge badge-accent';
-                    badge.innerHTML = `<i class="fa-brands fa-google"></i> Google: Non connecté`;
+                if (badge) {
+                    if (data.connected) {
+                        badge.style.display = 'inline-flex';
+                        badge.className = 'badge badge-green';
+                        badge.innerHTML = `<i class="fa-brands fa-google"></i> Google: Connecté (${data.pilot_email || 'OK'})`;
+                    } else {
+                        badge.style.display = 'none';
+                    }
                 }
             } catch (e) {
                 console.error(e);
+                const badge = document.getElementById('googleSyncBadge');
+                if (badge) badge.style.display = 'none';
             }
         }
 
