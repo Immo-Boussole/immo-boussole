@@ -132,11 +132,12 @@ def test_auto_searches_page_rendering_and_stats(db):
     assert "Maison 5p jardin" in html
     assert "Appartement T3" in html
 
-    # Verify card data attributes for filtering
-    assert 'data-platform="leboncoin"' in html
-    assert 'data-platform="seloger"' in html
-    assert 'data-ready-search-id="1"' in html
-    assert 'data-ready-search-id="2"' in html
+    # Verify mobile collapsible filters button and panel markup
+    assert 'filters-toggle-bar' in html
+    assert 'id="btnToggleFiltersMobile"' in html
+    assert 'id="autoSearchFiltersPanel"' in html
+    assert 'collapsible-mobile' in html
+    assert 'id="mobileActiveFiltersBadge"' in html
 
     app.dependency_overrides.pop(get_db, None)
     app.dependency_overrides.pop(login_required, None)

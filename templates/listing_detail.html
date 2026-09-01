@@ -15,7 +15,7 @@
 
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
-    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260901a" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
     <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
     <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
@@ -339,10 +339,11 @@
         .nav-title { font-size: 1rem; font-weight: 700; }
         .nav-src { margin-left: auto; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.05em; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; width: 100%; box-sizing: border-box; }
 
-        .layout { display: grid; grid-template-columns: 1fr 380px; gap: 2rem; align-items: start; }
-        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+        .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 2rem; align-items: start; width: 100%; max-width: 100%; box-sizing: border-box; }
+        .left-col, .right-col { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+        @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
 
         /* ── Carousel ── */
         .carousel { border-radius: var(--radius); overflow: hidden; background: var(--surface-2); position: relative; margin-bottom: 1.5rem; }
@@ -1639,7 +1640,7 @@
         <div class="zone-repair-banner" style="grid-column: 1 / -1; width: 100%; min-height: 48px; border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; {% if city_rule == 'forbidden' %}background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45);{% elif city_rule == 'allowed' %}background: rgba(16,217,164,0.08); border: 1.5px solid rgba(16,217,164,0.3);{% else %}background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.35);{% endif %}">
             
             <!-- Left: Zone info -->
-            <div style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
+            <div class="zone-info-block" style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
                 {% if city_rule == 'forbidden' %}
                     <i class="fa-solid fa-ban" style="color: var(--red); font-size: 1.2rem;"></i>
                     <div>
@@ -1660,7 +1661,7 @@
 
             <!-- Center: Error badges if any -->
             {% if listing_repair_issues %}
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1; justify-content: center;">
+            <div class="zone-issues-block" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1; justify-content: center;">
                 {% for issue in listing_repair_issues %}
                 <span class="badge-repair-issue" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; background: rgba(242,92,105,0.15); border: 1px solid rgba(242,92,105,0.35); color: var(--red); font-size: 0.78rem; font-weight: 600; border-radius: 20px;" title="{{ issue.label }}">
                     <i class="fa-solid {{ issue.icon }}"></i> {{ issue.label }}
@@ -1670,7 +1671,7 @@
             {% endif %}
 
             <!-- Right: Action button & navigation links -->
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0;">
+            <div class="zone-actions-block" style="display: flex; align-items: center; gap: 0.75rem; margin-left: auto; flex-shrink: 0;">
                 {% if listing_repair_issues %}
                 <button type="button" class="btn btn-repair-action" onclick="openEditModal()" style="background: var(--accent); color: white; border: none; border-radius: 8px; padding: 0.45rem 0.95rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: var(--trans);" title="Corriger les informations de l'annonce">
                     <i class="fa-solid fa-wrench"></i> <span>Corriger l'annonce</span>

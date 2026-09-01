@@ -16,7 +16,7 @@
     <link href="/static/css/inter.css" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
-    <link href="/static/css/mobile.css?v=20260817d" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260901a" rel="stylesheet">
     <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
     <style>
         :root {
@@ -537,8 +537,20 @@
         </header>
 
         <div class="content">
+            <!-- Bouton dépliable de filtres sur smartphone (<= 768px) -->
+            <div class="filters-toggle-bar">
+                <button type="button" id="btnToggleFiltersMobile" class="filters-toggle-btn" onclick="toggleMobileFilters()" aria-expanded="false" aria-controls="autoSearchFiltersPanel">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-sliders" style="color: var(--accent);"></i>
+                        <span>{{ t(request, 'auto_searches.filters_toggle_label', 'Filtres & Sources') }}</span>
+                        <span id="mobileActiveFiltersBadge" style="display: none; font-size: 0.72rem; color: var(--accent); background: rgba(79, 142, 247, 0.15); border: 1px solid rgba(79, 142, 247, 0.3); padding: 0.1rem 0.5rem; border-radius: 999px;"></span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                </button>
+            </div>
+
             <!-- Zone complète de filtres interactifs (Sources + Recherches Prêtes + Duplicats) -->
-            <div class="filters-panel">
+            <div class="filters-panel collapsible-mobile" id="autoSearchFiltersPanel">
                     
                     <!-- Ligne 1 : Filtres par Source / Plateforme avec date de dernière offre -->
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
@@ -948,10 +960,35 @@
             else if (currentDupFilter === 'duplicates') document.getElementById('pillDuplicates')?.classList.add('active');
             else if (currentDupFilter === 'unique') document.getElementById('pillUnique')?.classList.add('active');
 
-            // Show / Hide reset button
+            // Show / Hide reset button & update mobile filter badge
             const isFiltered = (currentDupFilter !== 'all' || currentSourceFilter !== 'all' || currentReadySearchFilter !== 'all');
             const resetBtn = document.getElementById('resetFiltersBtn');
             if (resetBtn) resetBtn.style.display = isFiltered ? 'inline-flex' : 'none';
+
+            // Update mobile active filters count badge
+            const mobileBadge = document.getElementById('mobileActiveFiltersBadge');
+            if (mobileBadge) {
+                let activeCount = 0;
+                if (currentSourceFilter !== 'all') activeCount++;
+                if (currentDupFilter !== 'all') activeCount++;
+                if (currentReadySearchFilter !== 'all') activeCount++;
+
+                if (activeCount > 0) {
+                    mobileBadge.textContent = `${activeCount} actif${activeCount > 1 ? 's' : ''}`;
+                    mobileBadge.style.display = 'inline-block';
+                } else {
+                    mobileBadge.style.display = 'none';
+                }
+            }
+        }
+
+        function toggleMobileFilters() {
+            const panel = document.getElementById('autoSearchFiltersPanel');
+            const btn = document.getElementById('btnToggleFiltersMobile');
+            if (!panel || !btn) return;
+            const isOpen = panel.classList.toggle('is-open');
+            btn.classList.toggle('expanded', isOpen);
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         }
 
         function setDupFilter(filter) {

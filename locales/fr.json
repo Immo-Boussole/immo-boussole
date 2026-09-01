@@ -631,7 +631,8 @@
         "no_offer_recorded": "Aucune offre",
         "filter_by_ready_search": "Toutes les recherches prêtes",
         "select_ready_search_placeholder": "Filtrer par recherche prête...",
-        "source_focus_badge": "Focus"
+        "source_focus_badge": "Focus",
+        "filters_toggle_label": "Filtres & Sources"
     },
     "duplicates": {
         "title": "Chasse aux duplicats",
