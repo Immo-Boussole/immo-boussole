@@ -17,7 +17,8 @@ TEST_GROUPS = {
     "Smoke": [
         "check_template.py",
         "test_jinja.py",
-        "check_i18n.py"
+        "check_i18n.py",
+        "test_listing_detail_responsive.py"
     ],
     "Core": [
         "test_api_map_data.py",

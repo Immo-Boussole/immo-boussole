@@ -15,7 +15,7 @@
 
     <link href="/static/css/inter.css" rel="stylesheet">
     <link href="/static/css/fontawesome.min.css" rel="stylesheet">
-    <link href="/static/css/mobile.css?v=20260901a" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260902a" rel="stylesheet">
     <link href="/static/css/visit-status-badge.css?v=20260817c" rel="stylesheet">
     <link href="/static/css/address-precision.css?v=20260819a" rel="stylesheet">
     <link href="/static/css/solar.css?v=20260831a" rel="stylesheet">
@@ -159,6 +159,9 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
         }
 
         .topbar {
@@ -170,11 +173,15 @@
             background: var(--surface);
             gap: 1rem;
             flex-shrink: 0;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
-        .topbar h1 { font-size: 1rem; font-weight: 700; }
+        .topbar h1 { font-size: 1rem; font-weight: 700; min-width: 0; }
 
-        .content { flex: 1; overflow-y: auto; padding: 1.5rem 2rem 2rem; }
+        .content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 1.5rem 2rem 2rem; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
 
         /* Language Selector in Sidebar */
         .sidebar-lang-selector {
@@ -339,10 +346,10 @@
         .nav-title { font-size: 1rem; font-weight: 700; }
         .nav-src { margin-left: auto; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-2); letter-spacing: 0.05em; }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; width: 100%; box-sizing: border-box; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; }
 
-        .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 2rem; align-items: start; width: 100%; max-width: 100%; box-sizing: border-box; }
-        .left-col, .right-col { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+        .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 2rem; align-items: start; width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; }
+        .left-col, .right-panel, .right-col { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
         @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
 
         /* ── Carousel ── */
@@ -819,14 +826,23 @@
             padding: 1.25rem 1.5rem;
             margin-bottom: 2rem;
             position: relative;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         .timeline-scroll-container {
             position: relative;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
             overflow-x: auto;
             padding: 1rem 0;
             scrollbar-width: thin;
+            box-sizing: border-box;
+            -webkit-overflow-scrolling: touch;
         }
 
         .timeline-scroll-container::-webkit-scrollbar {
@@ -1597,6 +1613,7 @@
                     <i class="fa-solid fa-building"></i>
                     <span class="btn-text">{{ agency.commercial_name or agency.legal_name }}</span>
                 </button>
+                {% else %}
                 <button class="btn btn-contact-nav" id="btnListingContact" onclick="openListingContactModal()" title="{% if detected_contact and detected_contact.has_detected %}Coordonnées détectées dans l'annonce - Créer ou lier un contact & agence{% else %}Créer/Assigner Contact & Agence{% endif %}" style="color: var(--accent); border-color: rgba(79, 142, 247, 0.3); background: rgba(79, 142, 247, 0.08); position: relative;">
                     <i class="fa-solid fa-user"></i>/<i class="fa-solid fa-building"></i>
                     <span class="btn-text">Contact & Agence</span>
@@ -1637,7 +1654,7 @@
 
         <!-- ── Zone & Repair Status Banner ── -->
         {% if city_rule == 'forbidden' or city_rule == 'allowed' or listing_repair_issues %}
-        <div class="zone-repair-banner" style="grid-column: 1 / -1; width: 100%; min-height: 48px; border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; {% if city_rule == 'forbidden' %}background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45);{% elif city_rule == 'allowed' %}background: rgba(16,217,164,0.08); border: 1.5px solid rgba(16,217,164,0.3);{% else %}background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.35);{% endif %}">
+        <div class="zone-repair-banner" style="grid-column: 1 / -1; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; min-height: 48px; border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; {% if city_rule == 'forbidden' %}background: rgba(242,92,105,0.12); border: 1.5px solid rgba(242,92,105,0.45);{% elif city_rule == 'allowed' %}background: rgba(16,217,164,0.08); border: 1.5px solid rgba(16,217,164,0.3);{% else %}background: rgba(245,158,11,0.1); border: 1.5px solid rgba(245,158,11,0.35);{% endif %}">
             
             <!-- Left: Zone info -->
             <div class="zone-info-block" style="display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0;">
@@ -1689,7 +1706,7 @@
 
         <!-- ── Timeline (Frise Chronologique des Visites) ── -->
         {% if listing.visits %}
-        <div class="timeline-wrapper" style="grid-column: 1 / -1; margin-bottom: 1.5rem;">
+        <div class="timeline-wrapper" style="grid-column: 1 / -1; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; margin-bottom: 1.5rem;">
             <h3 style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-2); margin-bottom: 0.75rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
                 <span style="display: flex; align-items: center; gap: 0.5rem;">
                     <i class="fa-solid fa-timeline" style="color: var(--accent);"></i> Frise chronologique des étapes
@@ -2812,7 +2829,6 @@
     </div><!-- end layout -->
         </div>
     </main>
-</div>
 
 <div class="toast" id="toast"></div>
 
