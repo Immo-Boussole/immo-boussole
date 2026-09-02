@@ -1851,8 +1851,10 @@
                 <div id="singleMode">
                     <div class="form-group">
                         <label for="urlInput">{{ t(request, 'dashboard.url_label') }}</label>
-                        <input type="url" id="urlInput"
-                            placeholder="https://www.leboncoin.fr/ventes_immobilieres/..." />
+                        <input type="text" id="urlInput"
+                            placeholder="https://www.leboncoin.fr/ventes_immobilieres/... (ou collez un message complet)"
+                            oninput="handleSingleUrlInput()"
+                            onpaste="setTimeout(handleSingleUrlInput, 20)" />
                     </div>
                     <div
                         style="font-size: 0.72rem; color: var(--text-2); margin-top: -0.5rem; margin-bottom: 1rem; font-style: italic;">
@@ -1943,6 +1945,82 @@
         </div>
 
         <script>
+            // ── URL Extraction & Cleaning Utilities ──
+            function cleanUrl(rawUrl) {
+                if (!rawUrl) return '';
+                let url = rawUrl.trim();
+                url = url.replace(/[.,;:!?«»<>`*~"']+$/g, '');
+                while (url.endsWith(')') && (url.match(/\)/g) || []).length > (url.match(/\(/g) || []).length) {
+                    url = url.slice(0, -1);
+                }
+                while (url.endsWith(']') && (url.match(/\]/g) || []).length > (url.match(/\[/g) || []).length) {
+                    url = url.slice(0, -1);
+                }
+                while (url.endsWith('}') && (url.match(/\}/g) || []).length > (url.match(/\{/g) || []).length) {
+                    url = url.slice(0, -1);
+                }
+                url = url.replace(/[.,;:!?«»<>`*~"']+$/g, '').trim();
+
+                try {
+                    const u = new URL(url);
+                    const trackingPrefixes = ['utm_'];
+                    const trackingExact = new Set([
+                        'fbclid', 'gclid', 'gclsrc', 'dclid', 'msclkid', 'zanpid',
+                        'xtor', 'xtref', 'xts', 'ref_src', 'ref_url', 'igshid',
+                        'mc_cid', 'mc_eid', '_ga', '_gl'
+                    ]);
+                    const keysToDelete = [];
+                    for (const [key] of u.searchParams) {
+                        const kl = key.toLowerCase();
+                        if (trackingPrefixes.some(p => kl.startsWith(p)) || trackingExact.has(kl)) {
+                            keysToDelete.push(key);
+                        }
+                    }
+                    keysToDelete.forEach(k => u.searchParams.delete(k));
+                    return u.toString();
+                } catch (e) {
+                    return url;
+                }
+            }
+
+            function extractUrlsFromText(text) {
+                if (!text || typeof text !== 'string') return [];
+                const urlRegex = /https?:\/\/[^\s<>"]+/gi;
+                const matches = text.match(urlRegex) || [];
+                const results = [];
+                const seen = new Set();
+                for (const m of matches) {
+                    const cleaned = cleanUrl(m);
+                    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+                        if (!seen.has(cleaned)) {
+                            seen.add(cleaned);
+                            results.push(cleaned);
+                        }
+                    }
+                }
+                return results;
+            }
+
+            function handleSingleUrlInput() {
+                const input = document.getElementById('urlInput');
+                if (!input) return;
+                const rawVal = input.value;
+                if (!rawVal.trim()) {
+                    hideAlert();
+                    return;
+                }
+
+                const urls = extractUrlsFromText(rawVal);
+                if (urls.length === 1) {
+                    if (input.value !== urls[0]) {
+                        input.value = urls[0];
+                    }
+                    hideAlert();
+                } else if (urls.length > 1) {
+                    showAlert("Plusieurs URLs ont été détectées. Veuillez n'en fournir qu'une seule ou basculer en mode ajout multiple.", 'warning');
+                }
+            }
+
             function openModal() {
                 document.getElementById('modal').classList.add('open');
                 document.getElementById('urlInput').value = '';
@@ -1968,16 +2046,16 @@
 
             function loadUrls() {
                 const area = document.getElementById('urlsArea');
-                const lines = area.value.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+                const extracted = extractUrlsFromText(area.value);
                 const body = document.getElementById('batchBody');
                 body.innerHTML = '';
 
-                if (lines.length === 0) {
-                    showAlert('Aucune URL valide détectée (doit commencer par http).', 'error');
+                if (extracted.length === 0) {
+                    showAlert('Aucune URL valide détectée (doit commencer par http:// ou https://).', 'error');
                     return;
                 }
 
-                lines.forEach((url, i) => {
+                extracted.forEach((url, i) => {
                     const tr = document.createElement('tr');
                     tr.dataset.url = url;
                     tr.innerHTML = `
@@ -2058,8 +2136,21 @@
             }
 
             async function submitUrl(skipScraping = false) {
-                const url = document.getElementById('urlInput').value.trim();
-                if (!url) { showAlert('Veuillez entrer une URL.', 'error'); return; }
+                const rawVal = document.getElementById('urlInput').value.trim();
+                if (!rawVal) { showAlert('Veuillez entrer une URL.', 'error'); return; }
+
+                const urls = extractUrlsFromText(rawVal);
+                if (urls.length === 0) {
+                    showAlert('Aucune URL valide (commençant par http:// ou https://) trouvée.', 'error');
+                    return;
+                }
+                if (urls.length > 1) {
+                    showAlert("Plusieurs URLs ont été détectées. Veuillez n'en fournir qu'une seule ou basculer en mode ajout multiple.", 'error');
+                    return;
+                }
+
+                const url = urls[0];
+                document.getElementById('urlInput').value = url;
 
                 const btn = document.getElementById('submitBtn');
                 const btnNoScrape = document.getElementById('submitBtnNoScrape');

@@ -194,9 +194,8 @@ class SubmitUrlRequest(BaseModel):
     @field_validator("url")
     @classmethod
     def validate_url(cls, v):
-        if not v.startswith("http"):
-            raise ValueError("URL must start with http:// or https://")
-        return v.strip()
+        from app.url_cleaner import extract_single_url_from_text
+        return extract_single_url_from_text(v)
 
 
 class ListingUpdateRequest(BaseModel):
