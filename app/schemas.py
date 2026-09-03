@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 
 class SubmitUrlRequest(BaseModel):
     url: str
@@ -495,6 +495,31 @@ class VisitResponse(BaseModel):
         from_attributes = True
 
 
+class GlobalQuestionCreate(BaseModel):
+    question_text: str
+    themes: List[str] = []
+    category: Optional[str] = "Inspection technique"
+    advice_notes: Optional[str] = None
+
+
+class GlobalQuestionResponse(BaseModel):
+    id: int
+    question_text: str
+    themes: List[str] = []
+    category: Optional[str] = None
+    advice_notes: Optional[str] = None
+    usage_count: int = 0
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class GlobalQuestionBatchImport(BaseModel):
+    question_ids: List[int] = []
+
+
 class VisitQuestionCreate(BaseModel):
     question_text: str
     themes: List[str] = []
@@ -514,6 +539,7 @@ class VisitQuestionUpdate(BaseModel):
 
 class VisitQuestionResponse(BaseModel):
     id: int
+    listing_id: Optional[int] = None
     visit_id: int
     question_text: str
     status: str
@@ -523,11 +549,90 @@ class VisitQuestionResponse(BaseModel):
     answer_text: Optional[str] = None
     answered_by: Optional[str] = None
     order_index: int = 0
+    origin_visit_type: Optional[str] = None
+    origin_visit_date: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class VisitInclusionCreate(BaseModel):
+    item_type: str = "objet" # "objet" or "service"
+    room: Optional[str] = None
+    title: str
+    variation_notes: Optional[str] = None
+    condition: Optional[str] = None
+    estimated_value: Optional[float] = None
+    provider_name: Optional[str] = None
+    equipment_included: Optional[str] = None
+    contract_start_date: Optional[date] = None
+    contract_end_date: Optional[date] = None
+    initial_cost: Optional[float] = None
+    monthly_cost: Optional[float] = None
+    annual_cost: Optional[float] = None
+    transfer_status: Optional[str] = "reprise_contrat"
+    negotiation_status: str = "inclus_prix_negocie" # inclus_prix_negocie, en_discussion, exclu_vendeur, option_payante
+    photo_url: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VisitInclusionUpdate(BaseModel):
+    item_type: Optional[str] = None
+    room: Optional[str] = None
+    title: Optional[str] = None
+    variation_notes: Optional[str] = None
+    condition: Optional[str] = None
+    estimated_value: Optional[float] = None
+    provider_name: Optional[str] = None
+    equipment_included: Optional[str] = None
+    contract_start_date: Optional[date] = None
+    contract_end_date: Optional[date] = None
+    initial_cost: Optional[float] = None
+    monthly_cost: Optional[float] = None
+    annual_cost: Optional[float] = None
+    transfer_status: Optional[str] = None
+    negotiation_status: Optional[str] = None
+    photo_url: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class VisitInclusionResponse(BaseModel):
+    id: int
+    listing_id: int
+    visit_id: Optional[int] = None
+    item_type: str
+    room: Optional[str] = None
+    title: str
+    variation_notes: Optional[str] = None
+    condition: Optional[str] = None
+    estimated_value: Optional[float] = None
+    provider_name: Optional[str] = None
+    equipment_included: Optional[str] = None
+    contract_start_date: Optional[date] = None
+    contract_end_date: Optional[date] = None
+    initial_cost: Optional[float] = None
+    monthly_cost: Optional[float] = None
+    annual_cost: Optional[float] = None
+    transfer_status: Optional[str] = None
+    negotiation_status: str
+    photo_url: Optional[str] = None
+    notes: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OfferInclusionClauseResponse(BaseModel):
+    listing_id: int
+    total_furniture_count: int = 0
+    total_furniture_value: float = 0.0
+    total_service_count: int = 0
+    clause_text: str
 
 
 class VisitMediaResponse(BaseModel):

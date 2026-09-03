@@ -274,6 +274,13 @@ _MIGRATIONS = [
     ("visits", "meeting_address",                          "TEXT"),
     ("visits", "instructions",                             "TEXT"),
     ("visits", "participants_json",                        "TEXT"),
+
+    # visit_questions — unified property listing_id & answered_by v37
+    ("visit_questions", "listing_id",                      "INTEGER"),
+    ("visit_questions", "answered_by",                     "TEXT"),
+
+    # visit_inclusions — furniture & service contracts v37
+    ("visit_inclusions", "negotiation_status",             "TEXT DEFAULT 'inclus_prix_negocie'"),
 ]
 
 
@@ -321,6 +328,10 @@ def run_migrations():
             ("idx_visits_scheduled_at", "CREATE INDEX IF NOT EXISTS idx_visits_scheduled_at ON visits(scheduled_at);"),
             ("idx_visits_access_token", "CREATE INDEX IF NOT EXISTS idx_visits_access_token ON visits(access_token);"),
             ("idx_visit_questions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_visit_id ON visit_questions(visit_id);"),
+            ("idx_visit_questions_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_listing_id ON visit_questions(listing_id);"),
+            ("idx_visit_inclusions_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_inclusions_listing_id ON visit_inclusions(listing_id);"),
+            ("idx_visit_inclusions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_inclusions_visit_id ON visit_inclusions(visit_id);"),
+            ("idx_global_questions_question_text", "CREATE INDEX IF NOT EXISTS idx_global_questions_question_text ON global_questions(question_text);"),
             ("idx_visit_media_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_visit_id ON visit_media(visit_id);"),
             ("idx_visit_media_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_listing_id ON visit_media(listing_id);"),
             ("idx_map_pins_pin_type", "CREATE INDEX IF NOT EXISTS idx_map_pins_pin_type ON map_pins(pin_type);"),
@@ -362,4 +373,19 @@ def run_migrations():
             conn.commit()
         except Exception as e:
             print(f"[Migration] Warning: could not backfill visit step_family: {e}")
+
+        # Backfill listing_id for visit_questions where it's missing
+        try:
+            conn.execute(text("UPDATE visit_questions SET listing_id = (SELECT listing_id FROM visits WHERE visits.id = visit_questions.visit_id) WHERE listing_id IS NULL"))
+            conn.commit()
+        except Exception as e:
+            print(f"[Migration] Warning: could not backfill visit_questions.listing_id: {e}")
+
+    # Auto-seed platform master question catalog if needed
+    try:
+        from app.visit_templates import seed_global_questions
+        with SessionLocal() as db_session:
+            seed_global_questions(db_session)
+    except Exception as e:
+        print(f"[Migration] Note: could not auto-seed global questions: {e}")
 

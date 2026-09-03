@@ -1,5 +1,4 @@
-# pyrefly: ignore [missing-import]
-from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, Text, ForeignKey, Boolean, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, Text, ForeignKey, Boolean, LargeBinary
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import relationship
 # pyrefly: ignore [missing-import]
@@ -200,6 +199,8 @@ class Listing(Base):
     attachments = relationship("ListingAttachment", back_populates="listing", cascade="all, delete-orphan", order_by="ListingAttachment.created_at.desc()")
     links = relationship("ListingLink", back_populates="listing", cascade="all, delete-orphan", order_by="ListingLink.created_at.asc()")
     visit_media = relationship("VisitMedia", back_populates="listing", cascade="all, delete-orphan", order_by="VisitMedia.created_at.desc()")
+    questions = relationship("VisitQuestion", back_populates="listing", cascade="all, delete-orphan", foreign_keys="VisitQuestion.listing_id", order_by="VisitQuestion.order_index.asc()")
+    inclusions = relationship("VisitInclusion", back_populates="listing", cascade="all, delete-orphan", order_by="VisitInclusion.created_at.desc()")
     main_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
     main_agent = relationship("Agent", foreign_keys=[main_agent_id])
@@ -317,8 +318,9 @@ class Visit(Base):
     # Relationships
     listing = relationship("Listing", back_populates="visits")
     visit_contacts = relationship("VisitContact", back_populates="visit", cascade="all, delete-orphan")
-    questions = relationship("VisitQuestion", back_populates="visit", cascade="all, delete-orphan", order_by="VisitQuestion.order_index.asc()")
+    questions = relationship("VisitQuestion", back_populates="visit", cascade="all, delete-orphan", foreign_keys="VisitQuestion.visit_id", order_by="VisitQuestion.order_index.asc()")
     media = relationship("VisitMedia", back_populates="visit", cascade="all, delete-orphan", order_by="VisitMedia.created_at.desc()")
+    inclusions = relationship("VisitInclusion", back_populates="visit")
 
     @property
     def contacts(self):
@@ -350,16 +352,36 @@ class VisitContact(Base):
     agency = relationship("Agency")
 
 
+class GlobalQuestion(Base):
+    """
+    Platform-wide master question catalog.
+    Shared across all properties and visits.
+    Automatically enriched when users formulate new questions.
+    """
+    __tablename__ = "global_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question_text = Column(Text, nullable=False, unique=True, index=True)
+    themes_json = Column(Text, nullable=True)  # JSON list of theme tags, e.g. ["Piscine", "Extérieur", "Jardin"]
+    category = Column(String(100), nullable=True) # e.g. "Inspection technique", "Copropriété", "Financier"
+    advice_notes = Column(Text, nullable=True) # Advice on why to ask and what to verify
+    usage_count = Column(Integer, default=0, nullable=False)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
 class VisitQuestion(Base):
     """
-    Stores interactive FAQ & inspection questions for a visit/contre-visite.
+    Stores interactive FAQ & inspection questions for a property and its visits/contre-visites.
     Supports multi-thematic classification (e.g. ['Piscine', 'Extérieur', 'Jardin']),
     status lifecycle ('en_attente', 'satisfaisante', 'relance_necessaire', 'resolu', 'non_applicable'),
-    and answer note-taking with author attribution.
+    and answer note-taking with author attribution and multi-visit continuity.
     """
     __tablename__ = "visit_questions"
 
     id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=True, index=True)
     visit_id = Column(Integer, ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
     question_text = Column(Text, nullable=False)
     status = Column(String(50), nullable=False, default="en_attente") # en_attente, satisfaisante, relance_necessaire, resolu, non_applicable
@@ -373,7 +395,44 @@ class VisitQuestion(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    visit = relationship("Visit", back_populates="questions")
+    visit = relationship("Visit", back_populates="questions", foreign_keys=[visit_id])
+    listing = relationship("Listing", back_populates="questions", foreign_keys=[listing_id])
+
+
+class VisitInclusion(Base):
+    """
+    Stores furniture, physical goods, equipment, and recurring service contracts
+    negotiated or included with the property sale.
+    """
+    __tablename__ = "visit_inclusions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    visit_id = Column(Integer, ForeignKey("visits.id", ondelete="SET NULL"), nullable=True, index=True)
+    item_type = Column(String(50), nullable=False, default="objet") # "objet", "service"
+    room = Column(String(100), nullable=True) # Salon, Chambre 1, Cuisine, Extérieur, etc.
+    title = Column(String(255), nullable=False) # Lit, Table, Télésurveillance, Entretien PAC
+    variation_notes = Column(Text, nullable=True) # Avec matelas, sans matelas, modèle 65"
+    condition = Column(String(50), nullable=True) # Neuf, Très bon état, Bon état, À réparer
+    estimated_value = Column(Float, nullable=True) # Estimated value (tax-deductible for notary fees)
+    provider_name = Column(String(255), nullable=True) # Verisure, Somfy, Dalkia
+    equipment_included = Column(Text, nullable=True) # Centrale + 4 détecteurs + 2 caméras
+    contract_start_date = Column(Date, nullable=True)
+    contract_end_date = Column(Date, nullable=True)
+    initial_cost = Column(Float, nullable=True) # Initial setup / equipment cost
+    monthly_cost = Column(Float, nullable=True) # Monthly fee
+    annual_cost = Column(Float, nullable=True) # Annual fee
+    transfer_status = Column(String(50), nullable=True) # reprise_contrat, resiliation_vendeur, a_etudier
+    negotiation_status = Column(String(50), nullable=False, default="inclus_prix_negocie") # inclus_prix_negocie, en_discussion, exclu_vendeur, option_payante
+    photo_url = Column(String(500), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    listing = relationship("Listing", back_populates="inclusions")
+    visit = relationship("Visit", back_populates="inclusions")
 
 
 class VisitMedia(Base):

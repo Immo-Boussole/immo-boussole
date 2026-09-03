@@ -300,5 +300,354 @@ def test_visit_media_upload_and_linkage():
             app.dependency_overrides.clear()
 
 
+def test_global_question_catalog_and_import():
+    """
+    Tests platform-wide master question catalog:
+    - Pre-seeded questions retrieval and category filtering.
+    - Adding custom reusable question.
+    - Batch importing selected catalog questions into visit FAQ.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        listing = Listing(
+            title="Appartement Haussmannien",
+            url=f"https://example.com/test-catalog-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "tester", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "tester", "role": "user"}
+
+        try:
+            # 1. Check global catalog retrieval
+            cat_resp = client.get("/api/visites/catalog/questions")
+            assert cat_resp.status_code == 200
+            catalog = cat_resp.json()
+            assert len(catalog) > 10
+
+            # 2. Filter catalog by category
+            struct_resp = client.get("/api/visites/catalog/questions?category=Structure%20%26%20Gros%20%C5%93uvre")
+            assert struct_resp.status_code == 200
+            assert len(struct_resp.json()) > 0
+
+            # 3. Add custom question to master catalog
+            new_cat_resp = client.post("/api/visites/catalog/questions", json={
+                "question_text": f"Présence d'un adoucisseur d'eau et date du dernier entretien ? {ts}",
+                "themes": ["Plomberie & Sanitaires", "Équipements"],
+                "category": "Réseaux & Électricité",
+                "advice_notes": "Vérifier le niveau de sel et la dureté de l'eau."
+            })
+            assert new_cat_resp.status_code == 200
+            created_cat_q = new_cat_resp.json()
+            cat_id = created_cat_q["id"]
+
+            # 4. Create visit and import from catalog
+            v_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "scheduled_at": datetime.datetime.now().isoformat(),
+                "import_default_questions": False
+            })
+            visit_id = v_resp.json()["id"]
+
+            import_resp = client.post(f"/api/visites/{visit_id}/questions/import-from-catalog", json={
+                "question_ids": [cat_id, catalog[0]["id"]]
+            })
+            assert import_resp.status_code == 200
+            assert import_resp.json()["imported_count"] == 2
+
+            # Verify questions in visit
+            vq_resp = client.get(f"/api/visites/{visit_id}/questions")
+            assert vq_resp.status_code == 200
+            assert len(vq_resp.json()) == 2
+
+        finally:
+            app.dependency_overrides.clear()
+
+
+def test_cross_visit_continuity_and_search_filters():
+    """
+    Tests cross-visit continuity:
+    - Questions created in Visit 1 are accessible in Visit 2 (Contre-visite).
+    - Origin label shows provenance.
+    - Multi-criteria full-text keyword search and author filtering.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        listing = Listing(
+            title="Maison Contemporaine avec Jardin",
+            url=f"https://example.com/test-continuity-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "acheteur_1", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "acheteur_1", "role": "user"}
+
+        try:
+            # 1. Create Visit 1
+            v1_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "visit_type": "visite",
+                "scheduled_at": (datetime.datetime.now() - datetime.timedelta(days=7)).isoformat(),
+                "import_default_questions": False
+            })
+            v1_id = v1_resp.json()["id"]
+
+            # Add question in Visit 1
+            q1_resp = client.post(f"/api/visites/{v1_id}/questions", json={
+                "question_text": "Quelle est la marque de la pompe à chaleur et sa consommation ?",
+                "themes": ["Chauffage & Énergie", "DPE & Isolation"],
+                "status": "satisfaisante"
+            })
+            assert q1_resp.status_code == 200
+            q1_id = q1_resp.json()["id"]
+
+            # Add answer
+            client.patch(f"/api/visites/questions/{q1_id}", json={
+                "answer_text": "Pompe Daikin installée en 2022, facture annuelle de 850€.",
+                "answered_by": "expert_energie"
+            })
+
+            # 2. Create Visit 2 (Contre-visite) on the same listing
+            v2_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "visit_type": "contre_visite",
+                "scheduled_at": datetime.datetime.now().isoformat(),
+                "import_default_questions": False
+            })
+            v2_id = v2_resp.json()["id"]
+            v2_token = v2_resp.json()["access_token"]
+
+            # Query questions from Visit 2 endpoint -> should include Visit 1 questions
+            v2_qs_resp = client.get(f"/api/visites/{v2_id}/questions")
+            assert v2_qs_resp.status_code == 200
+            qs = v2_qs_resp.json()
+            assert len(qs) == 1
+            assert "Daikin" in qs[0]["answer_text"]
+            assert qs[0]["origin_visit_type"] == "visite"
+
+            # 3. Test Full-text Keyword Search query
+            search_resp = client.get(f"/api/visites/{v2_id}/questions?q=daikin")
+            assert search_resp.status_code == 200
+            assert len(search_resp.json()) == 1
+
+            search_none = client.get(f"/api/visites/{v2_id}/questions?q=chaudiere_fioul")
+            assert search_none.status_code == 200
+            assert len(search_none.json()) == 0
+
+            # 4. Test Author filter
+            auth_resp = client.get(f"/api/visites/{v2_id}/questions?author=expert_energie")
+            assert auth_resp.status_code == 200
+            assert len(auth_resp.json()) == 1
+
+            # 5. Access HTML session for Visit 2
+            page_resp = client.get(f"/v/{v2_token}")
+            assert page_resp.status_code == 200
+            assert "Maison Contemporaine" in page_resp.text
+            assert "Pompe à chaleur" in page_resp.text or "pompe à chaleur" in page_resp.text.lower()
+
+        finally:
+            app.dependency_overrides.clear()
+
+
+def test_csv_import_and_export():
+    """
+    Tests CSV Import & Export functionality:
+    - Exporting visit FAQ to standard UTF-8-SIG CSV.
+    - Importing CSV with smart update/creation and auto-catalog enrollment.
+    - Downloading CSV template.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        listing = Listing(
+            title="Chalet Montagne",
+            url=f"https://example.com/test-csv-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "tester", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "tester", "role": "user"}
+
+        try:
+            v_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "scheduled_at": datetime.datetime.now().isoformat(),
+                "import_default_questions": False
+            })
+            visit_id = v_resp.json()["id"]
+
+            # Add 2 questions
+            client.post(f"/api/visites/{visit_id}/questions", json={
+                "question_text": "Quel est le type d'isolation sous toiture ?",
+                "themes": ["Toiture & Charpente", "DPE & Isolation"],
+                "status": "en_attente"
+            })
+            client.post(f"/api/visites/{visit_id}/questions", json={
+                "question_text": "Présence d'un poêle à bois et date du dernier ramonage ?",
+                "themes": ["Chauffage & Énergie"],
+                "status": "satisfaisante"
+            })
+
+            # 1. Export CSV
+            exp_resp = client.get(f"/api/visites/{visit_id}/questions/export-csv")
+            assert exp_resp.status_code == 200
+            assert exp_resp.headers["content-type"].startswith("text/csv")
+            csv_content = exp_resp.content.decode("utf-8-sig")
+            assert "isolation sous toiture" in csv_content
+            assert "poêle à bois" in csv_content
+            assert ";" in csv_content
+
+            # 2. Template CSV
+            tmpl_resp = client.get("/api/visites/questions/csv-template")
+            assert tmpl_resp.status_code == 200
+            assert "thematiques;question;statut;reponse" in tmpl_resp.content.decode("utf-8-sig")
+
+            # 3. Import CSV
+            new_csv_content = (
+                "thematiques;question;statut;reponse\n"
+                "Extérieur, Jardin;État de la clôture et mitoyenneté ?;en_attente;\n"
+                "Sécurité;Présence d'un détecteur de fumée DAAF en état ?;satisfaisante;2 détecteurs fonctionnels testés sur place\n"
+            )
+            fake_csv_file = io.BytesIO(new_csv_content.encode("utf-8-sig"))
+
+            imp_resp = client.post(
+                f"/api/visites/{visit_id}/questions/import-csv",
+                files={"file": ("import_questions.csv", fake_csv_file, "text/csv")}
+            )
+            assert imp_resp.status_code == 200
+            res_json = imp_resp.json()
+            assert res_json["status"] == "success"
+            assert res_json["created_count"] == 2
+
+            # Verify total questions is now 4
+            all_qs = client.get(f"/api/visites/{visit_id}/questions").json()
+            assert len(all_qs) == 4
+
+        finally:
+            app.dependency_overrides.clear()
+
+
+def test_inclusions_furniture_services_and_offer_clause():
+    """
+    Tests Inclusions & Services:
+    - Adding physical objects (room, variant, condition, estimated value, negotiation status).
+    - Adding service contracts (provider, equipment, dates, initial/monthly/annual fees).
+    - Generating the purchase offer annex clause.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        listing = Listing(
+            title="Appartement T4 Meublé",
+            url=f"https://example.com/test-inclusions-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "acheteur", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "acheteur", "role": "user"}
+
+        try:
+            v_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "scheduled_at": datetime.datetime.now().isoformat(),
+                "import_default_questions": False
+            })
+            visit_id = v_resp.json()["id"]
+
+            # 1. Add furniture items
+            f1_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
+                "item_type": "objet",
+                "room": "Chambre 1",
+                "title": "Lit double 160x200",
+                "variation_notes": "avec sommier et matelas mémoire de forme",
+                "condition": "Très bon état",
+                "estimated_value": 450.0,
+                "negotiation_status": "inclus_prix_negocie"
+            })
+            assert f1_resp.status_code == 200
+            f1_id = f1_resp.json()["id"]
+
+            f2_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
+                "item_type": "objet",
+                "room": "Salon",
+                "title": "Table à manger en chêne massif + 6 chaises",
+                "condition": "Bon état",
+                "estimated_value": 600.0,
+                "negotiation_status": "inclus_prix_negocie"
+            })
+            assert f2_resp.status_code == 200
+
+            # 2. Add service contract
+            s1_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
+                "item_type": "service",
+                "title": "Système d'alarme et télésurveillance 24/7",
+                "provider_name": "Verisure",
+                "equipment_included": "Centrale + 3 détecteurs photos + 1 sirène + 2 badges",
+                "contract_start_date": "2024-01-01",
+                "contract_end_date": "2027-01-01",
+                "initial_cost": 490.0,
+                "monthly_cost": 39.90,
+                "annual_cost": 478.80,
+                "transfer_status": "reprise_contrat",
+                "negotiation_status": "inclus_prix_negocie"
+            })
+            assert s1_resp.status_code == 200
+            s1_id = s1_resp.json()["id"]
+
+            # 3. Retrieve inclusions list
+            inc_list_resp = client.get(f"/api/visites/{visit_id}/inclusions")
+            assert inc_list_resp.status_code == 200
+            items = inc_list_resp.json()
+            assert len(items) == 3
+
+            # 4. Generate Offer Annex Clause
+            clause_resp = client.get(f"/api/visites/{visit_id}/inclusions/offer-clause")
+            assert clause_resp.status_code == 200
+            clause_data = clause_resp.json()
+
+            assert clause_data["total_furniture_count"] == 2
+            assert clause_data["total_furniture_value"] == 1050.0
+            assert clause_data["total_service_count"] == 1
+
+            clause_text = clause_data["clause_text"]
+            assert "INVENTAIRE DU MOBILIER ET DES CONTRATS DE SERVICES" in clause_text
+            assert "Lit double 160x200" in clause_text
+            assert "avec sommier et matelas" in clause_text
+            assert "1,050.00 €" in clause_text or "1 050.00 €" in clause_text or "1050" in clause_text
+            assert "Verisure" in clause_text
+            assert "39.90 €/mois" in clause_text or "39,90" in clause_text
+
+            # 5. Delete one item
+            del_resp = client.delete(f"/api/visites/inclusions/{f1_id}")
+            assert del_resp.status_code == 200
+            assert del_resp.json()["status"] == "deleted"
+
+        finally:
+            app.dependency_overrides.clear()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
+

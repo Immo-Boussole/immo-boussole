@@ -60,6 +60,7 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 |---|---|---|
 | `/contacts` | **Gestionnaire de contacts** | Annuaire des agences, négociateurs, notaires et vendeurs avec synchronisation Google Contacts |
 | `/visites` | **Gestionnaire de visites** | Planification des visites, comptes-rendus post-visite, photos de visite, suivi des offres et synchro Google Calendar |
+| `/v/{token}` | **Espace Visite & Contre-visite Collaboratif** | Espace mobile par lien magique court avec moteur de recherche universel plein texte, FAQ unifiée par bien, inventaire du mobilier et contrats de services avec générateur d'annexe offre d'achat, catalogue global et import/export CSV |
 
 ### 3. 🗺️ Intelligence Géospatiale & Trajets
 | Route | Nom de la Vue | Description |

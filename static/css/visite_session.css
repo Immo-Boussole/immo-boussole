@@ -884,6 +884,499 @@ body.visite-session-body {
     opacity: 1;
 }
 
+/* ─── Universal Search & Filter Header Bar ───────────────────────────────── */
+.vs-search-header-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.vs-search-main-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.vs-search-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--vs-text-muted);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.vs-universal-search-input {
+    width: 100%;
+    padding: 10px 42px 10px 38px;
+    background: var(--vs-surface-3);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-md);
+    color: var(--vs-text);
+    font-size: 14px;
+    outline: none;
+    transition: var(--vs-transition);
+    min-height: 44px;
+}
+.vs-universal-search-input:focus {
+    border-color: var(--vs-accent);
+    box-shadow: 0 0 0 3px var(--vs-accent-glow);
+    background: var(--vs-surface-2);
+}
+
+.vs-search-clear-btn {
+    position: absolute;
+    right: 36px;
+    background: none;
+    border: none;
+    color: var(--vs-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 6px;
+    display: none;
+}
+.vs-search-clear-btn:hover {
+    color: var(--vs-text);
+}
+
+.vs-search-kbd-hint {
+    position: absolute;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--vs-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: var(--vs-text-muted);
+    pointer-events: none;
+}
+
+.vs-search-filters-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vs-filter-select-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.vs-filter-select-wrapper i {
+    position: absolute;
+    left: 10px;
+    font-size: 12px;
+    color: var(--vs-text-muted);
+    pointer-events: none;
+}
+
+.vs-filter-select {
+    padding: 6px 12px 6px 28px;
+    background: var(--vs-surface-3);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-sm);
+    color: var(--vs-text);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    min-height: 36px;
+    transition: var(--vs-transition);
+}
+.vs-filter-select:hover, .vs-filter-select:focus {
+    border-color: var(--vs-accent);
+}
+
+.vs-results-counter {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vs-text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 6px 10px;
+    border-radius: var(--vs-radius-sm);
+    margin-left: auto;
+}
+
+/* ─── Dynamic Search Highlighting ─────────────────────────────────────────── */
+mark.vs-highlight {
+    background-color: rgba(245, 158, 11, 0.35);
+    color: #ffd166;
+    padding: 0 3px;
+    border-radius: 3px;
+    font-weight: 700;
+}
+
+/* ─── CSV Dropdown Menu ───────────────────────────────────────────────────── */
+.vs-faq-action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.vs-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.vs-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--vs-surface-2);
+    border: 1px solid var(--vs-border-strong);
+    border-radius: var(--vs-radius-md);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    min-width: 230px;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    padding: 6px 0;
+}
+.vs-dropdown-menu.show {
+    display: flex;
+}
+
+.vs-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    color: var(--vs-text);
+    text-decoration: none;
+    font-size: 13px;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--vs-transition);
+}
+.vs-dropdown-item:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--vs-accent);
+}
+.vs-dropdown-item i {
+    width: 16px;
+    color: var(--vs-text-muted);
+}
+
+/* ─── Question Provenance Badges ─────────────────────────────────────────── */
+.vs-q-origin-badge {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ─── Inclusions & Services Styles ────────────────────────────────────────── */
+.vs-inclusions-summary-card {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.vs-inc-summary-item {
+    background: var(--vs-surface);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.vs-inc-summary-item.highlight {
+    border-color: rgba(16, 217, 164, 0.3);
+    background: linear-gradient(135deg, rgba(16, 217, 164, 0.05) 0%, var(--vs-surface) 100%);
+}
+
+.vs-inc-summary-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--vs-text);
+}
+.vs-inc-summary-item.highlight .vs-inc-summary-val {
+    color: #10d9a4;
+}
+.vs-inc-summary-lbl {
+    font-size: 12px;
+    color: var(--vs-text-muted);
+}
+
+.vs-inclusions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.vs-inc-card {
+    background: var(--vs-surface);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: var(--vs-transition);
+}
+.vs-inc-card:hover {
+    border-color: var(--vs-border-strong);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.vs-inc-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.vs-inc-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.vs-inc-type-tag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.vs-inc-type-tag.type-objet {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.vs-inc-type-tag.type-service {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.vs-inc-room-tag {
+    font-size: 11px;
+    background: var(--vs-surface-2);
+    border: 1px solid var(--vs-border);
+    color: var(--vs-text);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.vs-inc-status-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+.vs-inc-status-pill.status-inclus_prix_negocie {
+    background: var(--vs-status-satisfactory-bg);
+    color: var(--vs-status-satisfactory);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.vs-inc-status-pill.status-en_discussion {
+    background: var(--vs-status-pending-bg);
+    color: var(--vs-status-pending);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.vs-inc-status-pill.status-exclu_vendeur {
+    background: var(--vs-status-followup-bg);
+    color: var(--vs-status-followup);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.vs-inc-status-pill.status-option_payante {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.vs-inc-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--vs-text);
+}
+
+.vs-inc-variation {
+    font-size: 13px;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.08);
+    padding: 6px 10px;
+    border-radius: var(--vs-radius-sm);
+    border-left: 3px solid var(--vs-accent);
+}
+
+.vs-inc-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.vs-inc-detail-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--vs-text-muted);
+}
+.vs-inc-detail-item strong {
+    color: var(--vs-text);
+}
+
+.vs-inc-notes {
+    font-size: 12px;
+    color: var(--vs-text-muted);
+    font-style: italic;
+    background: var(--vs-surface-2);
+    padding: 8px;
+    border-radius: var(--vs-radius-sm);
+}
+
+.vs-inc-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--vs-border);
+    padding-top: 10px;
+    margin-top: auto;
+}
+
+.vs-inc-author {
+    font-size: 11px;
+    color: var(--vs-text-muted);
+}
+
+.vs-form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+.vs-form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.vs-quick-room-suggestions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+.vs-quick-room-suggestions button {
+    background: var(--vs-surface-3);
+    border: 1px solid var(--vs-border);
+    color: var(--vs-text-muted);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.vs-quick-room-suggestions button:hover {
+    color: var(--vs-text);
+    border-color: var(--vs-accent);
+}
+
+/* ─── Global Catalog Modal Styles ────────────────────────────────────────── */
+.vs-modal-card.large {
+    max-width: 780px;
+}
+
+.vs-catalog-top-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vs-catalog-categories-bar {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-top: 10px;
+    border-bottom: 1px solid var(--vs-border);
+}
+
+.vs-catalog-list {
+    max-height: 380px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.vs-catalog-item {
+    background: var(--vs-surface-2);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-sm);
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: var(--vs-transition);
+}
+.vs-catalog-item:hover {
+    border-color: var(--vs-accent);
+    background: var(--vs-surface-3);
+}
+
+.vs-cat-cb {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--vs-accent);
+    cursor: pointer;
+}
+
+.vs-catalog-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.vs-catalog-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vs-catalog-cat-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--vs-text-muted);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.vs-catalog-q-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vs-text);
+}
+
+.vs-catalog-advice {
+    font-size: 12px;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
 /* ─── Responsive Media Queries ────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .vs-header {
@@ -903,14 +1396,15 @@ body.visite-session-body {
         flex-direction: column;
         gap: 10px;
     }
-    .vs-q-status-badge-container {
-        align-self: flex-start;
+    .vs-inclusions-grid {
+        grid-template-columns: 1fr;
+    }
+    .vs-form-row-2, .vs-form-row-3 {
+        grid-template-columns: 1fr;
     }
     .vs-media-gallery-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
-    .vs-media-thumb-container {
-        height: 130px;
-    }
 }
+

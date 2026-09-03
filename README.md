@@ -60,6 +60,7 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 |---|---|---|
 | `/contacts` | **Contacts Manager** | Real estate agencies, negotiators, notaries, and seller directory with Google Contacts 2-way sync |
 | `/visites` | **Visits Manager** | Visit scheduler, debriefing notes, photo logs, offer tracker, and Google Calendar synchronization |
+| `/v/{token}` | **Collaborative Visit & Inspection Space** | Magic-link mobile workspace with universal real-time search, multi-thematic property FAQ, furniture & service contract inventory with purchase offer annex generator, global catalog import, and CSV import/export |
 
 ### 3. 🗺️ Geospatial Intelligence & Proximity
 | Route | View Name | Description |

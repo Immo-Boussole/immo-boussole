@@ -33,15 +33,15 @@ import secrets
 from sqlalchemy import text, func, or_
 from sqlalchemy.orm import Session
 
-from app import models, database, schemas, google_service, email_service
+from app import models, database, schemas, google_service, email_service, csv_service
 from app.database import engine, get_db, run_migrations
 from app.models import (
     Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch,
     MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile,
     Visit, VisitContact, Agent, Agency, ListingAttachment, ListingLink,
-    VisitQuestion, VisitMedia
+    VisitQuestion, VisitMedia, GlobalQuestion, VisitInclusion
 )
-from app.visit_templates import import_default_pack_for_visit, DEFAULT_INSPECTION_PACK
+from app.visit_templates import import_default_pack_for_visit, DEFAULT_INSPECTION_PACK, record_in_global_catalog
 from app.media import save_visit_media_file
 
 from app.services import (
@@ -5480,6 +5480,8 @@ def change_visit_status(request: Request, visit_id: int, status: str = Form(...)
 
 # ─── Collaborative Visit / Contre-visite Session & FAQ Endpoints ───────────────
 
+# ─── Collaborative Visit / Contre-visite Session & FAQ Endpoints ───────────────
+
 @app.get("/v/{token}")
 def visit_short_url_session(
     request: Request,
@@ -5489,6 +5491,7 @@ def visit_short_url_session(
     """
     Public / Magic-link direct access to a collaborative visit session via its unique short token.
     Allows invited participants to collaborate without complex friction.
+    Provides unified FAQ, inclusions (furniture & contracts), media, and live search/filters.
     """
     visit = db.query(Visit).filter(Visit.access_token == token).first()
     if not visit:
@@ -5498,10 +5501,22 @@ def visit_short_url_session(
     if listing and hasattr(listing, 'photos_local') and listing.photos_local:
         listing._photos = json_to_photos(listing.photos_local)
 
-    # Load questions and parse themes
-    questions = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit.id).order_by(VisitQuestion.order_index.asc()).all()
+    # Load unified questions for this property (cross-visit continuity)
+    questions_query = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).order_by(VisitQuestion.order_index.asc()).all()
+
+    # Deduplicate by text or id if needed
+    seen_ids = set()
+    questions = []
     all_themes_set = set()
-    for q in questions:
+    all_authors_set = set()
+
+    for q in questions_query:
+        if q.id in seen_ids:
+            continue
+        seen_ids.add(q.id)
+
         try:
             q.themes_list = json.loads(q.themes_json or "[]")
         except Exception:
@@ -5510,10 +5525,37 @@ def visit_short_url_session(
             if t:
                 all_themes_set.add(t)
 
-    all_themes = sorted(list(all_themes_set))
+        if q.created_by:
+            all_authors_set.add(q.created_by)
+        if q.answered_by:
+            all_authors_set.add(q.answered_by)
 
-    # Media items
-    media_items = db.query(VisitMedia).filter(VisitMedia.visit_id == visit.id).order_by(VisitMedia.created_at.desc()).all()
+        # Compute provenance label if from another visit
+        if q.visit_id != visit.id and q.visit:
+            v_type = "Contre-visite" if q.visit.visit_type == "contre_visite" else "1ère visite"
+            v_date = q.visit.scheduled_at.strftime("%d/%m/%Y") if q.visit.scheduled_at else ""
+            q.origin_label = f"📌 {v_type} du {v_date}"
+        else:
+            q.origin_label = None
+
+        questions.append(q)
+
+    all_themes = sorted(list(all_themes_set))
+    all_authors = sorted(list(all_authors_set))
+
+    # Media items for this property and visit
+    media_items = db.query(VisitMedia).filter(
+        or_(VisitMedia.listing_id == visit.listing_id, VisitMedia.visit_id == visit.id)
+    ).order_by(VisitMedia.created_at.desc()).all()
+
+    # Inclusions (furniture & service contracts)
+    inclusions = db.query(VisitInclusion).filter(
+        VisitInclusion.listing_id == visit.listing_id
+    ).order_by(VisitInclusion.created_at.desc()).all()
+
+    for inc in inclusions:
+        if inc.created_by:
+            all_authors_set.add(inc.created_by)
 
     # Listing attachments and external links for full dossier context
     attachments = listing.attachments if listing else []
@@ -5525,6 +5567,13 @@ def visit_short_url_session(
     except Exception:
         participants = []
 
+    for p in participants:
+        name = p.get("name") or p.get("username")
+        if name:
+            all_authors_set.add(name)
+
+    all_authors = sorted(list(all_authors_set))
+
     # Current user identification
     current_username = request.session.get("username")
     is_authenticated = bool(current_username)
@@ -5532,11 +5581,21 @@ def visit_short_url_session(
 
     type_label = "Contre-visite" if visit.visit_type == "contre_visite" else "Visite"
 
+    # Compute quick stats
+    total_furniture = sum(1 for i in inclusions if i.item_type == "objet")
+    total_services = sum(1 for i in inclusions if i.item_type == "service")
+    total_furniture_val = sum(i.estimated_value or 0.0 for i in inclusions if i.item_type == "objet" and i.negotiation_status == "inclus_prix_negocie")
+
     return templates.TemplateResponse(request=request, name="visite_session.html", context={
         "visit": visit,
         "listing": listing,
         "questions": questions,
         "all_themes": all_themes,
+        "all_authors": all_authors,
+        "inclusions": inclusions,
+        "total_furniture": total_furniture,
+        "total_services": total_services,
+        "total_furniture_val": total_furniture_val,
         "media_items": media_items,
         "attachments": attachments,
         "links": links,
@@ -5599,7 +5658,6 @@ def invite_visit_participants(
             clean_email = p.email.strip().lower()
             existing_user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
             if not existing_user:
-                # Auto-generate account for participant
                 uname = p.username or p.name or clean_email.split("@")[0]
                 base_uname = re.sub(r'[^a-zA-Z0-9_\-]', '', uname) or "visiteur"
                 final_uname = base_uname
@@ -5661,46 +5719,216 @@ def invite_visit_participants(
     }
 
 
+# ─── Platform Global Question Catalog Endpoints ──────────────────────────────
+
+@app.get("/api/visites/catalog/questions")
+def get_global_catalog_questions(
+    theme: Optional[str] = None,
+    category: Optional[str] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Retrieves all questions from the platform master catalog with keyword and theme filters."""
+    query = db.query(GlobalQuestion)
+
+    if category:
+        query = query.filter(GlobalQuestion.category == category)
+
+    all_gq = query.order_by(GlobalQuestion.usage_count.desc(), GlobalQuestion.id.asc()).all()
+    results = []
+
+    for gq in all_gq:
+        try:
+            th_list = json.loads(gq.themes_json or "[]")
+        except Exception:
+            th_list = []
+
+        if theme and theme not in th_list:
+            continue
+
+        if q:
+            term = q.strip().lower()
+            text_match = (
+                term in (gq.question_text or "").lower() or
+                term in (gq.category or "").lower() or
+                term in (gq.advice_notes or "").lower() or
+                any(term in t.lower() for t in th_list)
+            )
+            if not text_match:
+                continue
+
+        results.append({
+            "id": gq.id,
+            "question_text": gq.question_text,
+            "themes": th_list,
+            "category": gq.category,
+            "advice_notes": gq.advice_notes,
+            "usage_count": gq.usage_count,
+            "created_by": gq.created_by,
+            "created_at": gq.created_at.isoformat() if gq.created_at else None,
+        })
+
+    return results
+
+
+@app.post("/api/visites/catalog/questions")
+def create_global_catalog_question(
+    body: schemas.GlobalQuestionCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Manually adds a reusable question to the platform master catalog."""
+    author = request.session.get("username") or "Utilisateur"
+    gq = record_in_global_catalog(
+        db=db,
+        question_text=body.question_text,
+        themes=body.themes or ["Général"],
+        category=body.category or "Inspection technique",
+        advice_notes=body.advice_notes,
+        created_by=author
+    )
+    if not gq:
+        raise HTTPException(status_code=400, detail="Texte de question invalide")
+
+    try:
+        th_list = json.loads(gq.themes_json or "[]")
+    except Exception:
+        th_list = []
+
+    return {
+        "id": gq.id,
+        "question_text": gq.question_text,
+        "themes": th_list,
+        "category": gq.category,
+        "advice_notes": gq.advice_notes,
+        "usage_count": gq.usage_count,
+        "created_by": gq.created_by,
+    }
+
+
+@app.get("/api/visites/catalog/export-csv")
+def export_global_catalog_csv(db: Session = Depends(get_db)):
+    """Exports the platform global question library as a CSV file."""
+    catalog = db.query(GlobalQuestion).order_by(GlobalQuestion.category.asc(), GlobalQuestion.id.asc()).all()
+    csv_data = csv_service.export_global_catalog_to_csv(catalog)
+    return Response(
+        content=csv_data.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=\"catalogue_questions_immo_boussole.csv\""}
+    )
+
+
+@app.post("/api/visites/catalog/import-csv")
+async def import_global_catalog_csv(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Imports or updates the platform global question catalog from a CSV file."""
+    content_bytes = await file.read()
+    try:
+        csv_text = content_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        csv_text = content_bytes.decode("latin-1")
+
+    author = request.session.get("username") or "Import CSV"
+    res = csv_service.import_global_catalog_from_csv(db=db, csv_content=csv_text, author=author)
+    return res
+
+
+@app.get("/api/visites/questions/csv-template")
+def get_visit_questions_csv_template():
+    """Downloads a sample CSV template for visit questions import."""
+    template_data = csv_service.get_faq_csv_template()
+    return Response(
+        content=template_data.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=\"modele_import_faq_visite.csv\""}
+    )
+
+
+# ─── Questions & FAQ Endpoints ───────────────────────────────────────────────
+
 @app.get("/api/visites/{visit_id}/questions")
 def get_visit_questions(
     visit_id: int,
     theme: Optional[str] = None,
     status: Optional[str] = None,
+    author: Optional[str] = None,
+    q: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Retrieves all inspection & FAQ questions for a visit session, filterable by theme and status."""
+    """
+    Retrieves all inspection & FAQ questions for a visit/listing.
+    Supports multi-criteria filtering: theme, status, author, and full-text keyword query.
+    """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
-    query = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit_id)
+    query = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    )
+
     if status:
         query = query.filter(VisitQuestion.status == status)
 
     questions = query.order_by(VisitQuestion.order_index.asc()).all()
     results = []
-    for q in questions:
+    seen_ids = set()
+
+    for item in questions:
+        if item.id in seen_ids:
+            continue
+        seen_ids.add(item.id)
+
         try:
-            th_list = json.loads(q.themes_json or "[]")
+            th_list = json.loads(item.themes_json or "[]")
         except Exception:
             th_list = []
+
         if theme and theme not in th_list:
             continue
 
+        if author and (item.created_by != author and item.answered_by != author):
+            continue
+
+        if q:
+            term = q.strip().lower()
+            text_match = (
+                term in (item.question_text or "").lower() or
+                term in (item.answer_text or "").lower() or
+                term in (item.created_by or "").lower() or
+                term in (item.answered_by or "").lower() or
+                any(term in t.lower() for t in th_list)
+            )
+            if not text_match:
+                continue
+
+        # Origin info
+        v_type = item.visit.visit_type if item.visit else None
+        v_date = item.visit.scheduled_at.strftime("%d/%m/%Y") if (item.visit and item.visit.scheduled_at) else None
+
         results.append({
-            "id": q.id,
-            "visit_id": q.visit_id,
-            "question_text": q.question_text,
-            "status": q.status,
+            "id": item.id,
+            "listing_id": item.listing_id,
+            "visit_id": item.visit_id,
+            "question_text": item.question_text,
+            "status": item.status,
             "themes": th_list,
-            "created_by": q.created_by,
-            "assigned_to": q.assigned_to,
-            "answer_text": q.answer_text,
-            "answered_by": q.answered_by,
-            "order_index": q.order_index,
-            "created_at": q.created_at.isoformat() if q.created_at else None,
-            "updated_at": q.updated_at.isoformat() if q.updated_at else None,
+            "created_by": item.created_by,
+            "assigned_to": item.assigned_to,
+            "answer_text": item.answer_text,
+            "answered_by": item.answered_by,
+            "order_index": item.order_index,
+            "origin_visit_type": v_type,
+            "origin_visit_date": v_date,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
+            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         })
+
     return results
 
 
@@ -5711,16 +5939,24 @@ def create_visit_question(
     body: schemas.VisitQuestionCreate,
     db: Session = Depends(get_db)
 ):
-    """Adds a new question to the visit FAQ with multi-thematic tagging."""
+    """
+    Adds a new question to the property/visit FAQ with multi-thematic tagging,
+    and automatically enriches the platform-wide master question catalog.
+    """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
-    max_order = max([q.order_index for q in visit.questions], default=-1)
+    existing_qs = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+
+    max_order = max([q.order_index for q in existing_qs], default=-1)
     author = request.session.get("username") or "Visiteur"
 
-    clean_themes = [t.strip() for t in body.themes if t.strip()]
+    clean_themes = [t.strip() for t in body.themes if t.strip()] or ["Général"]
     vq = VisitQuestion(
+        listing_id=visit.listing_id,
         visit_id=visit.id,
         question_text=body.question_text.strip(),
         status=body.status or "en_attente",
@@ -5733,8 +5969,17 @@ def create_visit_question(
     db.commit()
     db.refresh(vq)
 
+    # Auto-register into platform global catalog
+    record_in_global_catalog(
+        db=db,
+        question_text=body.question_text.strip(),
+        themes=clean_themes,
+        created_by=author
+    )
+
     return {
         "id": vq.id,
+        "listing_id": vq.listing_id,
         "visit_id": vq.visit_id,
         "question_text": vq.question_text,
         "status": vq.status,
@@ -5785,6 +6030,7 @@ def update_visit_question(
 
     return {
         "id": vq.id,
+        "listing_id": vq.listing_id,
         "visit_id": vq.visit_id,
         "question_text": vq.question_text,
         "status": vq.status,
@@ -5810,13 +6056,62 @@ def delete_visit_question(question_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted", "question_id": question_id}
 
 
+@app.post("/api/visites/{visit_id}/questions/import-from-catalog")
+def import_questions_from_catalog(
+    visit_id: int,
+    body: schemas.GlobalQuestionBatchImport,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Imports selected question IDs from the master catalog into the visit/listing FAQ."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    existing_qs = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+    existing_texts = {q.question_text.strip().lower() for q in existing_qs}
+
+    author = request.session.get("username") or "Système"
+    max_order = max([q.order_index for q in existing_qs], default=-1)
+    imported_count = 0
+
+    catalog_items = db.query(GlobalQuestion).filter(GlobalQuestion.id.in_(body.question_ids)).all()
+
+    for gq in catalog_items:
+        clean_text = gq.question_text.strip()
+        if clean_text.lower() in existing_texts:
+            continue
+
+        max_order += 1
+        vq = VisitQuestion(
+            listing_id=visit.listing_id,
+            visit_id=visit.id,
+            question_text=clean_text,
+            status="en_attente",
+            themes_json=gq.themes_json,
+            created_by=author,
+            order_index=max_order
+        )
+        db.add(vq)
+        existing_texts.add(clean_text.lower())
+        gq.usage_count = (gq.usage_count or 0) + 1
+        imported_count += 1
+
+    if imported_count > 0:
+        db.commit()
+
+    return {"status": "success", "imported_count": imported_count, "visit_id": visit.id}
+
+
 @app.post("/api/visites/{visit_id}/questions/import-template")
 def import_visit_questions_template(
     request: Request,
     visit_id: int,
     db: Session = Depends(get_db)
 ):
-    """Imports the multi-thematic real estate inspection question pack into the visit FAQ."""
+    """Imports the standard multi-thematic inspection question pack into the visit FAQ."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
@@ -5825,6 +6120,356 @@ def import_visit_questions_template(
     imported_cnt = import_default_pack_for_visit(db, visit, created_by=author)
     return {"status": "success", "imported": imported_cnt, "visit_id": visit.id}
 
+
+# ─── CSV Import / Export Endpoints ──────────────────────────────────────────
+
+@app.get("/api/visites/{visit_id}/questions/export-csv")
+def export_visit_questions_csv(visit_id: int, db: Session = Depends(get_db)):
+    """Exports all FAQ questions for a visit/listing as a standard UTF-8-SIG CSV file with ';' delimiter."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    questions = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).order_by(VisitQuestion.order_index.asc()).all()
+
+    csv_data = csv_service.export_questions_to_csv(questions)
+    filename = f"faq_visite_{visit.listing_id or visit.id}_{visit.scheduled_at.strftime('%Y%m%d')}.csv"
+
+    return Response(
+        content=csv_data.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+    )
+
+
+@app.post("/api/visites/{visit_id}/questions/import-csv")
+async def import_visit_questions_csv(
+    visit_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Uploads and imports a CSV file into the visit/listing FAQ with smart upsert matching."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    content_bytes = await file.read()
+    try:
+        csv_text = content_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            csv_text = content_bytes.decode("latin-1")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Impossible de lire le fichier CSV (encodage non supporté)")
+
+    author = request.session.get("username") or "Import CSV"
+    res = csv_service.import_questions_from_csv(
+        db=db,
+        listing_id=visit.listing_id,
+        visit_id=visit.id,
+        csv_content=csv_text,
+        author=author
+    )
+    return res
+
+
+# ─── Inclusions & Services Management Endpoints ──────────────────────────────
+
+@app.get("/api/visites/{visit_id}/inclusions")
+def get_visit_inclusions(
+    visit_id: int,
+    item_type: Optional[str] = None,
+    negotiation_status: Optional[str] = None,
+    room: Optional[str] = None,
+    q: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Retrieves all furniture and service contracts for a property/visit."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    query = db.query(VisitInclusion).filter(VisitInclusion.listing_id == visit.listing_id)
+
+    if item_type:
+        query = query.filter(VisitInclusion.item_type == item_type)
+    if negotiation_status:
+        query = query.filter(VisitInclusion.negotiation_status == negotiation_status)
+    if room:
+        query = query.filter(VisitInclusion.room == room)
+
+    inclusions = query.order_by(VisitInclusion.created_at.desc()).all()
+    results = []
+
+    for inc in inclusions:
+        if q:
+            term = q.strip().lower()
+            text_match = (
+                term in (inc.title or "").lower() or
+                term in (inc.room or "").lower() or
+                term in (inc.variation_notes or "").lower() or
+                term in (inc.provider_name or "").lower() or
+                term in (inc.equipment_included or "").lower() or
+                term in (inc.created_by or "").lower()
+            )
+            if not text_match:
+                continue
+
+        results.append({
+            "id": inc.id,
+            "listing_id": inc.listing_id,
+            "visit_id": inc.visit_id,
+            "item_type": inc.item_type,
+            "room": inc.room,
+            "title": inc.title,
+            "variation_notes": inc.variation_notes,
+            "condition": inc.condition,
+            "estimated_value": inc.estimated_value,
+            "provider_name": inc.provider_name,
+            "equipment_included": inc.equipment_included,
+            "contract_start_date": inc.contract_start_date.isoformat() if inc.contract_start_date else None,
+            "contract_end_date": inc.contract_end_date.isoformat() if inc.contract_end_date else None,
+            "initial_cost": inc.initial_cost,
+            "monthly_cost": inc.monthly_cost,
+            "annual_cost": inc.annual_cost,
+            "transfer_status": inc.transfer_status,
+            "negotiation_status": inc.negotiation_status,
+            "photo_url": inc.photo_url,
+            "notes": inc.notes,
+            "created_by": inc.created_by,
+            "created_at": inc.created_at.isoformat() if inc.created_at else None,
+            "updated_at": inc.updated_at.isoformat() if inc.updated_at else None,
+        })
+
+    return results
+
+
+@app.post("/api/visites/{visit_id}/inclusions")
+def create_visit_inclusion(
+    visit_id: int,
+    body: schemas.VisitInclusionCreate,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Adds a furniture item or service contract to the property/visit."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    author = request.session.get("username") or "Visiteur"
+
+    inc = VisitInclusion(
+        listing_id=visit.listing_id,
+        visit_id=visit.id,
+        item_type=body.item_type,
+        room=body.room,
+        title=body.title.strip(),
+        variation_notes=body.variation_notes,
+        condition=body.condition,
+        estimated_value=body.estimated_value,
+        provider_name=body.provider_name,
+        equipment_included=body.equipment_included,
+        contract_start_date=body.contract_start_date,
+        contract_end_date=body.contract_end_date,
+        initial_cost=body.initial_cost,
+        monthly_cost=body.monthly_cost,
+        annual_cost=body.annual_cost,
+        transfer_status=body.transfer_status or "reprise_contrat",
+        negotiation_status=body.negotiation_status or "inclus_prix_negocie",
+        photo_url=body.photo_url,
+        notes=body.notes,
+        created_by=author
+    )
+    db.add(inc)
+    db.commit()
+    db.refresh(inc)
+
+    return {
+        "id": inc.id,
+        "listing_id": inc.listing_id,
+        "visit_id": inc.visit_id,
+        "item_type": inc.item_type,
+        "room": inc.room,
+        "title": inc.title,
+        "variation_notes": inc.variation_notes,
+        "condition": inc.condition,
+        "estimated_value": inc.estimated_value,
+        "provider_name": inc.provider_name,
+        "equipment_included": inc.equipment_included,
+        "contract_start_date": inc.contract_start_date.isoformat() if inc.contract_start_date else None,
+        "contract_end_date": inc.contract_end_date.isoformat() if inc.contract_end_date else None,
+        "initial_cost": inc.initial_cost,
+        "monthly_cost": inc.monthly_cost,
+        "annual_cost": inc.annual_cost,
+        "transfer_status": inc.transfer_status,
+        "negotiation_status": inc.negotiation_status,
+        "photo_url": inc.photo_url,
+        "created_by": inc.created_by,
+        "created_at": inc.created_at.isoformat() if inc.created_at else None,
+    }
+
+
+@app.patch("/api/visites/inclusions/{inclusion_id}")
+def update_visit_inclusion(
+    inclusion_id: int,
+    body: schemas.VisitInclusionUpdate,
+    db: Session = Depends(get_db)
+):
+    """Updates a furniture item or service contract."""
+    inc = db.query(VisitInclusion).filter(VisitInclusion.id == inclusion_id).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Inclusion non trouvée")
+
+    if body.item_type is not None:
+        inc.item_type = body.item_type
+    if body.room is not None:
+        inc.room = body.room
+    if body.title is not None:
+        inc.title = body.title.strip()
+    if body.variation_notes is not None:
+        inc.variation_notes = body.variation_notes
+    if body.condition is not None:
+        inc.condition = body.condition
+    if body.estimated_value is not None:
+        inc.estimated_value = body.estimated_value
+    if body.provider_name is not None:
+        inc.provider_name = body.provider_name
+    if body.equipment_included is not None:
+        inc.equipment_included = body.equipment_included
+    if body.contract_start_date is not None:
+        inc.contract_start_date = body.contract_start_date
+    if body.contract_end_date is not None:
+        inc.contract_end_date = body.contract_end_date
+    if body.initial_cost is not None:
+        inc.initial_cost = body.initial_cost
+    if body.monthly_cost is not None:
+        inc.monthly_cost = body.monthly_cost
+    if body.annual_cost is not None:
+        inc.annual_cost = body.annual_cost
+    if body.transfer_status is not None:
+        inc.transfer_status = body.transfer_status
+    if body.negotiation_status is not None:
+        inc.negotiation_status = body.negotiation_status
+    if body.photo_url is not None:
+        inc.photo_url = body.photo_url
+    if body.notes is not None:
+        inc.notes = body.notes
+
+    db.commit()
+    db.refresh(inc)
+
+    return {
+        "id": inc.id,
+        "listing_id": inc.listing_id,
+        "visit_id": inc.visit_id,
+        "item_type": inc.item_type,
+        "room": inc.room,
+        "title": inc.title,
+        "variation_notes": inc.variation_notes,
+        "condition": inc.condition,
+        "estimated_value": inc.estimated_value,
+        "provider_name": inc.provider_name,
+        "equipment_included": inc.equipment_included,
+        "contract_start_date": inc.contract_start_date.isoformat() if inc.contract_start_date else None,
+        "contract_end_date": inc.contract_end_date.isoformat() if inc.contract_end_date else None,
+        "initial_cost": inc.initial_cost,
+        "monthly_cost": inc.monthly_cost,
+        "annual_cost": inc.annual_cost,
+        "transfer_status": inc.transfer_status,
+        "negotiation_status": inc.negotiation_status,
+        "photo_url": inc.photo_url,
+        "updated_at": inc.updated_at.isoformat() if inc.updated_at else None,
+    }
+
+
+@app.delete("/api/visites/inclusions/{inclusion_id}")
+def delete_visit_inclusion(inclusion_id: int, db: Session = Depends(get_db)):
+    """Deletes an inclusion from the property."""
+    inc = db.query(VisitInclusion).filter(VisitInclusion.id == inclusion_id).first()
+    if not inc:
+        raise HTTPException(status_code=404, detail="Inclusion non trouvée")
+
+    db.delete(inc)
+    db.commit()
+    return {"status": "deleted", "inclusion_id": inclusion_id}
+
+
+@app.get("/api/visites/{visit_id}/inclusions/offer-clause")
+def get_visit_inclusions_offer_clause(visit_id: int, db: Session = Depends(get_db)):
+    """
+    Generates a structured purchase offer annex clause in French ready to copy and paste,
+    listing all agreed furniture items and transferred service contracts.
+    """
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    inclusions = db.query(VisitInclusion).filter(
+        VisitInclusion.listing_id == visit.listing_id
+    ).order_by(VisitInclusion.item_type.asc(), VisitInclusion.room.asc(), VisitInclusion.title.asc()).all()
+
+    furniture_items = [inc for inc in inclusions if inc.item_type == "objet" and inc.negotiation_status in ("inclus_prix_negocie", "en_discussion")]
+    service_items = [inc for inc in inclusions if inc.item_type == "service" and inc.negotiation_status in ("inclus_prix_negocie", "en_discussion")]
+
+    total_furn_val = sum([inc.estimated_value or 0.0 for inc in furniture_items])
+
+    lines = [
+        "ANNEXE : INVENTAIRE DU MOBILIER ET DES CONTRATS DE SERVICES INCLUS DANS L'OFFRE D'ACHAT",
+        "=====================================================================================",
+        "",
+        "1. BIENS MOBILIERS ET ÉQUIPEMENTS LAISSÉS À LA VENTE (AU PRIX NÉGOCIÉ) :",
+    ]
+    if not furniture_items:
+        lines.append("   - Néant (aucun mobilier spécifique n'est inclus au-delà des équipements fixes et immeubles par destination).")
+    else:
+        for f in furniture_items:
+            room_str = f"[{f.room}] " if f.room else ""
+            var_str = f" ({f.variation_notes})" if f.variation_notes else ""
+            cond_str = f" - État : {f.condition}" if f.condition else ""
+            val_str = f" - Valeur estimée : {f.estimated_value:,.2f} €" if f.estimated_value else ""
+            status_str = " [Inclus au prix convenu]" if f.negotiation_status == "inclus_prix_negocie" else " [En cours d'accord]"
+            lines.append(f"   • {room_str}{f.title}{var_str}{cond_str}{val_str}{status_str}")
+        if total_furn_val > 0:
+            lines.append(f"\n   -> VALEUR MOBILIÈRE TOTALE ESTIMÉE DÉDUCTIBLE DES DROITS DE MUTATION : {total_furn_val:,.2f} €")
+
+    lines.append("\n2. CONTRATS ET SERVICES TRANSFÉRÉS OU RÉFÉRENCÉS :")
+    if not service_items:
+        lines.append("   - Néant.")
+    else:
+        for s in service_items:
+            prov_str = f"Prestataire : {s.provider_name}" if s.provider_name else ""
+            eq_str = f" - Matériel cédé : {s.equipment_included}" if s.equipment_included else ""
+            period_str = ""
+            if s.contract_start_date or s.contract_end_date:
+                d1 = s.contract_start_date.strftime("%d/%m/%Y") if s.contract_start_date else "N/C"
+                d2 = s.contract_end_date.strftime("%d/%m/%Y") if s.contract_end_date else "N/C"
+                period_str = f" - Période : du {d1} au {d2}"
+            cost_parts = []
+            if s.initial_cost:
+                cost_parts.append(f"coût initial {s.initial_cost:,.2f} €")
+            if s.monthly_cost:
+                cost_parts.append(f"frais mensuels {s.monthly_cost:,.2f} €/mois")
+            if s.annual_cost:
+                cost_parts.append(f"frais annuels {s.annual_cost:,.2f} €/an")
+            cost_str = f" - Coûts : {', '.join(cost_parts)}" if cost_parts else ""
+            trans_str = f" - Modalité : {s.transfer_status or 'reprise de contrat'}"
+            lines.append(f"   • {s.title} ({prov_str}){eq_str}{period_str}{cost_str}{trans_str}")
+
+    clause_text = "\n".join(lines)
+
+    return {
+        "listing_id": visit.listing_id,
+        "total_furniture_count": len(furniture_items),
+        "total_furniture_value": total_furn_val,
+        "total_service_count": len(service_items),
+        "clause_text": clause_text
+    }
+
+
+# ─── Media & Live Updates Endpoints ──────────────────────────────────────────
 
 @app.post("/api/visites/{visit_id}/media")
 async def upload_visit_media(
@@ -5936,34 +6581,47 @@ def get_visit_live_updates(
 ):
     """
     Lightweight reactive endpoint for live polling during visits.
-    Returns latest questions and media contributions to keep all participants in sync.
+    Returns latest questions, inclusions, and media contributions to keep all participants in sync.
     """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
-    q_query = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit_id)
-    m_query = db.query(VisitMedia).filter(VisitMedia.visit_id == visit_id)
+    q_query = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    )
+    m_query = db.query(VisitMedia).filter(
+        or_(VisitMedia.listing_id == visit.listing_id, VisitMedia.visit_id == visit.id)
+    )
+    i_query = db.query(VisitInclusion).filter(VisitInclusion.listing_id == visit.listing_id)
 
     if since:
         try:
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
             q_query = q_query.filter(or_(VisitQuestion.updated_at >= since_dt, VisitQuestion.created_at >= since_dt))
             m_query = m_query.filter(or_(VisitMedia.updated_at >= since_dt, VisitMedia.created_at >= since_dt))
+            i_query = i_query.filter(or_(VisitInclusion.updated_at >= since_dt, VisitInclusion.created_at >= since_dt))
         except Exception:
             pass
 
     questions = q_query.order_by(VisitQuestion.order_index.asc()).all()
     media_items = m_query.order_by(VisitMedia.created_at.desc()).all()
+    inclusions = i_query.order_by(VisitInclusion.created_at.desc()).all()
 
     q_res = []
+    seen_q = set()
     for q in questions:
+        if q.id in seen_q:
+            continue
+        seen_q.add(q.id)
         try:
             th_list = json.loads(q.themes_json or "[]")
         except Exception:
             th_list = []
         q_res.append({
             "id": q.id,
+            "listing_id": q.listing_id,
+            "visit_id": q.visit_id,
             "question_text": q.question_text,
             "status": q.status,
             "themes": th_list,
@@ -5988,12 +6646,33 @@ def get_visit_live_updates(
         for m in media_items
     ]
 
+    i_res = [
+        {
+            "id": inc.id,
+            "item_type": inc.item_type,
+            "room": inc.room,
+            "title": inc.title,
+            "variation_notes": inc.variation_notes,
+            "condition": inc.condition,
+            "estimated_value": inc.estimated_value,
+            "provider_name": inc.provider_name,
+            "negotiation_status": inc.negotiation_status,
+            "created_by": inc.created_by,
+        }
+        for inc in inclusions
+    ]
+
+    total_q = db.query(VisitQuestion).filter(
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).count()
+
     return {
         "visit_id": visit.id,
         "visit_status": visit.status,
-        "questions_count": len(visit.questions),
+        "questions_count": total_q,
         "questions": q_res,
         "media": m_res,
+        "inclusions": i_res,
         "server_time": datetime.now(timezone.utc).isoformat(),
     }
 
