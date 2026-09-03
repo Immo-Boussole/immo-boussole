@@ -3132,7 +3132,7 @@ def get_missing_location_notification(
     _auth = Depends(login_required)
 ):
     """Returns missing location stats, delta since last connection, snooze status and GitHub issue URL."""
-    username = request.session.get("username")
+    username = (request.session.get("username") if hasattr(request, "session") else None) or (_auth.get("username") if isinstance(_auth, dict) else (_auth.username if hasattr(_auth, "username") else None))
     current_user = db.query(models.User).filter(models.User.username == username).first() if username else None
     summary = db_maintenance.get_missing_location_summary(db, current_user=current_user)
     return summary
@@ -3151,7 +3151,7 @@ def snooze_missing_location_notification(
 ):
     """Snoozes the missing location overlay notification for the specified duration and updates last seen count."""
     from datetime import datetime, timezone, timedelta
-    username = request.session.get("username")
+    username = (request.session.get("username") if hasattr(request, "session") else None) or (_auth.get("username") if isinstance(_auth, dict) else (_auth.username if hasattr(_auth, "username") else None))
     current_user = db.query(models.User).filter(models.User.username == username).first() if username else None
 
     # Calculate current count to store as baseline
