@@ -27,7 +27,8 @@ TEST_GROUPS = {
         "test_duplicate_relations.py",
         "test_search_page_validation.py",
         "test_missing_location_repair.py",
-        "test_source_preview_proxy.py"
+        "test_source_preview_proxy.py",
+        "test_visit_collaboration.py"
     ],
     "Network": [
         "test_tls.py"

@@ -298,3 +298,7 @@ def test_visit_media_upload_and_linkage():
 
         finally:
             app.dependency_overrides.clear()
+
+
+if __name__ == "__main__":
+    sys.exit(pytest.main([__file__]))
