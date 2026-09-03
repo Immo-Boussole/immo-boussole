@@ -453,7 +453,21 @@
         "contact_tooltip": "Agency contact requested",
         "updated_on": "Updated on",
         "contact_agency_card": "Contact & Agency",
-        "unspecified": "Not specified"
+        "unspecified": "Not specified",
+        "session_visite_title": "Visit / Re-visit Session",
+        "session_visite_new": "New session",
+        "session_visite_create": "Create session",
+        "session_visite_type": "Visit type",
+        "session_visite_type_visite": "Visit",
+        "session_visite_type_contre": "Re-visit",
+        "session_visite_date": "Date & Time",
+        "session_visite_open": "Open session",
+        "session_visite_copy": "Copy link",
+        "session_visite_copied": "Link copied!",
+        "session_visite_no_sessions": "No session created for this property",
+        "session_visite_share_label": "Shareable link:",
+        "session_visite_creating": "Creating...",
+        "session_visite_error": "Error creating the session."
     },
     "setup": {
         "title": "Admin Setup",

@@ -2694,9 +2694,225 @@
                 <span style="font-size: 0.85rem; font-weight: 600; color: var(--text);">Demande de contact agence</span>
                 <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px; flex-shrink: 0; margin-bottom: 0;">
                     <input type="checkbox" id="detail-contact-made-toggle" onchange="toggleContactMade({{ listing.id }}, this)" {% if listing.has_contact_or_visit %}checked{% endif %} style="opacity: 0; width: 0; height: 0;">
-                    <span class="slider"></span>
                 </label>
             </div>
+
+            <!-- ── Session Visite / Contre-visite ── -->
+            <div id="visit-session-block" style="background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="fa-solid fa-clipboard-check" style="color: var(--accent);"></i>
+                        {{ t(request, 'listing.session_visite_title', 'Session Visite / Contre-visite') }}
+                    </span>
+                    <button id="visit-session-toggle-form-btn" type="button"
+                        onclick="toggleVisitSessionForm()"
+                        style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 7px; border: 1px solid var(--accent); background: rgba(79,142,247,0.1); color: var(--accent); cursor: pointer; display: flex; align-items: center; gap: 0.35rem; min-height: 36px; min-width: 44px;">
+                        <i class="fa-solid fa-plus"></i>
+                        {{ t(request, 'listing.session_visite_new', 'Nouvelle session') }}
+                    </button>
+                </div>
+
+                <!-- List of existing sessions -->
+                <div id="visit-sessions-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+
+                <!-- Quick creation form (initially hidden) -->
+                <div id="visit-session-form" style="display: none; border-top: 1px solid var(--border); padding-top: 0.75rem; margin-top: 0.25rem;">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; display: block;">
+                                    {{ t(request, 'listing.session_visite_type', 'Type de visite') }}
+                                </label>
+                                <select id="visit-session-type" style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.8rem; padding: 0.4rem 0.6rem; min-height: 36px;">
+                                    <option value="visite">{{ t(request, 'listing.session_visite_type_visite', 'Visite') }}</option>
+                                    <option value="contre_visite">{{ t(request, 'listing.session_visite_type_contre', 'Contre-visite') }}</option>
+                                </select>
+                            </div>
+                            <div style="flex: 2; min-width: 180px;">
+                                <label style="font-size: 0.7rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; display: block;">
+                                    {{ t(request, 'listing.session_visite_date', 'Date & Heure') }}
+                                </label>
+                                <input type="datetime-local" id="visit-session-date"
+                                    style="width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.8rem; padding: 0.4rem 0.6rem; min-height: 36px; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <button id="visit-session-create-btn" type="button"
+                            onclick="createVisitSessionFromListing({{ listing.id }})"
+                            style="width: 100%; padding: 0.5rem; border-radius: 8px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent-2, #6366f1)); color: #fff; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 40px; transition: opacity 0.2s;">
+                            <i class="fa-solid fa-play"></i>
+                            <span id="visit-session-create-btn-label">{{ t(request, 'listing.session_visite_create', 'Créer la session') }}</span>
+                        </button>
+                    </div>
+                    <!-- Result shown after creation -->
+                    <div id="visit-session-result" style="display: none; margin-top: 0.75rem; padding: 0.65rem 0.75rem; background: rgba(16,217,164,0.08); border: 1px solid rgba(16,217,164,0.25); border-radius: 10px;">
+                        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35rem;">
+                            <i class="fa-solid fa-share-nodes" style="color: var(--green, #10d9a4);"></i>
+                            {{ t(request, 'listing.session_visite_share_label', 'Lien à partager :') }}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                            <code id="visit-session-link-display" style="flex: 1; font-size: 0.78rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.5rem; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;"></code>
+                            <button onclick="copyVisitSessionLink()" style="padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); font-size: 0.75rem; cursor: pointer; min-height: 36px; min-width: 44px; white-space: nowrap;" title="{{ t(request, 'listing.session_visite_copy', 'Copier le lien') }}">
+                                <i class="fa-solid fa-copy"></i> <span id="visit-session-copy-label">{{ t(request, 'listing.session_visite_copy', 'Copier') }}</span>
+                            </button>
+                            <a id="visit-session-open-link" href="#" target="_blank"
+                                style="padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--accent); background: rgba(79,142,247,0.1); color: var(--accent); font-size: 0.75rem; text-decoration: none; min-height: 36px; min-width: 44px; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem;">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                {{ t(request, 'listing.session_visite_open', 'Ouvrir') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- ── /Session Visite / Contre-visite ── -->
+
+            <script>
+            (function() {
+                const _LISTING_ID = {{ listing.id }};
+                let _currentSessionLink = '';
+
+                function _getNextHalfHour() {
+                    const d = new Date();
+                    const minsToAdd = d.getMinutes() < 30 ? 30 - d.getMinutes() : 60 - d.getMinutes();
+                    d.setMinutes(d.getMinutes() + minsToAdd, 0, 0);
+                    const pad = n => String(n).padStart(2, '0');
+                    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                }
+
+                function _formatVisitDate(isoStr) {
+                    if (!isoStr) return '';
+                    try { return new Date(isoStr).toLocaleString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}); }
+                    catch(e) { return isoStr; }
+                }
+
+                function _renderSessionRow(v) {
+                    const shortUrl = window.location.origin + '/v/' + v.access_token;
+                    const typeLabel = v.visit_type === 'contre_visite' ? '🔁 Contre-visite' : '🏠 Visite';
+                    const dateStr = _formatVisitDate(v.scheduled_at);
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;padding:0.45rem 0.55rem;background:var(--surface);border:1px solid var(--border);border-radius:9px;';
+
+                    const spanType = document.createElement('span');
+                    spanType.style.cssText = 'font-size:0.75rem;font-weight:700;color:var(--text);white-space:nowrap;';
+                    spanType.textContent = typeLabel;
+
+                    const spanDate = document.createElement('span');
+                    spanDate.style.cssText = 'font-size:0.72rem;color:var(--text-2);white-space:nowrap;';
+                    spanDate.textContent = dateStr;
+
+                    const codeLink = document.createElement('code');
+                    codeLink.style.cssText = 'flex:1;font-size:0.72rem;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;';
+                    codeLink.textContent = shortUrl;
+
+                    const btnCopy = document.createElement('button');
+                    btnCopy.style.cssText = 'padding:0.25rem 0.5rem;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);font-size:0.72rem;cursor:pointer;min-height:36px;min-width:44px;';
+                    btnCopy.innerHTML = '<i class="fa-solid fa-copy"></i>';
+                    btnCopy.onclick = function() {
+                        navigator.clipboard.writeText(shortUrl).then(() => {
+                            const icon = this.querySelector('i');
+                            if (icon) { icon.className = 'fa-solid fa-check'; setTimeout(() => { icon.className = 'fa-solid fa-copy'; }, 1800); }
+                        });
+                    };
+
+                    const aOpen = document.createElement('a');
+                    aOpen.href = shortUrl;
+                    aOpen.target = '_blank';
+                    aOpen.style.cssText = 'padding:0.25rem 0.5rem;border-radius:6px;border:1px solid var(--accent);background:rgba(79,142,247,0.1);color:var(--accent);font-size:0.72rem;text-decoration:none;min-height:36px;min-width:44px;display:flex;align-items:center;gap:0.25rem;';
+                    aOpen.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i>';
+
+                    row.appendChild(spanType);
+                    row.appendChild(spanDate);
+                    row.appendChild(codeLink);
+                    row.appendChild(btnCopy);
+                    row.appendChild(aOpen);
+                    return row;
+                }
+
+                async function _loadVisitSessions() {
+                    const container = document.getElementById('visit-sessions-list');
+                    if (!container) return;
+                    try {
+                        const resp = await fetch('/api/visites?listing_id=' + _LISTING_ID);
+                        if (!resp.ok) return;
+                        const data = await resp.json();
+                        const sessions = Array.isArray(data) ? data : (data.items || data.visits || []);
+                        const validSessions = sessions.filter(v => v.access_token && (v.visit_type === 'visite' || v.visit_type === 'contre_visite'));
+                        container.innerHTML = '';
+                        if (validSessions.length === 0) {
+                            const empty = document.createElement('div');
+                            empty.style.cssText = 'font-size:0.75rem;color:var(--text-2);padding:0.25rem 0;';
+                            empty.textContent = '{{ t(request, "listing.session_visite_no_sessions", "Aucune session créée pour ce bien") }}';
+                            container.appendChild(empty);
+                        } else {
+                            validSessions.sort((a,b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+                            validSessions.forEach(v => container.appendChild(_renderSessionRow(v)));
+                        }
+                    } catch(e) { console.warn('loadVisitSessions error', e); }
+                }
+
+                window.toggleVisitSessionForm = function() {
+                    const form = document.getElementById('visit-session-form');
+                    const result = document.getElementById('visit-session-result');
+                    if (!form) return;
+                    const isHidden = form.style.display === 'none';
+                    form.style.display = isHidden ? 'block' : 'none';
+                    if (isHidden && result) result.style.display = 'none';
+                    if (isHidden) { const di = document.getElementById('visit-session-date'); if (di) di.value = _getNextHalfHour(); }
+                };
+
+                window.createVisitSessionFromListing = async function(listingId) {
+                    const typeEl = document.getElementById('visit-session-type');
+                    const dateEl = document.getElementById('visit-session-date');
+                    const btn = document.getElementById('visit-session-create-btn');
+                    const btnLabel = document.getElementById('visit-session-create-btn-label');
+                    if (!typeEl || !dateEl) return;
+                    const visitType = typeEl.value;
+                    const scheduledAt = dateEl.value;
+                    if (!scheduledAt) { dateEl.style.borderColor = 'var(--red, #f25c69)'; return; }
+                    dateEl.style.borderColor = '';
+                    const step = visitType === 'contre_visite' ? 'contre_visite' : '1ere_visite';
+                    if (btn) { btn.disabled = true; btn.style.opacity = '0.65'; }
+                    if (btnLabel) btnLabel.textContent = '{{ t(request, "listing.session_visite_creating", "Création en cours...") }}';
+                    try {
+                        const resp = await fetch('/api/visites', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({listing_id: listingId, visit_type: visitType, step_family: 'visite', step: step, scheduled_at: scheduledAt, status: 'programme', import_default_questions: true})
+                        });
+                        if (!resp.ok) throw new Error(await resp.text());
+                        const visit = await resp.json();
+                        const shortUrl = window.location.origin + '/v/' + visit.access_token;
+                        _currentSessionLink = shortUrl;
+                        const linkDisplay = document.getElementById('visit-session-link-display');
+                        const openLink = document.getElementById('visit-session-open-link');
+                        const result = document.getElementById('visit-session-result');
+                        const copyLabel = document.getElementById('visit-session-copy-label');
+                        if (linkDisplay) linkDisplay.textContent = shortUrl;
+                        if (openLink) openLink.href = shortUrl;
+                        if (copyLabel) copyLabel.textContent = '{{ t(request, "listing.session_visite_copy", "Copier") }}';
+                        if (result) result.style.display = 'block';
+                        _loadVisitSessions();
+                    } catch(e) {
+                        console.error('createVisitSession error', e);
+                        alert('{{ t(request, "listing.session_visite_error", "Erreur lors de la création de la session.") }}');
+                    } finally {
+                        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+                        if (btnLabel) btnLabel.textContent = '{{ t(request, "listing.session_visite_create", "Créer la session") }}';
+                    }
+                };
+
+                window.copyVisitSessionLink = function() {
+                    if (!_currentSessionLink) return;
+                    navigator.clipboard.writeText(_currentSessionLink).then(() => {
+                        const label = document.getElementById('visit-session-copy-label');
+                        if (label) { label.textContent = '{{ t(request, "listing.session_visite_copied", "Lien copié !") }}'; setTimeout(() => { label.textContent = '{{ t(request, "listing.session_visite_copy", "Copier") }}'; }, 1800); }
+                    });
+                };
+
+                const _dateInit = document.getElementById('visit-session-date');
+                if (_dateInit) _dateInit.value = _getNextHalfHour();
+                _loadVisitSessions();
+            })();
+            </script>
 
             <a href="{{ listing.url }}" target="_blank" class="ext-link">
                 <i class="fa-solid fa-arrow-up-right-from-square" style="color: var(--accent);"></i>

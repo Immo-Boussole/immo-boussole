@@ -453,7 +453,21 @@
         "contact_tooltip": "Demande de contact agence effectuée",
         "updated_on": "MAJ le",
         "contact_agency_card": "Contact & Agence",
-        "unspecified": "Non précisée"
+        "unspecified": "Non précisée",
+        "session_visite_title": "Session Visite / Contre-visite",
+        "session_visite_new": "Nouvelle session",
+        "session_visite_create": "Créer la session",
+        "session_visite_type": "Type de visite",
+        "session_visite_type_visite": "Visite",
+        "session_visite_type_contre": "Contre-visite",
+        "session_visite_date": "Date & Heure",
+        "session_visite_open": "Ouvrir la session",
+        "session_visite_copy": "Copier le lien",
+        "session_visite_copied": "Lien copié !",
+        "session_visite_no_sessions": "Aucune session créée pour ce bien",
+        "session_visite_share_label": "Lien à partager :",
+        "session_visite_creating": "Création en cours...",
+        "session_visite_error": "Erreur lors de la création de la session."
     },
     "setup": {
         "title": "Création Administrateur",
