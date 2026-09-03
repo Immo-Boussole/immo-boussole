@@ -33,9 +33,16 @@ import secrets
 from sqlalchemy import text, func, or_
 from sqlalchemy.orm import Session
 
-from app import models, database, schemas, google_service
+from app import models, database, schemas, google_service, email_service
 from app.database import engine, get_db, run_migrations
-from app.models import Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch, MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile, Visit, VisitContact, Agent, Agency, ListingAttachment, ListingLink
+from app.models import (
+    Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch,
+    MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile,
+    Visit, VisitContact, Agent, Agency, ListingAttachment, ListingLink,
+    VisitQuestion, VisitMedia
+)
+from app.visit_templates import import_default_pack_for_visit, DEFAULT_INSPECTION_PACK
+from app.media import save_visit_media_file
 
 from app.services import (
     scrape_and_diff,
@@ -5235,6 +5242,7 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
         listing.to_visit = True
 
     visitor_name = body.visitor or request.session.get("username") or "Utilisateur"
+    token = secrets.token_hex(6)
 
     visit = Visit(
         listing_id=body.listing_id,
@@ -5244,7 +5252,11 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
         scheduled_at=body.scheduled_at,
         status=body.status or "programme",
         visitor=visitor_name,
-        notes=body.notes
+        notes=body.notes,
+        access_token=token,
+        meeting_address=body.meeting_address or body.listing_address or (listing.address if listing else None),
+        instructions=body.instructions,
+        participants_json=json.dumps([p.dict() for p in body.participants], ensure_ascii=False) if body.participants else None
     )
     db.add(visit)
     
@@ -5254,6 +5266,10 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
 
     db.commit()
     db.refresh(visit)
+
+    # Automatically seed default inspection checklist if requested
+    if body.import_default_questions:
+        import_default_pack_for_visit(db, visit, created_by=visitor_name)
 
     # Attach contacts if specified
     if body.agent_ids:
@@ -5345,6 +5361,10 @@ def list_visites(
             "status": v.status,
             "visitor": v.visitor,
             "notes": v.notes,
+            "access_token": v.access_token,
+            "meeting_address": v.meeting_address,
+            "instructions": v.instructions,
+            "participants_json": v.participants_json,
             "google_event_id": v.google_event_id,
             "contacts": contacts_list,
             "created_at": v.created_at.isoformat() if v.created_at else None,
@@ -5358,6 +5378,9 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
     
+    if not visit.access_token:
+        visit.access_token = secrets.token_hex(6)
+
     if body.step_family is not None:
         visit.step_family = body.step_family
     if body.step is not None:
@@ -5383,6 +5406,12 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
         visit.visitor = body.visitor
     if body.notes is not None:
         visit.notes = body.notes
+    if body.meeting_address is not None:
+        visit.meeting_address = body.meeting_address
+    if body.instructions is not None:
+        visit.instructions = body.instructions
+    if body.participants is not None:
+        visit.participants_json = json.dumps([p.dict() for p in body.participants], ensure_ascii=False)
 
     if body.agent_ids is not None or body.agency_ids is not None:
         # Clear existing contacts
@@ -5447,6 +5476,526 @@ def change_visit_status(request: Request, visit_id: int, status: str = Form(...)
     # Sync status change to Google Calendar
     google_service.sync_visit_to_google_calendar(db, visit)
     return {"status": "updated", "visit_id": visit.id, "new_status": visit.status}
+
+
+# ─── Collaborative Visit / Contre-visite Session & FAQ Endpoints ───────────────
+
+@app.get("/v/{token}")
+def visit_short_url_session(
+    request: Request,
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Public / Magic-link direct access to a collaborative visit session via its unique short token.
+    Allows invited participants to collaborate without complex friction.
+    """
+    visit = db.query(Visit).filter(Visit.access_token == token).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Session de visite introuvable ou lien expiré")
+
+    listing = visit.listing
+    if listing and hasattr(listing, 'photos_local') and listing.photos_local:
+        listing._photos = json_to_photos(listing.photos_local)
+
+    # Load questions and parse themes
+    questions = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit.id).order_by(VisitQuestion.order_index.asc()).all()
+    all_themes_set = set()
+    for q in questions:
+        try:
+            q.themes_list = json.loads(q.themes_json or "[]")
+        except Exception:
+            q.themes_list = []
+        for t in q.themes_list:
+            if t:
+                all_themes_set.add(t)
+
+    all_themes = sorted(list(all_themes_set))
+
+    # Media items
+    media_items = db.query(VisitMedia).filter(VisitMedia.visit_id == visit.id).order_by(VisitMedia.created_at.desc()).all()
+
+    # Listing attachments and external links for full dossier context
+    attachments = listing.attachments if listing else []
+    links = listing.links if listing else []
+
+    # Parse participants
+    try:
+        participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        participants = []
+
+    # Current user identification
+    current_username = request.session.get("username")
+    is_authenticated = bool(current_username)
+    local_hash = get_local_commit_hash()
+
+    type_label = "Contre-visite" if visit.visit_type == "contre_visite" else "Visite"
+
+    return templates.TemplateResponse(request=request, name="visite_session.html", context={
+        "visit": visit,
+        "listing": listing,
+        "questions": questions,
+        "all_themes": all_themes,
+        "media_items": media_items,
+        "attachments": attachments,
+        "links": links,
+        "participants": participants,
+        "contacts": visit.contacts,
+        "current_username": current_username or "Visiteur",
+        "is_authenticated": is_authenticated,
+        "local_hash": local_hash,
+        "app_version": settings.APP_VERSION,
+        "title": f"{type_label} — {listing.title if listing else 'Espace Visite'} — Immo-Boussole",
+    })
+
+
+@app.get("/visites/{visit_id}/session")
+def visit_session_by_id(
+    request: Request,
+    visit_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """
+    Authenticated access to a visit collaborative space by its internal ID.
+    Ensures an access_token exists and redirects to the clean short URL.
+    """
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    if not visit.access_token:
+        visit.access_token = secrets.token_hex(6)
+        db.commit()
+
+    return RedirectResponse(url=f"/v/{visit.access_token}", status_code=302)
+
+
+@app.post("/api/visites/{visit_id}/invite")
+def invite_visit_participants(
+    request: Request,
+    visit_id: int,
+    body: schemas.VisitInviteRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """
+    Adds participants, auto-creates user accounts for new invited emails,
+    and sends styled invitation emails with GPS directions, listing details and direct visit link.
+    """
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    if not visit.access_token:
+        visit.access_token = secrets.token_hex(6)
+
+    # Process and auto-create users
+    updated_participants = []
+    for p in body.participants:
+        p_dict = p.dict()
+        if p.email:
+            clean_email = p.email.strip().lower()
+            existing_user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
+            if not existing_user:
+                # Auto-generate account for participant
+                uname = p.username or p.name or clean_email.split("@")[0]
+                base_uname = re.sub(r'[^a-zA-Z0-9_\-]', '', uname) or "visiteur"
+                final_uname = base_uname
+                counter = 1
+                while db.query(models.User).filter(models.User.username == final_uname).first():
+                    final_uname = f"{base_uname}_{counter}"
+                    counter += 1
+
+                salt = os.urandom(16)
+                temp_pwd = secrets.token_urlsafe(10)
+                pwd_hash = hashlib.pbkdf2_hmac('sha256', temp_pwd.encode('utf-8'), salt, 100000)
+                new_user = models.User(
+                    username=final_uname,
+                    password_hash=pwd_hash,
+                    salt=salt,
+                    role="user",
+                    email=clean_email
+                )
+                db.add(new_user)
+                db.flush()
+                p_dict["username"] = final_uname
+            else:
+                p_dict["username"] = existing_user.username
+
+        updated_participants.append(p_dict)
+
+    visit.participants_json = json.dumps(updated_participants, ensure_ascii=False)
+    if body.meeting_address is not None:
+        visit.meeting_address = body.meeting_address
+    if body.instructions is not None:
+        visit.instructions = body.instructions
+
+    db.commit()
+    db.refresh(visit)
+
+    # Send invitation emails
+    emails_sent = 0
+    if body.send_emails:
+        base_url = str(request.base_url)
+        for p in updated_participants:
+            if p.get("email"):
+                res = email_service.send_visit_invitation_email(
+                    db=db,
+                    visit=visit,
+                    participant_email=p["email"],
+                    participant_name=p.get("name") or p.get("username"),
+                    base_url=base_url
+                )
+                if res:
+                    emails_sent += 1
+
+    return {
+        "status": "success",
+        "visit_id": visit.id,
+        "access_token": visit.access_token,
+        "short_url": f"/v/{visit.access_token}",
+        "emails_sent": emails_sent,
+        "participants": updated_participants,
+    }
+
+
+@app.get("/api/visites/{visit_id}/questions")
+def get_visit_questions(
+    visit_id: int,
+    theme: Optional[str] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Retrieves all inspection & FAQ questions for a visit session, filterable by theme and status."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    query = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit_id)
+    if status:
+        query = query.filter(VisitQuestion.status == status)
+
+    questions = query.order_by(VisitQuestion.order_index.asc()).all()
+    results = []
+    for q in questions:
+        try:
+            th_list = json.loads(q.themes_json or "[]")
+        except Exception:
+            th_list = []
+        if theme and theme not in th_list:
+            continue
+
+        results.append({
+            "id": q.id,
+            "visit_id": q.visit_id,
+            "question_text": q.question_text,
+            "status": q.status,
+            "themes": th_list,
+            "created_by": q.created_by,
+            "assigned_to": q.assigned_to,
+            "answer_text": q.answer_text,
+            "answered_by": q.answered_by,
+            "order_index": q.order_index,
+            "created_at": q.created_at.isoformat() if q.created_at else None,
+            "updated_at": q.updated_at.isoformat() if q.updated_at else None,
+        })
+    return results
+
+
+@app.post("/api/visites/{visit_id}/questions")
+def create_visit_question(
+    request: Request,
+    visit_id: int,
+    body: schemas.VisitQuestionCreate,
+    db: Session = Depends(get_db)
+):
+    """Adds a new question to the visit FAQ with multi-thematic tagging."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    max_order = max([q.order_index for q in visit.questions], default=-1)
+    author = request.session.get("username") or "Visiteur"
+
+    clean_themes = [t.strip() for t in body.themes if t.strip()]
+    vq = VisitQuestion(
+        visit_id=visit.id,
+        question_text=body.question_text.strip(),
+        status=body.status or "en_attente",
+        themes_json=json.dumps(clean_themes, ensure_ascii=False),
+        created_by=author,
+        assigned_to=body.assigned_to,
+        order_index=max_order + 1
+    )
+    db.add(vq)
+    db.commit()
+    db.refresh(vq)
+
+    return {
+        "id": vq.id,
+        "visit_id": vq.visit_id,
+        "question_text": vq.question_text,
+        "status": vq.status,
+        "themes": clean_themes,
+        "created_by": vq.created_by,
+        "assigned_to": vq.assigned_to,
+        "answer_text": vq.answer_text,
+        "answered_by": vq.answered_by,
+        "order_index": vq.order_index,
+        "created_at": vq.created_at.isoformat() if vq.created_at else None,
+    }
+
+
+@app.patch("/api/visites/questions/{question_id}")
+def update_visit_question(
+    request: Request,
+    question_id: int,
+    body: schemas.VisitQuestionUpdate,
+    db: Session = Depends(get_db)
+):
+    """Updates a question's status (including non_applicable), answer, or themes."""
+    vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
+    if not vq:
+        raise HTTPException(status_code=404, detail="Question non trouvée")
+
+    if body.question_text is not None:
+        vq.question_text = body.question_text.strip()
+    if body.status is not None:
+        vq.status = body.status
+    if body.themes is not None:
+        clean_themes = [t.strip() for t in body.themes if t.strip()]
+        vq.themes_json = json.dumps(clean_themes, ensure_ascii=False)
+    if body.assigned_to is not None:
+        vq.assigned_to = body.assigned_to
+    if body.answer_text is not None:
+        vq.answer_text = body.answer_text.strip()
+        vq.answered_by = body.answered_by or request.session.get("username") or "Visiteur"
+    if body.order_index is not None:
+        vq.order_index = body.order_index
+
+    db.commit()
+    db.refresh(vq)
+
+    try:
+        th_list = json.loads(vq.themes_json or "[]")
+    except Exception:
+        th_list = []
+
+    return {
+        "id": vq.id,
+        "visit_id": vq.visit_id,
+        "question_text": vq.question_text,
+        "status": vq.status,
+        "themes": th_list,
+        "created_by": vq.created_by,
+        "assigned_to": vq.assigned_to,
+        "answer_text": vq.answer_text,
+        "answered_by": vq.answered_by,
+        "order_index": vq.order_index,
+        "updated_at": vq.updated_at.isoformat() if vq.updated_at else None,
+    }
+
+
+@app.delete("/api/visites/questions/{question_id}")
+def delete_visit_question(question_id: int, db: Session = Depends(get_db)):
+    """Deletes a question from the visit FAQ."""
+    vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
+    if not vq:
+        raise HTTPException(status_code=404, detail="Question non trouvée")
+
+    db.delete(vq)
+    db.commit()
+    return {"status": "deleted", "question_id": question_id}
+
+
+@app.post("/api/visites/{visit_id}/questions/import-template")
+def import_visit_questions_template(
+    request: Request,
+    visit_id: int,
+    db: Session = Depends(get_db)
+):
+    """Imports the multi-thematic real estate inspection question pack into the visit FAQ."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    author = request.session.get("username") or "Système"
+    imported_cnt = import_default_pack_for_visit(db, visit, created_by=author)
+    return {"status": "success", "imported": imported_cnt, "visit_id": visit.id}
+
+
+@app.post("/api/visites/{visit_id}/media")
+async def upload_visit_media(
+    request: Request,
+    visit_id: int,
+    files: Optional[list[UploadFile]] = File(None),
+    url: Optional[str] = Form(None),
+    title: Optional[str] = Form(None),
+    category_tag: Optional[str] = Form(None),
+    media_type: Optional[str] = Form("photo"),
+    db: Session = Depends(get_db)
+):
+    """Uploads photos/videos/documents from smartphone or adds external URLs to the visit dossier."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    author = request.session.get("username") or "Visiteur"
+    created_media = []
+
+    # Handle external URL
+    if url and url.strip():
+        vm = VisitMedia(
+            visit_id=visit.id,
+            listing_id=visit.listing_id,
+            media_type="link",
+            url=url.strip(),
+            title=title or url.strip(),
+            category_tag=category_tag or "Lien utile",
+            created_by=author,
+        )
+        db.add(vm)
+        created_media.append(vm)
+
+    # Handle uploaded files
+    if files:
+        for f in files:
+            if not f.filename:
+                continue
+            saved_name, orig_name, web_path, fsize, mime, mtype = await save_visit_media_file(
+                listing_id=visit.listing_id,
+                visit_id=visit.id,
+                file=f
+            )
+            item_title = title or orig_name
+            vm = VisitMedia(
+                visit_id=visit.id,
+                listing_id=visit.listing_id,
+                media_type=mtype,
+                file_path=web_path,
+                title=item_title,
+                category_tag=category_tag or "Visite sur place",
+                file_size=fsize,
+                mime_type=mime,
+                created_by=author,
+            )
+            db.add(vm)
+            created_media.append(vm)
+
+    if created_media:
+        db.commit()
+        for vm in created_media:
+            db.refresh(vm)
+
+    return {
+        "status": "success",
+        "created_count": len(created_media),
+        "media": [
+            {
+                "id": m.id,
+                "visit_id": m.visit_id,
+                "listing_id": m.listing_id,
+                "media_type": m.media_type,
+                "file_path": m.file_path,
+                "url": m.url,
+                "title": m.title,
+                "category_tag": m.category_tag,
+                "created_by": m.created_by,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in created_media
+        ]
+    }
+
+
+@app.delete("/api/visites/media/{media_id}")
+def delete_visit_media(media_id: int, db: Session = Depends(get_db)):
+    """Deletes a media item from the visit."""
+    vm = db.query(VisitMedia).filter(VisitMedia.id == media_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="Média non trouvé")
+
+    if vm.file_path and os.path.exists(vm.file_path):
+        try:
+            os.remove(vm.file_path)
+        except Exception:
+            pass
+
+    db.delete(vm)
+    db.commit()
+    return {"status": "deleted", "media_id": media_id}
+
+
+@app.get("/api/visites/{visit_id}/live-updates")
+def get_visit_live_updates(
+    visit_id: int,
+    since: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Lightweight reactive endpoint for live polling during visits.
+    Returns latest questions and media contributions to keep all participants in sync.
+    """
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    q_query = db.query(VisitQuestion).filter(VisitQuestion.visit_id == visit_id)
+    m_query = db.query(VisitMedia).filter(VisitMedia.visit_id == visit_id)
+
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            q_query = q_query.filter(or_(VisitQuestion.updated_at >= since_dt, VisitQuestion.created_at >= since_dt))
+            m_query = m_query.filter(or_(VisitMedia.updated_at >= since_dt, VisitMedia.created_at >= since_dt))
+        except Exception:
+            pass
+
+    questions = q_query.order_by(VisitQuestion.order_index.asc()).all()
+    media_items = m_query.order_by(VisitMedia.created_at.desc()).all()
+
+    q_res = []
+    for q in questions:
+        try:
+            th_list = json.loads(q.themes_json or "[]")
+        except Exception:
+            th_list = []
+        q_res.append({
+            "id": q.id,
+            "question_text": q.question_text,
+            "status": q.status,
+            "themes": th_list,
+            "created_by": q.created_by,
+            "assigned_to": q.assigned_to,
+            "answer_text": q.answer_text,
+            "answered_by": q.answered_by,
+            "order_index": q.order_index,
+        })
+
+    m_res = [
+        {
+            "id": m.id,
+            "media_type": m.media_type,
+            "file_path": m.file_path,
+            "url": m.url,
+            "title": m.title,
+            "category_tag": m.category_tag,
+            "created_by": m.created_by,
+            "created_at": m.created_at.isoformat() if m.created_at else None,
+        }
+        for m in media_items
+    ]
+
+    return {
+        "visit_id": visit.id,
+        "visit_status": visit.status,
+        "questions_count": len(visit.questions),
+        "questions": q_res,
+        "media": m_res,
+        "server_time": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 

@@ -426,6 +426,10 @@ class VisitCreateRequest(BaseModel):
     status: str = "programme"   # "programme", "effectuee", "annulee"
     visitor: Optional[str] = None
     notes: Optional[str] = None
+    meeting_address: Optional[str] = None
+    instructions: Optional[str] = None
+    participants: Optional[List[ParticipantInviteItem]] = None
+    import_default_questions: bool = True
     agent_ids: List[int] = []
     agency_ids: List[int] = []
     update_listing_contact: Optional[bool] = None
@@ -442,6 +446,9 @@ class VisitUpdateRequest(BaseModel):
     status: Optional[str] = None
     visitor: Optional[str] = None
     notes: Optional[str] = None
+    meeting_address: Optional[str] = None
+    instructions: Optional[str] = None
+    participants: Optional[List[ParticipantInviteItem]] = None
     agent_ids: Optional[List[int]] = None
     agency_ids: Optional[List[int]] = None
     update_listing_contact: Optional[bool] = None
@@ -467,12 +474,83 @@ class VisitResponse(BaseModel):
     visitor: Optional[str] = None
     notes: Optional[str] = None
     google_event_id: Optional[str] = None
+    access_token: Optional[str] = None
+    meeting_address: Optional[str] = None
+    instructions: Optional[str] = None
+    participants_json: Optional[str] = None
     contacts: List[VisitContactSchema] = []
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class VisitQuestionCreate(BaseModel):
+    question_text: str
+    themes: List[str] = []
+    assigned_to: Optional[str] = None
+    status: Optional[str] = "en_attente"
+
+
+class VisitQuestionUpdate(BaseModel):
+    question_text: Optional[str] = None
+    status: Optional[str] = None # en_attente, satisfaisante, relance_necessaire, resolu, non_applicable
+    themes: Optional[List[str]] = None
+    assigned_to: Optional[str] = None
+    answer_text: Optional[str] = None
+    answered_by: Optional[str] = None
+    order_index: Optional[int] = None
+
+
+class VisitQuestionResponse(BaseModel):
+    id: int
+    visit_id: int
+    question_text: str
+    status: str
+    themes: List[str] = []
+    created_by: Optional[str] = None
+    assigned_to: Optional[str] = None
+    answer_text: Optional[str] = None
+    answered_by: Optional[str] = None
+    order_index: int = 0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VisitMediaResponse(BaseModel):
+    id: int
+    visit_id: int
+    listing_id: int
+    media_type: str
+    file_path: Optional[str] = None
+    url: Optional[str] = None
+    title: Optional[str] = None
+    category_tag: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ParticipantInviteItem(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = "visiteur"
+
+
+class VisitInviteRequest(BaseModel):
+    participants: List[ParticipantInviteItem] = []
+    meeting_address: Optional[str] = None
+    instructions: Optional[str] = None
+    send_emails: bool = True
 
 
 class AttachedListingSummary(BaseModel):

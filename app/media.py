@@ -729,4 +729,67 @@ def purge_orphaned_and_rejected_media(db, purge_orphaned: bool = True, purge_rej
     }
 
 
+ALLOWED_VISIT_MEDIA_EXTENSIONS = {
+    # Images
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
+    # Videos
+    ".mp4", ".mov", ".webm", ".avi", ".m4v", ".3gp",
+    # Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".odt", ".ods", ".txt", ".csv",
+}
+
+
+def get_visit_media_dir(listing_id: int, visit_id: int) -> Path:
+    """Returns the directory path for visit media contributions."""
+    media_dir = MEDIA_BASE_DIR / str(listing_id) / "visits" / str(visit_id)
+    media_dir.mkdir(parents=True, exist_ok=True)
+    return media_dir
+
+
+async def save_visit_media_file(
+    listing_id: int,
+    visit_id: int,
+    file: UploadFile
+) -> tuple[str, str, str, int, str, str]:
+    """
+    Saves an uploaded media file (photo, video, document) for a visit session.
+    Returns: (saved_filename, orig_filename, relative_web_path, file_size, mime_type, media_type)
+    where media_type is 'photo', 'video', or 'document'.
+    """
+    orig_name = file.filename or "media_file"
+    orig_name = os.path.basename(orig_name)
+    ext = Path(orig_name).suffix.lower()
+    if ext not in ALLOWED_VISIT_MEDIA_EXTENSIONS:
+        ext = ext if ext else ".jpg"
+
+    # Classify media type
+    if ext in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"}:
+        media_type = "photo"
+    elif ext in {".mp4", ".mov", ".webm", ".avi", ".m4v", ".3gp"}:
+        media_type = "video"
+    else:
+        media_type = "document"
+
+    safe_base = sanitize_filename(Path(orig_name).stem)
+    unique_suffix = uuid.uuid4().hex[:8]
+    saved_filename = f"{media_type}_{safe_base}_{unique_suffix}{ext}"
+
+    visit_dir = get_visit_media_dir(listing_id, visit_id)
+    dest_path = visit_dir / saved_filename
+
+    content = await file.read()
+    dest_path.write_bytes(content)
+    file_size = len(content)
+
+    mime_type = file.content_type
+    if not mime_type or mime_type == "application/octet-stream":
+        mime_type, _ = mimetypes.guess_type(saved_filename)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    web_path = f"static/media/{listing_id}/visits/{visit_id}/{saved_filename}"
+    return saved_filename, orig_name, web_path, file_size, mime_type, media_type
+
+
+
 

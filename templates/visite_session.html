@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="{{ request.session.get('lang', 'fr') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f1a">
+    <title>{{ title }}</title>
+
+    <link href="/static/css/inter.css" rel="stylesheet">
+    <link href="/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css?v=20260901a" rel="stylesheet">
+    <link href="/static/css/visite_session.css?v={{ local_hash }}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+</head>
+
+<body class="visite-session-body" data-visit-id="{{ visit.id }}" data-access-token="{{ visit.access_token }}">
+
+    <!-- ═══ HEADER & PROPERTY SUMMARY ═══════════════════════════════════════ -->
+    <header class="vs-header">
+        <div class="vs-header-inner">
+            <div class="vs-top-nav-row">
+                <a href="/visites" class="vs-back-btn">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Toutes les visites</span>
+                </a>
+                <div class="vs-header-actions">
+                    <button class="vs-btn vs-btn-secondary" id="btn-share-visit" title="Copier le lien court de visite">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span>Partager</span>
+                    </button>
+                    <button class="vs-btn vs-btn-primary" id="btn-open-invite-modal">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>Inviter</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="vs-property-summary">
+                <div class="vs-prop-title-box">
+                    <div class="vs-prop-badges">
+                        <span class="vs-badge-type">
+                            {% if visit.visit_type == 'contre_visite' %}
+                                <i class="fa-solid fa-rotate-right"></i> Contre-visite
+                            {% else %}
+                                <i class="fa-solid fa-house-chimney-user"></i> Visite
+                            {% endif %}
+                        </span>
+                        <span class="vs-badge-status {{ visit.status }}">
+                            {% if visit.status == 'programme' %}
+                                <i class="fa-regular fa-clock"></i> Programmée
+                            {% elif visit.status == 'effectuee' %}
+                                <i class="fa-solid fa-check-double"></i> Effectuée
+                            {% elif visit.status == 'annulee' %}
+                                <i class="fa-solid fa-ban"></i> Annulée
+                            {% else %}
+                                {{ visit.status }}
+                            {% endif %}
+                        </span>
+                        {% if listing and listing.price %}
+                            <span style="font-weight: 700; color: #10d9a4; font-size: 14px;">
+                                {{ "{:,.0f}".format(listing.price).replace(',', ' ') }} €
+                            </span>
+                        {% endif %}
+                        {% if listing and listing.area %}
+                            <span style="color: var(--vs-text-muted); font-size: 13px;">
+                                {{ listing.area }} m²
+                            </span>
+                        {% endif %}
+                    </div>
+                    <h1 class="vs-prop-title">
+                        {{ listing.title if listing else 'Visite immobilière' }}
+                    </h1>
+                </div>
+
+                <div class="vs-prop-meta-row">
+                    <div>
+                        <i class="fa-regular fa-calendar-days"></i>
+                        <strong>{{ visit.scheduled_at.strftime('%d/%m/%Y à %H:%M') if visit.scheduled_at else 'Date non fixée' }}</strong>
+                    </div>
+                    <div>
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>{{ visit.meeting_address or (listing.address if listing else '') or (listing.city if listing else 'Lieu à définir') }}</span>
+                        {% set addr_query = visit.meeting_address or (listing.address if listing else '') or (listing.city if listing else '') %}
+                        {% if addr_query %}
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ addr_query|urlencode }}" target="_blank" class="vs-gps-link" title="Navigation GPS">
+                                <i class="fa-solid fa-diamond-turn-right"></i> GPS
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% if listing and listing.url %}
+                        <div>
+                            <a href="{{ listing.url }}" target="_blank" class="vs-gps-link" style="color: var(--vs-text-muted);">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Annonce source
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══ NAVIGATION TABS ═════════════════════════════════════════════════ -->
+    <nav class="vs-tabs-bar">
+        <div class="vs-tabs-inner">
+            <button class="vs-tab-btn active" data-tab="faq">
+                <i class="fa-solid fa-clipboard-question"></i>
+                <span>FAQ & Inspection</span>
+                <span class="vs-tab-count" id="count-faq">{{ questions|length }}</span>
+            </button>
+            <button class="vs-tab-btn" data-tab="media">
+                <i class="fa-solid fa-camera"></i>
+                <span>Photos & Médias</span>
+                <span class="vs-tab-count" id="count-media">{{ media_items|length }}</span>
+            </button>
+            <button class="vs-tab-btn" data-tab="docs">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Dossier & Liens</span>
+                <span class="vs-tab-count">{{ (attachments|length) + (links|length) }}</span>
+            </button>
+            <button class="vs-tab-btn" data-tab="participants">
+                <i class="fa-solid fa-users"></i>
+                <span>Participants</span>
+                <span class="vs-tab-count">{{ participants|length }}</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ═══ MAIN TAB CONTENTS ═══════════════════════════════════════════════ -->
+    <main class="vs-main-container">
+
+        <!-- ─── TAB 1 : FAQ & QUESTIONS D'INSPECTION MULTI-THÉMATIQUES ──── -->
+        <section id="tab-faq" class="vs-tab-content active">
+
+            <!-- Thématiques Filter Chips Bar -->
+            <div class="vs-themes-bar-container">
+                <div class="vs-themes-chips-scroll" id="themes-chips-list">
+                    <button class="vs-theme-chip active" data-theme="">
+                        <span>Toutes les thématiques</span>
+                        <span class="vs-chip-count" id="chip-total-cnt">{{ questions|length }}</span>
+                    </button>
+                    {% for theme in all_themes %}
+                        <button class="vs-theme-chip" data-theme="{{ theme }}">
+                            <span>{{ theme }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Controls, Search & Actions -->
+            <div class="vs-controls-card">
+                <div class="vs-controls-top-row">
+                    <div class="vs-search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="faq-search-input" class="vs-search-input" placeholder="Rechercher une question, mot-clé ou réponse...">
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        {% if not questions %}
+                            <button class="vs-btn vs-btn-secondary" id="btn-import-template">
+                                <i class="fa-solid fa-file-import"></i>
+                                <span>Importer pack inspection type</span>
+                            </button>
+                        {% endif %}
+                        <button class="vs-btn vs-btn-primary" id="btn-open-add-q-modal">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Poser une question</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Filter Bar -->
+                <div class="vs-status-filters-row">
+                    <button class="vs-status-btn active" data-status="">
+                        <span>Tous les statuts</span>
+                    </button>
+                    <button class="vs-status-btn" data-status="en_attente">
+                        <i class="fa-regular fa-clock" style="color: var(--vs-status-pending);"></i>
+                        <span>En attente</span>
+                    </button>
+                    <button class="vs-status-btn" data-status="satisfaisante">
+                        <i class="fa-solid fa-check" style="color: var(--vs-status-satisfactory);"></i>
+                        <span>Satisfaisante</span>
+                    </button>
+                    <button class="vs-status-btn" data-status="relance_necessaire">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: var(--vs-status-followup);"></i>
+                        <span>Relance nécessaire</span>
+                    </button>
+                    <button class="vs-status-btn" data-status="resolu">
+                        <i class="fa-solid fa-circle-check" style="color: var(--vs-status-resolved);"></i>
+                        <span>Résolu</span>
+                    </button>
+                    <button class="vs-status-btn" data-status="non_applicable">
+                        <i class="fa-solid fa-ban" style="color: var(--vs-status-na);"></i>
+                        <span>Non applicable</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Questions List Accordions -->
+            <div class="vs-questions-list" id="questions-container">
+                {% for q in questions %}
+                    <div class="vs-q-card status-{{ q.status }}" 
+                         data-qid="{{ q.id }}" 
+                         data-status="{{ q.status }}" 
+                         data-themes='{{ q.themes_json or "[]" }}'>
+                        <div class="vs-q-card-header">
+                            <div class="vs-q-status-badge-container" onclick="event.stopPropagation();">
+                                <select class="vs-q-status-select status-{{ q.status }}" data-qid="{{ q.id }}">
+                                    <option value="en_attente" {% if q.status == 'en_attente' %}selected{% endif %}>⏳ En attente</option>
+                                    <option value="satisfaisante" {% if q.status == 'satisfaisante' %}selected{% endif %}>✅ Satisfaisante</option>
+                                    <option value="relance_necessaire" {% if q.status == 'relance_necessaire' %}selected{% endif %}>⚠️ Relance nécessaire</option>
+                                    <option value="resolu" {% if q.status == 'resolu' %}selected{% endif %}>✔️ Résolu</option>
+                                    <option value="non_applicable" {% if q.status == 'non_applicable' %}selected{% endif %}>🚫 Non applicable</option>
+                                </select>
+                            </div>
+
+                            <div class="vs-q-title-col">
+                                <div class="vs-q-text">{{ q.question_text }}</div>
+                                <div class="vs-q-themes-list">
+                                    {% for th in q.themes_list %}
+                                        <span class="vs-q-theme-tag">{{ th }}</span>
+                                    {% endfor %}
+                                    {% if q.created_by %}
+                                        <span class="vs-q-meta-info">• Ajouté par {{ q.created_by }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="vs-q-toggle-icon">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                        </div>
+
+                        <div class="vs-q-card-body">
+                            <div class="vs-answer-box">
+                                <div class="vs-answer-label">
+                                    <span><i class="fa-solid fa-comment-dots"></i> Réponse / Constat de visite :</span>
+                                    {% if q.answered_by %}
+                                        <span class="vs-answered-by-note">Renseigné par {{ q.answered_by }}</span>
+                                    {% endif %}
+                                </div>
+                                <textarea class="vs-answer-textarea" data-qid="{{ q.id }}" placeholder="Notez la réponse de l'agent ou vos observations sur place...">{{ q.answer_text or '' }}</textarea>
+                                <div class="vs-answer-actions">
+                                    <button class="vs-btn vs-btn-secondary btn-delete-q" data-qid="{{ q.id }}" style="color: #ef4444;">
+                                        <i class="fa-solid fa-trash-can"></i> Supprimer
+                                    </button>
+                                    <button class="vs-btn vs-btn-primary btn-save-answer" data-qid="{{ q.id }}">
+                                        <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 48px 20px; background: var(--vs-surface); border-radius: var(--vs-radius-md); border: 1px dashed var(--vs-border);">
+                        <i class="fa-solid fa-clipboard-question" style="font-size: 42px; color: var(--vs-text-muted); margin-bottom: 14px;"></i>
+                        <h3 style="font-size: 16px; margin-bottom: 8px;">Aucune question préparée pour cette visite</h3>
+                        <p style="font-size: 13px; color: var(--vs-text-muted); max-width: 480px; margin: 0 auto 20px auto;">
+                            Préparez vos questions d'inspection ou importez directement notre pack complet de questions types d'experts immobiliers.
+                        </p>
+                        <button class="vs-btn vs-btn-primary" id="btn-import-template-empty">
+                            <i class="fa-solid fa-file-import"></i> Importer le pack inspection type
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </section>
+
+        <!-- ─── TAB 2 : PHOTOS & MÉDIAS EN DIRECT ────────────────────────── -->
+        <section id="tab-media" class="vs-tab-content">
+            
+            <div class="vs-media-actions-grid">
+                <!-- Direct Smartphone Camera Shoot Card -->
+                <label class="vs-capture-card" for="camera-direct-input">
+                    <input type="file" id="camera-direct-input" accept="image/*" capture="environment" style="display: none;">
+                    <i class="fa-solid fa-camera-retro vs-capture-icon"></i>
+                    <div class="vs-capture-title">Prendre une photo en direct</div>
+                    <div class="vs-capture-subtitle">Déclenche l'appareil photo de votre smartphone</div>
+                </label>
+
+                <!-- Video / Multiple Files Upload Card -->
+                <label class="vs-capture-card" for="media-files-input">
+                    <input type="file" id="media-files-input" multiple accept="image/*,video/*,application/pdf" style="display: none;">
+                    <i class="fa-solid fa-file-arrow-up vs-capture-icon" style="color: #10b981;"></i>
+                    <div class="vs-capture-title">Importer photos, vidéos ou PDF</div>
+                    <div class="vs-capture-subtitle">Sélectionnez des fichiers depuis votre appareil</div>
+                </label>
+
+                <!-- External Link Card -->
+                <div class="vs-capture-card" id="btn-open-link-modal">
+                    <i class="fa-solid fa-link vs-capture-icon" style="color: #a855f7;"></i>
+                    <div class="vs-capture-title">Ajouter un lien externe</div>
+                    <div class="vs-capture-subtitle">Plan cadastral, rapport d'expertise, simulateur...</div>
+                </div>
+            </div>
+
+            <!-- Media Gallery Grid -->
+            <div class="vs-media-gallery-grid" id="media-gallery-container">
+                {% for m in media_items %}
+                    <div class="vs-media-item-card" data-mid="{{ m.id }}">
+                        <button class="vs-media-delete-btn" data-mid="{{ m.id }}" title="Supprimer ce média">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+
+                        {% if m.media_type == 'photo' %}
+                            <div class="vs-media-thumb-container" onclick="openMediaPreview('{{ m.file_path }}', 'image')">
+                                <img src="/{{ m.file_path }}" alt="{{ m.title }}" loading="lazy">
+                            </div>
+                        {% elif m.media_type == 'video' %}
+                            <div class="vs-media-thumb-container" onclick="openMediaPreview('{{ m.file_path }}', 'video')">
+                                <i class="fa-solid fa-circle-play vs-media-doc-icon" style="color: #ef4444;"></i>
+                            </div>
+                        {% elif m.media_type == 'link' %}
+                            <a href="{{ m.url }}" target="_blank" class="vs-media-thumb-container" style="text-decoration: none;">
+                                <i class="fa-solid fa-arrow-up-right-from-square vs-media-doc-icon" style="color: #a855f7;"></i>
+                            </a>
+                        {% else %}
+                            <a href="/{{ m.file_path }}" target="_blank" class="vs-media-thumb-container" style="text-decoration: none;">
+                                <i class="fa-solid fa-file-pdf vs-media-doc-icon"></i>
+                            </a>
+                        {% endif %}
+
+                        <div class="vs-media-info">
+                            <div class="vs-media-title">{{ m.title or 'Sans titre' }}</div>
+                            <div class="vs-media-footer-meta">
+                                <span>{{ m.category_tag or m.media_type }}</span>
+                                <span>{{ m.created_by }}</span>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: var(--vs-surface); border-radius: var(--vs-radius-md); border: 1px dashed var(--vs-border);">
+                        <i class="fa-solid fa-camera" style="font-size: 36px; color: var(--vs-text-muted); margin-bottom: 10px;"></i>
+                        <p style="font-size: 14px; color: var(--vs-text-muted);">Aucune photo ou vidéo prise pour le moment.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </section>
+
+        <!-- ─── TAB 3 : DOSSIER DU BIEN & LIENS UTILES ───────────────────── -->
+        <section id="tab-docs" class="vs-tab-content">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Listing Attachments -->
+                <div class="vs-controls-card">
+                    <h3 style="font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-file-lines" style="color: var(--vs-accent);"></i>
+                        <span>Documents du bien (Diagnostics, Plans, PV d'AG)</span>
+                    </h3>
+                    {% if attachments %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
+                            {% for att in attachments %}
+                                <a href="/{{ att.file_path }}" target="_blank" style="text-decoration: none; background: var(--vs-surface-2); border: 1px solid var(--vs-border); border-radius: var(--vs-radius-sm); padding: 12px; display: flex; align-items: center; gap: 12px; color: var(--vs-text);">
+                                    <i class="fa-solid fa-file-pdf" style="font-size: 24px; color: #ef4444;"></i>
+                                    <div style="overflow: hidden;">
+                                        <div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ att.title or att.original_filename }}</div>
+                                        <div style="font-size: 11px; color: var(--vs-text-muted);">{{ att.file_type }}</div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="font-size: 13px; color: var(--vs-text-muted);">Aucun document téléversé dans la fiche principale.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Listing Links -->
+                <div class="vs-controls-card">
+                    <h3 style="font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-compass" style="color: #10b981;"></i>
+                        <span>Liens utiles & Rapports</span>
+                    </h3>
+                    {% if links %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
+                            {% for l in links %}
+                                <a href="{{ l.url }}" target="_blank" style="text-decoration: none; background: var(--vs-surface-2); border: 1px solid var(--vs-border); border-radius: var(--vs-radius-sm); padding: 12px; display: flex; align-items: center; gap: 12px; color: var(--vs-text);">
+                                    <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 20px; color: #3b82f6;"></i>
+                                    <div style="overflow: hidden;">
+                                        <div style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ l.title or l.url }}</div>
+                                        <div style="font-size: 11px; color: var(--vs-text-muted);">{{ l.category }}</div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p style="font-size: 13px; color: var(--vs-text-muted);">Aucun lien externe configuré pour ce bien.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── TAB 4 : PARTICIPANTS & NOTES PARTAGÉES ──────────────────── -->
+        <section id="tab-participants" class="vs-tab-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                
+                <!-- Attendees List Card -->
+                <div class="vs-controls-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="font-size: 16px; font-weight: 700;">👥 Participants invités</h3>
+                        <button class="vs-btn vs-btn-secondary" id="btn-add-p-from-tab" style="padding: 6px 12px; min-height: 36px; font-size: 12px;">
+                            <i class="fa-solid fa-user-plus"></i> Ajouter
+                        </button>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px;" id="participants-list-container">
+                        {% for p in participants %}
+                            <div style="background: var(--vs-surface-2); border: 1px solid var(--vs-border); border-radius: var(--vs-radius-sm); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 14px;">{{ p.name or p.username or p.email }}</div>
+                                    <div style="font-size: 12px; color: var(--vs-text-muted);">{{ p.email or 'Sans email' }}</div>
+                                </div>
+                                <span style="font-size: 11px; background: rgba(59, 130, 246, 0.15); color: #93c5fd; padding: 3px 8px; border-radius: 6px;">
+                                    {{ p.role or 'Visiteur' }}
+                                </span>
+                            </div>
+                        {% else %}
+                            <p style="font-size: 13px; color: var(--vs-text-muted);">Aucun participant supplémentaire invité pour le moment.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Shared General Notes Card -->
+                <div class="vs-controls-card">
+                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">
+                        📝 Débriefing & Consignes Générales
+                    </h3>
+                    <div class="vs-form-group">
+                        <label class="vs-form-label">Instructions pour les participants :</label>
+                        <p style="font-size: 13px; color: var(--vs-text-muted); background: var(--vs-surface-2); padding: 10px; border-radius: 6px; border: 1px solid var(--vs-border);">
+                            {{ visit.instructions or 'Aucune consigne particulière.' }}
+                        </p>
+                    </div>
+                    <div class="vs-form-group" style="margin-top: 10px;">
+                        <label class="vs-form-label">Notes globales de visite :</label>
+                        <textarea id="general-notes-textarea" class="vs-form-input" style="min-height: 100px;" placeholder="Bilan global, points forts/faibles remarqués lors du débriefing...">{{ visit.notes or '' }}</textarea>
+                        <button class="vs-btn vs-btn-primary" id="btn-save-general-notes" style="align-self: flex-end; margin-top: 8px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Sauvegarder les notes
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ═══ MODAL : AJOUTER UNE QUESTION FAQ MULTI-THÉMATIQUE ═══════════════ -->
+    <div class="vs-modal-backdrop" id="modal-add-question">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">Poser une question pour la visite</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-add-question')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Intitulé de la question *</label>
+                    <textarea id="new-q-text" class="vs-form-input" rows="3" placeholder="Ex: Quel est l'état de la toiture ? Y a-t-il eu des infiltrations ?"></textarea>
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Thématiques associées (Sélection multiple & Ajout libre)</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;" id="theme-selector-chips">
+                        <button type="button" class="vs-theme-chip" data-val="Toiture & Charpente">Toiture</button>
+                        <button type="button" class="vs-theme-chip" data-val="Structure & Gros œuvre">Structure</button>
+                        <button type="button" class="vs-theme-chip" data-val="Chauffage & Énergie">Chauffage</button>
+                        <button type="button" class="vs-theme-chip" data-val="DPE & Isolation">DPE</button>
+                        <button type="button" class="vs-theme-chip" data-val="Piscine">Piscine</button>
+                        <button type="button" class="vs-theme-chip" data-val="Extérieur">Extérieur</button>
+                        <button type="button" class="vs-theme-chip" data-val="Jardin">Jardin</button>
+                        <button type="button" class="vs-theme-chip" data-val="Copropriété">Copropriété</button>
+                        <button type="button" class="vs-theme-chip" data-val="Voisinage & Bruit">Voisinage</button>
+                        <button type="button" class="vs-theme-chip" data-val="Entretien à prévoir">Entretien</button>
+                    </div>
+                    <input type="text" id="new-q-custom-themes" class="vs-form-input" placeholder="Ajouter d'autres thématiques séparées par des virgules...">
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-add-question')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" id="btn-submit-add-question">Ajouter la question</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : INVITER DES PARTICIPANTS & ENVOI D'EMAILS ═══════════════ -->
+    <div class="vs-modal-backdrop" id="modal-invite-participants">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">Inviter des participants à la visite</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-invite-participants')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <p style="font-size: 13px; color: var(--vs-text-muted);">
+                    Invitez votre conjoint(e), un proche, un artisan ou un architecte. Un compte Immo-Boussole sera automatiquement créé et un email contenant le lien court et les instructions leur sera envoyé.
+                </p>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Nom / Prénom du participant</label>
+                    <input type="text" id="invite-name" class="vs-form-input" placeholder="Ex: Marie Dupont">
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Email du participant *</label>
+                    <input type="email" id="invite-email" class="vs-form-input" placeholder="marie.dupont@exemple.com">
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Rôle / Profil</label>
+                    <select id="invite-role" class="vs-form-input">
+                        <option value="visiteur">Co-acquéreur / Visiteur</option>
+                        <option value="artisan">Artisan / Travaux</option>
+                        <option value="architecte">Architecte</option>
+                        <option value="conseiller">Conseiller / Ami</option>
+                    </select>
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Instructions / Message personnalisé (optionnel)</label>
+                    <textarea id="invite-instructions" class="vs-form-input" rows="2" placeholder="Ex: RDV devant le portail à 14h25, nous inspecterons en priorité la cave et la toiture...">{{ visit.instructions or '' }}</textarea>
+                </div>
+
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; margin-top: 4px;">
+                    <input type="checkbox" id="invite-send-email-cb" checked>
+                    <span>Envoyer immédiatement l'email d'invitation avec GPS et lien direct</span>
+                </label>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-invite-participants')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" id="btn-submit-invite">
+                    <i class="fa-solid fa-paper-plane"></i> Envoyer l'invitation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : AJOUTER UN LIEN EXTERNE ═════════════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-add-link">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">Ajouter un lien externe au dossier</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-add-link')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <div class="vs-form-group">
+                    <label class="vs-form-label">URL du document ou service *</label>
+                    <input type="url" id="new-link-url" class="vs-form-input" placeholder="https://...">
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Titre ou description</label>
+                    <input type="text" id="new-link-title" class="vs-form-input" placeholder="Ex: Plan cadastral / Estimation travaux">
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-add-link')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" id="btn-submit-add-link">Enregistrer le lien</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST NOTIFICATION ═══════════════════════════════════════════════ -->
+    <div id="vs-toast" class="vs-toast">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="vs-toast-msg">Opération réussie</span>
+    </div>
+
+    <!-- ═══ SCRIPTS & INTERACTIVITY ══════════════════════════════════════════ -->
+    <script>
+        const visitId = {{ visit.id }};
+        const visitToken = "{{ visit.access_token }}";
+        let currentThemeFilter = "";
+        let currentStatusFilter = "";
+
+        function showToast(msg, icon = 'fa-circle-check') {
+            const toast = document.getElementById('vs-toast');
+            const msgEl = document.getElementById('vs-toast-msg');
+            msgEl.textContent = msg;
+            toast.className = 'vs-toast show';
+            setTimeout(() => { toast.className = 'vs-toast'; }, 3200);
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Tab Navigation
+        document.querySelectorAll('.vs-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.vs-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.vs-tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const target = document.getElementById('tab-' + btn.dataset.tab);
+                if (target) target.classList.add('active');
+            });
+        });
+
+        // Theme filter chips
+        document.querySelectorAll('.vs-theme-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                if (chip.closest('#theme-selector-chips')) {
+                    chip.classList.toggle('active');
+                    return;
+                }
+                document.querySelectorAll('#themes-chips-list .vs-theme-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                currentThemeFilter = chip.dataset.theme || "";
+                filterQuestions();
+            });
+        });
+
+        // Status filter buttons
+        document.querySelectorAll('.vs-status-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.vs-status-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentStatusFilter = btn.dataset.status || "";
+                filterQuestions();
+            });
+        });
+
+        // Search filter
+        document.getElementById('faq-search-input').addEventListener('input', () => {
+            filterQuestions();
+        });
+
+        function filterQuestions() {
+            const query = (document.getElementById('faq-search-input').value || "").toLowerCase().trim();
+            const cards = document.querySelectorAll('.vs-q-card');
+
+            cards.forEach(card => {
+                const text = (card.querySelector('.vs-q-text')?.textContent || "").toLowerCase();
+                const answer = (card.querySelector('.vs-answer-textarea')?.value || "").toLowerCase();
+                const status = card.dataset.status || "";
+                const themes = JSON.parse(card.dataset.themes || "[]");
+
+                const matchQuery = !query || text.includes(query) || answer.includes(query);
+                const matchStatus = !currentStatusFilter || status === currentStatusFilter;
+                const matchTheme = !currentThemeFilter || themes.includes(currentThemeFilter);
+
+                if (matchQuery && matchStatus && matchTheme) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Question card accordion toggle
+        document.getElementById('questions-container').addEventListener('click', (e) => {
+            const header = e.target.closest('.vs-q-card-header');
+            if (header && !e.target.closest('.vs-q-status-badge-container')) {
+                const card = header.closest('.vs-q-card');
+                card.classList.toggle('open');
+            }
+        });
+
+        // Status dropdown change
+        document.getElementById('questions-container').addEventListener('change', async (e) => {
+            if (e.target.classList.contains('vs-q-status-select')) {
+                const qid = e.target.dataset.qid;
+                const newStatus = e.target.value;
+                const card = e.target.closest('.vs-q-card');
+
+                try {
+                    const resp = await fetch(`/api/visites/questions/${qid}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    if (resp.ok) {
+                        e.target.className = `vs-q-status-select status-${newStatus}`;
+                        card.className = `vs-q-card status-${newStatus}` + (card.classList.contains('open') ? ' open' : '');
+                        card.dataset.status = newStatus;
+                        showToast("Statut de la question mis à jour !");
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+
+        // Save answer button
+        document.getElementById('questions-container').addEventListener('click', async (e) => {
+            if (e.target.closest('.btn-save-answer')) {
+                const btn = e.target.closest('.btn-save-answer');
+                const qid = btn.dataset.qid;
+                const textarea = document.querySelector(`.vs-answer-textarea[data-qid="${qid}"]`);
+                const answerText = textarea ? textarea.value : "";
+
+                try {
+                    const resp = await fetch(`/api/visites/questions/${qid}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ answer_text: answerText })
+                    });
+                    if (resp.ok) {
+                        showToast("Réponse enregistrée avec succès !");
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+
+        // Delete question button
+        document.getElementById('questions-container').addEventListener('click', async (e) => {
+            if (e.target.closest('.btn-delete-q')) {
+                const btn = e.target.closest('.btn-delete-q');
+                const qid = btn.dataset.qid;
+                if (confirm("Supprimer cette question de la FAQ ?")) {
+                    try {
+                        const resp = await fetch(`/api/visites/questions/${qid}`, { method: 'DELETE' });
+                        if (resp.ok) {
+                            btn.closest('.vs-q-card').remove();
+                            showToast("Question supprimée");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+        });
+
+        // Import default pack
+        async function importDefaultPack() {
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/questions/import-template`, { method: 'POST' });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showToast(`${data.imported} questions importées !`);
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        document.getElementById('btn-import-template')?.addEventListener('click', importDefaultPack);
+        document.getElementById('btn-import-template-empty')?.addEventListener('click', importDefaultPack);
+
+        // Add question modal
+        document.getElementById('btn-open-add-q-modal').addEventListener('click', () => openModal('modal-add-question'));
+        document.getElementById('btn-submit-add-question').addEventListener('click', async () => {
+            const text = document.getElementById('new-q-text').value.trim();
+            if (!text) {
+                alert("Veuillez saisir le texte de la question.");
+                return;
+            }
+
+            const selectedThemes = Array.from(document.querySelectorAll('#theme-selector-chips .vs-theme-chip.active')).map(c => c.dataset.val);
+            const customThemes = (document.getElementById('new-q-custom-themes').value || "").split(',').map(s => s.trim()).filter(Boolean);
+            const allThemes = Array.from(new Set([...selectedThemes, ...customThemes]));
+
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/questions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question_text: text, themes: allThemes })
+                });
+                if (resp.ok) {
+                    closeModal('modal-add-question');
+                    showToast("Question ajoutée avec succès !");
+                    setTimeout(() => window.location.reload(), 600);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Share short link
+        document.getElementById('btn-share-visit').addEventListener('click', () => {
+            const shortUrl = `${window.location.origin}/v/${visitToken}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shortUrl);
+                showToast("Lien court de visite copié dans le presse-papier !");
+            } else {
+                prompt("Lien court de la visite :", shortUrl);
+            }
+        });
+
+        // Invite Modal
+        document.getElementById('btn-open-invite-modal').addEventListener('click', () => openModal('modal-invite-participants'));
+        document.getElementById('btn-add-p-from-tab')?.addEventListener('click', () => openModal('modal-invite-participants'));
+        document.getElementById('btn-submit-invite').addEventListener('click', async () => {
+            const name = document.getElementById('invite-name').value.trim();
+            const email = document.getElementById('invite-email').value.trim();
+            const role = document.getElementById('invite-role').value;
+            const instructions = document.getElementById('invite-instructions').value.trim();
+            const sendEmail = document.getElementById('invite-send-email-cb').checked;
+
+            if (!email) {
+                alert("Veuillez renseigner l'adresse email du participant.");
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/invite`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        participants: [{ name: name, email: email, role: role }],
+                        instructions: instructions,
+                        send_emails: sendEmail
+                    })
+                });
+                if (resp.ok) {
+                    closeModal('modal-invite-participants');
+                    showToast("Invitation envoyée avec succès !");
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Media Upload Handlers
+        async function uploadFiles(files) {
+            if (!files || files.length === 0) return;
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            formData.append('category_tag', 'Prise de vue');
+
+            showToast("Téléversement des médias en cours...");
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/media`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (resp.ok) {
+                    showToast("Médias enregistrés !");
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.getElementById('camera-direct-input').addEventListener('change', (e) => uploadFiles(e.target.files));
+        document.getElementById('media-files-input').addEventListener('change', (e) => uploadFiles(e.target.files));
+
+        // Add External Link Modal
+        document.getElementById('btn-open-link-modal').addEventListener('click', () => openModal('modal-add-link'));
+        document.getElementById('btn-submit-add-link').addEventListener('click', async () => {
+            const url = document.getElementById('new-link-url').value.trim();
+            const title = document.getElementById('new-link-title').value.trim();
+            if (!url) return alert("Veuillez saisir une URL valide.");
+
+            const formData = new FormData();
+            formData.append('url', url);
+            formData.append('title', title || url);
+            formData.append('media_type', 'link');
+
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/media`, { method: 'POST', body: formData });
+                if (resp.ok) {
+                    closeModal('modal-add-link');
+                    showToast("Lien ajouté au dossier !");
+                    setTimeout(() => window.location.reload(), 800);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Delete Media Item
+        document.getElementById('media-gallery-container').addEventListener('click', async (e) => {
+            const btn = e.target.closest('.vs-media-delete-btn');
+            if (btn) {
+                e.stopPropagation();
+                const mid = btn.dataset.mid;
+                if (confirm("Supprimer ce média ?")) {
+                    try {
+                        const resp = await fetch(`/api/visites/media/${mid}`, { method: 'DELETE' });
+                        if (resp.ok) {
+                            btn.closest('.vs-media-item-card').remove();
+                            showToast("Média supprimé");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+        });
+
+        // Save General Notes
+        document.getElementById('btn-save-general-notes')?.addEventListener('click', async () => {
+            const notes = document.getElementById('general-notes-textarea').value;
+            try {
+                const resp = await fetch(`/api/visites/${visitId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: notes })
+                });
+                if (resp.ok) {
+                    showToast("Notes enregistrées avec succès !");
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Lightweight Live Polling (every 10 seconds)
+        let lastSyncTime = new Date().toISOString();
+        setInterval(async () => {
+            try {
+                const resp = await fetch(`/api/visites/${visitId}/live-updates?since=${encodeURIComponent(lastSyncTime)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    lastSyncTime = data.server_time || new Date().toISOString();
+                    // Update answers and statuses dynamically if changed remotely
+                    if (data.questions && data.questions.length > 0) {
+                        data.questions.forEach(q => {
+                            const card = document.querySelector(`.vs-q-card[data-qid="${q.id}"]`);
+                            if (card) {
+                                const select = card.querySelector('.vs-q-status-select');
+                                if (select && select.value !== q.status) {
+                                    select.value = q.status;
+                                    select.className = `vs-q-status-select status-${q.status}`;
+                                    card.className = `vs-q-card status-${q.status}` + (card.classList.contains('open') ? ' open' : '');
+                                    card.dataset.status = q.status;
+                                }
+                                const ta = card.querySelector('.vs-answer-textarea');
+                                if (ta && document.activeElement !== ta && q.answer_text && ta.value !== q.answer_text) {
+                                    ta.value = q.answer_text;
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                // Silently skip if polling network blip
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -199,6 +199,7 @@ class Listing(Base):
     visits = relationship("Visit", back_populates="listing", cascade="all, delete-orphan", order_by="Visit.scheduled_at")
     attachments = relationship("ListingAttachment", back_populates="listing", cascade="all, delete-orphan", order_by="ListingAttachment.created_at.desc()")
     links = relationship("ListingLink", back_populates="listing", cascade="all, delete-orphan", order_by="ListingLink.created_at.asc()")
+    visit_media = relationship("VisitMedia", back_populates="listing", cascade="all, delete-orphan", order_by="VisitMedia.created_at.desc()")
     main_agent_id = Column(Integer, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
     agency_id = Column(Integer, ForeignKey("agencies.id", ondelete="SET NULL"), nullable=True)
     main_agent = relationship("Agent", foreign_keys=[main_agent_id])
@@ -308,9 +309,16 @@ class Visit(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    access_token = Column(String(64), unique=True, index=True, nullable=True) # Unique short link token for /v/{token}
+    meeting_address = Column(String, nullable=True)                     # Specific meeting point / address
+    instructions = Column(Text, nullable=True)                         # Instructions / briefing for participants
+    participants_json = Column(Text, nullable=True)                     # JSON list of participant emails / usernames / roles
+
     # Relationships
     listing = relationship("Listing", back_populates="visits")
     visit_contacts = relationship("VisitContact", back_populates="visit", cascade="all, delete-orphan")
+    questions = relationship("VisitQuestion", back_populates="visit", cascade="all, delete-orphan", order_by="VisitQuestion.order_index.asc()")
+    media = relationship("VisitMedia", back_populates="visit", cascade="all, delete-orphan", order_by="VisitMedia.created_at.desc()")
 
     @property
     def contacts(self):
@@ -340,6 +348,59 @@ class VisitContact(Base):
     visit = relationship("Visit", back_populates="visit_contacts")
     agent = relationship("Agent")
     agency = relationship("Agency")
+
+
+class VisitQuestion(Base):
+    """
+    Stores interactive FAQ & inspection questions for a visit/contre-visite.
+    Supports multi-thematic classification (e.g. ['Piscine', 'Extérieur', 'Jardin']),
+    status lifecycle ('en_attente', 'satisfaisante', 'relance_necessaire', 'resolu', 'non_applicable'),
+    and answer note-taking with author attribution.
+    """
+    __tablename__ = "visit_questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    visit_id = Column(Integer, ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_text = Column(Text, nullable=False)
+    status = Column(String(50), nullable=False, default="en_attente") # en_attente, satisfaisante, relance_necessaire, resolu, non_applicable
+    themes_json = Column(Text, nullable=True) # JSON list of theme tags, e.g. ["Piscine", "Extérieur", "Jardin"]
+    created_by = Column(String(100), nullable=True)
+    assigned_to = Column(String(100), nullable=True)
+    answer_text = Column(Text, nullable=True)
+    answered_by = Column(String(100), nullable=True)
+    order_index = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    visit = relationship("Visit", back_populates="questions")
+
+
+class VisitMedia(Base):
+    """
+    Stores contributions added during or before a visit (photos taken on site,
+    videos, PDF diagnostics/plans, external URLs) with bidirectional linkage
+    to both the visit event and the main property listing.
+    """
+    __tablename__ = "visit_media"
+
+    id = Column(Integer, primary_key=True, index=True)
+    visit_id = Column(Integer, ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
+    listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    media_type = Column(String(50), nullable=False, default="photo") # photo, video, document, link
+    file_path = Column(String(500), nullable=True)
+    url = Column(Text, nullable=True)
+    title = Column(String(255), nullable=True)
+    category_tag = Column(String(100), nullable=True)
+    file_size = Column(Integer, nullable=True)
+    mime_type = Column(String(100), nullable=True)
+    created_by = Column(String(100), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    visit = relationship("Visit", back_populates="media")
+    listing = relationship("Listing", back_populates="visit_media")
 
 
 

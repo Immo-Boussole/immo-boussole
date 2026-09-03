@@ -268,6 +268,12 @@ _MIGRATIONS = [
     # listings — solar & exposure v35
     ("listings", "orientation",                            "TEXT"),
     ("listings", "solar_json",                             "TEXT"),
+
+    # visits — collaboration & short URL access token v36
+    ("visits", "access_token",                             "TEXT"),
+    ("visits", "meeting_address",                          "TEXT"),
+    ("visits", "instructions",                             "TEXT"),
+    ("visits", "participants_json",                        "TEXT"),
 ]
 
 
@@ -313,6 +319,10 @@ def run_migrations():
             ("idx_attachments_listing_id", "CREATE INDEX IF NOT EXISTS idx_attachments_listing_id ON listing_attachments(listing_id);"),
             ("idx_visits_listing_id", "CREATE INDEX IF NOT EXISTS idx_visits_listing_id ON visits(listing_id);"),
             ("idx_visits_scheduled_at", "CREATE INDEX IF NOT EXISTS idx_visits_scheduled_at ON visits(scheduled_at);"),
+            ("idx_visits_access_token", "CREATE INDEX IF NOT EXISTS idx_visits_access_token ON visits(access_token);"),
+            ("idx_visit_questions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_visit_id ON visit_questions(visit_id);"),
+            ("idx_visit_media_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_visit_id ON visit_media(visit_id);"),
+            ("idx_visit_media_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_listing_id ON visit_media(listing_id);"),
             ("idx_map_pins_pin_type", "CREATE INDEX IF NOT EXISTS idx_map_pins_pin_type ON map_pins(pin_type);"),
             ("idx_notifications_user_id", "CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);"),
             ("idx_notifications_target_role", "CREATE INDEX IF NOT EXISTS idx_notifications_target_role ON notifications(target_role);"),
