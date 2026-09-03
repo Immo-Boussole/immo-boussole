@@ -10,7 +10,47 @@ from sqlalchemy.orm import Session
 from app.models import Visit, VisitQuestion, GlobalQuestion
 
 
+from pathlib import Path
+
+QUESTIONS_JSON_PATH = Path(__file__).parent / "data" / "default_catalog_questions.json"
+
+
+def load_default_catalog_questions() -> List[Dict[str, Any]]:
+    """
+    Charge la liste des questions par défaut depuis le fichier JSON structuré app/data/default_catalog_questions.json.
+    """
+    if QUESTIONS_JSON_PATH.is_file():
+        try:
+            with open(QUESTIONS_JSON_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+
+def get_default_inspection_pack(language: str = "fr") -> List[Dict[str, Any]]:
+    """
+    Retourne le pack de questions d'inspection pour une langue donnée (ex: 'fr', 'en').
+    """
+    clean_lang = (language or "fr").strip().lower()
+    all_qs = load_default_catalog_questions()
+    if all_qs:
+        filtered = [q for q in all_qs if (q.get("language") or "fr").lower() == clean_lang]
+        if filtered:
+            return filtered
+
+    # Fallback to English or French if specific language not found
+    if clean_lang.startswith("en"):
+        return [q for q in all_qs if (q.get("language") or "").lower() == "en"] or DEFAULT_INSPECTION_PACK_EN
+    return [q for q in all_qs if (q.get("language") or "").lower() == "fr"] or DEFAULT_INSPECTION_PACK
+
+
+# Maintain module-level constants for backward compatibility
+_all_loaded_questions = load_default_catalog_questions()
+
 DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
+    q for q in _all_loaded_questions if (q.get("language") or "fr").lower() == "fr"
+] or [
     # ─── 1. Bâtiment, Structure & Gros Œuvre ──────────────────────────────
     {
         "question_text": "Quel est l'état général de la toiture, de la charpente et de la couverture ? Des infiltrations ou réparations récentes ont-elles eu lieu ?",
@@ -33,7 +73,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Consulter les 3 derniers procès-verbaux d'assemblée générale.",
         "language": "fr"
     },
-
     # ─── 2. Énergie, Chauffage, DPE & Isolation ──────────────────────────
     {
         "question_text": "Quel est le mode et le coût annuel réel de chauffage (chaudière, PAC, radiateurs) ? De quand date la dernière révision / installation ?",
@@ -56,7 +95,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Vérifier l'aspiration des bouches d'extraction avec une feuille de papier.",
         "language": "fr"
     },
-
     # ─── 3. Réseaux, Électricité & Plomberie ──────────────────────────────
     {
         "question_text": "Le tableau électrique est-il aux normes (différentiels 30mA, disjoncteurs, présence de terre dans toutes les pièces) ?",
@@ -79,7 +117,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Demander le certificat de conformité d'assainissement de la commune ou du SPANC.",
         "language": "fr"
     },
-
     # ─── 4. Extérieur, Jardin, Piscine & Dépendances ──────────────────────
     {
         "question_text": "Quels sont les équipements extérieurs et l'entretien régulier à prévoir (arrosage, clôtures, portail automatique, dépendances) ?",
@@ -102,7 +139,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Consulter le titre de propriété antérieur et le plan cadastral.",
         "language": "fr"
     },
-
     # ─── 5. Copropriété, Charges & Assemblées Générales ──────────────────
     {
         "question_text": "Quel est le montant exact des charges courantes mensuelles et ce qu'elles comprennent (eau, chauffage, ascenseur, gardien) ?",
@@ -125,7 +161,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Consulter le pré-état daté fourni par le vendeur.",
         "language": "fr"
     },
-
     # ─── 6. Environnement, Voisinage & Vie Quotidienne ───────────────────
     {
         "question_text": "Quel est le niveau sonore aux heures de pointe, en soirée et le week-end (bruit de rue, mitoyenneté, chemin de fer, commerces) ?",
@@ -148,7 +183,6 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
         "advice_notes": "Tester le trajet à pied jusqu'aux transports et commerces.",
         "language": "fr"
     },
-
     # ─── 7. Taxes, Prix & Négociation ────────────────────────────────────
     {
         "question_text": "Quel est le montant de la dernière taxe foncière ?",
@@ -175,6 +209,8 @@ DEFAULT_INSPECTION_PACK: List[Dict[str, Any]] = [
 
 
 DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
+    q for q in _all_loaded_questions if (q.get("language") or "").lower() == "en"
+] or [
     # ─── 1. Building, Structure & Shell ──────────────────────────────────
     {
         "question_text": "What is the overall condition of the roof, timber framework, and covering? Have there been any recent leaks or repairs?",
@@ -197,7 +233,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Review the minutes of the last 3 general meetings.",
         "language": "en"
     },
-
     # ─── 2. Energy, Heating, EPC & Insulation ────────────────────────────
     {
         "question_text": "What is the heating system type and actual annual energy cost (boiler, heat pump, radiators)? When was it last serviced or installed?",
@@ -220,7 +255,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Test air extraction grills with a piece of paper.",
         "language": "en"
     },
-
     # ─── 3. Electrical, Utilities & Plumbing ──────────────────────────────
     {
         "question_text": "Is the electrical distribution board compliant with modern standards (30mA RCDs, circuit breakers, earthing in all rooms)?",
@@ -243,7 +277,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Request the sanitation/drainage compliance certificate.",
         "language": "en"
     },
-
     # ─── 4. Exterior, Garden, Pool & Outbuildings ────────────────────────
     {
         "question_text": "What exterior equipment is included and what regular maintenance is required (irrigation, fences, motorized gate, outbuildings)?",
@@ -266,7 +299,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Examine title deeds and cadastral survey plans.",
         "language": "en"
     },
-
     # ─── 5. Co-ownership / HOA, Service Charges & AGM ────────────────────
     {
         "question_text": "What are the exact monthly service charges and what do they cover (water, communal heating, elevator, caretaker)?",
@@ -289,7 +321,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Check the pre-contractual questionnaire provided by the seller.",
         "language": "en"
     },
-
     # ─── 6. Environment, Neighborhood & Daily Living ─────────────────────
     {
         "question_text": "What is the noise level during rush hours, evenings, and weekends (street noise, party walls, railway, commercial shops)?",
@@ -312,7 +343,6 @@ DEFAULT_INSPECTION_PACK_EN: List[Dict[str, Any]] = [
         "advice_notes": "Walk the route from the property to local transit and shops.",
         "language": "en"
     },
-
     # ─── 7. Taxes, Price & Negotiation ───────────────────────────────────
     {
         "question_text": "What is the exact annual property tax amount (Taxe Foncière / local rates)?",

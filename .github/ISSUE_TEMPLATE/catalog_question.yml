@@ -1,0 +1,105 @@
+name: "Propose Inspection Question / Proposer une question d'inspection"
+description: "Suggest adding, modifying, removing, or translating a question in the master catalog / Proposer un ajout, modification, suppression ou traduction de question."
+title: "[Question]: "
+labels: ["catalog-question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 🧭 Community Inspection Questions / Questions d'inspection communautaires
+        Use this form to propose an addition, update, removal, or translation of a standard question in the Immo-Boussole catalog (`app/data/default_catalog_questions.json`).
+        An automated GitHub Action will generate a Pull Request for maintainer review.
+
+  - type: dropdown
+    id: action
+    attributes:
+      label: Action / Type de proposition
+      description: "Select what you would like to do with the question / Choisissez l'action souhaitée."
+      options:
+        - "Ajouter une nouvelle question / Add a new question"
+        - "Modifier une question existante / Modify an existing question"
+        - "Supprimer une question / Remove a question"
+        - "Traduire une question existante / Translate an existing question"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language / Langue
+      description: "Select the primary language of your question or translation / Choisissez la langue."
+      options:
+        - "fr (Français)"
+        - "en (English)"
+        - "es (Español)"
+        - "de (Deutsch)"
+        - "it (Italiano)"
+        - "pt (Português)"
+        - "nl (Nederlands)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category / Catégorie
+      description: "Select the main category for this question / Choisissez la catégorie principale."
+      options:
+        - "Structure & Gros œuvre / Structure & Shell"
+        - "Énergie & Chauffage / Energy & Heating"
+        - "Réseaux & Électricité / Utilities & Electrical"
+        - "Réseaux & Plomberie / Utilities & Plumbing"
+        - "Réseaux & Assainissement / Utilities & Drainage"
+        - "Extérieur & Jardin / Exterior & Garden"
+        - "Juridique & Servitudes / Legal & Easements"
+        - "Copropriété / Co-ownership & HOA"
+        - "Environnement / Environment & Location"
+        - "Financier & Négociation / Financial & Negotiation"
+        - "Autre / Other"
+    validations:
+      required: true
+
+  - type: input
+    id: themes
+    attributes:
+      label: Themes / Thématiques
+      description: "Comma-separated tags or themes (e.g. 'Toiture & Charpente, Entretien à prévoir') / Thématiques séparées par des virgules."
+      placeholder: "e.g. Toiture & Charpente, Entretien à prévoir"
+    validations:
+      required: false
+
+  - type: textarea
+    id: question_text
+    attributes:
+      label: Proposed Question Text / Intitulé de la question proposée
+      description: "Enter the full question text (or the new translated / updated text) / Saisissez le texte complet de la question."
+      placeholder: "e.g. Quel est l'état général de la toiture et de la charpente ?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_existing_text
+    attributes:
+      label: Target Existing Question / Intitulé de la question existante ciblée
+      description: "Only if modifying, removing, or translating: provide the original question text or its ID / Uniquement si modification, suppression ou traduction : indiquez la question d'origine."
+      placeholder: "e.g. What is the overall condition of the roof..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: advice_notes
+    attributes:
+      label: Verification Advice / Conseils d'inspection ou points de contrôle
+      description: "Helpful advice or document checklist for inspectors during visits / Conseils pratiques ou documents à demander lors de la visite."
+      placeholder: "e.g. Vérifier les 3 derniers procès-verbaux d'assemblée générale et factures."
+    validations:
+      required: false
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: Motivation / Justification
+      description: "Explain why this change or new question improves real estate visit inspections / Justifiez pourquoi cet ajout ou modification est utile."
+      placeholder: "e.g. Permet de détecter les surcoûts d'isolation thermique avant une offre d'achat."
+    validations:
+      required: false

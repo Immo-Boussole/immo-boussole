@@ -1,0 +1,80 @@
+name: Auto Catalog Question PR
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  create-catalog-pr:
+    if: contains(github.event.issue.labels.*.name, 'catalog-question')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Process Issue and Update Questions Catalog
+        id: update_catalog
+        run: |
+          python scripts/process_catalog_question_issue.py "${{ github.event.issue.body }}" "${{ github.event.issue.number }}" > result.json
+          cat result.json
+          git status
+
+      - name: Check for Catalog Changes
+        id: check_changes
+        run: |
+          if git diff --quiet app/data/default_catalog_questions.json; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to catalog JSON."
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Catalog JSON updated successfully."
+          fi
+
+      - name: Create Branch, Commit & Open PR
+        if: steps.check_changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH_NAME="feat/catalog-question-issue-${ISSUE_NUMBER}"
+          git checkout -b "$BRANCH_NAME"
+          git add app/data/default_catalog_questions.json
+
+          COMMIT_TITLE=$(python3 -c "import json; res = json.load(open('result.json')); print(res.get('commit_title') or 'feat(catalog): update inspection questions')")
+          PR_TITLE=$(python3 -c "import json; res = json.load(open('result.json')); print(res.get('pr_title') or 'feat(catalog): update inspection questions')")
+          PR_SUMMARY=$(python3 -c "import json; res = json.load(open('result.json')); print(res.get('pr_summary') or '')")
+
+          git commit -m "$COMMIT_TITLE (Issue #${ISSUE_NUMBER})"
+          git push origin "$BRANCH_NAME"
+
+          PR_URL=$(gh pr create \
+            --title "$PR_TITLE (Issue #${ISSUE_NUMBER})" \
+            --body "$PR_SUMMARY
+
+          ---
+          Closes #${ISSUE_NUMBER}. Automated Pull Request generated from issue #${ISSUE_NUMBER}." \
+            --head "$BRANCH_NAME" \
+            --base main \
+            --label "catalog-contribution")
+
+          echo "Created PR: $PR_URL"
+
+          # Comment on the origin issue
+          gh issue comment "$ISSUE_NUMBER" --body "👋 Thank you for your contribution!
+
+          An automated Pull Request has been generated for maintainer review:
+          🔗 **$PR_URL**"

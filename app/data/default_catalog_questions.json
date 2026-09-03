@@ -1,0 +1,338 @@
+[
+  {
+    "id": 1,
+    "question_text": "Quel est l'état général de la toiture, de la charpente et de la couverture ? Des infiltrations ou réparations récentes ont-elles eu lieu ?",
+    "themes": ["Toiture & Charpente", "Structure & Gros œuvre", "Entretien à prévoir"],
+    "category": "Structure & Gros œuvre",
+    "advice_notes": "Vérifier la date de réfection de toiture et inspecter les combles.",
+    "language": "fr"
+  },
+  {
+    "id": 2,
+    "question_text": "Y a-t-il des fissures traversantes, des traces d'humidité ou des remontées capillaires sur les murs porteurs et en sous-sol/cave ?",
+    "themes": ["Structure & Gros œuvre", "Humidité & Assainissement", "Sous-sol & Cave"],
+    "category": "Structure & Gros œuvre",
+    "advice_notes": "Rechercher des traces de salpêtre ou moisissure en cave et soubassements.",
+    "language": "fr"
+  },
+  {
+    "id": 3,
+    "question_text": "Quel est l'âge et l'état du ravalement de façade ? Des travaux d'isolation par l'extérieur (ITE) sont-ils prévus ou votés ?",
+    "themes": ["Façade & Extérieur", "Structure & Gros œuvre", "Copropriété", "Travaux & Budget"],
+    "category": "Structure & Gros œuvre",
+    "advice_notes": "Consulter les 3 derniers procès-verbaux d'assemblée générale.",
+    "language": "fr"
+  },
+  {
+    "id": 4,
+    "question_text": "Quel est le mode et le coût annuel réel de chauffage (chaudière, PAC, radiateurs) ? De quand date la dernière révision / installation ?",
+    "themes": ["Chauffage & Énergie", "DPE & Isolation", "Charges & Budget", "Entretien à prévoir"],
+    "category": "Énergie & Chauffage",
+    "advice_notes": "Demander les factures réelles des 2 dernières années et l'attestation d'entretien annuel.",
+    "language": "fr"
+  },
+  {
+    "id": 5,
+    "question_text": "Quelle est la nature du vitrage (simple, double, phonique/thermique) et l'état des menuiseries/volets ?",
+    "themes": ["DPE & Isolation", "Menuiseries & Fenêtres", "Travaux & Budget"],
+    "category": "Énergie & Chauffage",
+    "advice_notes": "Inspecter l'étanchéité à l'air des ouvrants.",
+    "language": "fr"
+  },
+  {
+    "id": 6,
+    "question_text": "Comment fonctionne la ventilation (VMC simple flux, double flux, naturelle) ? Est-elle opérationnelle dans les pièces humides ?",
+    "themes": ["DPE & Isolation", "Humidité & Assainissement", "Plomberie & Sanitaires"],
+    "category": "Énergie & Chauffage",
+    "advice_notes": "Vérifier l'aspiration des bouches d'extraction avec une feuille de papier.",
+    "language": "fr"
+  },
+  {
+    "id": 7,
+    "question_text": "Le tableau électrique est-il aux normes (différentiels 30mA, disjoncteurs, présence de terre dans toutes les pièces) ?",
+    "themes": ["Électricité & Sécurité", "Diagnostics & Conformité"],
+    "category": "Réseaux & Électricité",
+    "advice_notes": "Consulter le diagnostic électrique (anomalies B3, B4 ou absence de terre).",
+    "language": "fr"
+  },
+  {
+    "id": 8,
+    "question_text": "Quel est l'état de la plomberie générale (matériaux plomb/cuivre/multicouche, pression, chauffe-eau récent) ?",
+    "themes": ["Plomberie & Sanitaires", "Entretien à prévoir"],
+    "category": "Réseaux & Plomberie",
+    "advice_notes": "Vérifier la pression aux robinets et l'âge du cumulus.",
+    "language": "fr"
+  },
+  {
+    "id": 9,
+    "question_text": "L'assainissement est-il collectif (tout-à-l'égout raccordé et conforme) ou individuel (fosse septique aux normes SPANC) ?",
+    "themes": ["Humidité & Assainissement", "Diagnostics & Conformité", "Administratif & Urbanisme"],
+    "category": "Réseaux & Assainissement",
+    "advice_notes": "Demander le certificat de conformité d'assainissement de la commune ou du SPANC.",
+    "language": "fr"
+  },
+  {
+    "id": 10,
+    "question_text": "Quels sont les équipements extérieurs et l'entretien régulier à prévoir (arrosage, clôtures, portail automatique, dépendances) ?",
+    "themes": ["Extérieur", "Jardin", "Entretien à prévoir"],
+    "category": "Extérieur & Jardin",
+    "advice_notes": "Vérifier la mitoyenneté des clôtures et haies.",
+    "language": "fr"
+  },
+  {
+    "id": 11,
+    "question_text": "Quel est l'état de la piscine et de ses équipements (liner/coque, pompe, filtration, système de sécurité conforme) ?",
+    "themes": ["Piscine", "Extérieur", "Jardin", "Entretien à prévoir", "Charges & Budget"],
+    "category": "Extérieur & Jardin",
+    "advice_notes": "Demander la date du liner et l'attestation de conformité du système de sécurité (alarme, bâche ou barrière).",
+    "language": "fr"
+  },
+  {
+    "id": 12,
+    "question_text": "Existe-t-il des servitudes de passage, de vue ou de réseaux traversant le terrain/jardin ?",
+    "themes": ["Extérieur", "Jardin", "Administratif & Urbanisme", "Juridique & Servitudes"],
+    "category": "Juridique & Servitudes",
+    "advice_notes": "Consulter le titre de propriété antérieur et le plan cadastral.",
+    "language": "fr"
+  },
+  {
+    "id": 13,
+    "question_text": "Quel est le montant exact des charges courantes mensuelles et ce qu'elles comprennent (eau, chauffage, ascenseur, gardien) ?",
+    "themes": ["Copropriété", "Charges & Budget"],
+    "category": "Copropriété",
+    "advice_notes": "Vérifier les 4 derniers appels de fonds.",
+    "language": "fr"
+  },
+  {
+    "id": 14,
+    "question_text": "Y a-t-il des travaux récemment votés ou prévus lors des prochaines AG (ravalement, toiture, ascenseur, chaufferie) ?",
+    "themes": ["Copropriété", "Travaux & Budget"],
+    "category": "Copropriété",
+    "advice_notes": "Analyser les PV des 3 dernières AG et le carnet d'entretien.",
+    "language": "fr"
+  },
+  {
+    "id": 15,
+    "question_text": "Y a-t-il des impayés significatifs ou des procédures en cours au sein de la copropriété / syndic ?",
+    "themes": ["Copropriété", "Juridique & Servitudes"],
+    "category": "Copropriété",
+    "advice_notes": "Consulter le pré-état daté fourni par le vendeur.",
+    "language": "fr"
+  },
+  {
+    "id": 16,
+    "question_text": "Quel est le niveau sonore aux heures de pointe, en soirée et le week-end (bruit de rue, mitoyenneté, chemin de fer, commerces) ?",
+    "themes": ["Voisinage & Bruit", "Environnement & Quartier"],
+    "category": "Environnement",
+    "advice_notes": "Effectuer une contre-visite à une heure de pointe et en soirée.",
+    "language": "fr"
+  },
+  {
+    "id": 17,
+    "question_text": "Quelle est l'exposition réelle du salon et des espaces de vie tout au long de la journée / luminosité ?",
+    "themes": ["Luminosité & Orientation", "Environnement & Quartier"],
+    "category": "Environnement",
+    "advice_notes": "Vérifier la boussole et le simulateur solaire Immo-Boussole.",
+    "language": "fr"
+  },
+  {
+    "id": 18,
+    "question_text": "Où se situent les commodités immédiates (transports, écoles, commerces, stationnement visiteurs) ?",
+    "themes": ["Environnement & Quartier", "Vie pratique"],
+    "category": "Environnement",
+    "advice_notes": "Tester le trajet à pied jusqu'aux transports et commerces.",
+    "language": "fr"
+  },
+  {
+    "id": 19,
+    "question_text": "Quel est le montant de la dernière taxe foncière ?",
+    "themes": ["Charges & Budget", "Administratif & Urbanisme"],
+    "category": "Financier & Négociation",
+    "advice_notes": "Demander le dernier avis de taxe foncière officiel.",
+    "language": "fr"
+  },
+  {
+    "id": 20,
+    "question_text": "Quelle est la raison de la vente et depuis combien de temps le bien est-il sur le marché ?",
+    "themes": ["Négociation & Contexte", "Vente & Modalités"],
+    "category": "Financier & Négociation",
+    "advice_notes": "Déceler le niveau d'urgence ou la marge de négociation du vendeur.",
+    "language": "fr"
+  },
+  {
+    "id": 21,
+    "question_text": "Quelle est la date souhaitée de libération des lieux par le vendeur ?",
+    "themes": ["Négociation & Contexte", "Vente & Modalités"],
+    "category": "Financier & Négociation",
+    "advice_notes": "Indispensable pour caler le calendrier de signature notaire et le prêt bancaire.",
+    "language": "fr"
+  },
+  {
+    "id": 22,
+    "question_text": "What is the overall condition of the roof, timber framework, and covering? Have there been any recent leaks or repairs?",
+    "themes": ["Roof & Framework", "Structure & Building Shell", "Maintenance & Repairs"],
+    "category": "Structure & Shell",
+    "advice_notes": "Check the last roof renovation date and inspect the attic.",
+    "language": "en"
+  },
+  {
+    "id": 23,
+    "question_text": "Are there any through-cracks, signs of dampness, or rising damp on load-bearing walls and in the basement/cellar?",
+    "themes": ["Structure & Building Shell", "Dampness & Drainage", "Basement & Cellar"],
+    "category": "Structure & Shell",
+    "advice_notes": "Look for saltpetre, flaking plaster, or mould in the cellar and foundation walls.",
+    "language": "en"
+  },
+  {
+    "id": 24,
+    "question_text": "What is the age and condition of the exterior facade? Are any external wall insulation (EWI) works planned or approved?",
+    "themes": ["Facade & Exterior", "Structure & Building Shell", "HOA / Copro", "Renovation & Budget"],
+    "category": "Structure & Shell",
+    "advice_notes": "Review the minutes of the last 3 general meetings.",
+    "language": "en"
+  },
+  {
+    "id": 25,
+    "question_text": "What is the heating system type and actual annual energy cost (boiler, heat pump, radiators)? When was it last serviced or installed?",
+    "themes": ["Heating & Energy", "EPC & Insulation", "Utility Bills & Budget", "Maintenance & Repairs"],
+    "category": "Energy & Heating",
+    "advice_notes": "Request actual utility bills for the past 2 years and annual maintenance certificate.",
+    "language": "en"
+  },
+  {
+    "id": 26,
+    "question_text": "What type of glazing is installed (single, double, acoustic/thermal) and what is the condition of window frames/shutters?",
+    "themes": ["EPC & Insulation", "Windows & Joinery", "Renovation & Budget"],
+    "category": "Energy & Heating",
+    "advice_notes": "Check air tightness around window sashes and doors.",
+    "language": "en"
+  },
+  {
+    "id": 27,
+    "question_text": "How does the ventilation work (mechanical extract, double flux, natural)? Is it fully working in wet rooms (kitchen, bathrooms)?",
+    "themes": ["EPC & Insulation", "Dampness & Drainage", "Plumbing & Bathrooms"],
+    "category": "Energy & Heating",
+    "advice_notes": "Test air extraction grills with a piece of paper.",
+    "language": "en"
+  },
+  {
+    "id": 28,
+    "question_text": "Is the electrical distribution board compliant with modern standards (30mA RCDs, circuit breakers, earthing in all rooms)?",
+    "themes": ["Electrical & Safety", "Diagnostics & Compliance"],
+    "category": "Utilities & Electrical",
+    "advice_notes": "Review the electrical inspection report for safety anomalies.",
+    "language": "en"
+  },
+  {
+    "id": 29,
+    "question_text": "What is the general condition of plumbing (copper, multilayer or lead pipes, water pressure, recent boiler/cylinder)?",
+    "themes": ["Plumbing & Bathrooms", "Maintenance & Repairs"],
+    "category": "Utilities & Plumbing",
+    "advice_notes": "Check water pressure at taps and water heater manufacturing date.",
+    "language": "en"
+  },
+  {
+    "id": 30,
+    "question_text": "Is drainage connected to mains sewer (compliant connection) or a private septic tank system (compliant with local regulations)?",
+    "themes": ["Dampness & Drainage", "Diagnostics & Compliance", "Legal & Permits"],
+    "category": "Utilities & Drainage",
+    "advice_notes": "Request the sanitation/drainage compliance certificate.",
+    "language": "en"
+  },
+  {
+    "id": 31,
+    "question_text": "What exterior equipment is included and what regular maintenance is required (irrigation, fences, motorized gate, outbuildings)?",
+    "themes": ["Exterior", "Garden", "Maintenance & Repairs"],
+    "category": "Exterior & Garden",
+    "advice_notes": "Verify boundary ownership of fences and hedges.",
+    "language": "en"
+  },
+  {
+    "id": 32,
+    "question_text": "What is the condition of the swimming pool and its plant equipment (liner/shell, pump, filtration, compliant safety barrier/alarm)?",
+    "themes": ["Swimming Pool", "Exterior", "Garden", "Maintenance & Repairs", "Utility Bills & Budget"],
+    "category": "Exterior & Garden",
+    "advice_notes": "Ask for liner replacement date and pool safety compliance certificate.",
+    "language": "en"
+  },
+  {
+    "id": 33,
+    "question_text": "Are there any rights of way, easements, or utility lines crossing the plot/garden?",
+    "themes": ["Exterior", "Garden", "Legal & Permits", "Easements & Rights"],
+    "category": "Legal & Easements",
+    "advice_notes": "Examine title deeds and cadastral survey plans.",
+    "language": "en"
+  },
+  {
+    "id": 34,
+    "question_text": "What are the exact monthly service charges and what do they cover (water, communal heating, elevator, caretaker)?",
+    "themes": ["HOA / Copro", "Utility Bills & Budget"],
+    "category": "Co-ownership & HOA",
+    "advice_notes": "Review the last 4 quarterly service charge statements.",
+    "language": "en"
+  },
+  {
+    "id": 35,
+    "question_text": "Have major capital works been voted or planned for upcoming AGMs (facade rendering, roof, lift, heating plant)?",
+    "themes": ["HOA / Copro", "Renovation & Budget"],
+    "category": "Co-ownership & HOA",
+    "advice_notes": "Analyze minutes of the last 3 general meetings and building maintenance logbook.",
+    "language": "en"
+  },
+  {
+    "id": 36,
+    "question_text": "Are there any substantial unpaid service charges or ongoing litigation within the co-ownership / building management?",
+    "themes": ["HOA / Copro", "Legal & Easements"],
+    "category": "Co-ownership & HOA",
+    "advice_notes": "Check the pre-contractual questionnaire provided by the seller.",
+    "language": "en"
+  },
+  {
+    "id": 37,
+    "question_text": "What is the noise level during rush hours, evenings, and weekends (street noise, party walls, railway, commercial shops)?",
+    "themes": ["Noise & Neighbors", "Neighborhood & Surroundings"],
+    "category": "Environment & Location",
+    "advice_notes": "Conduct a second visit during peak traffic and evening hours.",
+    "language": "en"
+  },
+  {
+    "id": 38,
+    "question_text": "What is the actual sun exposure of the living room and primary areas throughout the day / natural light?",
+    "themes": ["Sunlight & Orientation", "Neighborhood & Surroundings"],
+    "category": "Environment & Location",
+    "advice_notes": "Check orientation with compass and solar tracker tool in Immo-Boussole.",
+    "language": "en"
+  },
+  {
+    "id": 39,
+    "question_text": "Where are nearby amenities located (public transit, schools, grocery stores, visitor parking)?",
+    "themes": ["Neighborhood & Surroundings", "Daily Life & Transit"],
+    "category": "Environment & Location",
+    "advice_notes": "Walk the route from the property to local transit and shops.",
+    "language": "en"
+  },
+  {
+    "id": 40,
+    "question_text": "What is the exact annual property tax amount (Taxe Foncière / local rates)?",
+    "themes": ["Utility Bills & Budget", "Legal & Permits"],
+    "category": "Financial & Negotiation",
+    "advice_notes": "Ask for the latest official property tax bill.",
+    "language": "en"
+  },
+  {
+    "id": 41,
+    "question_text": "What is the reason for selling and how long has the property been on the market?",
+    "themes": ["Negotiation & Context", "Sale Conditions"],
+    "category": "Financial & Negotiation",
+    "advice_notes": "Gauge the seller's urgency level and negotiation flexibility.",
+    "language": "en"
+  },
+  {
+    "id": 42,
+    "question_text": "What is the seller's preferred timeline for vacating the property / completion date?",
+    "themes": ["Negotiation & Context", "Sale Conditions"],
+    "category": "Financial & Negotiation",
+    "advice_notes": "Crucial to synchronize mortgage approval and final completion notary schedule.",
+    "language": "en"
+  }
+]
