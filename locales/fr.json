@@ -219,6 +219,7 @@
         "visit_status_retour_agence": "Retour d'agence pour RDV",
         "visit_status_visite_programmee": "Visite programmée",
         "visit_status_deja_visitee": "Déjà visitée, réflexion",
+        "visit_status_contre_visite": "Contre-visite nécessaire",
         "visit_status_sans_suite_acheteur": "Sans suite acheteur",
         "visit_status_sans_suite_visiteur": "Sans suite vendeur",
         "visit_status_a_relancer": "A relancer pour RDV",
@@ -226,6 +227,7 @@
         "visit_status_retour_agence_short": "Retour agence",
         "visit_status_visite_programmee_short": "Visite programmée",
         "visit_status_deja_visitee_short": "Déjà visitée",
+        "visit_status_contre_visite_short": "Contre-visite",
         "visit_status_sans_suite_acheteur_short": "Sans suite (ach.)",
         "visit_status_sans_suite_visiteur_short": "Sans suite (vend.)",
         "visit_status_a_relancer_short": "A relancer"

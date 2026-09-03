@@ -76,6 +76,12 @@
     color: #ffffff;
 }
 
+.visit-status-badge.status-contre_visite {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border-color: rgba(168, 85, 247, 0.4);
+    color: #ffffff;
+}
+
 .visit-status-badge.status-sans_suite_acheteur {
     background: linear-gradient(135deg, #b91c1c, #ef4444);
     border-color: rgba(239, 68, 68, 0.4);
@@ -158,6 +164,7 @@
 .visit-status-item.item-retour_agence .dot { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
 .visit-status-item.item-visite_programmee .dot { background: #818cf8; box-shadow: 0 0 6px #818cf8; }
 .visit-status-item.item-deja_visitee .dot { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+.visit-status-item.item-contre_visite .dot { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
 .visit-status-item.item-sans_suite_acheteur .dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
 .visit-status-item.item-sans_suite_visiteur .dot { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
 .visit-status-item.item-a_relancer .dot { background: #fb923c; box-shadow: 0 0 6px #fb923c; }

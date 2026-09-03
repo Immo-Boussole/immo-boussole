@@ -128,7 +128,7 @@ class ListingUpdateRequest(BaseModel):
 
 
 class ListingVisitStatusUpdate(BaseModel):
-    last_visit_status: Optional[str] = None  # None or one of: retour_agence, visite_programmee, deja_visitee, sans_suite_acheteur, sans_suite_visiteur, a_relancer
+    last_visit_status: Optional[str] = None  # None or one of: retour_agence, visite_programmee, deja_visitee, contre_visite, sans_suite_acheteur, sans_suite_visiteur, a_relancer
 
 
 class PhotoImportRequest(BaseModel):

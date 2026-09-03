@@ -219,6 +219,7 @@
         "visit_status_retour_agence": "Agency follow-up for appointment",
         "visit_status_visite_programmee": "Visit scheduled",
         "visit_status_deja_visitee": "Already visited, under review",
+        "visit_status_contre_visite": "Second visit required",
         "visit_status_sans_suite_acheteur": "No further action (buyer)",
         "visit_status_sans_suite_visiteur": "No further action (seller)",
         "visit_status_a_relancer": "Follow up for appointment",
@@ -226,6 +227,7 @@
         "visit_status_retour_agence_short": "Agency follow-up",
         "visit_status_visite_programmee_short": "Scheduled visit",
         "visit_status_deja_visitee_short": "Visited",
+        "visit_status_contre_visite_short": "2nd Visit",
         "visit_status_sans_suite_acheteur_short": "Closed (buyer)",
         "visit_status_sans_suite_visiteur_short": "Closed (seller)",
         "visit_status_a_relancer_short": "To follow up"

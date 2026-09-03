@@ -45,6 +45,20 @@ const VISIT_STATUS_CONFIG = {
         status: "effectuee",
         color: "#fbbf24"
     },
+    contre_visite: {
+        key: 'contre_visite',
+        label: "Contre-visite nécessaire",
+        shortLabel: "Contre-visite",
+        icon: "fa-solid fa-repeat",
+        badgeClass: "status-contre_visite",
+        itemClass: "item-contre_visite",
+        stepFamily: "visite",
+        familyLabel: "Rendez-vous & Visites",
+        step: "contre_visite",
+        stepLabel: "Contre-visite planifiée / effectuée",
+        status: "programme",
+        color: "#a855f7"
+    },
     sans_suite_acheteur: {
         key: 'sans_suite_acheteur',
         label: "Sans suite acheteur",
@@ -249,7 +263,7 @@ async function updateListingVisitStatus(listingId, newStatus, listingTitle = '')
         // Update card data attribute for filtering if present
         document.querySelectorAll(`[data-id="${listingId}"], [data-listing-id="${listingId}"]`).forEach(el => {
             el.dataset.visitStatus = updatedStatus || '';
-            if (updatedStatus in {'visite_programmee':1, 'retour_agence':1, 'deja_visitee':1, 'a_relancer':1}) {
+            if (updatedStatus in {'visite_programmee':1, 'retour_agence':1, 'deja_visitee':1, 'contre_visite':1, 'a_relancer':1}) {
                 el.dataset.toVisit = 'true';
             } else if (updatedStatus in {'sans_suite_acheteur':1, 'sans_suite_visiteur':1}) {
                 el.dataset.toVisit = 'false';

@@ -968,6 +968,14 @@ body.visite-session-body {
     border-color: rgba(16, 217, 164, 0.3);
     background: linear-gradient(135deg, rgba(16, 217, 164, 0.05) 0%, var(--vs-surface) 100%);
 }
+.vs-inc-summary-item.warning {
+    border-color: rgba(245, 158, 11, 0.2);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, var(--vs-surface) 100%);
+}
+.vs-inc-summary-item.warning.has-items {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, var(--vs-surface) 100%);
+}
 
 .vs-inc-summary-val {
     font-size: 24px;
@@ -977,9 +985,64 @@ body.visite-session-body {
 .vs-inc-summary-item.highlight .vs-inc-summary-val {
     color: #10d9a4;
 }
+.vs-inc-summary-item.warning.has-items .vs-inc-summary-val {
+    color: #f59e0b;
+}
 .vs-inc-summary-lbl {
     font-size: 12px;
     color: var(--vs-text-muted);
+}
+
+.vs-inc-type-btn.btn-filter-to-define {
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+.vs-inc-type-btn.btn-filter-to-define.active,
+.vs-inc-type-btn.btn-filter-to-define:hover {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: #f59e0b;
+    color: #fbbf24;
+}
+
+.vs-inc-condition-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.vs-inc-condition-tag.tag-to-define {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.vs-inc-condition-tag.tag-standard {
+    background: var(--vs-surface-2);
+    color: var(--vs-text-muted);
+    border: 1px solid var(--vs-border);
+}
+
+.vs-inc-condition-row {
+    align-items: center;
+}
+
+.vs-inc-inline-condition-select {
+    background: var(--vs-surface-2);
+    color: var(--vs-text);
+    border: 1px solid var(--vs-border);
+    border-radius: var(--vs-radius-sm);
+    padding: 3px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--vs-transition);
+}
+.vs-inc-inline-condition-select:hover,
+.vs-inc-inline-condition-select:focus {
+    border-color: var(--vs-accent);
+    outline: none;
 }
 
 .vs-inclusions-grid {

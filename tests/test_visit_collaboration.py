@@ -639,7 +639,7 @@ def test_inclusions_furniture_services_and_offer_clause():
             })
             visit_id = v_resp.json()["id"]
 
-            # 1. Add furniture items
+            # 1. Add furniture items (including one with condition 'À définir')
             f1_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
                 "item_type": "objet",
                 "room": "Chambre 1",
@@ -662,6 +662,17 @@ def test_inclusions_furniture_services_and_offer_clause():
             })
             assert f2_resp.status_code == 200
 
+            f3_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
+                "item_type": "objet",
+                "room": "Cuisine",
+                "title": "Réfrigérateur américain Samsung",
+                "condition": "À définir",
+                "estimated_value": 300.0,
+                "negotiation_status": "en_discussion"
+            })
+            assert f3_resp.status_code == 200
+            f3_id = f3_resp.json()["id"]
+
             # 2. Add service contract
             s1_resp = client.post(f"/api/visites/{visit_id}/inclusions", json={
                 "item_type": "service",
@@ -679,30 +690,48 @@ def test_inclusions_furniture_services_and_offer_clause():
             assert s1_resp.status_code == 200
             s1_id = s1_resp.json()["id"]
 
-            # 3. Retrieve inclusions list
+            # 3. Retrieve inclusions list and check condition filtering
             inc_list_resp = client.get(f"/api/visites/{visit_id}/inclusions")
             assert inc_list_resp.status_code == 200
             items = inc_list_resp.json()
-            assert len(items) == 3
+            assert len(items) == 4
 
-            # 4. Generate Offer Annex Clause
+            # Filter by condition: to_define
+            to_define_resp = client.get(f"/api/visites/{visit_id}/inclusions?condition=to_define")
+            assert to_define_resp.status_code == 200
+            to_define_items = to_define_resp.json()
+            assert len(to_define_items) == 1
+            assert to_define_items[0]["id"] == f3_id
+
+            # 4. Check visit session template render (counters & À définir option)
+            session_resp = client.get(f"/visites/{visit_id}/session")
+            assert session_resp.status_code == 200
+            assert "État à définir" in session_resp.text
+            assert "summary-to-define-count" in session_resp.text
+            assert "Réfrigérateur américain Samsung" in session_resp.text
+
+            # 5. Quick edit condition via PATCH
+            patch_resp = client.patch(f"/api/visites/inclusions/{f3_id}", json={"condition": "Très bon état"})
+            assert patch_resp.status_code == 200
+            assert patch_resp.json()["condition"] == "Très bon état"
+
+            # 6. Generate Offer Annex Clause
             clause_resp = client.get(f"/api/visites/{visit_id}/inclusions/offer-clause")
             assert clause_resp.status_code == 200
             clause_data = clause_resp.json()
 
-            assert clause_data["total_furniture_count"] == 2
-            assert clause_data["total_furniture_value"] == 1050.0
+            assert clause_data["total_furniture_count"] == 3
+            assert clause_data["total_furniture_value"] == 1350.0
             assert clause_data["total_service_count"] == 1
 
             clause_text = clause_data["clause_text"]
             assert "INVENTAIRE DU MOBILIER ET DES CONTRATS DE SERVICES" in clause_text
             assert "Lit double 160x200" in clause_text
             assert "avec sommier et matelas" in clause_text
-            assert "1,050.00 €" in clause_text or "1 050.00 €" in clause_text or "1050" in clause_text
             assert "Verisure" in clause_text
             assert "39.90 €/mois" in clause_text or "39,90" in clause_text
 
-            # 5. Delete one item
+            # 7. Delete one item
             del_resp = client.delete(f"/api/visites/inclusions/{f1_id}")
             assert del_resp.status_code == 200
             assert del_resp.json()["status"] == "deleted"

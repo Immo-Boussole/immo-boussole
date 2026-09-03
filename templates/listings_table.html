@@ -745,6 +745,7 @@
                         <option value="retour_agence">🔵 {{ t(request, 'dashboard.visit_status_retour_agence', 'Retour d\'agence pour RDV') }}</option>
                         <option value="visite_programmee">🟣 {{ t(request, 'dashboard.visit_status_visite_programmee', 'Visite programmée') }}</option>
                         <option value="deja_visitee">🟡 {{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</option>
+                        <option value="contre_visite">🟣 {{ t(request, 'dashboard.visit_status_contre_visite', 'Contre-visite nécessaire') }}</option>
                         <option value="sans_suite_acheteur">🔴 {{ t(request, 'dashboard.visit_status_sans_suite_acheteur', 'Sans suite acheteur') }}</option>
                         <option value="sans_suite_visiteur">🔴 {{ t(request, 'dashboard.visit_status_sans_suite_visiteur', 'Sans suite vendeur') }}</option>
                         <option value="a_relancer">🟠 {{ t(request, 'dashboard.visit_status_a_relancer', 'A relancer pour RDV') }}</option>
@@ -890,6 +891,8 @@
                                             class="fa-solid fa-calendar-check"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_visite_programmee_short', 'Visite programmée') }}</span>
                                         {% elif listing.last_visit_status == 'deja_visitee' %}<i
                                             class="fa-solid fa-brain"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_deja_visitee_short', 'Déjà visitée') }}</span>
+                                        {% elif listing.last_visit_status == 'contre_visite' %}<i
+                                            class="fa-solid fa-repeat"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_contre_visite_short', 'Contre-visite') }}</span>
                                         {% elif listing.last_visit_status == 'sans_suite_acheteur' %}<i
                                             class="fa-solid fa-user-slash"></i> <span class="badge-text">{{ t(request, 'dashboard.visit_status_sans_suite_acheteur_short', 'Sans suite (ach.)') }}</span>
                                         {% elif listing.last_visit_status == 'sans_suite_visiteur' %}<i
@@ -912,6 +915,10 @@
                                             data-status="deja_visitee" onclick="selectVisitStatus(this, event)"><span
                                                 class="dot"></span><i class="fa-solid fa-brain"
                                                 style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_deja_visitee', 'Déjà visitée, réflexion') }}</span></div>
+                                        <div class="visit-status-item item-contre_visite {% if listing.last_visit_status == 'contre_visite' %}active{% endif %}"
+                                            data-status="contre_visite" onclick="selectVisitStatus(this, event)"><span
+                                                class="dot"></span><i class="fa-solid fa-repeat"
+                                                style="width: 14px; text-align: center;"></i><span>{{ t(request, 'dashboard.visit_status_contre_visite', 'Contre-visite nécessaire') }}</span></div>
                                         <div class="visit-status-item item-sans_suite_acheteur {% if listing.last_visit_status == 'sans_suite_acheteur' %}active{% endif %}"
                                             data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)">
                                             <span class="dot"></span><i class="fa-solid fa-user-slash"
@@ -955,6 +962,10 @@
                                                 class="fa-solid fa-brain"
                                                 style="width: 14px; text-align: center;"></i><span>Déjà visitée,
                                                 réflexion</span></div>
+                                        <div class="visit-status-item item-contre_visite" data-status="contre_visite"
+                                            onclick="selectVisitStatus(this, event)"><span class="dot"></span><i
+                                                class="fa-solid fa-repeat"
+                                                style="width: 14px; text-align: center;"></i><span>Contre-visite nécessaire</span></div>
                                         <div class="visit-status-item item-sans_suite_acheteur"
                                             data-status="sans_suite_acheteur" onclick="selectVisitStatus(this, event)">
                                             <span class="dot"></span><i class="fa-solid fa-user-slash"

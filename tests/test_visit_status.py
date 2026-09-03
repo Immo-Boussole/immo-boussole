@@ -145,6 +145,18 @@ class TestVisitStatus(unittest.TestCase):
         self.assertEqual(self.listing.last_visit_status, "visite_programmee")
         self.assertTrue(self.listing.to_visit)
 
+    def test_patch_visit_status_contre_visite(self):
+        # 7. Updating to contre_visite should mark to_visit = True
+        res = self.client.patch(f"/api/listings/{self.listing.id}/visit-status", json={"last_visit_status": "contre_visite"})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["last_visit_status"], "contre_visite")
+        self.assertTrue(data["to_visit"])
+
+        self.db.refresh(self.listing)
+        self.assertEqual(self.listing.last_visit_status, "contre_visite")
+        self.assertTrue(self.listing.to_visit)
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -5600,6 +5600,13 @@ def visit_short_url_session(
 
     # Compute quick stats
     total_furniture = sum(1 for i in inclusions if i.item_type == "objet")
+    total_furniture_to_define = sum(
+        1 for i in inclusions
+        if i.item_type == "objet" and (
+            not i.condition
+            or i.condition.strip().lower() in ("à définir", "a définir", "a definir", "à definir", "")
+        )
+    )
     total_services = sum(1 for i in inclusions if i.item_type == "service")
     total_furniture_val = sum(i.estimated_value or 0.0 for i in inclusions if i.item_type == "objet" and i.negotiation_status == "inclus_prix_negocie")
 
@@ -5611,6 +5618,7 @@ def visit_short_url_session(
         "all_authors": all_authors,
         "inclusions": inclusions,
         "total_furniture": total_furniture,
+        "total_furniture_to_define": total_furniture_to_define,
         "total_services": total_services,
         "total_furniture_val": total_furniture_val,
         "media_items": media_items,
@@ -6299,6 +6307,7 @@ def get_visit_inclusions(
     visit_id: int,
     item_type: Optional[str] = None,
     negotiation_status: Optional[str] = None,
+    condition: Optional[str] = None,
     room: Optional[str] = None,
     q: Optional[str] = None,
     db: Session = Depends(get_db)
@@ -6314,6 +6323,18 @@ def get_visit_inclusions(
         query = query.filter(VisitInclusion.item_type == item_type)
     if negotiation_status:
         query = query.filter(VisitInclusion.negotiation_status == negotiation_status)
+    if condition:
+        if condition.lower() in ("à définir", "a définir", "a definir", "à definir", "to_define"):
+            query = query.filter(
+                VisitInclusion.item_type == "objet",
+                or_(
+                    VisitInclusion.condition == None,
+                    VisitInclusion.condition == "",
+                    VisitInclusion.condition.in_(["À définir", "A définir", "a définir", "à définir", "A definir", "À definir"])
+                )
+            )
+        else:
+            query = query.filter(VisitInclusion.condition == condition)
     if room:
         query = query.filter(VisitInclusion.room == room)
 

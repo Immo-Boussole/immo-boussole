@@ -369,17 +369,21 @@
             
             <!-- Summary stats card -->
             <div class="vs-inclusions-summary-card">
-                <div class="vs-inc-summary-item">
+                <div class="vs-inc-summary-item" id="summary-card-furn" title="Filtrer : tous les meubles" style="cursor: pointer;">
                     <div class="vs-inc-summary-val" id="summary-furn-count">{{ total_furniture }}</div>
                     <div class="vs-inc-summary-lbl">Objets / Meubles</div>
                 </div>
-                <div class="vs-inc-summary-item">
+                <div class="vs-inc-summary-item warning{% if total_furniture_to_define > 0 %} has-items{% endif %}" id="summary-card-to-define" title="Filtrer : meubles avec état à définir" style="cursor: pointer;">
+                    <div class="vs-inc-summary-val" id="summary-to-define-count">{{ total_furniture_to_define }}</div>
+                    <div class="vs-inc-summary-lbl">⚠️ État à définir</div>
+                </div>
+                <div class="vs-inc-summary-item" id="summary-card-serv" title="Filtrer : tous les services" style="cursor: pointer;">
                     <div class="vs-inc-summary-val" id="summary-serv-count">{{ total_services }}</div>
                     <div class="vs-inc-summary-lbl">Services & Contrats</div>
                 </div>
-                <div class="vs-inc-summary-item highlight">
+                <div class="vs-inc-summary-item highlight" id="summary-card-val" title="Total mobilier inclus déductible">
                     <div class="vs-inc-summary-val" id="summary-furn-val">{{ "{:,.0f}".format(total_furniture_val).replace(',', ' ') }} €</div>
-                    <div class="vs-inc-summary-lbl">Mobilier inclus déductible notaire</div>
+                    <div class="vs-inc-summary-lbl">Mobilier inclus notaire</div>
                 </div>
             </div>
 
@@ -393,6 +397,10 @@
                         <button class="vs-inc-type-btn" data-inc-type="objet">
                             <i class="fa-solid fa-couch"></i>
                             <span>Mobilier & Objets</span>
+                        </button>
+                        <button class="vs-inc-type-btn btn-filter-to-define" data-inc-type="to_define">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>À définir (<span id="btn-count-to-define">{{ total_furniture_to_define }}</span>)</span>
                         </button>
                         <button class="vs-inc-type-btn" data-inc-type="service">
                             <i class="fa-solid fa-shield-halved"></i>
@@ -440,6 +448,8 @@
                          data-id="{{ inc.id }}" 
                          data-type="{{ inc.item_type }}" 
                          data-status="{{ inc.negotiation_status }}"
+                         data-condition="{{ inc.condition or 'À définir' }}"
+                         data-value="{{ inc.estimated_value or 0 }}"
                          data-room="{{ inc.room or '' }}"
                          data-created-by="{{ inc.created_by or '' }}">
                         <div class="vs-inc-card-header">
@@ -451,6 +461,17 @@
                                         <i class="fa-solid fa-shield-halved"></i> Service
                                     {% endif %}
                                 </span>
+                                {% if inc.item_type == 'objet' %}
+                                    {% if not inc.condition or inc.condition in ['À définir', 'A définir', 'a définir', 'à définir', 'A definir', 'À definir'] %}
+                                        <span class="vs-inc-condition-tag tag-to-define">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> État à définir
+                                        </span>
+                                    {% else %}
+                                        <span class="vs-inc-condition-tag tag-standard">
+                                            <i class="fa-solid fa-tag"></i> {{ inc.condition }}
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
                                 {% if inc.room %}
                                     <span class="vs-inc-room-tag">
                                         <i class="fa-solid fa-door-open"></i> {{ inc.room }}
@@ -486,9 +507,17 @@
                         {% endif %}
 
                         <div class="vs-inc-details-list">
-                            {% if inc.condition %}
-                                <div class="vs-inc-detail-item">
-                                    <span>État :</span> <strong>{{ inc.condition }}</strong>
+                            {% if inc.item_type == 'objet' %}
+                                <div class="vs-inc-detail-item vs-inc-condition-row">
+                                    <span>État du bien :</span>
+                                    <select class="vs-inc-inline-condition-select" onchange="updateInclusionCondition({{ inc.id }}, this.value)" title="Modifier l'état du bien">
+                                        <option value="À définir" {% if not inc.condition or inc.condition in ['À définir', 'A définir', 'a définir', 'à définir', 'A definir', 'À definir'] %}selected{% endif %}>⚠️ À définir</option>
+                                        <option value="Neuf" {% if inc.condition == 'Neuf' %}selected{% endif %}>✨ Neuf</option>
+                                        <option value="Très bon état" {% if inc.condition == 'Très bon état' %}selected{% endif %}>👌 Très bon état</option>
+                                        <option value="Bon état" {% if inc.condition == 'Bon état' %}selected{% endif %}>👍 Bon état</option>
+                                        <option value="État d'usage" {% if inc.condition == "État d'usage" %}selected{% endif %}>📦 État d'usage</option>
+                                        <option value="À réparer" {% if inc.condition == 'À réparer' %}selected{% endif %}>🔧 À réparer</option>
+                                    </select>
                                 </div>
                             {% endif %}
                             {% if inc.estimated_value %}
@@ -871,9 +900,10 @@
                     <div class="vs-form-group">
                         <label class="vs-form-label">État du bien</label>
                         <select id="obj-condition" class="vs-form-input">
+                            <option value="À définir" selected>À définir</option>
+                            <option value="Neuf">Neuf</option>
                             <option value="Très bon état">Très bon état</option>
                             <option value="Bon état">Bon état</option>
-                            <option value="Neuf">Neuf</option>
                             <option value="État d'usage">État d'usage</option>
                             <option value="À réparer">À réparer</option>
                         </select>
@@ -1288,6 +1318,25 @@
             });
         });
 
+        // Summary Cards Quick Filter Click Handlers
+        document.getElementById('summary-card-furn')?.addEventListener('click', () => {
+            setInclusionTypeFilter(currentInclusionTypeFilter === 'objet' ? '' : 'objet');
+        });
+        document.getElementById('summary-card-to-define')?.addEventListener('click', () => {
+            setInclusionTypeFilter(currentInclusionTypeFilter === 'to_define' ? '' : 'to_define');
+        });
+        document.getElementById('summary-card-serv')?.addEventListener('click', () => {
+            setInclusionTypeFilter(currentInclusionTypeFilter === 'service' ? '' : 'service');
+        });
+
+        function setInclusionTypeFilter(type) {
+            document.querySelectorAll('.vs-inc-type-btn').forEach(b => {
+                b.classList.toggle('active', (b.dataset.incType || '') === type);
+            });
+            currentInclusionTypeFilter = type;
+            applyUniversalFilters();
+        }
+
         // ─── UNIVERSAL REAL-TIME FULL-TEXT SEARCH & FILTER ENGINE ───────────
         function highlightMatch(text, queryTerms) {
             if (!queryTerms || queryTerms.length === 0 || !text) return text;
@@ -1348,12 +1397,22 @@
                 const title = (card.querySelector('.vs-inc-card-title')?.textContent || "").toLowerCase();
                 const room = (card.dataset.room || "").toLowerCase();
                 const incType = card.dataset.type || "";
+                const incCondition = (card.dataset.condition || "").toLowerCase().trim();
                 const createdBy = (card.dataset.createdBy || "").toLowerCase();
-                const incStatus = card.dataset.status || "";
+                const notes = (card.querySelector('.vs-inc-notes')?.textContent || "").toLowerCase();
+                const variation = (card.querySelector('.vs-inc-variation')?.textContent || "").toLowerCase();
 
-                const combinedBlob = `${title} ${room} ${createdBy}`;
+                const combinedBlob = `${title} ${room} ${createdBy} ${incCondition} ${notes} ${variation}`;
                 const matchTerms = terms.length === 0 || terms.every(t => combinedBlob.includes(t));
-                const matchType = !currentInclusionTypeFilter || incType === currentInclusionTypeFilter;
+
+                let matchType = true;
+                if (currentInclusionTypeFilter === 'to_define') {
+                    const isToDefine = !incCondition || ['à définir', 'a définir', 'a definir', 'à definir'].includes(incCondition);
+                    matchType = incType === 'objet' && isToDefine;
+                } else if (currentInclusionTypeFilter) {
+                    matchType = incType === currentInclusionTypeFilter;
+                }
+
                 const matchAuthor = !currentAuthorFilter || createdBy === currentAuthorFilter.toLowerCase();
 
                 if (matchTerms && matchType && matchAuthor) {
@@ -1772,6 +1831,95 @@
             }
         });
 
+        function recalculateInclusionSummaryCounters() {
+            const incCards = document.querySelectorAll('.vs-inc-card');
+            let furnCount = 0;
+            let toDefineCount = 0;
+            let servCount = 0;
+            let furnVal = 0;
+
+            incCards.forEach(card => {
+                const type = card.dataset.type || '';
+                const cond = (card.dataset.condition || '').toLowerCase().trim();
+                const status = card.dataset.status || '';
+                const val = parseFloat(card.dataset.value || '0') || 0;
+
+                if (type === 'objet') {
+                    furnCount++;
+                    if (!cond || ['à définir', 'a définir', 'a definir', 'à definir'].includes(cond)) {
+                        toDefineCount++;
+                    }
+                    if (status === 'inclus_prix_negocie') {
+                        furnVal += val;
+                    }
+                } else if (type === 'service') {
+                    servCount++;
+                }
+            });
+
+            const furnCountEl = document.getElementById('summary-furn-count');
+            if (furnCountEl) furnCountEl.textContent = furnCount;
+
+            const toDefineCountEl = document.getElementById('summary-to-define-count');
+            if (toDefineCountEl) toDefineCountEl.textContent = toDefineCount;
+
+            const btnCountToDefine = document.getElementById('btn-count-to-define');
+            if (btnCountToDefine) btnCountToDefine.textContent = toDefineCount;
+
+            const summaryCardToDefine = document.getElementById('summary-card-to-define');
+            if (summaryCardToDefine) {
+                if (toDefineCount > 0) {
+                    summaryCardToDefine.classList.add('has-items');
+                } else {
+                    summaryCardToDefine.classList.remove('has-items');
+                }
+            }
+
+            const servCountEl = document.getElementById('summary-serv-count');
+            if (servCountEl) servCountEl.textContent = servCount;
+
+            const furnValEl = document.getElementById('summary-furn-val');
+            if (furnValEl) furnValEl.textContent = `${new Intl.NumberFormat('fr-FR').format(Math.round(furnVal))} €`;
+
+            const countInclusions = document.getElementById('count-inclusions');
+            if (countInclusions) countInclusions.textContent = incCards.length;
+        }
+
+        async function updateInclusionCondition(incId, newCondition) {
+            try {
+                const res = await fetch(`/api/visites/inclusions/${incId}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ condition: newCondition })
+                });
+                if (res.ok) {
+                    const card = document.querySelector(`.vs-inc-card[data-id="${incId}"]`);
+                    if (card) {
+                        card.dataset.condition = newCondition;
+                        const isToDefine = !newCondition || ['à définir', 'a définir', 'a definir', 'à definir'].includes(newCondition.toLowerCase().trim());
+                        const badgeEl = card.querySelector('.vs-inc-condition-tag');
+                        if (badgeEl) {
+                            if (isToDefine) {
+                                badgeEl.className = 'vs-inc-condition-tag tag-to-define';
+                                badgeEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> État à définir';
+                            } else {
+                                badgeEl.className = 'vs-inc-condition-tag tag-standard';
+                                badgeEl.innerHTML = `<i class="fa-solid fa-tag"></i> ${newCondition}`;
+                            }
+                        }
+                        recalculateInclusionSummaryCounters();
+                        showToast(`État mis à jour : ${newCondition}`);
+                        applyUniversalFilters();
+                    }
+                } else {
+                    alert('Erreur lors de la mise à jour de l\'état.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de communication avec le serveur.');
+            }
+        }
+
         async function deleteInclusion(incId) {
             if (!confirm('Supprimer cet élément des inclusions ?')) return;
             try {
@@ -1779,6 +1927,7 @@
                 if (res.ok) {
                     document.querySelector(`.vs-inc-card[data-id="${incId}"]`)?.remove();
                     showToast('Élément supprimé');
+                    recalculateInclusionSummaryCounters();
                     applyUniversalFilters();
                 }
             } catch (err) {
