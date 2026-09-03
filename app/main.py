@@ -5157,6 +5157,7 @@ VALID_VISIT_STATUSES = {
     "retour_agence",
     "visite_programmee",
     "deja_visitee",
+    "contre_visite",
     "sans_suite_acheteur",
     "sans_suite_visiteur",
     "sans_suite_vendeur",
@@ -5179,6 +5180,8 @@ def _derive_visit_status_from_visit(visit: Visit) -> Optional[str]:
     if visit.step_family == "reflexion" or visit.step in ("en_reflexion_sans_offre", "en_reflexion"):
         return "deja_visitee"
     if visit.step_family == "visite" or visit.visit_type in ("visite", "contre_visite"):
+        if visit.step == "contre_visite" and visit.status != "effectuee":
+            return "visite_programmee"
         if visit.status == "effectuee":
             return "deja_visitee"
         return "visite_programmee"
@@ -5204,13 +5207,13 @@ def update_listing_visit_status(
     listing.last_visit_status = status_val if status_val else None
     
     # Adjust to_visit flag if relevant
-    if status_val in {"visite_programmee", "retour_agence", "deja_visitee", "a_relancer"}:
+    if status_val in {"visite_programmee", "retour_agence", "deja_visitee", "contre_visite", "a_relancer"}:
         listing.to_visit = True
     elif status_val in {"sans_suite_acheteur", "sans_suite_visiteur", "sans_suite_vendeur"}:
         listing.to_visit = False
 
     db.commit()
-    return {"status": "updated", "last_visit_status": listing.last_visit_status, "listing_id": listing.id}
+    return {"status": "updated", "last_visit_status": listing.last_visit_status, "listing_id": listing.id, "to_visit": listing.to_visit}
 
 
 @app.post("/api/visites", response_model=schemas.VisitResponse)
@@ -5574,6 +5577,20 @@ def visit_short_url_session(
 
     all_authors = sorted(list(all_authors_set))
 
+    # Available system users for participant assignment / invitation
+    db_users = db.query(models.User).order_by(models.User.username.asc()).all()
+    available_users = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "name": u.username,
+            "email": u.email or "",
+            "phone": u.phone or "",
+            "role": u.role or "user"
+        }
+        for u in db_users
+    ]
+
     # Current user identification
     current_username = request.session.get("username")
     is_authenticated = bool(current_username)
@@ -5600,6 +5617,7 @@ def visit_short_url_session(
         "attachments": attachments,
         "links": links,
         "participants": participants,
+        "available_users": available_users,
         "contacts": visit.contacts,
         "current_username": current_username or "Visiteur",
         "is_authenticated": is_authenticated,
@@ -5611,9 +5629,9 @@ def visit_short_url_session(
 
 @app.get("/visites/{visit_id}/session")
 def visit_session_by_id(
-    request: Request,
-    visit_id: int,
-    db: Session = Depends(get_db),
+    request: Request, 
+    visit_id: int, 
+    db: Session = Depends(get_db), 
     _auth = Depends(login_required)
 ):
     """
@@ -5641,6 +5659,7 @@ def invite_visit_participants(
 ):
     """
     Adds participants, auto-creates user accounts for new invited emails,
+    updates missing info (e.g. email) on existing accounts,
     and sends styled invitation emails with GPS directions, listing details and direct visit link.
     """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
@@ -5650,41 +5669,82 @@ def invite_visit_participants(
     if not visit.access_token:
         visit.access_token = secrets.token_hex(6)
 
-    # Process and auto-create users
-    updated_participants = []
+    # Load existing participants to append/merge without overwriting
+    try:
+        existing_participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        existing_participants = []
+
+    # Process, update or auto-create users
+    newly_invited_participants = []
     for p in body.participants:
         p_dict = p.dict()
-        if p.email:
-            clean_email = p.email.strip().lower()
+        clean_email = (p.email or "").strip().lower()
+        clean_uname = (p.username or "").strip()
+        p_name = (p.name or "").strip()
+
+        if not clean_email:
+            raise HTTPException(status_code=400, detail="L'adresse email est obligatoire pour chaque participant.")
+
+        p_dict["email"] = clean_email
+        if p_name:
+            p_dict["name"] = p_name
+
+        # Check existing user by username or email
+        existing_user = None
+        if clean_uname:
+            existing_user = db.query(models.User).filter(models.User.username == clean_uname).first()
+        if not existing_user and clean_email:
             existing_user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
-            if not existing_user:
-                uname = p.username or p.name or clean_email.split("@")[0]
-                base_uname = re.sub(r'[^a-zA-Z0-9_\-]', '', uname) or "visiteur"
-                final_uname = base_uname
-                counter = 1
-                while db.query(models.User).filter(models.User.username == final_uname).first():
-                    final_uname = f"{base_uname}_{counter}"
-                    counter += 1
 
-                salt = os.urandom(16)
-                temp_pwd = secrets.token_urlsafe(10)
-                pwd_hash = hashlib.pbkdf2_hmac('sha256', temp_pwd.encode('utf-8'), salt, 100000)
-                new_user = models.User(
-                    username=final_uname,
-                    password_hash=pwd_hash,
-                    salt=salt,
-                    role="user",
-                    email=clean_email
-                )
-                db.add(new_user)
+        if not existing_user:
+            uname = clean_uname or p_name or clean_email.split("@")[0]
+            base_uname = re.sub(r'[^a-zA-Z0-9_\-]', '', uname) or "visiteur"
+            final_uname = base_uname
+            counter = 1
+            while db.query(models.User).filter(models.User.username == final_uname).first():
+                final_uname = f"{base_uname}_{counter}"
+                counter += 1
+
+            salt = os.urandom(16)
+            temp_pwd = secrets.token_urlsafe(10)
+            pwd_hash = hashlib.pbkdf2_hmac('sha256', temp_pwd.encode('utf-8'), salt, 100000)
+            new_user = models.User(
+                username=final_uname,
+                password_hash=pwd_hash,
+                salt=salt,
+                role="user",
+                email=clean_email
+            )
+            db.add(new_user)
+            db.flush()
+            p_dict["username"] = final_uname
+        else:
+            p_dict["username"] = existing_user.username
+            # Update user in DB if missing email or info was completed
+            if clean_email and (not existing_user.email or existing_user.email.strip().lower() != clean_email):
+                existing_user.email = clean_email
                 db.flush()
-                p_dict["username"] = final_uname
-            else:
-                p_dict["username"] = existing_user.username
 
-        updated_participants.append(p_dict)
+        newly_invited_participants.append(p_dict)
 
-    visit.participants_json = json.dumps(updated_participants, ensure_ascii=False)
+    # Merge newly invited into existing participants list
+    merged_participants = list(existing_participants)
+    for new_p in newly_invited_participants:
+        new_email = (new_p.get("email") or "").strip().lower()
+        new_uname = (new_p.get("username") or "").strip().lower()
+        matched = False
+        for idx, exist_p in enumerate(merged_participants):
+            exist_email = (exist_p.get("email") or "").strip().lower()
+            exist_uname = (exist_p.get("username") or "").strip().lower()
+            if (new_email and exist_email and new_email == exist_email) or (new_uname and exist_uname and new_uname == exist_uname):
+                merged_participants[idx] = {**exist_p, **new_p}
+                matched = True
+                break
+        if not matched:
+            merged_participants.append(new_p)
+
+    visit.participants_json = json.dumps(merged_participants, ensure_ascii=False)
     if body.meeting_address is not None:
         visit.meeting_address = body.meeting_address
     if body.instructions is not None:
@@ -5697,17 +5757,20 @@ def invite_visit_participants(
     emails_sent = 0
     if body.send_emails:
         base_url = str(request.base_url)
-        for p in updated_participants:
+        for p in newly_invited_participants:
             if p.get("email"):
-                res = email_service.send_visit_invitation_email(
-                    db=db,
-                    visit=visit,
-                    participant_email=p["email"],
-                    participant_name=p.get("name") or p.get("username"),
-                    base_url=base_url
-                )
-                if res:
-                    emails_sent += 1
+                try:
+                    res = email_service.send_visit_invitation_email(
+                        db=db,
+                        visit=visit,
+                        participant_email=p["email"],
+                        participant_name=p.get("name") or p.get("username"),
+                        base_url=base_url
+                    )
+                    if res:
+                        emails_sent += 1
+                except Exception as e:
+                    logger.warning(f"Failed to send invite email to {p.get('email')}: {e}")
 
     return {
         "status": "success",
@@ -5715,7 +5778,7 @@ def invite_visit_participants(
         "access_token": visit.access_token,
         "short_url": f"/v/{visit.access_token}",
         "emails_sent": emails_sent,
-        "participants": updated_participants,
+        "participants": merged_participants,
     }
 
 

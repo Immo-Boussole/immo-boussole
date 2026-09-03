@@ -1675,9 +1675,41 @@ body.visite-session-body {
     font-size: 14px;
     outline: none;
     min-height: 44px;
+    transition: border-color 0.2s, background-color 0.2s;
 }
 .vs-form-input:focus {
     border-color: var(--vs-accent);
+}
+
+.vs-form-input.vs-input-error {
+    border-color: #ef4444 !important;
+    background-color: rgba(239, 68, 68, 0.08) !important;
+    color: #fecaca;
+}
+.vs-form-input.vs-input-error:focus {
+    border-color: #f87171 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+
+.vs-field-error {
+    display: none;
+    font-size: 12px;
+    font-weight: 500;
+    color: #f87171;
+    margin-top: 5px;
+    line-height: 1.4;
+}
+.vs-field-error.show {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.vs-btn:disabled, .vs-btn[disabled] {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(40%);
+    pointer-events: auto;
 }
 
 .vs-modal-footer {

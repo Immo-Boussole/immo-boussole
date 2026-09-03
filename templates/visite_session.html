@@ -1048,31 +1048,59 @@
             </div>
             <div class="vs-modal-body">
                 <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 14px;">
-                    Un compte Immo-Boussole sera automatiquement configuré pour le participant afin qu'il puisse collaborer sur la FAQ et les photos.
+                    Sélectionnez un compte existant ou créez un nouveau profil pour lui donner accès au dossier collaboratif.
                 </p>
 
                 <div class="vs-form-group">
-                    <label class="vs-form-label">Nom / Prénom du participant</label>
+                    <label class="vs-form-label" for="invite-account-select">Compte utilisateur Immo-Boussole</label>
+                    <select id="invite-account-select" class="vs-form-input">
+                        <option value="">➕ Créer un nouveau profil / compte externe</option>
+                        {% if available_users %}
+                            <optgroup label="Comptes existants">
+                                {% for u in available_users %}
+                                    <option value="{{ u.username }}" data-name="{{ u.name or u.username }}" data-email="{{ u.email or '' }}" data-phone="{{ u.phone or '' }}" data-role="{{ u.role or 'visiteur' }}">
+                                        👤 {{ u.username }}{% if u.email %} ({{ u.email }}){% else %} [email non renseigné]{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </optgroup>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="invite-name">Nom / Prénom du participant *</label>
                     <input type="text" id="invite-name" class="vs-form-input" placeholder="Ex: Marie Dupont">
+                    <span class="vs-field-error" id="err-invite-name">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>Le nom ou prénom est obligatoire.</span>
+                    </span>
                 </div>
 
                 <div class="vs-form-group">
-                    <label class="vs-form-label">Email du participant *</label>
+                    <label class="vs-form-label" for="invite-email">Email du participant *</label>
                     <input type="email" id="invite-email" class="vs-form-input" placeholder="marie.dupont@exemple.com">
+                    <span class="vs-field-error" id="err-invite-email">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>L'adresse email est obligatoire.</span>
+                    </span>
                 </div>
 
                 <div class="vs-form-group">
-                    <label class="vs-form-label">Rôle / Profil</label>
+                    <label class="vs-form-label" for="invite-role">Rôle / Profil *</label>
                     <select id="invite-role" class="vs-form-input">
                         <option value="visiteur">Co-acquéreur / Visiteur</option>
                         <option value="artisan">Artisan / Travaux</option>
                         <option value="architecte">Architecte</option>
                         <option value="conseiller">Conseiller / Ami</option>
                     </select>
+                    <span class="vs-field-error" id="err-invite-role">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>Le rôle ou profil est obligatoire.</span>
+                    </span>
                 </div>
 
                 <div class="vs-form-group">
-                    <label class="vs-form-label">Instructions / Message personnalisé (optionnel)</label>
+                    <label class="vs-form-label" for="invite-instructions">Instructions / Message personnalisé (optionnel)</label>
                     <textarea id="invite-instructions" class="vs-form-input" rows="2" placeholder="Ex: RDV devant le portail à 14h25, nous inspecterons en priorité la cave et la toiture...">{{ visit.instructions or '' }}</textarea>
                 </div>
 
@@ -1084,7 +1112,7 @@
             <div class="vs-modal-footer">
                 <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-invite-participants')">Annuler</button>
                 <button class="vs-btn vs-btn-primary" id="btn-submit-invite">
-                    <i class="fa-solid fa-paper-plane"></i> Envoyer l'invitation
+                    <i class="fa-solid fa-paper-plane"></i> Inviter le participant
                 </button>
             </div>
         </div>
@@ -1857,36 +1885,178 @@
             }
         });
 
+        // ─── MODALE D'INVITATION : GESTION DES COMPTES & VALIDATION ──────────
+        const modalInvite = document.getElementById('modal-invite-participants');
+        const selectAccount = document.getElementById('invite-account-select');
+        const inputInviteName = document.getElementById('invite-name');
+        const inputInviteEmail = document.getElementById('invite-email');
+        const selectInviteRole = document.getElementById('invite-role');
+        const errInviteName = document.getElementById('err-invite-name');
+        const errInviteEmail = document.getElementById('err-invite-email');
+        const errInviteRole = document.getElementById('err-invite-role');
+        const btnSubmitInvite = document.getElementById('btn-submit-invite');
+
+        // Ouvrir modale via le bouton header
+        document.getElementById('btn-open-invite-modal')?.addEventListener('click', () => {
+            openModal('modal-invite-participants');
+        });
+
+        function validateEmailFormat(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Valider les champs obligatoires (Nom, Email, Rôle)
+        function validateInviteForm(showErrors = false) {
+            const nameVal = (inputInviteName?.value || '').trim();
+            const emailVal = (inputInviteEmail?.value || '').trim();
+            const roleVal = (selectInviteRole?.value || '').trim();
+
+            let isValid = true;
+
+            // Validation Nom / Prénom
+            if (!nameVal) {
+                isValid = false;
+                if (showErrors) {
+                    inputInviteName?.classList.add('vs-input-error');
+                    errInviteName?.classList.add('show');
+                }
+            } else {
+                inputInviteName?.classList.remove('vs-input-error');
+                errInviteName?.classList.remove('show');
+            }
+
+            // Validation Email
+            if (!emailVal) {
+                isValid = false;
+                if (showErrors) {
+                    inputInviteEmail?.classList.add('vs-input-error');
+                    if (errInviteEmail) {
+                        errInviteEmail.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i><span>L\'adresse email est obligatoire.</span>';
+                        errInviteEmail.classList.add('show');
+                    }
+                }
+            } else if (!validateEmailFormat(emailVal)) {
+                isValid = false;
+                if (showErrors) {
+                    inputInviteEmail?.classList.add('vs-input-error');
+                    if (errInviteEmail) {
+                        errInviteEmail.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i><span>Format d\'email invalide (ex: nom@domaine.com).</span>';
+                        errInviteEmail.classList.add('show');
+                    }
+                }
+            } else {
+                inputInviteEmail?.classList.remove('vs-input-error');
+                errInviteEmail?.classList.remove('show');
+            }
+
+            // Validation Rôle
+            if (!roleVal) {
+                isValid = false;
+                if (showErrors) {
+                    selectInviteRole?.classList.add('vs-input-error');
+                    errInviteRole?.classList.add('show');
+                }
+            } else {
+                selectInviteRole?.classList.remove('vs-input-error');
+                errInviteRole?.classList.remove('show');
+            }
+
+            // Mise à jour de l'état du bouton
+            if (btnSubmitInvite) {
+                btnSubmitInvite.disabled = !isValid;
+            }
+
+            return isValid;
+        }
+
+        // Changement de sélection dans le dropdown des comptes
+        selectAccount?.addEventListener('change', () => {
+            const selectedOpt = selectAccount.options[selectAccount.selectedIndex];
+            const username = selectAccount.value;
+
+            if (!username) {
+                // Mode "+ Créer un nouveau profil"
+                inputInviteName.value = '';
+                inputInviteEmail.value = '';
+                selectInviteRole.value = 'visiteur';
+                validateInviteForm(false);
+            } else {
+                // Compte existant sélectionné
+                const accountName = selectedOpt.getAttribute('data-name') || username;
+                const accountEmail = selectedOpt.getAttribute('data-email') || '';
+                const accountRole = selectedOpt.getAttribute('data-role') || 'visiteur';
+
+                inputInviteName.value = accountName;
+                inputInviteEmail.value = accountEmail;
+                if (['visiteur', 'artisan', 'architecte', 'conseiller'].includes(accountRole)) {
+                    selectInviteRole.value = accountRole;
+                } else {
+                    selectInviteRole.value = 'visiteur';
+                }
+
+                // Mettre immédiatement en avant les éventuelles données obligatoires manquantes
+                validateInviteForm(true);
+
+                if (!accountEmail) {
+                    showToast('Attention : email manquant pour ce compte. Veuillez le renseigner.', 'fa-triangle-exclamation');
+                    inputInviteEmail?.focus();
+                }
+            }
+        });
+
+        // Validation en temps réel dès que l'utilisateur saisit ou modifie
+        [inputInviteName, inputInviteEmail, selectInviteRole].forEach(el => {
+            el?.addEventListener('input', () => validateInviteForm(true));
+            el?.addEventListener('change', () => validateInviteForm(true));
+        });
+
         // Submit invite
-        document.getElementById('btn-submit-invite')?.addEventListener('click', async () => {
-            const email = document.getElementById('invite-email').value.trim();
-            const name = document.getElementById('invite-name').value.trim();
-            const role = document.getElementById('invite-role').value;
+        btnSubmitInvite?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const isValid = validateInviteForm(true);
+
+            if (!isValid) {
+                showToast('Veuillez compléter tous les champs obligatoires mis en avant.', 'fa-circle-exclamation');
+                return;
+            }
+
+            const email = inputInviteEmail.value.trim();
+            const name = inputInviteName.value.trim();
+            const role = selectInviteRole.value;
+            const username = selectAccount?.value ? selectAccount.value.trim() : null;
             const instructions = document.getElementById('invite-instructions').value.trim();
             const sendEmail = document.getElementById('invite-send-email-cb').checked;
 
-            if (!email) {
-                alert('Veuillez indiquer une adresse email.');
-                return;
-            }
+            const originalBtnHtml = btnSubmitInvite.innerHTML;
+            btnSubmitInvite.disabled = true;
+            btnSubmitInvite.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Envoi en cours...';
 
             try {
                 const res = await fetch(`/api/visites/${visitId}/invite`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        participants: [{ email, name, role }],
+                        participants: [{ username, email, name, role }],
                         instructions: instructions,
                         send_emails: sendEmail
                     })
                 });
+
                 if (res.ok) {
                     closeModal('modal-invite-participants');
-                    showToast('Invitation envoyée avec succès !');
+                    showToast('Participant invité avec succès !');
                     setTimeout(() => location.reload(), 800);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    const errMsg = errData.detail || `Erreur lors de l'envoi de l'invitation (Code ${res.status}).`;
+                    alert(errMsg);
                 }
             } catch (err) {
-                alert('Erreur lors de l\'envoi de l\'invitation.');
+                console.error('[Invite] Connection error:', err);
+                alert("Erreur de connexion avec le serveur lors de l'envoi de l'invitation.");
+            } finally {
+                btnSubmitInvite.disabled = false;
+                btnSubmitInvite.innerHTML = originalBtnHtml;
             }
         });
 

@@ -158,6 +158,69 @@ def test_invite_participants_and_auto_account_creation():
                 assert email_to == new_participant_email
                 assert "Contre-visite" in email_html
                 assert f"/v/{invite_data['access_token']}" in email_html
+
+                # Verify adding a second participant preserves existing participant
+                second_email = f"artisan_{ts}@example.com"
+                invite2_resp = client.post(f"/api/visites/{visit_id}/invite", json={
+                    "participants": [
+                        {
+                            "name": "Pierre Artisan",
+                            "email": second_email,
+                            "role": "artisan"
+                        }
+                    ],
+                    "send_emails": False
+                })
+                assert invite2_resp.status_code == 200
+                invite2_data = invite2_resp.json()
+                assert len(invite2_data["participants"]) == 2
+                emails_in_list = [p.get("email") for p in invite2_data["participants"]]
+                assert new_participant_email in emails_in_list
+                assert second_email in emails_in_list
+
+                # Test inviting an existing user without email, updating their email in DB
+                existing_uname = f"user_no_email_{ts}"
+                user_obj = User(
+                    username=existing_uname,
+                    password_hash=b"fakehash",
+                    salt=b"fakesalt",
+                    role="user",
+                    email=None
+                )
+                db.add(user_obj)
+                db.commit()
+
+                completed_email = f"completed_{ts}@example.com"
+                invite_existing_resp = client.post(f"/api/visites/{visit_id}/invite", json={
+                    "participants": [
+                        {
+                            "username": existing_uname,
+                            "name": "Utilisateur Existant",
+                            "email": completed_email,
+                            "role": "conseiller"
+                        }
+                    ],
+                    "send_emails": False
+                })
+                assert invite_existing_resp.status_code == 200
+
+                # Verify user in DB now has the completed email persisted
+                db.refresh(user_obj)
+                assert user_obj.email == completed_email
+
+                # Test error if email is missing
+                bad_invite_resp = client.post(f"/api/visites/{visit_id}/invite", json={
+                    "participants": [
+                        {
+                            "username": existing_uname,
+                            "name": "Sans email",
+                            "email": "",
+                            "role": "visiteur"
+                        }
+                    ],
+                    "send_emails": False
+                })
+                assert bad_invite_resp.status_code == 400
         finally:
             app.dependency_overrides.clear()
 
