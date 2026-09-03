@@ -281,6 +281,10 @@ _MIGRATIONS = [
 
     # visit_inclusions — furniture & service contracts v37
     ("visit_inclusions", "negotiation_status",             "TEXT DEFAULT 'inclus_prix_negocie'"),
+
+    # global_questions & visit_questions — language code v38
+    ("global_questions", "language",                       "TEXT DEFAULT 'fr'"),
+    ("visit_questions", "language",                        "TEXT DEFAULT 'fr'"),
 ]
 
 
@@ -318,25 +322,27 @@ def run_migrations():
             ("idx_listings_to_visit", "CREATE INDEX IF NOT EXISTS idx_listings_to_visit ON listings(to_visit);"),
             ("idx_listings_is_favorite", "CREATE INDEX IF NOT EXISTS idx_listings_is_favorite ON listings(is_favorite);"),
             ("idx_listings_is_liked", "CREATE INDEX IF NOT EXISTS idx_listings_is_liked ON listings(is_liked);"),
+            ("idx_listings_is_disliked", "CREATE INDEX IF NOT EXISTS idx_listings_is_disliked ON listings(is_disliked);"),
+            ("idx_listings_source", "CREATE INDEX IF NOT EXISTS idx_listings_source ON listings(source);"),
             ("idx_listings_city", "CREATE INDEX IF NOT EXISTS idx_listings_city ON listings(city);"),
             ("idx_listings_price", "CREATE INDEX IF NOT EXISTS idx_listings_price ON listings(price);"),
+            ("idx_listings_area", "CREATE INDEX IF NOT EXISTS idx_listings_area ON listings(area);"),
+            ("idx_listings_rooms", "CREATE INDEX IF NOT EXISTS idx_listings_rooms ON listings(rooms);"),
             ("idx_listings_price_per_sqm", "CREATE INDEX IF NOT EXISTS idx_listings_price_per_sqm ON listings(price_per_sqm);"),
             ("idx_listings_date_added", "CREATE INDEX IF NOT EXISTS idx_listings_date_added ON listings(date_added DESC);"),
-            ("idx_listings_active_composite", "CREATE INDEX IF NOT EXISTS idx_listings_active_composite ON listings(status, is_duplicate, date_added DESC);"),
-            ("idx_attachments_listing_id", "CREATE INDEX IF NOT EXISTS idx_attachments_listing_id ON listing_attachments(listing_id);"),
             ("idx_visits_listing_id", "CREATE INDEX IF NOT EXISTS idx_visits_listing_id ON visits(listing_id);"),
             ("idx_visits_scheduled_at", "CREATE INDEX IF NOT EXISTS idx_visits_scheduled_at ON visits(scheduled_at);"),
             ("idx_visits_access_token", "CREATE INDEX IF NOT EXISTS idx_visits_access_token ON visits(access_token);"),
-            ("idx_visit_questions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_visit_id ON visit_questions(visit_id);"),
             ("idx_visit_questions_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_listing_id ON visit_questions(listing_id);"),
+            ("idx_visit_questions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_questions_visit_id ON visit_questions(visit_id);"),
+            ("idx_visit_questions_language", "CREATE INDEX IF NOT EXISTS idx_visit_questions_language ON visit_questions(language);"),
+            ("idx_global_questions_category", "CREATE INDEX IF NOT EXISTS idx_global_questions_category ON global_questions(category);"),
+            ("idx_global_questions_language", "CREATE INDEX IF NOT EXISTS idx_global_questions_language ON global_questions(language);"),
             ("idx_visit_inclusions_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_inclusions_listing_id ON visit_inclusions(listing_id);"),
             ("idx_visit_inclusions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_inclusions_visit_id ON visit_inclusions(visit_id);"),
-            ("idx_global_questions_question_text", "CREATE INDEX IF NOT EXISTS idx_global_questions_question_text ON global_questions(question_text);"),
             ("idx_visit_media_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_visit_id ON visit_media(visit_id);"),
             ("idx_visit_media_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_listing_id ON visit_media(listing_id);"),
-            ("idx_map_pins_pin_type", "CREATE INDEX IF NOT EXISTS idx_map_pins_pin_type ON map_pins(pin_type);"),
             ("idx_notifications_user_id", "CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);"),
-            ("idx_notifications_target_role", "CREATE INDEX IF NOT EXISTS idx_notifications_target_role ON notifications(target_role);"),
             ("idx_notifications_is_read", "CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);"),
             ("idx_notifications_created_at", "CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);"),
         ]

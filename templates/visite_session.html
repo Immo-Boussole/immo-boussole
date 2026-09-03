@@ -280,6 +280,7 @@
                          data-id="{{ q.id }}" 
                          data-status="{{ q.status }}" 
                          data-themes='{{ q.themes_json or "[]" }}'
+                         data-language="{{ q.language or 'fr' }}"
                          data-created-by="{{ q.created_by or '' }}"
                          data-answered-by="{{ q.answered_by or '' }}">
                         <div class="vs-q-header" onclick="toggleQuestionCard(this)">
@@ -287,6 +288,9 @@
                                 <span class="vs-status-indicator status-{{ q.status }}"></span>
                                 <div class="vs-q-header-text">
                                     <div class="vs-q-badges-line">
+                                        <span class="vs-q-lang-badge">
+                                            {% if q.language == 'en' %}🇬🇧 EN{% else %}🇫🇷 FR{% endif %}
+                                        </span>
                                         {% if q.origin_label %}
                                             <span class="vs-q-origin-badge">{{ q.origin_label }}</span>
                                         {% endif %}
@@ -719,7 +723,12 @@
                         <i class="fa-solid fa-magnifying-glass"></i>
                         <input type="text" id="catalog-search-input" class="vs-search-input" placeholder="Rechercher dans le catalogue global...">
                     </div>
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <select id="catalog-lang-filter" class="vs-form-input" style="width: auto; min-width: 140px; padding: 4px 8px; font-size: 13px;" title="Filtrer par langue">
+                            <option value="all">🌐 Toutes les langues</option>
+                            <option value="fr" selected>🇫🇷 Français</option>
+                            <option value="en">🇬🇧 English</option>
+                        </select>
                         <a href="/api/visites/catalog/export-csv" class="vs-btn vs-btn-secondary vs-btn-sm" download title="Exporter tout le catalogue en CSV">
                             <i class="fa-solid fa-download"></i> CSV
                         </a>
@@ -779,6 +788,26 @@
                     <textarea id="new-q-text" class="vs-form-input" rows="3" placeholder="Ex: De quand date la dernière révision de la chaudière et quel est le coût annuel moyen ?"></textarea>
                 </div>
 
+                <div class="vs-form-row-2">
+                    <div class="vs-form-group">
+                        <label class="vs-form-label">Langue</label>
+                        <select id="new-q-language" class="vs-form-input">
+                            <option value="fr" selected>🇫🇷 Français (FR)</option>
+                            <option value="en">🇬🇧 English (EN)</option>
+                        </select>
+                    </div>
+                    <div class="vs-form-group">
+                        <label class="vs-form-label">Statut initial</label>
+                        <select id="new-q-status" class="vs-form-input">
+                            <option value="en_attente">⏳ En attente de réponse</option>
+                            <option value="satisfaisante">✅ Réponse satisfaisante</option>
+                            <option value="relance_necessaire">⚠️ Relance nécessaire</option>
+                            <option value="resolu">✔️ Résolu</option>
+                            <option value="non_applicable">🚫 Non applicable pour ce bien</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="vs-form-group">
                     <label class="vs-form-label">Thématiques associées (sélectionnez ou ajoutez)</label>
                     <div class="vs-theme-selector-chips" id="theme-selector-chips">
@@ -797,17 +826,6 @@
                         <button type="button" class="vs-theme-chip" data-val="Négociation & Contexte">Négociation & Contexte</button>
                     </div>
                     <input type="text" id="new-q-custom-theme" class="vs-form-input" placeholder="Ajouter une thématique personnalisée (ex: Fosse septique, Domotique...)" style="margin-top: 8px;">
-                </div>
-
-                <div class="vs-form-group">
-                    <label class="vs-form-label">Statut initial</label>
-                    <select id="new-q-status" class="vs-form-input">
-                        <option value="en_attente">⏳ En attente de réponse</option>
-                        <option value="satisfaisante">✅ Réponse satisfaisante</option>
-                        <option value="relance_necessaire">⚠️ Relance nécessaire</option>
-                        <option value="resolu">✔️ Résolu</option>
-                        <option value="non_applicable">🚫 Non applicable pour ce bien</option>
-                    </select>
                 </div>
             </div>
             <div class="vs-modal-footer">
@@ -1413,6 +1431,7 @@
             if (customTheme) selectedThemes.push(customTheme);
 
             const status = document.getElementById('new-q-status').value;
+            const language = document.getElementById('new-q-language')?.value || 'fr';
 
             try {
                 const res = await fetch(`/api/visites/${visitId}/questions`, {
@@ -1421,7 +1440,8 @@
                     body: JSON.stringify({
                         question_text: text,
                         themes: selectedThemes,
-                        status: status
+                        status: status,
+                        language: language
                     })
                 });
                 if (res.ok) {
@@ -1435,13 +1455,42 @@
         });
 
         // ─── GLOBAL QUESTION CATALOG ────────────────────────────────────────
-        async function loadGlobalCatalog(category = "", query = "") {
+        async function loadCatalogLanguages() {
+            const langSelect = document.getElementById('catalog-lang-filter');
+            if (!langSelect) return;
+            try {
+                const res = await fetch('/api/visites/catalog/languages');
+                if (res.ok) {
+                    const langs = await res.json();
+                    if (langs && langs.length > 0) {
+                        const currentVal = langSelect.value;
+                        let html = '<option value="all">🌐 Toutes les langues</option>';
+                        langs.forEach(l => {
+                            html += `<option value="${l.code}">${l.label} (${l.count})</option>`;
+                        });
+                        langSelect.innerHTML = html;
+                        if (currentVal && Array.from(langSelect.options).some(o => o.value === currentVal)) {
+                            langSelect.value = currentVal;
+                        } else {
+                            langSelect.value = 'fr';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Could not load catalog languages:', e);
+            }
+        }
+
+        async function loadGlobalCatalog(category = "", query = "", language = "") {
             const listEl = document.getElementById('catalog-questions-list');
             listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--vs-text-muted);">Chargement du catalogue...</div>';
+
+            const lang = language || document.getElementById('catalog-lang-filter')?.value || "";
 
             let url = `/api/visites/catalog/questions?`;
             if (category) url += `category=${encodeURIComponent(category)}&`;
             if (query) url += `q=${encodeURIComponent(query)}&`;
+            if (lang && lang !== 'all') url += `language=${encodeURIComponent(lang)}&`;
 
             try {
                 const res = await fetch(url);
@@ -1457,7 +1506,7 @@
         function renderGlobalCatalog(items) {
             const listEl = document.getElementById('catalog-questions-list');
             if (!items || items.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--vs-text-muted);">Aucune question trouvée dans le catalogue.</div>';
+                listEl.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--vs-text-muted);">Aucune question trouvée dans le catalogue pour les filtres sélectionnés.</div>';
                 return;
             }
 
@@ -1466,6 +1515,7 @@
                     <input type="checkbox" class="vs-cat-cb" value="${item.id}" onclick="event.stopPropagation(); updateCatalogSelectedCount();">
                     <div class="vs-catalog-item-content">
                         <div class="vs-catalog-badges">
+                            <span class="vs-q-lang-badge">${item.language === 'en' ? '🇬🇧 EN' : (item.language === 'fr' ? '🇫🇷 FR' : (item.language || 'FR').toUpperCase())}</span>
                             <span class="vs-catalog-cat-badge">${item.category || 'Inspection'}</span>
                             ${(item.themes || []).map(t => `<span class="vs-q-theme-tag">${t}</span>`).join('')}
                         </div>
@@ -1504,13 +1554,30 @@
                 chip.classList.add('active');
                 const cat = chip.dataset.cat || "";
                 const q = document.getElementById('catalog-search-input').value.trim();
-                loadGlobalCatalog(cat, q);
+                const lang = document.getElementById('catalog-lang-filter')?.value || "";
+                loadGlobalCatalog(cat, q, lang);
             });
         });
 
         document.getElementById('catalog-search-input')?.addEventListener('input', (e) => {
             const activeCat = document.querySelector('#catalog-category-chips .vs-theme-chip.active')?.dataset.cat || "";
-            loadGlobalCatalog(activeCat, e.target.value.trim());
+            const lang = document.getElementById('catalog-lang-filter')?.value || "";
+            loadGlobalCatalog(activeCat, e.target.value.trim(), lang);
+        });
+
+        document.getElementById('catalog-lang-filter')?.addEventListener('change', (e) => {
+            const activeCat = document.querySelector('#catalog-category-chips .vs-theme-chip.active')?.dataset.cat || "";
+            const q = document.getElementById('catalog-search-input')?.value.trim() || "";
+            loadGlobalCatalog(activeCat, q, e.target.value);
+        });
+
+        // Open Catalog Modal Hook
+        document.getElementById('btn-open-catalog-modal')?.addEventListener('click', () => {
+            openModal('modal-global-catalog');
+            loadCatalogLanguages();
+            const activeCat = document.querySelector('#catalog-category-chips .vs-theme-chip.active')?.dataset.cat || "";
+            const q = document.getElementById('catalog-search-input')?.value.trim() || "";
+            loadGlobalCatalog(activeCat, q);
         });
 
         // Submit catalog import

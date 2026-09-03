@@ -648,6 +648,119 @@ def test_inclusions_furniture_services_and_offer_clause():
             app.dependency_overrides.clear()
 
 
+def test_language_attribution_and_filtering():
+    """
+    Tests language attribution, language-based filtering in master catalog and visit questions,
+    and bilingual CSV import/export.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        # 1. Test languages catalog endpoint
+        lang_resp = client.get("/api/visites/catalog/languages")
+        assert lang_resp.status_code == 200
+        langs = lang_resp.json()
+        assert len(langs) >= 2
+        lang_codes = [l["code"] for l in langs]
+        assert "fr" in lang_codes
+        assert "en" in lang_codes
+
+        # 2. Test catalog language filtering
+        fr_resp = client.get("/api/visites/catalog/questions?language=fr")
+        assert fr_resp.status_code == 200
+        fr_qs = fr_resp.json()
+        assert len(fr_qs) > 0
+        assert all(q["language"] == "fr" for q in fr_qs)
+
+        en_resp = client.get("/api/visites/catalog/questions?language=en")
+        assert en_resp.status_code == 200
+        en_qs = en_resp.json()
+        assert len(en_qs) > 0
+        assert all(q["language"] == "en" for q in en_qs)
+
+        # 3. Create listing and visit to test question creation with explicit language
+        listing = Listing(
+            title="Bilingual Inspection Property",
+            url=f"https://example.com/test-lang-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "tester_i18n", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "tester_i18n", "role": "user"}
+
+        try:
+            v_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "scheduled_at": datetime.datetime.now().isoformat(),
+                "import_default_questions": False
+            })
+            visit_id = v_resp.json()["id"]
+
+            # Add English question
+            q_en_resp = client.post(f"/api/visites/{visit_id}/questions", json={
+                "question_text": "Is there any active damp or saltpetre in the basement?",
+                "themes": ["Dampness & Drainage", "Basement & Cellar"],
+                "language": "en",
+                "status": "en_attente"
+            })
+            assert q_en_resp.status_code == 200
+            assert q_en_resp.json()["language"] == "en"
+
+            # Add French question
+            q_fr_resp = client.post(f"/api/visites/{visit_id}/questions", json={
+                "question_text": "Quel est le montant de la dernière taxe foncière ?",
+                "themes": ["Charges & Budget"],
+                "language": "fr",
+                "status": "satisfaisante"
+            })
+            assert q_fr_resp.status_code == 200
+            assert q_fr_resp.json()["language"] == "fr"
+
+            # Filter visit questions by language
+            filter_en = client.get(f"/api/visites/{visit_id}/questions?language=en")
+            assert filter_en.status_code == 200
+            assert len(filter_en.json()) == 1
+            assert filter_en.json()[0]["language"] == "en"
+
+            # Export visit questions CSV and verify 'langue' column
+            csv_exp_resp = client.get(f"/api/visites/{visit_id}/questions/export-csv")
+            assert csv_exp_resp.status_code == 200
+            csv_content = csv_exp_resp.content.decode("utf-8-sig")
+            assert "langue" in csv_content
+            assert ";en;" in csv_content
+            assert ";fr;" in csv_content
+
+            # Test CSV import with language column
+            test_csv_import = (
+                "langue;thematiques;question;statut;reponse;auteur_question\n"
+                "en;Roof & Framework;What is the age of the roofing?;satisfaisante;Replaced in 2022;Inspector\n"
+                "fr;Piscine;La pompe est-elle sous garantie ?;en_attente;;Acheteur\n"
+            )
+            import_resp = client.post(
+                f"/api/visites/{visit_id}/questions/import-csv",
+                files={"file": ("test_import.csv", io.BytesIO(test_csv_import.encode("utf-8-sig")), "text/csv")}
+            )
+            assert import_resp.status_code == 200
+            assert import_resp.json()["created_count"] == 2
+
+            # Verify imported questions languages
+            all_q_resp = client.get(f"/api/visites/{visit_id}/questions")
+            assert all_q_resp.status_code == 200
+            all_qs = all_q_resp.json()
+            assert len(all_qs) == 4
+            roof_q = next((q for q in all_qs if "roofing" in q["question_text"].lower()), None)
+            assert roof_q is not None
+            assert roof_q["language"] == "en"
+
+        finally:
+            app.dependency_overrides.clear()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
 

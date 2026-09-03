@@ -500,6 +500,7 @@ class GlobalQuestionCreate(BaseModel):
     themes: List[str] = []
     category: Optional[str] = "Inspection technique"
     advice_notes: Optional[str] = None
+    language: Optional[str] = "fr"
 
 
 class GlobalQuestionResponse(BaseModel):
@@ -508,6 +509,7 @@ class GlobalQuestionResponse(BaseModel):
     themes: List[str] = []
     category: Optional[str] = None
     advice_notes: Optional[str] = None
+    language: str = "fr"
     usage_count: int = 0
     created_by: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -525,6 +527,7 @@ class VisitQuestionCreate(BaseModel):
     themes: List[str] = []
     assigned_to: Optional[str] = None
     status: Optional[str] = "en_attente"
+    language: Optional[str] = "fr"
 
 
 class VisitQuestionUpdate(BaseModel):
@@ -534,6 +537,7 @@ class VisitQuestionUpdate(BaseModel):
     assigned_to: Optional[str] = None
     answer_text: Optional[str] = None
     answered_by: Optional[str] = None
+    language: Optional[str] = None
     order_index: Optional[int] = None
 
 
@@ -544,6 +548,7 @@ class VisitQuestionResponse(BaseModel):
     question_text: str
     status: str
     themes: List[str] = []
+    language: str = "fr"
     created_by: Optional[str] = None
     assigned_to: Optional[str] = None
     answer_text: Optional[str] = None

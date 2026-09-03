@@ -5721,18 +5721,49 @@ def invite_visit_participants(
 
 # ─── Platform Global Question Catalog Endpoints ──────────────────────────────
 
+@app.get("/api/visites/catalog/languages")
+def get_global_catalog_languages(db: Session = Depends(get_db)):
+    """Returns all available question languages in the master catalog with count and flags."""
+    rows = db.query(GlobalQuestion.language, func.count(GlobalQuestion.id)).group_by(GlobalQuestion.language).all()
+    lang_names = {
+        "fr": ("Français", "🇫🇷"),
+        "en": ("English", "🇬🇧"),
+        "es": ("Español", "🇪🇸"),
+        "de": ("Deutsch", "🇩🇪"),
+        "it": ("Italiano", "🇮🇹"),
+        "pt": ("Português", "🇵🇹"),
+        "nl": ("Nederlands", "🇳🇱"),
+    }
+    results = []
+    for lang_code, count in rows:
+        code = (lang_code or "fr").lower()
+        name, flag = lang_names.get(code, (code.upper(), "🌐"))
+        results.append({
+            "code": code,
+            "name": name,
+            "flag": flag,
+            "label": f"{flag} {name}",
+            "count": count
+        })
+    results.sort(key=lambda x: (0 if x["code"] == "fr" else (1 if x["code"] == "en" else 2), x["name"]))
+    return results
+
+
 @app.get("/api/visites/catalog/questions")
 def get_global_catalog_questions(
     theme: Optional[str] = None,
     category: Optional[str] = None,
+    language: Optional[str] = None,
     q: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Retrieves all questions from the platform master catalog with keyword and theme filters."""
+    """Retrieves all questions from the platform master catalog with keyword, language and theme filters."""
     query = db.query(GlobalQuestion)
 
     if category:
         query = query.filter(GlobalQuestion.category == category)
+    if language and language.strip().lower() not in ("all", "toutes", "*"):
+        query = query.filter(GlobalQuestion.language == language.strip().lower())
 
     all_gq = query.order_by(GlobalQuestion.usage_count.desc(), GlobalQuestion.id.asc()).all()
     results = []
@@ -5752,6 +5783,7 @@ def get_global_catalog_questions(
                 term in (gq.question_text or "").lower() or
                 term in (gq.category or "").lower() or
                 term in (gq.advice_notes or "").lower() or
+                term in (gq.language or "").lower() or
                 any(term in t.lower() for t in th_list)
             )
             if not text_match:
@@ -5763,6 +5795,7 @@ def get_global_catalog_questions(
             "themes": th_list,
             "category": gq.category,
             "advice_notes": gq.advice_notes,
+            "language": gq.language or "fr",
             "usage_count": gq.usage_count,
             "created_by": gq.created_by,
             "created_at": gq.created_at.isoformat() if gq.created_at else None,
@@ -5778,14 +5811,16 @@ def create_global_catalog_question(
     db: Session = Depends(get_db),
     _auth = Depends(login_required)
 ):
-    """Manually adds a reusable question to the platform master catalog."""
+    """Manually adds a reusable question to the platform master catalog with language."""
     author = request.session.get("username") or "Utilisateur"
+    lang = (body.language or request.session.get("lang") or "fr").strip().lower()
     gq = record_in_global_catalog(
         db=db,
         question_text=body.question_text,
         themes=body.themes or ["Général"],
         category=body.category or "Inspection technique",
         advice_notes=body.advice_notes,
+        language=lang,
         created_by=author
     )
     if not gq:
@@ -5802,6 +5837,7 @@ def create_global_catalog_question(
         "themes": th_list,
         "category": gq.category,
         "advice_notes": gq.advice_notes,
+        "language": gq.language or "fr",
         "usage_count": gq.usage_count,
         "created_by": gq.created_by,
     }
@@ -5810,7 +5846,7 @@ def create_global_catalog_question(
 @app.get("/api/visites/catalog/export-csv")
 def export_global_catalog_csv(db: Session = Depends(get_db)):
     """Exports the platform global question library as a CSV file."""
-    catalog = db.query(GlobalQuestion).order_by(GlobalQuestion.category.asc(), GlobalQuestion.id.asc()).all()
+    catalog = db.query(GlobalQuestion).order_by(GlobalQuestion.language.asc(), GlobalQuestion.category.asc(), GlobalQuestion.id.asc()).all()
     csv_data = csv_service.export_global_catalog_to_csv(catalog)
     return Response(
         content=csv_data.encode("utf-8-sig"),
@@ -5834,7 +5870,8 @@ async def import_global_catalog_csv(
         csv_text = content_bytes.decode("latin-1")
 
     author = request.session.get("username") or "Import CSV"
-    res = csv_service.import_global_catalog_from_csv(db=db, csv_content=csv_text, author=author)
+    default_lang = request.session.get("lang", "fr")
+    res = csv_service.import_global_catalog_from_csv(db=db, csv_content=csv_text, default_language=default_lang, author=author)
     return res
 
 
@@ -5857,12 +5894,13 @@ def get_visit_questions(
     theme: Optional[str] = None,
     status: Optional[str] = None,
     author: Optional[str] = None,
+    language: Optional[str] = None,
     q: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
     Retrieves all inspection & FAQ questions for a visit/listing.
-    Supports multi-criteria filtering: theme, status, author, and full-text keyword query.
+    Supports multi-criteria filtering: theme, status, author, language, and full-text keyword query.
     """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
@@ -5874,6 +5912,8 @@ def get_visit_questions(
 
     if status:
         query = query.filter(VisitQuestion.status == status)
+    if language and language.strip().lower() not in ("all", "toutes", "*"):
+        query = query.filter(VisitQuestion.language == language.strip().lower())
 
     questions = query.order_by(VisitQuestion.order_index.asc()).all()
     results = []
@@ -5902,6 +5942,7 @@ def get_visit_questions(
                 term in (item.answer_text or "").lower() or
                 term in (item.created_by or "").lower() or
                 term in (item.answered_by or "").lower() or
+                term in (item.language or "").lower() or
                 any(term in t.lower() for t in th_list)
             )
             if not text_match:
@@ -5918,6 +5959,7 @@ def get_visit_questions(
             "question_text": item.question_text,
             "status": item.status,
             "themes": th_list,
+            "language": item.language or "fr",
             "created_by": item.created_by,
             "assigned_to": item.assigned_to,
             "answer_text": item.answer_text,
@@ -5953,6 +5995,7 @@ def create_visit_question(
 
     max_order = max([q.order_index for q in existing_qs], default=-1)
     author = request.session.get("username") or "Visiteur"
+    lang = (body.language or request.session.get("lang") or "fr").strip().lower()
 
     clean_themes = [t.strip() for t in body.themes if t.strip()] or ["Général"]
     vq = VisitQuestion(
@@ -5961,6 +6004,7 @@ def create_visit_question(
         question_text=body.question_text.strip(),
         status=body.status or "en_attente",
         themes_json=json.dumps(clean_themes, ensure_ascii=False),
+        language=lang,
         created_by=author,
         assigned_to=body.assigned_to,
         order_index=max_order + 1
@@ -5974,6 +6018,7 @@ def create_visit_question(
         db=db,
         question_text=body.question_text.strip(),
         themes=clean_themes,
+        language=lang,
         created_by=author
     )
 
@@ -5984,6 +6029,7 @@ def create_visit_question(
         "question_text": vq.question_text,
         "status": vq.status,
         "themes": clean_themes,
+        "language": vq.language or "fr",
         "created_by": vq.created_by,
         "assigned_to": vq.assigned_to,
         "answer_text": vq.answer_text,
@@ -6000,7 +6046,7 @@ def update_visit_question(
     body: schemas.VisitQuestionUpdate,
     db: Session = Depends(get_db)
 ):
-    """Updates a question's status (including non_applicable), answer, or themes."""
+    """Updates a question's status (including non_applicable), answer, themes, or language."""
     vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
     if not vq:
         raise HTTPException(status_code=404, detail="Question non trouvée")
@@ -6009,6 +6055,8 @@ def update_visit_question(
         vq.question_text = body.question_text.strip()
     if body.status is not None:
         vq.status = body.status
+    if body.language is not None:
+        vq.language = body.language.strip().lower()
     if body.themes is not None:
         clean_themes = [t.strip() for t in body.themes if t.strip()]
         vq.themes_json = json.dumps(clean_themes, ensure_ascii=False)
@@ -6035,6 +6083,7 @@ def update_visit_question(
         "question_text": vq.question_text,
         "status": vq.status,
         "themes": th_list,
+        "language": vq.language or "fr",
         "created_by": vq.created_by,
         "assigned_to": vq.assigned_to,
         "answer_text": vq.answer_text,
@@ -6091,6 +6140,7 @@ def import_questions_from_catalog(
             question_text=clean_text,
             status="en_attente",
             themes_json=gq.themes_json,
+            language=gq.language or "fr",
             created_by=author,
             order_index=max_order
         )
@@ -6117,7 +6167,8 @@ def import_visit_questions_template(
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
     author = request.session.get("username") or "Système"
-    imported_cnt = import_default_pack_for_visit(db, visit, created_by=author)
+    lang = request.session.get("lang", "fr")
+    imported_cnt = import_default_pack_for_visit(db, visit, language=lang, created_by=author)
     return {"status": "success", "imported": imported_cnt, "visit_id": visit.id}
 
 
@@ -6166,11 +6217,13 @@ async def import_visit_questions_csv(
             raise HTTPException(status_code=400, detail="Impossible de lire le fichier CSV (encodage non supporté)")
 
     author = request.session.get("username") or "Import CSV"
+    default_lang = request.session.get("lang", "fr")
     res = csv_service.import_questions_from_csv(
         db=db,
         listing_id=visit.listing_id,
         visit_id=visit.id,
         csv_content=csv_text,
+        default_language=default_lang,
         author=author
     )
     return res

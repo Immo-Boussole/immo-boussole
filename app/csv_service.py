@@ -18,7 +18,7 @@ from app.visit_templates import record_in_global_catalog
 def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
     """
     Exporte une liste de questions de visite/bien au format CSV (UTF-8-SIG, séparateur ';').
-    Colonnes : id;thematiques;question;statut;reponse;auteur_question;auteur_reponse;date_creation;date_reponse
+    Colonnes : id;langue;thematiques;question;statut;reponse;auteur_question;auteur_reponse;date_creation;date_reponse
     """
     output = io.StringIO()
     # Write BOM for Excel UTF-8 compatibility
@@ -27,6 +27,7 @@ def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
 
     headers = [
         "id",
+        "langue",
         "thematiques",
         "question",
         "statut",
@@ -54,6 +55,7 @@ def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
 
         writer.writerow([
             q.id,
+            q.language or "fr",
             themes_str,
             q.question_text or "",
             q.status or "en_attente",
@@ -72,12 +74,13 @@ def import_questions_from_csv(
     listing_id: int,
     visit_id: int,
     csv_content: str,
+    default_language: str = "fr",
     author: str = "Import CSV"
 ) -> Dict[str, Any]:
     """
     Importe des questions/réponses depuis un contenu CSV (séparateur ';' ou détecté automatiquement).
     Met à jour les questions existantes (par matching id ou texte de question) et crée les nouvelles.
-    Enregistre également les nouvelles questions dans le catalogue global transverse.
+    Enregistre également les nouvelles questions dans le catalogue global transverse avec leur langue.
     """
     # Strip potential BOM
     if csv_content.startswith('\ufeff'):
@@ -94,19 +97,21 @@ def import_questions_from_csv(
     header_map = {}
     for f in fieldnames:
         clean = f.strip().lower().replace(" ", "_").replace("é", "e").replace("è", "e").replace("à", "a")
-        if "theme" in clean or "tag" in clean or "categorie" in clean:
+        if clean in ("langue", "lang", "language") or "lang" in clean:
+            header_map["language"] = f
+        elif clean in ("thematiques", "thematique", "themes", "theme", "tags", "tag", "categorie", "categories") or "theme" in clean or "tag" in clean:
             header_map["themes"] = f
-        elif "quest" in clean or "titre" in clean:
-            header_map["question"] = f
-        elif "stat" in clean or "etat" in clean:
-            header_map["status"] = f
-        elif "rep" in clean or "note" in clean or "constat" in clean:
-            header_map["answer"] = f
-        elif "auteur_rep" in clean or "repondu_par" in clean:
+        elif clean in ("auteur_reponse", "auteur_rep", "repondu_par", "answered_by") or "auteur_rep" in clean:
             header_map["answered_by"] = f
-        elif "auteur" in clean or "createur" in clean or "user" in clean:
+        elif clean in ("auteur_question", "auteur_quest", "auteur", "createur", "user", "created_by") or "auteur" in clean or "createur" in clean:
             header_map["created_by"] = f
-        elif "id" in clean and clean == "id":
+        elif clean in ("question", "titre", "libelle_question", "intitule") or "quest" in clean:
+            header_map["question"] = f
+        elif clean in ("statut", "status", "etat") or "stat" in clean:
+            header_map["status"] = f
+        elif clean in ("reponse", "reponses", "answer", "note", "notes", "constat") or "rep" in clean:
+            header_map["answer"] = f
+        elif clean == "id":
             header_map["id"] = f
 
     # Fetch existing questions for this listing
@@ -115,7 +120,7 @@ def import_questions_from_csv(
     ).all()
     
     by_id = {q.id: q for q in existing_questions}
-    by_text = {q.question_text.strip().lower(): q for q in existing_questions}
+    by_text_lang = {(q.question_text.strip().lower(), (q.language or "fr").lower()): q for q in existing_questions}
 
     created_count = 0
     updated_count = 0
@@ -127,6 +132,7 @@ def import_questions_from_csv(
             continue
 
         raw_id = row.get(header_map.get("id", "id"), "").strip()
+        raw_lang = row.get(header_map.get("language", "langue"), "").strip().lower() or default_language or "fr"
         raw_themes = row.get(header_map.get("themes", "thematiques"), "").strip()
         raw_status = row.get(header_map.get("status", "statut"), "").strip().lower()
         raw_answer = row.get(header_map.get("answer", "reponse"), "").strip()
@@ -157,14 +163,15 @@ def import_questions_from_csv(
         target_q = None
         if raw_id.isdigit() and int(raw_id) in by_id:
             target_q = by_id[int(raw_id)]
-        elif raw_q_text.lower() in by_text:
-            target_q = by_text[raw_q_text.lower()]
+        elif (raw_q_text.lower(), raw_lang) in by_text_lang:
+            target_q = by_text_lang[(raw_q_text.lower(), raw_lang)]
 
         if target_q:
             # Update existing
             target_q.question_text = raw_q_text
             target_q.status = raw_status
             target_q.themes_json = json.dumps(themes, ensure_ascii=False)
+            target_q.language = raw_lang
             if raw_answer:
                 target_q.answer_text = raw_answer
             if raw_answered_by:
@@ -181,13 +188,14 @@ def import_questions_from_csv(
                 question_text=raw_q_text,
                 status=raw_status,
                 themes_json=json.dumps(themes, ensure_ascii=False),
+                language=raw_lang,
                 created_by=raw_author,
                 answer_text=raw_answer or None,
                 answered_by=raw_answered_by or (author if raw_answer else None),
                 order_index=max_order
             )
             db.add(new_q)
-            by_text[raw_q_text.lower()] = new_q
+            by_text_lang[(raw_q_text.lower(), raw_lang)] = new_q
             created_count += 1
 
             # Auto-record in platform global catalog
@@ -195,6 +203,7 @@ def import_questions_from_csv(
                 db=db,
                 question_text=raw_q_text,
                 themes=themes,
+                language=raw_lang,
                 created_by=raw_author
             )
 
@@ -212,7 +221,7 @@ def import_questions_from_csv(
 def export_global_catalog_to_csv(catalog: List[GlobalQuestion]) -> str:
     """
     Exporte le catalogue global de questions types au format CSV (UTF-8-SIG, ';').
-    Colonnes : id;categorie;thematiques;question;conseil_reponse;nombre_utilisations
+    Colonnes : id;langue;categorie;thematiques;question;conseil_reponse;nombre_utilisations
     """
     output = io.StringIO()
     output.write('\ufeff')
@@ -220,6 +229,7 @@ def export_global_catalog_to_csv(catalog: List[GlobalQuestion]) -> str:
 
     writer.writerow([
         "id",
+        "langue",
         "categorie",
         "thematiques",
         "question",
@@ -239,6 +249,7 @@ def export_global_catalog_to_csv(catalog: List[GlobalQuestion]) -> str:
         
         writer.writerow([
             gq.id,
+            gq.language or "fr",
             gq.category or "Inspection technique",
             ", ".join(themes),
             gq.question_text or "",
@@ -249,9 +260,9 @@ def export_global_catalog_to_csv(catalog: List[GlobalQuestion]) -> str:
     return output.getvalue()
 
 
-def import_global_catalog_from_csv(db: Session, csv_content: str, author: str = "Import CSV") -> Dict[str, Any]:
+def import_global_catalog_from_csv(db: Session, csv_content: str, default_language: str = "fr", author: str = "Import CSV") -> Dict[str, Any]:
     """
-    Importe ou enrichit le catalogue global de questions depuis un CSV.
+    Importe ou enrichit le catalogue global de questions depuis un CSV avec attribution de langue.
     """
     if csv_content.startswith('\ufeff'):
         csv_content = csv_content[1:]
@@ -264,13 +275,15 @@ def import_global_catalog_from_csv(db: Session, csv_content: str, author: str = 
     header_map = {}
     for f in (reader.fieldnames or []):
         clean = f.strip().lower().replace(" ", "_").replace("é", "e").replace("è", "e").replace("à", "a")
-        if "theme" in clean or "tag" in clean:
+        if clean in ("langue", "lang", "language") or "lang" in clean:
+            header_map["language"] = f
+        elif clean in ("thematiques", "thematique", "themes", "theme", "tags", "tag") or "theme" in clean or "tag" in clean:
             header_map["themes"] = f
-        elif "quest" in clean or "titre" in clean:
+        elif clean in ("question", "titre", "libelle_question", "intitule") or "quest" in clean:
             header_map["question"] = f
-        elif "cat" in clean:
+        elif clean in ("categorie", "categories", "category") or "cat" in clean:
             header_map["category"] = f
-        elif "cons" in clean or "note" in clean or "avis" in clean:
+        elif clean in ("conseil_reponse", "conseil", "avis", "advice", "notes") or "cons" in clean or "note" in clean or "avis" in clean:
             header_map["advice"] = f
 
     created_count = 0
@@ -281,13 +294,15 @@ def import_global_catalog_from_csv(db: Session, csv_content: str, author: str = 
         if not q_text:
             continue
 
+        raw_lang = row.get(header_map.get("language", "langue"), "").strip().lower() or default_language or "fr"
         raw_themes = row.get(header_map.get("themes", "thematiques"), "").strip()
         themes = [t.strip() for t in raw_themes.replace(";", ",").replace("/", ",").split(",") if t.strip()] if raw_themes else ["Général"]
         category = row.get(header_map.get("category", "categorie"), "").strip() or "Inspection technique"
         advice = row.get(header_map.get("advice", "conseil_reponse"), "").strip() or None
 
         gq = db.query(GlobalQuestion).filter(
-            GlobalQuestion.question_text.ilike(q_text)
+            GlobalQuestion.question_text.ilike(q_text),
+            GlobalQuestion.language == raw_lang
         ).first()
 
         if gq:
@@ -302,6 +317,7 @@ def import_global_catalog_from_csv(db: Session, csv_content: str, author: str = 
                 themes_json=json.dumps(themes, ensure_ascii=False),
                 category=category,
                 advice_notes=advice,
+                language=raw_lang,
                 created_by=author,
                 usage_count=1
             )
@@ -320,13 +336,14 @@ def import_global_catalog_from_csv(db: Session, csv_content: str, author: str = 
 
 def get_faq_csv_template() -> str:
     """
-    Retourne un modèle CSV type commenté pour l'import de questions/réponses.
+    Retourne un modèle CSV type commenté pour l'import de questions/réponses bilingues.
     """
     output = io.StringIO()
     output.write('\ufeff')
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
 
     writer.writerow([
+        "langue",
         "thematiques",
         "question",
         "statut",
@@ -334,6 +351,7 @@ def get_faq_csv_template() -> str:
         "auteur_question"
     ])
     writer.writerow([
+        "fr",
         "Toiture & Charpente, Structure & Gros œuvre",
         "Quel est l'état général de la toiture et des combles ?",
         "satisfaisante",
@@ -341,6 +359,7 @@ def get_faq_csv_template() -> str:
         "Jean Dupont"
     ])
     writer.writerow([
+        "fr",
         "Piscine, Extérieur, Jardin",
         "Quel est l'âge du liner de la piscine et l'état du système de filtration ?",
         "relance_necessaire",
@@ -348,18 +367,20 @@ def get_faq_csv_template() -> str:
         "Marie Martin"
     ])
     writer.writerow([
-        "Mobilier & Inclusions",
-        "La cuisine équipée (four, plaque induction, hotte) reste-t-elle à la vente au prix négocié ?",
-        "resolu",
-        "Oui, tous les éléments encastrés sont inclus sans surcoût.",
-        "Jean Dupont"
+        "en",
+        "Roof & Framework, Structure & Building Shell",
+        "What is the overall condition of the roof and timber framework?",
+        "satisfaisante",
+        "Roof renewed in 2021, warranty invoices supplied by seller.",
+        "John Doe"
     ])
     writer.writerow([
-        "Copropriété, Charges & Budget",
-        "Quel est le montant des charges courantes mensuelles ?",
+        "en",
+        "Swimming Pool, Exterior, Garden",
+        "What is the age of the pool liner and filtration pump?",
         "en_attente",
         "",
-        "Jean Dupont"
+        "John Doe"
     ])
 
     return output.getvalue()

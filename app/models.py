@@ -361,10 +361,11 @@ class GlobalQuestion(Base):
     __tablename__ = "global_questions"
 
     id = Column(Integer, primary_key=True, index=True)
-    question_text = Column(Text, nullable=False, unique=True, index=True)
+    question_text = Column(Text, nullable=False, index=True)
     themes_json = Column(Text, nullable=True)  # JSON list of theme tags, e.g. ["Piscine", "Extérieur", "Jardin"]
     category = Column(String(100), nullable=True) # e.g. "Inspection technique", "Copropriété", "Financier"
     advice_notes = Column(Text, nullable=True) # Advice on why to ask and what to verify
+    language = Column(String(10), default="fr", nullable=False, index=True) # e.g. "fr", "en"
     usage_count = Column(Integer, default=0, nullable=False)
     created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -376,7 +377,7 @@ class VisitQuestion(Base):
     Stores interactive FAQ & inspection questions for a property and its visits/contre-visites.
     Supports multi-thematic classification (e.g. ['Piscine', 'Extérieur', 'Jardin']),
     status lifecycle ('en_attente', 'satisfaisante', 'relance_necessaire', 'resolu', 'non_applicable'),
-    and answer note-taking with author attribution and multi-visit continuity.
+    and answer note-taking with author attribution, language, and multi-visit continuity.
     """
     __tablename__ = "visit_questions"
 
@@ -386,6 +387,7 @@ class VisitQuestion(Base):
     question_text = Column(Text, nullable=False)
     status = Column(String(50), nullable=False, default="en_attente") # en_attente, satisfaisante, relance_necessaire, resolu, non_applicable
     themes_json = Column(Text, nullable=True) # JSON list of theme tags, e.g. ["Piscine", "Extérieur", "Jardin"]
+    language = Column(String(10), default="fr", nullable=False, index=True) # e.g. "fr", "en"
     created_by = Column(String(100), nullable=True)
     assigned_to = Column(String(100), nullable=True)
     answer_text = Column(Text, nullable=True)
