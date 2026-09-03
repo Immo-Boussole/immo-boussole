@@ -66,7 +66,12 @@ The typography relies on **Inter**, a highly legible geometric sans-serif that s
 - **Typography**: `0.65rem` size, `800` weight, uppercase with `0.05em` letter-spacing.
 - **Colors**: Typically pure black or white text sitting confidently on a semantic background color (`var(--green)`, `var(--red)`).
 
-- **Global Layout System**: Full height CSS grid/flex hybrid (`100vh` layouts, locked scroll body). The application utilizes a **Universal Sidebar Navigation** pattern where every page consists of a fixed Sidebar (`aside.sidebar`) and a scrollable Main Content area (`main.main`). The body is set to `overflow: hidden` to enable independent scrolling for both the sidebar and the content area.
+- **Global Layout System**: Full height CSS grid/flex hybrid (`100vh` layouts, locked scroll body). The application utilizes a **Universal Sidebar Navigation** pattern where every standard dashboard page consists of a fixed Sidebar (`aside.sidebar`) and a scrollable Main Content area (`main.main`). The body is set to `overflow: hidden` to enable independent scrolling for both the sidebar and the content area.
+
+### Public & Standalone Views Architecture (e.g., `/v/{token}`)
+Standalone views (such as the collaborative visit workspace `/v/{token}`, public share links, login, setup) must NOT inherit the locked-body dashboard layout:
+- **No `mobile.css`**: Standalone views MUST NEVER link `/static/css/mobile.css` because `mobile.css` sets `body { position: fixed !important; overflow: hidden !important; }` on smartphones ($\le 768\text{px}$), breaking vertical scrolling.
+- **Dedicated Responsive Stylesheet**: Standalone views must link a dedicated stylesheet (e.g. `visite_session.css`) with standard body scroll, touch targets $\ge 44\text{px}$, and mobile-first sticky headers/tabs (`position: sticky; top: 0; backdrop-filter: blur(16px)`).
 
 ### Sidebar Structure (`aside.sidebar`)
 The sidebar is **identical across all templates**. Every page MUST include the exact same sidebar sections in this order. No section may be omitted.

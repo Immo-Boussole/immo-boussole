@@ -8,6 +8,14 @@ This rule defines mandatory requirements for monitoring, diagnosing, and verifyi
 
 Whenever any code, configuration, or documentation change is pushed to a remote repository or associated with a pull request:
 
+- **Mandatory Local Pre-Push Quality & Regression Validation**:
+  - Before running `git push` or opening a PR, the agent MUST run local quality checks:
+    ```bash
+    python tests/run_tests.py --ci
+    ```
+  - This executes smoke checks (Jinja template syntax, i18n parity, responsive markup isolation) and core test suites.
+  - Zero failure tolerance locally: all local tests must report `100% passed / OK` before pushing.
+
 - **Proactive Monitoring**:
   - The AI agent must never mark a task complete immediately after `git push`.
   - The agent must inspect the status of triggered GitHub Actions workflows using `gh run list` / `gh run view` / `gh pr checks`.

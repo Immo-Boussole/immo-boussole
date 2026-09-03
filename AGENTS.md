@@ -15,6 +15,9 @@ For every code or user interface (UI/UX) modification:
 - **CSS & Layout Checks**:
   - Use fluid flexbox/grid layouts and appropriate media queries.
   - Maintain component legibility, accessibility, and responsiveness (modals, banners, forms, tables, lists).
+- **Standalone Public / Magic-Link Isolation (e.g. `/v/{token}`)**:
+  - Never import dashboard-specific `mobile.css` (`body { position: fixed !important; overflow: hidden !important; }`) into standalone / public / magic-link templates.
+  - Always provide dedicated mobile-first stylesheets with natural vertical body scrolling, sticky tabs at `top: 0` on mobile, and touch-accessible controls.
 
 ---
 
@@ -28,6 +31,11 @@ For every code change:
 
 ## 3. Code Quality, Performance & Testing
 
+- **Mandatory Local Pre-Push Validation**: Before pushing any commit or PR, always run local validation suites:
+  ```bash
+  python tests/run_tests.py --ci
+  ```
+  Ensure all smoke tests (Jinja syntax, i18n parity, responsive standalone isolation) and core tests pass with **100% OK**.
 - **Unit and Integration Tests**: Run and validate tests (`pytest`) to prevent regressions.
 - **Python 3.10+ & Performance**: Prefer optimized native operations (e.g. `int.bit_count()` and bitwise operations for perceptual hash distance calculations).
 - **Documentation Integrity**: Preserve docstrings, comments, and documented architectures located in the `.ai/` directory.

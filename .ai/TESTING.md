@@ -6,24 +6,24 @@ Immo-Boussole includes a unified testing framework designed to ensure stability 
 
 The framework is built around a central runner that orchestrates multiple types of tests:
 
-- **Smoke Tests**: Quick checks to ensure basic components (like Jinja templates) are functional and syntactically correct.
-- **Core Tests**: Verify business logic, API endpoints, and database interactions.
+- **Smoke Tests**: Quick checks to ensure basic components (like Jinja templates, i18n parity, and responsive template isolation) are functional and syntactically correct.
+- **Core Tests**: Verify business logic, API endpoints, database interactions, and collaborative workspaces.
 - **Network Tests**: Ensure connectivity and TLS configurations are compatible with target platforms (e.g., LeBonCoin).
 - **External API Tests**: Validate integrations with third-party services like OpenStreetMap (Geocoding) and Georisques.
 - **Scraper Tests**: High-level integration tests that perform actual scraping to verify parser accuracy.
 
 ## Usage
 
-### Local Execution
+### Local Execution (Mandatory Pre-Push)
 
-Use the `run_tests.py` script located in the `tests/` directory:
+Always run the local test suite before any git commit / push:
 
 ```bash
+# Run local pre-push CI test suite
+python tests/run_tests.py --ci
+
 # Run the full test suite
 python tests/run_tests.py
-
-# Run in CI mode (skips heavy scrapers and external APIs)
-python tests/run_tests.py --ci
 ```
 
 ### Continuous Integration (CI)
@@ -42,3 +42,5 @@ A GitHub Actions workflow is configured in `.github/workflows/ci.yml`. It automa
 - `.github/workflows/ci.yml`: GitHub Actions configuration.
 - `tests/check_template.py`: Utility to verify Jinja2 template syntax.
 - `tests/test_jinja.py`: Unit tests for custom Jinja2 logic/filters.
+- `tests/test_standalone_pages_responsive.py`: Verifies responsive isolation of standalone / public pages.
+- `tests/test_listing_detail_responsive.py`: Verifies responsive layout and mobile overrides for listing details.
