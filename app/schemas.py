@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel, field_validator
 from typing import Optional, List
 from datetime import datetime
@@ -417,6 +418,14 @@ class AgentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class ParticipantInviteItem(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = "visiteur"
+
+
 class VisitCreateRequest(BaseModel):
     listing_id: int
     visit_type: str = "visite"  # "visite", "contre_visite", "proposition_offre", "contre_proposition_offre"
@@ -537,13 +546,6 @@ class VisitMediaResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class ParticipantInviteItem(BaseModel):
-    username: Optional[str] = None
-    email: Optional[str] = None
-    name: Optional[str] = None
-    role: Optional[str] = "visiteur"
 
 
 class VisitInviteRequest(BaseModel):
