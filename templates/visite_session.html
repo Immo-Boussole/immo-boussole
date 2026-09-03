@@ -32,6 +32,12 @@
                         <i class="fa-solid fa-user-plus"></i>
                         <span>Inviter</span>
                     </button>
+                    {% if is_authenticated and current_username %}
+                    <div class="vs-user-badge" title="Connecté en tant que {{ current_username }}">
+                        <div class="vs-user-avatar">{{ current_username[0]|upper }}</div>
+                        <span class="vs-user-name">{{ current_username }}</span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 

@@ -849,6 +849,30 @@ def test_language_attribution_and_filtering():
             assert roof_q is not None
             assert roof_q["language"] == "en"
 
+            # ── Test /v/{token} rendering connected user badge ──
+            # 1. Unauthenticated / anonymous visitor
+            token_visit = db.query(Visit).filter(Visit.id == visit_id).first()
+            resp_anon = client.get(f"/v/{token_visit.access_token}")
+            assert resp_anon.status_code == 200
+            anon_html = resp_anon.text
+            assert 'vs-user-badge' not in anon_html
+
+            # 2. Authenticated user with active session
+            # Mock session cookie / state
+            app.dependency_overrides[user_required] = lambda: {"username": "jean_marc", "role": "user"}
+            app.dependency_overrides[login_required] = lambda: {"username": "jean_marc", "role": "user"}
+
+            # Set session in client
+            with client as sess_client:
+                # Use a session cookie simulation
+                with patch("fastapi.Request.session", new_callable=lambda: property(lambda self: {"username": "jean_marc", "role": "user"})):
+                    resp_auth = sess_client.get(f"/v/{token_visit.access_token}")
+                    assert resp_auth.status_code == 200
+                    auth_html = resp_auth.text
+                    assert 'class="vs-user-badge"' in auth_html
+                    assert 'jean_marc' in auth_html
+                    assert '<div class="vs-user-avatar">J</div>' in auth_html
+
         finally:
             app.dependency_overrides.clear()
 
