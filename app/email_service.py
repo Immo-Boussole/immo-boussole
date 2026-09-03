@@ -1,3 +1,8 @@
+import os
+import logging
+import urllib.parse
+from typing import Optional
+
 try:
     import resend
 except ImportError:
@@ -5,19 +10,20 @@ except ImportError:
 
 from sqlalchemy.orm import Session
 from app import models
-from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 def send_email(db: Session, to_email: str, html_content: str, subject: Optional[str] = None):
     """
     Sends an email using Resend.com based on global settings.
     """
     if not resend:
-        print("[EmailService] Resend library not installed. Skipping email.")
+        logger.info("[EmailService] Resend library not installed. Skipping email.")
         return None
 
     settings = db.query(models.GlobalSettings).first()
     if not settings or not settings.resend_api_key:
-        print("[EmailService] Resend API key not configured. Skipping email.")
+        logger.info("[EmailService] Resend API key not configured. Skipping email.")
         return None
 
     resend.api_key = settings.resend_api_key
@@ -26,12 +32,13 @@ def send_email(db: Session, to_email: str, html_content: str, subject: Optional[
     sender_email = settings.resend_sender_email
     
     if not sender_email:
-        print("[EmailService] Resend sender email not configured. Skipping email.")
+        logger.info("[EmailService] Resend sender email not configured. Skipping email.")
         return None
 
     final_subject = subject or settings.resend_subject or "Notification Immo-Boussole"
     
-    if settings.APP_ENV == "development":
+    app_env = getattr(settings, "APP_ENV", None) or os.environ.get("APP_ENV", "production")
+    if str(app_env).lower() == "development":
         final_subject = f"[DEV] {final_subject}"
     
     try:
@@ -45,7 +52,7 @@ def send_email(db: Session, to_email: str, html_content: str, subject: Optional[
         response = resend.Emails.send(params)
         return response
     except Exception as e:
-        print(f"[EmailService] Error sending email: {e}")
+        logger.warning(f"[EmailService] Error sending email: {e}")
         return None
 
 
@@ -68,19 +75,26 @@ def send_visit_invitation_email(
     base = (base_url or "http://localhost:8000").rstrip("/")
     visit_url = f"{base}/v/{visit.access_token}" if visit.access_token else f"{base}/visites"
     listing = visit.listing
-    listing_title = listing.title if listing else "Bien immobilier"
+    listing_title = (listing.title if listing and listing.title else "Bien immobilier")
     listing_url = f"{base}/#listing-{listing.id}" if listing else base
 
     # Format date
-    try:
-        dt_str = visit.scheduled_at.strftime("%d/%m/%Y à %H:%M")
-    except Exception:
-        dt_str = str(visit.scheduled_at)
+    if visit.scheduled_at:
+        try:
+            dt_str = visit.scheduled_at.strftime("%d/%m/%Y à %H:%M")
+        except Exception:
+            dt_str = str(visit.scheduled_at)
+    else:
+        dt_str = "Date à convenir"
 
     type_label = "Contre-visite" if visit.visit_type == "contre_visite" else "Visite immobilière"
-    address_display = visit.meeting_address or (listing.address if listing else "") or (listing.city if listing else "Adresse non précisée")
-    import urllib.parse
-    maps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(address_display)}"
+    address_display = (
+        visit.meeting_address
+        or (listing.address if listing and listing.address else "")
+        or (listing.city if listing and listing.city else "")
+        or "Adresse non précisée"
+    )
+    maps_link = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(str(address_display))}"
 
     instructions_html = ""
     if visit.instructions:

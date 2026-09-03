@@ -3,10 +3,13 @@ FastAPI application main entry point.
 Defines all routes: HTML pages + REST API.
 """
 import json
+import logging
 import os
 import re
 import urllib.parse
 import asyncio
+
+logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -5259,7 +5262,7 @@ def create_visit(request: Request, body: schemas.VisitCreateRequest, db: Session
         access_token=token,
         meeting_address=body.meeting_address or body.listing_address or (listing.address if listing else None),
         instructions=body.instructions,
-        participants_json=json.dumps([p.dict() for p in body.participants], ensure_ascii=False) if body.participants else None
+        participants_json=json.dumps([(p.model_dump() if hasattr(p, "model_dump") else p.dict()) for p in body.participants], ensure_ascii=False) if body.participants else None
     )
     db.add(visit)
     
@@ -5414,7 +5417,7 @@ def update_visit(request: Request, visit_id: int, body: schemas.VisitUpdateReque
     if body.instructions is not None:
         visit.instructions = body.instructions
     if body.participants is not None:
-        visit.participants_json = json.dumps([p.dict() for p in body.participants], ensure_ascii=False)
+        visit.participants_json = json.dumps([(p.model_dump() if hasattr(p, "model_dump") else p.dict()) for p in body.participants], ensure_ascii=False)
 
     if body.agent_ids is not None or body.agency_ids is not None:
         # Clear existing contacts
@@ -5686,7 +5689,7 @@ def invite_visit_participants(
     # Process, update or auto-create users
     newly_invited_participants = []
     for p in body.participants:
-        p_dict = p.dict()
+        p_dict = p.model_dump() if hasattr(p, "model_dump") else p.dict()
         clean_email = (p.email or "").strip().lower()
         clean_uname = (p.username or "").strip()
         p_name = (p.name or "").strip()
@@ -5764,7 +5767,13 @@ def invite_visit_participants(
     # Send invitation emails
     emails_sent = 0
     if body.send_emails:
-        base_url = str(request.base_url)
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
+        if host:
+            base_url = f"{proto}://{host}"
+        else:
+            base_url = str(request.base_url)
+
         for p in newly_invited_participants:
             if p.get("email"):
                 try:

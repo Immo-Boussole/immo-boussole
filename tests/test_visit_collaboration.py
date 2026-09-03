@@ -11,8 +11,9 @@ from fastapi.testclient import TestClient
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal, run_migrations
-from app.models import Listing, Source, ListingStatus, Visit, User, VisitQuestion, VisitMedia
+from app.models import Listing, Source, ListingStatus, Visit, User, VisitQuestion, VisitMedia, GlobalSettings
 from app.main import app, login_required, user_required
+from app import email_service
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -877,6 +878,81 @@ def test_language_attribution_and_filtering():
             app.dependency_overrides.clear()
 
 
+def test_invite_unmocked_email_service_and_global_settings_safety():
+    """
+    Regression test: ensures invite endpoint handles real GlobalSettings without
+    AttributeError on APP_ENV or NameError on logger, returning 200 even when email sending fails or is skipped.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        # Ensure GlobalSettings exists in DB
+        settings = db.query(GlobalSettings).first()
+        if not settings:
+            settings = GlobalSettings(resend_api_key="re_test_dummy_key_123", resend_sender_email="test@example.com")
+            db.add(settings)
+            db.commit()
+            db.refresh(settings)
+
+        listing = Listing(
+            title="Appartement Sécurisé",
+            url=f"https://example.com/test-safety-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "tester", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "tester", "role": "user"}
+
+        try:
+            v_resp = client.post("/api/visites", json={
+                "listing_id": listing.id,
+                "scheduled_at": (datetime.datetime.now() + datetime.timedelta(days=2)).isoformat(),
+                "import_default_questions": False
+            })
+            assert v_resp.status_code == 200
+            visit_id = v_resp.json()["id"]
+
+            # Direct call to send_visit_invitation_email without mocks
+            visit = db.query(Visit).filter(Visit.id == visit_id).first()
+            # This should NEVER raise AttributeError or NameError
+            email_res = email_service.send_visit_invitation_email(
+                db=db,
+                visit=visit,
+                participant_email=f"notif_{ts}@example.com",
+                participant_name="Notification Test",
+                base_url="https://immo.example.com"
+            )
+
+            # Route call to /api/visites/{visit_id}/invite with send_emails=True without mocking
+            invite_resp = client.post(f"/api/visites/{visit_id}/invite", json={
+                "participants": [
+                    {
+                        "name": "Marie Témoin",
+                        "email": f"marie_{ts}@example.com",
+                        "role": "conjoint"
+                    }
+                ],
+                "instructions": "Rendez-vous devant l'immeuble.",
+                "send_emails": True
+            })
+
+            # Must succeed with 200 OK (no 500 error!)
+            assert invite_resp.status_code == 200
+            data = invite_resp.json()
+            assert data["status"] == "success"
+            assert data["short_url"].startswith("/v/")
+            assert len(data["participants"]) >= 1
+
+        finally:
+            app.dependency_overrides.clear()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
+
 

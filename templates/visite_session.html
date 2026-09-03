@@ -2198,9 +2198,14 @@
                 });
 
                 if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
                     closeModal('modal-invite-participants');
-                    showToast('Participant invité avec succès !');
-                    setTimeout(() => location.reload(), 800);
+                    if (sendEmail && data.emails_sent === 0) {
+                        showToast('Participant ajouté (email non envoyé : service Resend non configuré)', 'fa-triangle-exclamation');
+                    } else {
+                        showToast('Participant invité avec succès !');
+                    }
+                    setTimeout(() => location.reload(), 900);
                 } else {
                     const errData = await res.json().catch(() => ({}));
                     const errMsg = errData.detail || `Erreur lors de l'envoi de l'invitation (Code ${res.status}).`;
