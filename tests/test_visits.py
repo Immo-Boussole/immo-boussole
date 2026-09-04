@@ -142,7 +142,38 @@ def test_visits_flow():
         assert "Biens visités" in visites_html_resp.text
         assert 'id="statBiensVisitesCnt"' in visites_html_resp.text
 
-        # 9. Clean up test data
+        # 9. Test Participant Invitation: Same role / shared email coexistence without overwriting
+        resp_inv1 = client.post(f"/api/visites/{v2_id}/invite", json={
+            "participants": [{
+                "name": "Conseiller Un",
+                "email": "conseiller1@example.com",
+                "role": "conseiller"
+            }],
+            "send_emails": False
+        })
+        assert resp_inv1.status_code == 200, f"Invite 1 failed: {resp_inv1.text}"
+
+        resp_inv2 = client.post(f"/api/visites/{v2_id}/invite", json={
+            "participants": [{
+                "name": "Conseiller Deux",
+                "email": "conseiller2@example.com",
+                "role": "conseiller"
+            }],
+            "send_emails": False
+        })
+        assert resp_inv2.status_code == 200, f"Invite 2 failed: {resp_inv2.text}"
+
+        db.expire_all()
+        v2_db = db.query(Visit).filter(Visit.id == v2_id).first()
+        import json
+        p_list = json.loads(v2_db.participants_json or "[]")
+        assert len(p_list) == 2, f"Expected 2 participants, found {len(p_list)}"
+        names = [p.get("name") for p in p_list]
+        assert "Conseiller Un" in names and "Conseiller Deux" in names, f"Names mismatch: {names}"
+        assert p_list[0]["role"] == "conseiller" and p_list[1]["role"] == "conseiller"
+        assert p_list[0]["id"] != p_list[1]["id"], "Each participant should receive a distinct unique id"
+
+        # 10. Clean up test data
         tool_delete_visit(visit_id)
         tool_delete_visit(v2_id)
         db.delete(test_listing)

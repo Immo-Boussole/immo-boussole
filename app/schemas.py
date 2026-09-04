@@ -420,6 +420,7 @@ class AgentResponse(BaseModel):
 
 
 class ParticipantInviteItem(BaseModel):
+    id: Optional[str] = None
     username: Optional[str] = None
     email: Optional[str] = None
     name: Optional[str] = None

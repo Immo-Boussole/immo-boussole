@@ -5714,9 +5714,6 @@ def invite_visit_participants(
         p_dict["name"] = p_name or (clean_email.split("@")[0] if clean_email else "Participant")
         p_dict["role"] = p_role
 
-        if not p_dict.get("id"):
-            p_dict["id"] = str(uuid.uuid4())[:8]
-
         # Link to system user ONLY if clean_uname was explicitly provided from existing accounts
         if clean_uname:
             existing_user = db.query(models.User).filter(models.User.username == clean_uname).first()
@@ -5735,25 +5732,24 @@ def invite_visit_participants(
         newly_invited_participants.append(p_dict)
 
     # Merge newly invited into existing participants list
-    # Match ONLY by explicit participant 'id', or if an existing participant has the exact same non-empty email
+    # Match ONLY if an explicit existing participant 'id' was provided;
+    # Otherwise, assign a fresh UUID so that multiple participants (even with the same role or email) can co-exist
     merged_participants = list(existing_participants)
     for new_p in newly_invited_participants:
-        new_id = new_p.get("id")
-        new_email = (new_p.get("email") or "").strip().lower()
+        explicit_id = new_p.get("id")
         matched_idx = None
-        for idx, exist_p in enumerate(merged_participants):
-            exist_id = exist_p.get("id")
-            exist_email = (exist_p.get("email") or "").strip().lower()
-            if new_id and exist_id and new_id == exist_id:
-                matched_idx = idx
-                break
-            if new_email and exist_email and new_email == exist_email:
-                matched_idx = idx
-                break
+        if explicit_id:
+            for idx, exist_p in enumerate(merged_participants):
+                exist_id = exist_p.get("id")
+                if exist_id and exist_id == explicit_id:
+                    matched_idx = idx
+                    break
 
         if matched_idx is not None:
             merged_participants[matched_idx] = {**merged_participants[matched_idx], **new_p}
         else:
+            if not explicit_id:
+                new_p["id"] = str(uuid.uuid4())[:8]
             merged_participants.append(new_p)
 
     visit.participants_json = json.dumps(merged_participants, ensure_ascii=False)

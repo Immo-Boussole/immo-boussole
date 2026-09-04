@@ -1290,6 +1290,11 @@
                 </button>
             </div>
             <div class="vs-modal-body">
+                <div id="invite-general-error" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444; font-size: 16px;"></i>
+                    <span id="invite-general-error-msg">Une erreur est survenue lors de l'invitation.</span>
+                </div>
+
                 <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 14px;">
                     Sélectionnez un compte existant ou créez un nouveau profil pour lui donner accès au dossier collaboratif.
                 </p>
@@ -1573,18 +1578,55 @@
         let currentActiveTab = "faq";
         let globalCatalogCache = [];
 
-        function showToast(msg, icon = 'fa-circle-check') {
+        function showToast(msg, icon = 'fa-circle-check', isError = false) {
             const toast = document.getElementById('vs-toast');
             const msgEl = document.getElementById('vs-toast-msg');
             msgEl.textContent = msg;
+            const iconEl = toast.querySelector('i');
+            if (iconEl) {
+                iconEl.className = `fa-solid ${icon}`;
+                iconEl.style.color = isError ? '#ef4444' : '#22c55e';
+            }
+            if (isError) {
+                toast.style.borderColor = '#ef4444';
+            } else {
+                toast.style.borderColor = '';
+            }
             toast.className = 'vs-toast show';
-            setTimeout(() => { toast.className = 'vs-toast'; }, 3200);
+            setTimeout(() => { 
+                toast.className = 'vs-toast';
+                toast.style.borderColor = '';
+                if (iconEl) iconEl.style.color = '';
+            }, 3600);
+        }
+
+        function switchTab(tabName, updateHash = true) {
+            if (!tabName) return;
+            const cleanTab = tabName.replace(/^tab-/, '').replace(/^#/, '');
+            const targetBtn = document.querySelector(`.vs-tab-btn[data-tab="${cleanTab}"]`);
+            const targetContent = document.getElementById('tab-' + cleanTab);
+            if (!targetBtn || !targetContent) return;
+
+            document.querySelectorAll('.vs-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.vs-tab-content').forEach(c => c.classList.remove('active'));
+
+            targetBtn.classList.add('active');
+            targetContent.classList.add('active');
+            currentActiveTab = cleanTab;
+
+            if (updateHash && window.location.hash !== `#${cleanTab}`) {
+                history.replaceState(null, '', `#${cleanTab}`);
+            }
+            applyUniversalFilters();
         }
 
         function openModal(id) {
             document.getElementById(id).classList.add('open');
             if (id === 'modal-global-catalog' && globalCatalogCache.length === 0) {
                 loadGlobalCatalog();
+            }
+            if (id === 'modal-invite-participants') {
+                resetInviteModal();
             }
         }
         function closeModal(id) {
@@ -1610,15 +1652,23 @@
         // Tab Navigation
         document.querySelectorAll('.vs-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.vs-tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.vs-tab-content').forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                currentActiveTab = btn.dataset.tab;
-                const target = document.getElementById('tab-' + btn.dataset.tab);
-                if (target) target.classList.add('active');
-                applyUniversalFilters();
+                switchTab(btn.dataset.tab, true);
             });
         });
+
+        // Check hash on page load for deep linking to tabs (e.g. #participants, #faq, #inclusions)
+        document.addEventListener('DOMContentLoaded', () => {
+            const hash = (window.location.hash || '').replace('#', '');
+            if (hash) {
+                switchTab(hash, false);
+            }
+        });
+        if (window.location.hash) {
+            const initialHash = window.location.hash.replace('#', '');
+            if (initialHash) {
+                setTimeout(() => switchTab(initialHash, false), 50);
+            }
+        }
 
         // Keyboard Shortcut '/' for fast search
         document.addEventListener('keydown', (e) => {
@@ -2616,13 +2666,35 @@
             el?.addEventListener('change', () => validateInviteForm(true));
         });
 
+        function resetInviteModal() {
+            const errBanner = document.getElementById('invite-general-error');
+            if (errBanner) {
+                errBanner.style.display = 'none';
+                const errMsgEl = document.getElementById('invite-general-error-msg');
+                if (errMsgEl) errMsgEl.textContent = '';
+            }
+            if (selectAccount) selectAccount.value = '';
+            if (inputInviteName) inputInviteName.value = '';
+            if (inputInviteEmail) inputInviteEmail.value = '';
+            if (selectInviteRole) selectInviteRole.value = 'visiteur';
+            const inputInstructions = document.getElementById('invite-instructions');
+            if (inputInstructions) inputInstructions.value = '';
+            const cbEmail = document.getElementById('invite-send-email-cb');
+            if (cbEmail) cbEmail.checked = true;
+            validateInviteForm(false);
+        }
+
         // Submit invite
         btnSubmitInvite?.addEventListener('click', async (e) => {
             e.preventDefault();
+            const errBanner = document.getElementById('invite-general-error');
+            const errMsgEl = document.getElementById('invite-general-error-msg');
+            if (errBanner) errBanner.style.display = 'none';
+
             const isValid = validateInviteForm(true);
 
             if (!isValid) {
-                showToast('Veuillez compléter tous les champs obligatoires mis en avant.', 'fa-circle-exclamation');
+                showToast('Veuillez compléter tous les champs obligatoires mis en avant.', 'fa-circle-exclamation', true);
                 return;
             }
 
@@ -2654,17 +2726,29 @@
                     if (sendEmail && data.emails_sent === 0) {
                         showToast('Participant ajouté (email non envoyé : service Resend non configuré)', 'fa-triangle-exclamation');
                     } else {
-                        showToast('Participant invité avec succès !');
+                        showToast('Participant invité avec succès !', 'fa-circle-check');
                     }
-                    setTimeout(() => location.reload(), 900);
+                    setTimeout(() => {
+                        window.location.hash = '#participants';
+                        location.reload();
+                    }, 800);
                 } else {
                     const errData = await res.json().catch(() => ({}));
                     const errMsg = errData.detail || `Erreur lors de l'envoi de l'invitation (Code ${res.status}).`;
-                    alert(errMsg);
+                    if (errBanner && errMsgEl) {
+                        errMsgEl.textContent = errMsg;
+                        errBanner.style.display = 'flex';
+                    }
+                    showToast(errMsg, 'fa-triangle-exclamation', true);
                 }
             } catch (err) {
                 console.error('[Invite] Connection error:', err);
-                alert("Erreur de connexion avec le serveur lors de l'envoi de l'invitation.");
+                const errMsg = "Erreur de connexion avec le serveur lors de l'envoi de l'invitation.";
+                if (errBanner && errMsgEl) {
+                    errMsgEl.textContent = errMsg;
+                    errBanner.style.display = 'flex';
+                }
+                showToast(errMsg, 'fa-triangle-exclamation', true);
             } finally {
                 btnSubmitInvite.disabled = false;
                 btnSubmitInvite.innerHTML = originalBtnHtml;
@@ -3151,7 +3235,10 @@
                 if (res.ok) {
                     closeModal('modal-edit-participant');
                     showToast('Participant modifié avec succès !');
-                    setTimeout(() => location.reload(), 600);
+                    setTimeout(() => {
+                        window.location.hash = '#participants';
+                        location.reload();
+                    }, 600);
                 } else {
                     const errData = await res.json().catch(() => ({}));
                     alert(errData.detail || 'Erreur lors de la modification du participant.');
@@ -3176,7 +3263,10 @@
                 if (res.ok) {
                     showToast('Participant retiré.');
                     document.getElementById(`participant-row-${idx}`)?.remove();
-                    setTimeout(() => location.reload(), 600);
+                    setTimeout(() => {
+                        window.location.hash = '#participants';
+                        location.reload();
+                    }, 600);
                 } else {
                     alert('Erreur lors de la suppression du participant.');
                 }
