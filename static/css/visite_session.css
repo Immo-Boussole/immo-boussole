@@ -1788,6 +1788,29 @@ body.visite-session-body {
     border-color: var(--vs-accent);
 }
 
+/* Explicit dark background & high contrast text for select dropdowns & options */
+select.vs-form-input,
+.vs-bulk-select {
+    color-scheme: dark;
+    background-color: #1a2236 !important;
+    color: #f1f5f9 !important;
+}
+
+select.vs-form-input option,
+.vs-bulk-select option,
+select option {
+    background-color: #131929 !important;
+    color: #f8fafc !important;
+    padding: 8px 12px;
+}
+
+select.vs-form-input option:hover,
+select.vs-form-input option:checked,
+select option:checked {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
 .vs-form-input.vs-input-error {
     border-color: #ef4444 !important;
     background-color: rgba(239, 68, 68, 0.08) !important;

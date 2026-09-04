@@ -281,13 +281,13 @@
                         <strong id="bulk-selected-label">0</strong> question(s) sélectionnée(s)
                     </span>
                     <div class="vs-bulk-actions">
-                        <select id="bulk-status-select" class="vs-form-input" style="padding: 5px 10px; font-size: 13px; width: auto; background: var(--vs-card-bg); color: var(--vs-text);" onchange="applyBulkStatus(this.value)">
-                            <option value="">Modifier statut...</option>
-                            <option value="en_attente">⏳ En attente</option>
-                            <option value="satisfaisante">✅ Satisfaisante</option>
-                            <option value="relance_necessaire">⚠️ Relance</option>
-                            <option value="resolu">🎯 Résolu</option>
-                            <option value="non_applicable">🚫 Non applicable</option>
+                        <select id="bulk-status-select" class="vs-form-input vs-bulk-select" style="padding: 6px 12px; font-size: 13px; width: auto; background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);" onchange="applyBulkStatus(this.value)">
+                            <option value="" style="background-color: #131929; color: #94a3b8;">Modifier statut...</option>
+                            <option value="en_attente" style="background-color: #131929; color: #ffffff;">⏳ En attente</option>
+                            <option value="satisfaisante" style="background-color: #131929; color: #ffffff;">✅ Satisfaisante</option>
+                            <option value="relance_necessaire" style="background-color: #131929; color: #ffffff;">⚠️ Relance</option>
+                            <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
+                            <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
                         </select>
                         <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
                             <i class="fa-solid fa-tags"></i> Thématique
