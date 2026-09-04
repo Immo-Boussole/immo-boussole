@@ -1310,7 +1310,20 @@
                                         </a>
 
                                         <!-- Edit Visit -->
-                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;" title="Modifier la session" onclick="editVisit({{ v.id }}, {{ v.listing_id }}, '{{ v.step_family or 'visite' }}', '{{ v.step or '1ere_visite' }}', '{{ v.scheduled_at.isoformat() if v.scheduled_at else '' }}', '{{ v.status or 'programme' }}', {{ (v.visitor or '')|tojson }}, {{ (v.notes or '')|tojson }}, {{ v.contacts[0].agent_id if v.contacts and v.contacts[0].agent_id else 'null' }}, {{ v.contacts[0].agency_id if v.contacts and v.contacts[0].agency_id else 'null' }}, {{ (v.meeting_address or '')|tojson }}, {{ (v.instructions or '')|tojson }})">
+                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;" title="Modifier la session"
+                                                data-id="{{ v.id }}"
+                                                data-listing-id="{{ v.listing_id }}"
+                                                data-step-family="{{ v.step_family or 'visite' }}"
+                                                data-step="{{ v.step or '1ere_visite' }}"
+                                                data-scheduled-at="{{ v.scheduled_at.isoformat() if v.scheduled_at else '' }}"
+                                                data-status="{{ v.status or 'programme' }}"
+                                                data-visitor="{{ v.visitor or '' }}"
+                                                data-notes="{{ v.notes or '' }}"
+                                                data-agent-id="{{ v.visit_contacts[0].agent_id if v.visit_contacts and v.visit_contacts[0].agent_id else '' }}"
+                                                data-agency-id="{{ v.visit_contacts[0].agency_id if v.visit_contacts and v.visit_contacts[0].agency_id else '' }}"
+                                                data-meeting-address="{{ v.meeting_address or '' }}"
+                                                data-instructions="{{ v.instructions or '' }}"
+                                                onclick="handleEditSessionClick(this)">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
 
@@ -2598,6 +2611,21 @@
                     element.style.background = originalBg;
                 }, 1000);
             }
+        function handleEditSessionClick(btn) {
+            const d = btn.dataset;
+            const id = parseInt(d.id, 10);
+            const listingId = d.listingId ? parseInt(d.listingId, 10) : null;
+            const stepFamily = d.stepFamily || 'visite';
+            const step = d.step || '1ere_visite';
+            const scheduledAt = d.scheduledAt || '';
+            const status = d.status || 'programme';
+            const visitor = d.visitor || '';
+            const notes = d.notes || '';
+            const agentId = d.agentId ? parseInt(d.agentId, 10) : null;
+            const agencyId = d.agencyId ? parseInt(d.agencyId, 10) : null;
+            const meetingAddress = d.meetingAddress || '';
+            const instructions = d.instructions || '';
+            editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes, agentId, agencyId, meetingAddress, instructions);
         }
 
         function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes, agentId = null, agencyId = null, meetingAddress = null, instructions = null) {
