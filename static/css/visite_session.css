@@ -597,9 +597,36 @@ body.visite-session-body {
 }
 .vs-status-btn.active, .vs-inc-type-btn.active {
     background: var(--vs-surface-3);
-    color: var(--vs-text);
+    color: #ffffff;
     border-color: var(--vs-accent);
+    box-shadow: 0 0 0 1px var(--vs-accent);
     font-weight: 600;
+}
+
+.vs-status-btn[data-status="en_attente"].active {
+    border-color: var(--vs-status-pending);
+    box-shadow: 0 0 0 1px var(--vs-status-pending);
+    background: rgba(245, 158, 11, 0.18);
+}
+.vs-status-btn[data-status="satisfaisante"].active {
+    border-color: var(--vs-status-satisfactory);
+    box-shadow: 0 0 0 1px var(--vs-status-satisfactory);
+    background: rgba(16, 185, 129, 0.18);
+}
+.vs-status-btn[data-status="relance_necessaire"].active {
+    border-color: var(--vs-status-followup);
+    box-shadow: 0 0 0 1px var(--vs-status-followup);
+    background: rgba(239, 68, 68, 0.18);
+}
+.vs-status-btn[data-status="resolu"].active {
+    border-color: var(--vs-status-resolved);
+    box-shadow: 0 0 0 1px var(--vs-status-resolved);
+    background: rgba(99, 102, 241, 0.18);
+}
+.vs-status-btn[data-status="non_applicable"].active {
+    border-color: var(--vs-status-na);
+    box-shadow: 0 0 0 1px var(--vs-status-na);
+    background: rgba(100, 116, 139, 0.22);
 }
 
 .vs-faq-action-buttons {

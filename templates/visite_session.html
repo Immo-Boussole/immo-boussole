@@ -1506,7 +1506,7 @@
         const visitToken = "{{ visit.access_token }}";
 
         let currentThemeFilter = "";
-        let currentStatusFilter = "";
+        let currentStatusFilters = new Set();
         let currentAuthorFilter = "";
         let currentInclusionTypeFilter = "";
         let currentActiveTab = "faq";
@@ -1617,12 +1617,34 @@
             });
         });
 
-        // Status filter buttons
+        // Status filter buttons (support 1 to multiple active status filters)
         document.querySelectorAll('.vs-status-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.vs-status-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentStatusFilter = btn.dataset.status || "";
+                const status = btn.dataset.status || "";
+                const btnAll = document.querySelector('.vs-status-btn[data-status=""]');
+
+                if (!status) {
+                    // Clicked on "Tous les statuts": clear all specific filters
+                    currentStatusFilters.clear();
+                    document.querySelectorAll('.vs-status-btn').forEach(b => b.classList.remove('active'));
+                    if (btnAll) btnAll.classList.add('active');
+                } else {
+                    // Toggle the clicked status
+                    if (currentStatusFilters.has(status)) {
+                        currentStatusFilters.delete(status);
+                        btn.classList.remove('active');
+                    } else {
+                        currentStatusFilters.add(status);
+                        btn.classList.add('active');
+                    }
+
+                    // If no status is selected, re-activate "Tous les statuts"
+                    if (currentStatusFilters.size === 0) {
+                        if (btnAll) btnAll.classList.add('active');
+                    } else {
+                        if (btnAll) btnAll.classList.remove('active');
+                    }
+                }
                 applyUniversalFilters();
             });
         });
@@ -1691,7 +1713,7 @@
 
                 // Check text terms
                 const matchTerms = terms.length === 0 || terms.every(t => combinedBlob.includes(t));
-                const matchStatus = !currentStatusFilter || status === currentStatusFilter;
+                const matchStatus = currentStatusFilters.size === 0 || currentStatusFilters.has(status);
                 const matchTheme = !currentThemeFilter || themes.includes(currentThemeFilter);
                 const matchAuthor = !currentAuthorFilter || createdBy === currentAuthorFilter.toLowerCase() || answeredBy === currentAuthorFilter.toLowerCase();
 
