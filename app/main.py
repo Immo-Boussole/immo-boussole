@@ -42,7 +42,7 @@ from app.models import (
     Listing, ListingStatus, Review, Source, SearchQuery, ReadySearch,
     MapPin, UserListingView, ZoneRule, RejectedDuplicate, AIProfile,
     Visit, VisitContact, Agent, Agency, ListingAttachment, ListingLink,
-    VisitQuestion, VisitMedia, GlobalQuestion, VisitInclusion
+    VisitQuestion, VisitMedia, GlobalQuestion, VisitInclusion, VisitQuestionMedia
 )
 from app.visit_templates import import_default_pack_for_visit, DEFAULT_INSPECTION_PACK, record_in_global_catalog
 from app.media import save_visit_media_file
@@ -1509,9 +1509,14 @@ def visites_page(request: Request, db: Session = Depends(get_db), _auth = Depend
         if l:
             if hasattr(l, 'photos_local') and l.photos_local:
                 l._photos = json_to_photos(l.photos_local)
+            try:
+                participants_list = json.loads(v.participants_json or "[]")
+            except Exception:
+                participants_list = []
             visits_with_listings.append({
                 "visit": v,
-                "listing": l
+                "listing": l,
+                "participants": participants_list
             })
 
     all_agents = db.query(Agent).order_by(Agent.last_name.asc(), Agent.first_name.asc()).all()
@@ -5799,6 +5804,139 @@ def invite_visit_participants(
     }
 
 
+@app.put("/api/visites/{visit_id}/participants/{participant_index}")
+def update_visit_participant(
+    visit_id: int,
+    participant_index: int,
+    body: schemas.ParticipantUpdate,
+    db: Session = Depends(get_db)
+):
+    """Updates a participant's details (name, email, role, phone, instructions) in the visit."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    try:
+        participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        participants = []
+
+    if participant_index < 0 or participant_index >= len(participants):
+        raise HTTPException(status_code=404, detail="Participant non trouvé")
+
+    p = participants[participant_index]
+    if body.name is not None:
+        p["name"] = body.name.strip()
+    if body.email is not None:
+        p["email"] = body.email.strip().lower()
+    if body.role is not None:
+        p["role"] = body.role.strip()
+    if body.phone is not None:
+        p["phone"] = body.phone.strip()
+    if body.instructions is not None:
+        p["instructions"] = body.instructions.strip()
+    if body.username is not None:
+        p["username"] = body.username.strip()
+
+    participants[participant_index] = p
+    visit.participants_json = json.dumps(participants, ensure_ascii=False)
+    db.commit()
+    return {"status": "success", "participant": p, "participants": participants}
+
+
+@app.delete("/api/visites/{visit_id}/participants/{participant_index}")
+def delete_visit_participant(
+    visit_id: int,
+    participant_index: int,
+    db: Session = Depends(get_db)
+):
+    """Removes a participant from the visit session."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    try:
+        participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        participants = []
+
+    if participant_index < 0 or participant_index >= len(participants):
+        raise HTTPException(status_code=404, detail="Participant non trouvé")
+
+    deleted_p = participants.pop(participant_index)
+    visit.participants_json = json.dumps(participants, ensure_ascii=False)
+    db.commit()
+    return {"status": "deleted", "deleted_participant": deleted_p, "participants": participants}
+
+
+@app.post("/api/visites/{visit_id}/participants/{participant_index}/resend-invite")
+def resend_participant_invite(
+    request: Request,
+    visit_id: int,
+    participant_index: int,
+    db: Session = Depends(get_db)
+):
+    """Resends the invitation email with magic link and GPS to a specific participant."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    if not visit.access_token:
+        visit.access_token = secrets.token_hex(6)
+        db.commit()
+
+    try:
+        participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        participants = []
+
+    if participant_index < 0 or participant_index >= len(participants):
+        raise HTTPException(status_code=404, detail="Participant non trouvé")
+
+    p = participants[participant_index]
+    target_email = (p.get("email") or "").strip()
+    if not target_email:
+        raise HTTPException(status_code=400, detail="Ce participant n'a pas d'adresse email renseignée")
+
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
+    base_url = f"{proto}://{host}" if host else str(request.base_url)
+
+    email_sent = False
+    try:
+        email_sent = email_service.send_visit_invitation_email(
+            db=db,
+            visit=visit,
+            participant_email=target_email,
+            participant_name=p.get("name") or p.get("username"),
+            base_url=base_url
+        )
+    except Exception as e:
+        logger.warning(f"Error resending invite to {target_email}: {e}")
+
+    return {
+        "status": "success" if email_sent else "failed",
+        "email_sent": email_sent,
+        "email": target_email
+    }
+
+
+@app.put("/api/visites/{visit_id}/organizer")
+def update_visit_organizer(
+    visit_id: int,
+    body: schemas.OrganizerUpdate,
+    db: Session = Depends(get_db)
+):
+    """Updates the visit organizer / primary visitor."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    visit.visitor = body.visitor.strip()
+    db.commit()
+    return {"status": "success", "visitor": visit.visitor}
+
+
 # ─── Platform Global Question Catalog Endpoints ──────────────────────────────
 
 @app.get("/api/visites/catalog/languages")
@@ -6049,6 +6187,17 @@ def get_visit_questions(
             "origin_visit_date": v_date,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+            "media": [
+                {
+                    "id": m.id,
+                    "media_type": m.media_type,
+                    "file_path": m.file_path,
+                    "title": m.title,
+                    "url": m.url,
+                    "file_size": m.file_size
+                }
+                for m in item.media
+            ],
         })
 
     return results
@@ -6185,6 +6334,97 @@ def delete_visit_question(question_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted", "question_id": question_id}
 
 
+@app.post("/api/visites/{visit_id}/questions/bulk-status")
+def bulk_update_questions_status(
+    visit_id: int,
+    body: schemas.VisitBulkStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """Updates the status of multiple questions in bulk."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    questions = db.query(VisitQuestion).filter(
+        VisitQuestion.id.in_(body.question_ids),
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+
+    for q in questions:
+        q.status = body.status
+
+    db.commit()
+    return {
+        "status": "success",
+        "updated_count": len(questions),
+        "new_status": body.status
+    }
+
+
+@app.post("/api/visites/{visit_id}/questions/bulk-delete")
+def bulk_delete_questions(
+    visit_id: int,
+    body: schemas.VisitBulkDelete,
+    db: Session = Depends(get_db)
+):
+    """Deletes multiple questions in bulk."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    questions = db.query(VisitQuestion).filter(
+        VisitQuestion.id.in_(body.question_ids),
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+
+    count = len(questions)
+    for q in questions:
+        db.delete(q)
+
+    db.commit()
+    return {
+        "status": "success",
+        "deleted_count": count
+    }
+
+
+@app.post("/api/visites/{visit_id}/questions/bulk-theme")
+def bulk_assign_questions_theme(
+    visit_id: int,
+    body: schemas.VisitBulkTheme,
+    db: Session = Depends(get_db)
+):
+    """Appends a theme tag to multiple questions in bulk."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    theme_to_add = (body.theme or "").strip()
+    if not theme_to_add:
+        raise HTTPException(status_code=400, detail="Thématique vide")
+
+    questions = db.query(VisitQuestion).filter(
+        VisitQuestion.id.in_(body.question_ids),
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+
+    for q in questions:
+        try:
+            th_list = json.loads(q.themes_json or "[]")
+        except Exception:
+            th_list = []
+        if theme_to_add not in th_list:
+            th_list.append(theme_to_add)
+            q.themes_json = json.dumps(th_list, ensure_ascii=False)
+
+    db.commit()
+    return {
+        "status": "success",
+        "updated_count": len(questions),
+        "theme": theme_to_add
+    }
+
+
 @app.post("/api/visites/{visit_id}/questions/import-from-catalog")
 def import_questions_from_catalog(
     visit_id: int,
@@ -6226,22 +6466,16 @@ def import_questions_from_catalog(
         )
         db.add(vq)
         existing_texts.add(clean_text.lower())
-        gq.usage_count = (gq.usage_count or 0) + 1
         imported_count += 1
+        gq.usage_count = (gq.usage_count or 0) + 1
 
-    if imported_count > 0:
-        db.commit()
-
-    return {"status": "success", "imported_count": imported_count, "visit_id": visit.id}
+    db.commit()
+    return {"status": "success", "imported_count": imported_count}
 
 
 @app.post("/api/visites/{visit_id}/questions/import-template")
-def import_visit_questions_template(
-    request: Request,
-    visit_id: int,
-    db: Session = Depends(get_db)
-):
-    """Imports the standard multi-thematic inspection question pack into the visit FAQ."""
+def import_visit_questions_template(visit_id: int, request: Request, db: Session = Depends(get_db)):
+    """Imports the full default checklist into this visit."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
@@ -6255,15 +6489,25 @@ def import_visit_questions_template(
 # ─── CSV Import / Export Endpoints ──────────────────────────────────────────
 
 @app.get("/api/visites/{visit_id}/questions/export-csv")
-def export_visit_questions_csv(visit_id: int, db: Session = Depends(get_db)):
-    """Exports all FAQ questions for a visit/listing as a standard UTF-8-SIG CSV file with ';' delimiter."""
+def export_visit_questions_csv(visit_id: int, q_ids: Optional[str] = None, db: Session = Depends(get_db)):
+    """Exports FAQ questions for a visit/listing as a standard UTF-8-SIG CSV file with ';' delimiter. Supports filtering by comma-separated q_ids."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
-    questions = db.query(VisitQuestion).filter(
+    query = db.query(VisitQuestion).filter(
         or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
-    ).order_by(VisitQuestion.order_index.asc()).all()
+    )
+
+    if q_ids:
+        try:
+            ids = [int(x.strip()) for x in q_ids.split(",") if x.strip()]
+            if ids:
+                query = query.filter(VisitQuestion.id.in_(ids))
+        except Exception:
+            pass
+
+    questions = query.order_by(VisitQuestion.order_index.asc()).all()
 
     csv_data = csv_service.export_questions_to_csv(questions)
     filename = f"faq_visite_{visit.listing_id or visit.id}_{visit.scheduled_at.strftime('%Y%m%d')}.csv"
@@ -6719,6 +6963,149 @@ def delete_visit_media(media_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted", "media_id": media_id}
 
 
+@app.post("/api/visites/{visit_id}/questions/{question_id}/media")
+async def upload_question_media(
+    request: Request,
+    visit_id: int,
+    question_id: int,
+    files: Optional[list[UploadFile]] = File(None),
+    title: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Uploads photo, video, audio, or doc directly attached to a specific question."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+    vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
+    if not vq:
+        raise HTTPException(status_code=404, detail="Question non trouvée")
+
+    author = request.session.get("username") or "Visiteur"
+    created_media = []
+
+    if files:
+        for f in files:
+            if not f.filename:
+                continue
+            saved_name, orig_name, web_path, fsize, mime, mtype = await save_visit_media_file(
+                listing_id=visit.listing_id,
+                visit_id=visit.id,
+                file=f
+            )
+            item_title = title or orig_name
+            vm = VisitMedia(
+                visit_id=visit.id,
+                listing_id=visit.listing_id,
+                media_type=mtype,
+                file_path=web_path,
+                title=item_title,
+                category_tag=f"Question #{vq.id}",
+                file_size=fsize,
+                mime_type=mime,
+                created_by=author,
+            )
+            db.add(vm)
+            db.flush()
+            vq.media.append(vm)
+            created_media.append(vm)
+
+    if created_media:
+        db.commit()
+        for vm in created_media:
+            db.refresh(vm)
+
+    return {
+        "status": "success",
+        "created_count": len(created_media),
+        "question_id": question_id,
+        "media": [
+            {
+                "id": m.id,
+                "visit_id": m.visit_id,
+                "listing_id": m.listing_id,
+                "media_type": m.media_type,
+                "file_path": m.file_path,
+                "title": m.title,
+                "file_size": m.file_size,
+                "mime_type": m.mime_type,
+                "created_by": m.created_by,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+            }
+            for m in created_media
+        ]
+    }
+
+
+@app.post("/api/visites/{visit_id}/questions/{question_id}/link-media")
+def link_existing_media_to_question(
+    visit_id: int,
+    question_id: int,
+    body: schemas.VisitQuestionMediaLink,
+    db: Session = Depends(get_db)
+):
+    """Links existing session media items to a question."""
+    vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
+    if not vq:
+        raise HTTPException(status_code=404, detail="Question non trouvée")
+
+    media_items = db.query(VisitMedia).filter(VisitMedia.id.in_(body.media_ids)).all()
+    for m in media_items:
+        if m not in vq.media:
+            vq.media.append(m)
+
+    db.commit()
+    return {
+        "status": "success",
+        "question_id": question_id,
+        "linked_count": len(media_items),
+        "media_ids": [m.id for m in vq.media]
+    }
+
+
+@app.delete("/api/visites/{visit_id}/questions/{question_id}/media/{media_id}")
+def unlink_media_from_question(
+    visit_id: int,
+    question_id: int,
+    media_id: int,
+    db: Session = Depends(get_db)
+):
+    """Unlinks a media item from a question without deleting the file."""
+    vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
+    if not vq:
+        raise HTTPException(status_code=404, detail="Question non trouvée")
+    vm = db.query(VisitMedia).filter(VisitMedia.id == media_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="Média non trouvé")
+
+    if vm in vq.media:
+        vq.media.remove(vm)
+        db.commit()
+
+    return {"status": "unlinked", "question_id": question_id, "media_id": media_id}
+
+
+@app.post("/api/visites/{visit_id}/media/{media_id}/link-questions")
+def link_questions_to_media(
+    visit_id: int,
+    media_id: int,
+    body: schemas.VisitMediaQuestionsLink,
+    db: Session = Depends(get_db)
+):
+    """Associates/updates the questions linked to a media item."""
+    vm = db.query(VisitMedia).filter(VisitMedia.id == media_id).first()
+    if not vm:
+        raise HTTPException(status_code=404, detail="Média non trouvé")
+
+    questions = db.query(VisitQuestion).filter(VisitQuestion.id.in_(body.question_ids)).all()
+    vm.questions = questions
+    db.commit()
+    return {
+        "status": "success",
+        "media_id": media_id,
+        "linked_question_ids": [q.id for q in vm.questions]
+    }
+
+
 @app.get("/api/visites/{visit_id}/live-updates")
 def get_visit_live_updates(
     visit_id: int,
@@ -6776,6 +7163,16 @@ def get_visit_live_updates(
             "answer_text": q.answer_text,
             "answered_by": q.answered_by,
             "order_index": q.order_index,
+            "media": [
+                {
+                    "id": m.id,
+                    "media_type": m.media_type,
+                    "file_path": m.file_path,
+                    "title": m.title,
+                    "url": m.url
+                }
+                for m in q.media
+            ]
         })
 
     m_res = [
@@ -6788,6 +7185,7 @@ def get_visit_live_updates(
             "category_tag": m.category_tag,
             "created_by": m.created_by,
             "created_at": m.created_at.isoformat() if m.created_at else None,
+            "question_ids": [q.id for q in m.questions],
         }
         for m in media_items
     ]

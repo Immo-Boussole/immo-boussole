@@ -260,6 +260,49 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Select-all and Bulk bar trigger row -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--vs-border); font-size: 13px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500; color: var(--vs-text-muted);">
+                        <input type="checkbox" id="cb-select-all-questions" onchange="toggleSelectAllQuestions(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--vs-primary);">
+                        <span>Tout sélectionner (<span id="selected-questions-count">0</span> sélectionnée(s))</span>
+                    </label>
+                    <div id="bulk-selection-hint" style="font-size: 12px; color: var(--vs-text-muted); display: none;">
+                        <i class="fa-solid fa-layer-group"></i> Barre d'actions groupées active ci-dessous
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating / Sticky Bulk Actions Bar -->
+            <div id="vs-bulk-bar" class="vs-bulk-bar">
+                <div class="vs-bulk-bar-inner">
+                    <span class="vs-bulk-count">
+                        <i class="fa-solid fa-check-double"></i>
+                        <strong id="bulk-selected-label">0</strong> question(s) sélectionnée(s)
+                    </span>
+                    <div class="vs-bulk-actions">
+                        <select id="bulk-status-select" class="vs-form-input" style="padding: 5px 10px; font-size: 13px; width: auto; background: var(--vs-card-bg); color: var(--vs-text);" onchange="applyBulkStatus(this.value)">
+                            <option value="">Modifier statut...</option>
+                            <option value="en_attente">⏳ En attente</option>
+                            <option value="satisfaisante">✅ Satisfaisante</option>
+                            <option value="relance_necessaire">⚠️ Relance</option>
+                            <option value="resolu">🎯 Résolu</option>
+                            <option value="non_applicable">🚫 Non applicable</option>
+                        </select>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
+                            <i class="fa-solid fa-tags"></i> Thématique
+                        </button>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="exportSelectedQuestionsCSV()" title="Exporter uniquement la sélection en CSV">
+                            <i class="fa-solid fa-file-export"></i> Exporter CSV
+                        </button>
+                        <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteSelectedQuestions()" title="Supprimer définitivement la sélection">
+                            <i class="fa-solid fa-trash-can"></i> Supprimer
+                        </button>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="clearSelectedQuestions()" title="Annuler la sélection">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Questions List Accordions -->
@@ -288,8 +331,9 @@
                          data-language="{{ q.language or 'fr' }}"
                          data-created-by="{{ q.created_by or '' }}"
                          data-answered-by="{{ q.answered_by or '' }}">
-                        <div class="vs-q-header" onclick="toggleQuestionCard(this)">
+                        <div class="vs-q-header" onclick="toggleQuestionCard(this, event)">
                             <div class="vs-q-header-left">
+                                <input type="checkbox" class="vs-q-checkbox" data-qid="{{ q.id }}" onclick="event.stopPropagation(); onQuestionCheckChanged();" title="Sélectionner pour action groupée">
                                 <span class="vs-status-indicator status-{{ q.status }}"></span>
                                 <div class="vs-q-header-text">
                                     <div class="vs-q-badges-line">
@@ -305,6 +349,11 @@
                                         <span class="vs-q-author">
                                             <i class="fa-regular fa-user"></i> {{ q.created_by or 'Visiteur' }}
                                         </span>
+                                        {% if q.media and q.media|length > 0 %}
+                                            <span class="vs-q-theme-tag" style="background: rgba(16, 217, 164, 0.15); color: #10d9a4;" title="{{ q.media|length }} média(s) attaché(s)">
+                                                <i class="fa-solid fa-paperclip"></i> {{ q.media|length }}
+                                            </span>
+                                        {% endif %}
                                     </div>
                                     <div class="vs-q-text">{{ q.question_text }}</div>
                                 </div>
@@ -354,6 +403,65 @@
                                     {% endif %}
                                 </label>
                                 <textarea class="vs-answer-textarea" placeholder="Notez ici les explications du vendeur ou vos constats..." onblur="saveQuestionAnswer({{ q.id }}, this.value)">{{ q.answer_text or '' }}</textarea>
+                            </div>
+
+                            <!-- Attached Media & File Import Section -->
+                            <div class="vs-q-media-section">
+                                <div class="vs-q-media-header">
+                                    <span class="vs-q-media-title">
+                                        <i class="fa-solid fa-paperclip"></i> Médias & Pièces jointes (<span id="q-media-count-{{ q.id }}">{{ q.media|length if q.media else 0 }}</span>)
+                                    </span>
+                                    <div class="vs-q-media-actions">
+                                        <label class="vs-btn vs-btn-secondary vs-btn-sm" style="cursor: pointer;" title="Importer un fichier (photo, vidéo, audio, PDF) pour cette question">
+                                            <i class="fa-solid fa-upload"></i> Importer fichier
+                                            <input type="file" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.txt" style="display: none;" onchange="uploadQuestionFile({{ q.id }}, this.files[0])">
+                                        </label>
+                                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openLinkExistingMediaModal({{ q.id }})" title="Lier une photo ou média déjà existant dans le dossier de visite">
+                                            <i class="fa-solid fa-link"></i> Lier un média existant
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="vs-q-media-grid" id="q-media-grid-{{ q.id }}">
+                                    {% if q.media %}
+                                        {% for m in q.media %}
+                                            <div class="vs-q-media-item" id="q-media-item-{{ q.id }}-{{ m.id }}">
+                                                {% if m.media_type == 'photo' %}
+                                                    <img src="{{ m.file_path }}" alt="{{ m.title or 'Photo' }}" class="vs-q-media-thumb" onclick="openPhotoViewer('{{ m.file_path }}')" title="Cliquer pour agrandir la photo">
+                                                {% elif m.media_type == 'video' %}
+                                                    <div class="vs-q-media-icon-box video" title="Vidéo : {{ m.title or m.file_path }}">
+                                                        <i class="fa-solid fa-video"></i>
+                                                    </div>
+                                                {% elif m.media_type == 'audio' %}
+                                                    <div class="vs-q-media-icon-box audio" title="Enregistrement audio : {{ m.title or m.file_path }}">
+                                                        <i class="fa-solid fa-microphone-lines"></i>
+                                                    </div>
+                                                {% elif m.media_type == 'document' %}
+                                                    <div class="vs-q-media-icon-box doc" title="Document : {{ m.title or m.file_path }}">
+                                                        <i class="fa-solid fa-file-pdf"></i>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="vs-q-media-icon-box link" title="Lien / Autre : {{ m.title or m.url }}">
+                                                        <i class="fa-solid fa-link"></i>
+                                                    </div>
+                                                {% endif %}
+
+                                                <div class="vs-q-media-info">
+                                                    <a href="{{ m.file_path or m.url }}" target="_blank" class="vs-q-media-name" title="{{ m.title or m.original_filename or 'Fichier' }}">
+                                                        {{ m.title or m.original_filename or 'Média joint' }}
+                                                    </a>
+                                                    {% if m.media_type == 'audio' and m.file_path %}
+                                                        <audio src="{{ m.file_path }}" controls preload="none" style="height: 28px; width: 100%; margin-top: 4px;"></audio>
+                                                    {% endif %}
+                                                </div>
+
+                                                <button type="button" class="vs-q-media-unlink" onclick="unlinkMediaFromQuestion({{ q.id }}, {{ m.id }})" title="Détacher ce média de la question">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                             </div>
 
                             <div class="vs-q-footer">
@@ -622,6 +730,12 @@
                                 <video src="{{ m.file_path }}" controls preload="metadata"></video>
                                 <span class="vs-media-type-badge"><i class="fa-solid fa-video"></i> Vidéo</span>
                             </div>
+                        {% elif m.media_type == 'audio' %}
+                            <div class="vs-media-thumb-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(16, 217, 164, 0.15)); padding: 20px 14px;">
+                                <i class="fa-solid fa-microphone-lines" style="font-size: 32px; color: #f59e0b; margin-bottom: 12px;"></i>
+                                <audio src="{{ m.file_path }}" controls preload="none" style="width: 100%; height: 32px;"></audio>
+                                <span class="vs-media-type-badge"><i class="fa-solid fa-microphone-lines"></i> Audio</span>
+                            </div>
                         {% elif m.media_type == 'link' %}
                             <div class="vs-media-link-box">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -641,9 +755,14 @@
                             <div class="vs-media-meta">
                                 <span><i class="fa-regular fa-user"></i> {{ m.created_by or 'Visiteur' }}</span>
                                 <span>{{ m.created_at.strftime('%d/%m %H:%M') if m.created_at else '' }}</span>
-                                <button class="vs-media-delete-btn" onclick="deleteMedia({{ m.id }})" title="Supprimer">
-                                    <i class="fa-regular fa-trash-can"></i>
-                                </button>
+                                <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+                                    <button class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openLinkMediaToQuestionsModal({{ m.id }})" title="Rattacher ce média à une ou plusieurs questions de visite" style="padding: 3px 8px; font-size: 11px;">
+                                        <i class="fa-solid fa-paperclip"></i> Lier aux questions
+                                    </button>
+                                    <button class="vs-media-delete-btn" onclick="deleteMedia({{ m.id }})" title="Supprimer">
+                                        <i class="fa-regular fa-trash-can"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -711,26 +830,53 @@
 
                 <div class="vs-participants-list">
                     <!-- Owner / Primary Visitor -->
-                    <div class="vs-part-row">
+                    <div class="vs-part-row" id="vs-organizer-row">
                         <div class="vs-part-avatar">
                             <i class="fa-solid fa-user-tie"></i>
                         </div>
                         <div class="vs-part-info">
-                            <div class="vs-part-name">{{ visit.visitor or 'Acheteur principal' }}</div>
-                            <div class="vs-part-role">Organisateur de la visite</div>
+                            <div class="vs-part-name" id="display-organizer-name">{{ visit.visitor or 'Acheteur principal' }}</div>
+                            <div class="vs-part-role">
+                                <span class="vs-role-tag"><i class="fa-solid fa-crown"></i> Organisateur de la visite</span>
+                            </div>
+                        </div>
+                        <div class="vs-part-actions">
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openEditOrganizerModal('{{ visit.visitor or '' }}')" title="Modifier le nom de l'organisateur">
+                                <i class="fa-solid fa-pen"></i> Modifier
+                            </button>
                         </div>
                     </div>
 
                     {% for p in participants %}
-                        <div class="vs-part-row">
+                        <div class="vs-part-row" id="participant-row-{{ loop.index0 }}">
                             <div class="vs-part-avatar">
                                 <i class="fa-solid fa-user"></i>
                             </div>
                             <div class="vs-part-info">
                                 <div class="vs-part-name">{{ p.name or p.username or p.email }}</div>
                                 <div class="vs-part-role">
-                                    {{ p.role or 'Visiteur' }} {% if p.email %}• {{ p.email }}{% endif %}
+                                    <span class="vs-role-tag">{{ p.role or 'Visiteur' }}</span>
+                                    {% if p.email %}<span style="color: var(--vs-text-muted); font-size: 12px; margin-left: 6px;">• {{ p.email }}</span>{% endif %}
+                                    {% if p.phone %}<span style="color: var(--vs-text-muted); font-size: 12px; margin-left: 6px;"><i class="fa-solid fa-phone"></i> {{ p.phone }}</span>{% endif %}
                                 </div>
+                                {% if p.instructions %}
+                                    <div style="font-size: 12px; color: var(--vs-text-muted); font-style: italic; margin-top: 3px;">
+                                        <i class="fa-regular fa-comment-dots"></i> {{ p.instructions }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="vs-part-actions">
+                                <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openEditParticipantModal({{ loop.index0 }}, '{{ p.name or '' }}', '{{ p.email or '' }}', '{{ p.phone or '' }}', '{{ p.role or 'visiteur' }}', `{{ p.instructions or '' }}`)" title="Modifier les coordonnées et le rôle du participant">
+                                    <i class="fa-solid fa-user-pen"></i> Modifier
+                                </button>
+                                {% if p.email %}
+                                    <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="resendParticipantInvite({{ loop.index0 }}, '{{ p.email }}')" title="Renvoyer l'email d'invitation avec GPS et lien direct">
+                                        <i class="fa-solid fa-envelope"></i> Renvoyer
+                                    </button>
+                                {% endif %}
+                                <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteParticipant({{ loop.index0 }}, '{{ p.name or p.email or 'ce participant' }}')" title="Supprimer ce participant de la session">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
                             </div>
                         </div>
                     {% endfor %}
@@ -1180,6 +1326,173 @@
         </div>
     </div>
 
+    <!-- ═══ MODAL : BULK ASSIGN THEME ═════════════════════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-bulk-theme">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">🏷️ Assigner une thématique groupée</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-bulk-theme')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 12px;">
+                    Appliquez une ou plusieurs thématiques aux <strong id="bulk-theme-count">0</strong> question(s) sélectionnée(s).
+                </p>
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Thématique(s) rapide(s)</label>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        {% for theme in all_themes %}
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="selectBulkThemeQuick('{{ theme }}')">
+                                {{ theme }}
+                            </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Nom de la thématique</label>
+                    <input type="text" id="bulk-theme-input" class="vs-form-input" placeholder="Ex: Chauffage, Toiture, Copropriété...">
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="checkbox" id="bulk-theme-append-cb" checked>
+                    <span>Ajouter aux thématiques existantes (au lieu de remplacer)</span>
+                </label>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-bulk-theme')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" onclick="submitBulkTheme()">Appliquer à la sélection</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : LIER UN MÉDIA EXISTANT À UNE QUESTION ═════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-link-existing-media">
+        <div class="vs-modal-card large">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">📎 Lier un média existant à la question</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-link-existing-media')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <input type="hidden" id="target-link-question-id" value="">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 12px;">
+                    Cochez les photos, enregistrements audio ou documents du dossier de visite à rattacher à cette question :
+                </p>
+                <div id="link-existing-media-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; max-height: 400px; overflow-y: auto;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-link-existing-media')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" onclick="submitLinkExistingMedia()">
+                    <i class="fa-solid fa-check"></i> Enregistrer les liaisons
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : LIER UN MÉDIA À DES QUESTIONS ═════════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-link-media-questions">
+        <div class="vs-modal-card large">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">📌 Rattacher ce média à des questions</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-link-media-questions')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <input type="hidden" id="target-link-media-id" value="">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 12px;">
+                    Sélectionnez les questions de la liste auxquelles ce média doit être rattaché :
+                </p>
+                <div class="vs-search-box" style="margin-bottom: 12px;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="filter-media-questions-input" class="vs-search-input" placeholder="Filtrer les questions..." oninput="filterMediaQuestionsList(this.value)">
+                </div>
+                <div id="link-media-questions-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-link-media-questions')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" onclick="submitLinkMediaToQuestions()">
+                    <i class="fa-solid fa-check"></i> Valider les liaisons
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : MODIFIER UN PARTICIPANT ═══════════════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-edit-participant">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">✏️ Modifier le participant</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-edit-participant')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <input type="hidden" id="edit-participant-idx" value="">
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-participant-name">Nom / Prénom *</label>
+                    <input type="text" id="edit-participant-name" class="vs-form-input" placeholder="Nom complet">
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-participant-email">Adresse Email</label>
+                    <input type="email" id="edit-participant-email" class="vs-form-input" placeholder="adresse@domaine.com">
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-participant-phone">Téléphone</label>
+                    <input type="tel" id="edit-participant-phone" class="vs-form-input" placeholder="+33 6 12 34 56 78">
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-participant-role">Rôle / Profil</label>
+                    <select id="edit-participant-role" class="vs-form-input">
+                        <option value="visiteur">Co-acquéreur / Visiteur</option>
+                        <option value="artisan">Artisan / Travaux</option>
+                        <option value="architecte">Architecte</option>
+                        <option value="conseiller">Conseiller / Proche</option>
+                    </select>
+                </div>
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-participant-instructions">Instructions ou mission</label>
+                    <textarea id="edit-participant-instructions" class="vs-form-input" rows="2" placeholder="Consignes particulières pour ce participant..."></textarea>
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-edit-participant')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" onclick="submitEditParticipant()">
+                    <i class="fa-solid fa-floppy-disk"></i> Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : MODIFIER L'ORGANISATEUR ═══════════════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-edit-organizer">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div class="vs-modal-title">👑 Modifier l'organisateur principal</div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-edit-organizer')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="edit-organizer-name">Nom ou identifiant de l'organisateur *</label>
+                    <input type="text" id="edit-organizer-name" class="vs-form-input" placeholder="Ex: Jean-Marc">
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-edit-organizer')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" onclick="submitEditOrganizer()">
+                    <i class="fa-solid fa-check"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ TOAST NOTIFICATION ═══════════════════════════════════════════════ -->
     <div id="vs-toast" class="vs-toast">
         <i class="fa-solid fa-circle-check"></i>
@@ -1435,7 +1748,10 @@
         }
 
         // Toggle question accordion
-        function toggleQuestionCard(header) {
+        function toggleQuestionCard(header, event) {
+            if (event && event.target && (event.target.type === 'checkbox' || event.target.closest('input') || event.target.closest('button') || event.target.closest('a'))) {
+                return;
+            }
             const card = header.closest('.vs-q-card');
             card.classList.toggle('expanded');
         }
@@ -2219,6 +2535,549 @@
                 btnSubmitInvite.innerHTML = originalBtnHtml;
             }
         });
+
+        // ─── BULK ACTIONS ENGINE ─────────────────────────────────────────────
+        function getSelectedQuestionCheckboxes() {
+            return Array.from(document.querySelectorAll('.vs-q-checkbox:checked'));
+        }
+
+        function getSelectedQuestionIds() {
+            return getSelectedQuestionCheckboxes().map(cb => parseInt(cb.dataset.qid, 10)).filter(id => !isNaN(id));
+        }
+
+        function onQuestionCheckChanged() {
+            const selected = getSelectedQuestionCheckboxes();
+            const total = document.querySelectorAll('.vs-q-checkbox').length;
+            const cnt = selected.length;
+            
+            const countEl = document.getElementById('selected-questions-count');
+            if (countEl) countEl.textContent = cnt;
+            
+            const bulkBar = document.getElementById('vs-bulk-bar');
+            const bulkLabel = document.getElementById('bulk-selected-label');
+            const hint = document.getElementById('bulk-selection-hint');
+            
+            if (bulkBar && bulkLabel) {
+                bulkLabel.textContent = cnt;
+                if (cnt > 0) {
+                    bulkBar.classList.add('visible');
+                    if (hint) hint.style.display = 'inline-block';
+                } else {
+                    bulkBar.classList.remove('visible');
+                    if (hint) hint.style.display = 'none';
+                }
+            }
+
+            const masterCb = document.getElementById('cb-select-all-questions');
+            if (masterCb) {
+                masterCb.checked = (total > 0 && cnt === total);
+                masterCb.indeterminate = (cnt > 0 && cnt < total);
+            }
+        }
+
+        function toggleSelectAllQuestions(checked) {
+            document.querySelectorAll('.vs-q-checkbox').forEach(cb => {
+                // only toggle visible cards if filtered
+                const card = cb.closest('.vs-q-card');
+                if (card && card.style.display !== 'none') {
+                    cb.checked = checked;
+                }
+            });
+            onQuestionCheckChanged();
+        }
+
+        function clearSelectedQuestions() {
+            document.querySelectorAll('.vs-q-checkbox').forEach(cb => { cb.checked = false; });
+            const masterCb = document.getElementById('cb-select-all-questions');
+            if (masterCb) {
+                masterCb.checked = false;
+                masterCb.indeterminate = false;
+            }
+            onQuestionCheckChanged();
+        }
+
+        async function applyBulkStatus(status) {
+            if (!status) return;
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) {
+                alert('Veuillez sélectionner au moins une question.');
+                return;
+            }
+
+            try {
+                showToast('Mise à jour groupée en cours...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/bulk-status`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question_ids: ids, status: status })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`${data.updated_count} question(s) mise(s) à jour avec succès !`);
+                    document.getElementById('bulk-status-select').value = '';
+                    clearSelectedQuestions();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de la mise à jour groupée des statuts.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de connexion au serveur.');
+            }
+        }
+
+        function openBulkThemeModal() {
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) {
+                alert('Veuillez sélectionner au moins une question.');
+                return;
+            }
+            document.getElementById('bulk-theme-count').textContent = ids.length;
+            document.getElementById('bulk-theme-input').value = '';
+            openModal('modal-bulk-theme');
+        }
+
+        function selectBulkThemeQuick(theme) {
+            document.getElementById('bulk-theme-input').value = theme;
+        }
+
+        async function submitBulkTheme() {
+            const ids = getSelectedQuestionIds();
+            const theme = document.getElementById('bulk-theme-input').value.trim();
+            const append = document.getElementById('bulk-theme-append-cb').checked;
+
+            if (!theme) {
+                alert('Veuillez renseigner une thématique.');
+                return;
+            }
+
+            try {
+                showToast('Attribution de la thématique...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/bulk-theme`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question_ids: ids, theme: theme, append: append })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    closeModal('modal-bulk-theme');
+                    showToast(`${data.updated_count} question(s) mise(s) à jour avec la thématique "${theme}" !`);
+                    clearSelectedQuestions();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de l\'attribution de la thématique.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de communication avec le serveur.');
+            }
+        }
+
+        async function deleteSelectedQuestions() {
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) {
+                alert('Veuillez sélectionner au moins une question.');
+                return;
+            }
+
+            if (!confirm(`Confirmez-vous la suppression définitive de ces ${ids.length} question(s) sélectionnée(s) ?`)) {
+                return;
+            }
+
+            try {
+                showToast('Suppression groupée...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/bulk-delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question_ids: ids })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast(`${data.deleted_count} question(s) supprimée(s).`);
+                    clearSelectedQuestions();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de la suppression groupée.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de connexion au serveur.');
+            }
+        }
+
+        function exportSelectedQuestionsCSV() {
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) {
+                alert('Veuillez sélectionner au moins une question.');
+                return;
+            }
+            const url = `/api/visites/${visitId}/questions/export-csv?q_ids=${ids.join(',')}`;
+            window.location.href = url;
+        }
+
+        // ─── QUESTION MEDIA & FILE UPLOAD ENGINE ─────────────────────────────
+        async function uploadQuestionFile(qId, file) {
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                showToast('Téléchargement du fichier vers la question...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/${qId}/media`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    showToast('Fichier joint à la question avec succès !');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    alert(errData.detail || 'Erreur lors de l\'envoi du fichier.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de connexion lors du transfert.');
+            }
+        }
+
+        async function unlinkMediaFromQuestion(qId, mId) {
+            if (!confirm('Détacher ce fichier de cette question ? (Le fichier restera conservé dans le dossier Photos & Médias de la visite)')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/visites/${visitId}/questions/${qId}/media/${mId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    document.getElementById(`q-media-item-${qId}-${mId}`)?.remove();
+                    const cntEl = document.getElementById(`q-media-count-${qId}`);
+                    if (cntEl) {
+                        const cur = parseInt(cntEl.textContent, 10) || 1;
+                        cntEl.textContent = Math.max(0, cur - 1);
+                    }
+                    showToast('Média détaché de la question');
+                } else {
+                    alert('Erreur lors du détachement du média.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        // Modal: Link Existing Media to Question
+        let allVisitMediaCache = [];
+        async function openLinkExistingMediaModal(qId) {
+            document.getElementById('target-link-question-id').value = qId;
+            const container = document.getElementById('link-existing-media-list');
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--vs-text-muted); padding: 20px;">Chargement des médias de la visite...</div>';
+            openModal('modal-link-existing-media');
+
+            try {
+                const res = await fetch(`/api/visites/${visitId}/media`);
+                if (res.ok) {
+                    allVisitMediaCache = await res.json();
+                    renderLinkExistingMediaList(qId, allVisitMediaCache);
+                } else {
+                    container.innerHTML = '<div style="grid-column: 1/-1; color: #ff5c7c; padding: 10px;">Impossible de charger les médias.</div>';
+                }
+            } catch (err) {
+                container.innerHTML = '<div style="grid-column: 1/-1; color: #ff5c7c; padding: 10px;">Erreur de connexion.</div>';
+            }
+        }
+
+        function renderLinkExistingMediaList(qId, items) {
+            const container = document.getElementById('link-existing-media-list');
+            if (!items || items.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--vs-text-muted);">Aucun média n\'a encore été importé dans cette visite. Vous pouvez utiliser le bouton "Importer fichier" directement sur la question.</div>';
+                return;
+            }
+
+            // check which media are already attached to this qId
+            let html = '';
+            items.forEach(m => {
+                const isAttached = Array.isArray(m.question_ids) && m.question_ids.includes(qId);
+                let iconHtml = '';
+                if (m.media_type === 'photo') {
+                    iconHtml = `<img src="${m.file_path}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;">`;
+                } else if (m.media_type === 'video') {
+                    iconHtml = `<div style="height: 80px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #3b82f6; font-size: 24px; margin-bottom: 6px;"><i class="fa-solid fa-video"></i></div>`;
+                } else if (m.media_type === 'audio') {
+                    iconHtml = `<div style="height: 80px; background: rgba(245, 158, 11, 0.15); display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #f59e0b; font-size: 24px; margin-bottom: 6px;"><i class="fa-solid fa-microphone-lines"></i></div>`;
+                } else {
+                    iconHtml = `<div style="height: 80px; background: rgba(148, 163, 184, 0.15); display: flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--vs-text-muted); font-size: 24px; margin-bottom: 6px;"><i class="fa-solid fa-file-pdf"></i></div>`;
+                }
+
+                html += `
+                    <label style="border: 1px solid var(--vs-border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; cursor: pointer; background: var(--vs-card-bg); user-select: none;">
+                        ${iconHtml}
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                            <input type="checkbox" class="cb-link-media-item" value="${m.id}" ${isAttached ? 'checked' : ''} style="accent-color: var(--vs-primary); width: 16px; height: 16px;">
+                            <span style="font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;" title="${m.title || m.original_filename || 'Média'}">
+                                ${m.title || m.original_filename || 'Média #' + m.id}
+                            </span>
+                        </div>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        async function submitLinkExistingMedia() {
+            const qId = parseInt(document.getElementById('target-link-question-id').value, 10);
+            if (!qId) return;
+
+            const selectedCheckboxes = Array.from(document.querySelectorAll('.cb-link-media-item:checked'));
+            const mediaIds = selectedCheckboxes.map(cb => parseInt(cb.value, 10)).filter(id => !isNaN(id));
+
+            try {
+                showToast('Enregistrement des liaisons...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/${qId}/link-media`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ media_ids: mediaIds })
+                });
+
+                if (res.ok) {
+                    closeModal('modal-link-existing-media');
+                    showToast('Liaisons médias enregistrées avec succès !');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de la mise à jour des liaisons médias.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur de connexion au serveur.');
+            }
+        }
+
+        // Modal: Link Media to Questions (from Media tab)
+        let allQuestionsCache = [];
+        async function openLinkMediaToQuestionsModal(mId) {
+            document.getElementById('target-link-media-id').value = mId;
+            const container = document.getElementById('link-media-questions-list');
+            container.innerHTML = '<div style="text-align: center; color: var(--vs-text-muted); padding: 20px;">Chargement des questions de visite...</div>';
+            openModal('modal-link-media-questions');
+
+            try {
+                const res = await fetch(`/api/visites/${visitId}/questions`);
+                if (res.ok) {
+                    allQuestionsCache = await res.json();
+                    renderLinkMediaQuestionsList(mId, allQuestionsCache);
+                } else {
+                    container.innerHTML = '<div style="color: #ff5c7c; padding: 10px;">Impossible de charger les questions.</div>';
+                }
+            } catch (err) {
+                container.innerHTML = '<div style="color: #ff5c7c; padding: 10px;">Erreur réseau.</div>';
+            }
+        }
+
+        function renderLinkMediaQuestionsList(mId, questions) {
+            const container = document.getElementById('link-media-questions-list');
+            if (!questions || questions.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--vs-text-muted);">Aucune question créée dans cette session de visite.</div>';
+                return;
+            }
+
+            let html = '';
+            questions.forEach(q => {
+                const isAttached = Array.isArray(q.media) && q.media.some(m => m.id === mId);
+                const themesLabel = Array.isArray(q.themes_list) ? q.themes_list.join(', ') : '';
+                html += `
+                    <label class="media-q-choice-item" style="border: 1px solid var(--vs-border); border-radius: 6px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; background: var(--vs-card-bg);" data-text="${(q.question_text || '').toLowerCase()} ${themesLabel.toLowerCase()}">
+                        <input type="checkbox" class="cb-media-q-item" value="${q.id}" ${isAttached ? 'checked' : ''} style="margin-top: 3px; accent-color: var(--vs-primary); width: 16px; height: 16px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 13px; font-weight: 500; color: var(--vs-text);">${q.question_text}</div>
+                            <div style="font-size: 11px; color: var(--vs-text-muted); margin-top: 2px;">
+                                ${themesLabel ? `<span class="vs-q-theme-tag" style="font-size: 10px; padding: 1px 6px;">${themesLabel}</span> • ` : ''}
+                                <span>Statut: ${q.status}</span>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function filterMediaQuestionsList(query) {
+            const q = (query || '').trim().toLowerCase();
+            document.querySelectorAll('.media-q-choice-item').forEach(item => {
+                const txt = item.dataset.text || '';
+                item.style.display = (!q || txt.includes(q)) ? 'flex' : 'none';
+            });
+        }
+
+        async function submitLinkMediaToQuestions() {
+            const mId = parseInt(document.getElementById('target-link-media-id').value, 10);
+            if (!mId) return;
+
+            const selectedCbs = Array.from(document.querySelectorAll('.cb-media-q-item:checked'));
+            const qIds = selectedCbs.map(cb => parseInt(cb.value, 10)).filter(id => !isNaN(id));
+
+            try {
+                showToast('Rattachement du média aux questions...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/media/${mId}/link-questions`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question_ids: qIds })
+                });
+
+                if (res.ok) {
+                    closeModal('modal-link-media-questions');
+                    showToast(`Média rattaché à ${qIds.length} question(s) !`);
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors du rattachement du média aux questions.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        // ─── FINE PARTICIPANT MANAGEMENT ENGINE ──────────────────────────────
+        function openEditOrganizerModal(currentName) {
+            document.getElementById('edit-organizer-name').value = currentName || '';
+            openModal('modal-edit-organizer');
+        }
+
+        async function submitEditOrganizer() {
+            const name = document.getElementById('edit-organizer-name').value.trim();
+            if (!name) {
+                alert('Veuillez renseigner le nom de l\'organisateur.');
+                return;
+            }
+
+            try {
+                showToast('Enregistrement...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/organizer`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ visitor: name })
+                });
+
+                if (res.ok) {
+                    closeModal('modal-edit-organizer');
+                    const nameEl = document.getElementById('display-organizer-name');
+                    if (nameEl) nameEl.textContent = name;
+                    showToast('Organisateur mis à jour avec succès !');
+                } else {
+                    alert('Erreur lors de la mise à jour de l\'organisateur.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        function openEditParticipantModal(idx, name, email, phone, role, instructions) {
+            document.getElementById('edit-participant-idx').value = idx;
+            document.getElementById('edit-participant-name').value = name || '';
+            document.getElementById('edit-participant-email').value = email || '';
+            document.getElementById('edit-participant-phone').value = phone || '';
+            document.getElementById('edit-participant-role').value = role || 'visiteur';
+            document.getElementById('edit-participant-instructions').value = instructions || '';
+            openModal('modal-edit-participant');
+        }
+
+        async function submitEditParticipant() {
+            const idx = parseInt(document.getElementById('edit-participant-idx').value, 10);
+            const name = document.getElementById('edit-participant-name').value.trim();
+            const email = document.getElementById('edit-participant-email').value.trim();
+            const phone = document.getElementById('edit-participant-phone').value.trim();
+            const role = document.getElementById('edit-participant-role').value;
+            const instructions = document.getElementById('edit-participant-instructions').value.trim();
+
+            if (!name) {
+                alert('Le nom du participant est obligatoire.');
+                return;
+            }
+
+            try {
+                showToast('Mise à jour du participant...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/participants/${idx}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        email: email || null,
+                        phone: phone || null,
+                        role: role,
+                        instructions: instructions || null
+                    })
+                });
+
+                if (res.ok) {
+                    closeModal('modal-edit-participant');
+                    showToast('Participant modifié avec succès !');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    alert(errData.detail || 'Erreur lors de la modification du participant.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        async function deleteParticipant(idx, displayName) {
+            if (!confirm(`Supprimer ${displayName} de la liste des participants ? Cette personne n'aura plus accès au dossier de visite.`)) {
+                return;
+            }
+
+            try {
+                showToast('Suppression du participant...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/participants/${idx}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    showToast('Participant retiré.');
+                    document.getElementById(`participant-row-${idx}`)?.remove();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de la suppression du participant.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        async function resendParticipantInvite(idx, email) {
+            if (!confirm(`Renvoyer l'email d'invitation avec les instructions de visite et lien direct à ${email} ?`)) {
+                return;
+            }
+
+            try {
+                showToast('Envoi de l\'invitation...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/participants/${idx}/resend-invite`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.email_sent) {
+                        showToast(`Email envoyé avec succès à ${email} !`);
+                    } else {
+                        showToast('Service email non configuré ou échec d\'envoi.', 'fa-triangle-exclamation');
+                    }
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    alert(errData.detail || 'Erreur lors du renvoi de l\'email.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
 
         // ─── LIVE REAL-TIME POLLING SYNCHRONIZATION ──────────────────────────
         let lastSyncTime = new Date().toISOString();

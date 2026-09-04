@@ -734,6 +734,8 @@ ALLOWED_VISIT_MEDIA_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
     # Videos
     ".mp4", ".mov", ".webm", ".avi", ".m4v", ".3gp",
+    # Audio / Sound
+    ".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac", ".wma", ".opus", ".weba",
     # Documents
     ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".odt", ".ods", ".txt", ".csv",
 }
@@ -752,9 +754,9 @@ async def save_visit_media_file(
     file: UploadFile
 ) -> tuple[str, str, str, int, str, str]:
     """
-    Saves an uploaded media file (photo, video, document) for a visit session.
+    Saves an uploaded media file (photo, video, audio, document) for a visit session.
     Returns: (saved_filename, orig_filename, relative_web_path, file_size, mime_type, media_type)
-    where media_type is 'photo', 'video', or 'document'.
+    where media_type is 'photo', 'video', 'audio', or 'document'.
     """
     orig_name = file.filename or "media_file"
     orig_name = os.path.basename(orig_name)
@@ -767,6 +769,8 @@ async def save_visit_media_file(
         media_type = "photo"
     elif ext in {".mp4", ".mov", ".webm", ".avi", ".m4v", ".3gp"}:
         media_type = "video"
+    elif ext in {".mp3", ".m4a", ".wav", ".aac", ".ogg", ".flac", ".wma", ".opus", ".weba"}:
+        media_type = "audio"
     else:
         media_type = "document"
 

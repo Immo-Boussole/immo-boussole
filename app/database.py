@@ -342,6 +342,8 @@ def run_migrations():
             ("idx_visit_inclusions_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_inclusions_visit_id ON visit_inclusions(visit_id);"),
             ("idx_visit_media_visit_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_visit_id ON visit_media(visit_id);"),
             ("idx_visit_media_listing_id", "CREATE INDEX IF NOT EXISTS idx_visit_media_listing_id ON visit_media(listing_id);"),
+            ("idx_visit_question_media_qid", "CREATE INDEX IF NOT EXISTS idx_visit_question_media_qid ON visit_question_media(question_id);"),
+            ("idx_visit_question_media_mid", "CREATE INDEX IF NOT EXISTS idx_visit_question_media_mid ON visit_question_media(media_id);"),
             ("idx_notifications_user_id", "CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);"),
             ("idx_notifications_is_read", "CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);"),
             ("idx_notifications_created_at", "CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);"),

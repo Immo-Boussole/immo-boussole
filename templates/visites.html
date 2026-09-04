@@ -887,6 +887,9 @@
                 <button class="tab-btn" id="tabBtnProps" onclick="switchTab('properties')">
                     <i class="fa-solid fa-list-check"></i> {{ t(request, 'visites.tab_properties', 'Biens à visiter') }} ({{ total_targets }})
                 </button>
+                <button class="tab-btn" id="tabBtnSessions" onclick="switchTab('sessions')">
+                    <i class="fa-solid fa-clipboard-user"></i> {{ t(request, 'visites.tab_sessions', 'Sessions de visites') }} (<span id="totalSessionsCount">{{ visits_with_listings|length }}</span>)
+                </button>
                 <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">
                     <i class="fa-solid fa-clock-rotate-left"></i> {{ t(request, 'visites.tab_history', 'Historique des visites') }}
                 </button>
@@ -1060,6 +1063,284 @@
                     <p style="margin-top: 0.5rem; font-size: 0.9rem;">{{ t(request, 'visites.no_target_listings_desc', 'Ajoutez des biens en cliquant sur le bouton \"À visiter\" depuis le tableau de bord ou les fiches annonces.') }}</p>
                 </div>
                 {% endif %}
+            </div>
+
+            <!-- ── TAB: Sessions de Visite / Contre-visite ── -->
+            <div id="tabSessions" class="tab-content" style="display: none;">
+                <!-- Sessions Stats Counter Cards -->
+                <div class="sessions-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem;">
+                    <div class="session-stat-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(79, 142, 247, 0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fa-solid fa-clipboard-user"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-2);">{{ t(request, 'visites.stat_total_sessions', 'Total Sessions') }}</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);" id="statTotalSessions">{{ visits_with_listings|length }}</div>
+                        </div>
+                    </div>
+
+                    <div class="session-stat-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fa-solid fa-house-chimney-user"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-2);">{{ t(request, 'visites.stat_first_visits', '1ères Visites') }}</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);" id="statFirstVisits">
+                                {{ visits_with_listings|selectattr('visit.visit_type', 'equalto', 'visite')|list|length }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="session-stat-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(168, 85, 247, 0.15); color: #a855f7; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-2);">{{ t(request, 'visites.stat_contre_visites', 'Contre-visites') }}</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);" id="statContreVisites">
+                                {{ visits_with_listings|selectattr('visit.visit_type', 'equalto', 'contre_visite')|list|length }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="session-stat-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(248, 168, 75, 0.15); color: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fa-regular fa-clock"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-2);">{{ t(request, 'visites.stat_scheduled', 'Programmées') }}</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);" id="statScheduled">
+                                {{ visits_with_listings|selectattr('visit.status', 'equalto', 'programme')|list|length }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="session-stat-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                            <i class="fa-solid fa-check-double"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-2);">{{ t(request, 'visites.stat_completed', 'Effectuées') }}</div>
+                            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text);" id="statCompleted">
+                                {{ visits_with_listings|selectattr('visit.status', 'equalto', 'effectuee')|list|length }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sessions Toolbar (Search, Filters, New Session Button) -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; flex: 1;">
+                        <!-- Universal Text Search -->
+                        <div style="position: relative; min-width: 260px; flex: 1;">
+                            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-2); font-size: 0.85rem; pointer-events: none;"></i>
+                            <input type="text" id="sessionsSearchInput" oninput="filterSessionsTable()" placeholder="{{ t(request, 'visites.search_sessions_placeholder', 'Rechercher par bien, participant, adresse, notes...') }}" style="width: 100%; padding: 0.5rem 0.85rem 0.5rem 2.3rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.85rem; box-sizing: border-box;">
+                        </div>
+
+                        <!-- Type Filter -->
+                        <select id="sessionsFilterType" onchange="filterSessionsTable()" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.85rem; font-weight: 600;">
+                            <option value="">{{ t(request, 'visites.all_types', 'Tous les types de sessions') }}</option>
+                            <option value="visite">🏡 {{ t(request, 'visites.type_first_visit', '1ère Visite') }}</option>
+                            <option value="contre_visite">🔁 {{ t(request, 'visites.type_contre_visite', 'Contre-visite') }}</option>
+                            <option value="offre">🤝 {{ t(request, 'visites.type_offer', 'Offre & Négociation') }}</option>
+                            <option value="autre">📋 {{ t(request, 'visites.type_other', 'Autres étapes') }}</option>
+                        </select>
+
+                        <!-- Status Filter -->
+                        <select id="sessionsFilterStatus" onchange="filterSessionsTable()" style="padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 0.85rem; font-weight: 600;">
+                            <option value="">{{ t(request, 'visites.all_statuses', 'Tous les statuts') }}</option>
+                            <option value="programme">⏳ {{ t(request, 'visites.status_scheduled', 'Programmée') }}</option>
+                            <option value="effectuee">✅ {{ t(request, 'visites.status_completed', 'Effectuée') }}</option>
+                            <option value="annulee">❌ {{ t(request, 'visites.status_cancelled', 'Annulée') }}</option>
+                        </select>
+
+                        <button class="btn" style="font-size: 0.75rem; padding: 0.5rem 0.75rem;" onclick="resetSessionsFilters()">
+                            <i class="fa-solid fa-rotate-left"></i> {{ t(request, 'visites.reset', 'Réinitialiser') }}
+                        </button>
+                    </div>
+
+                    <!-- Create New Session Button -->
+                    <button class="btn primary" onclick="openVisitModal(null)" style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; padding: 0.55rem 1.1rem; white-space: nowrap;">
+                        <i class="fa-solid fa-calendar-plus"></i> {{ t(request, 'visites.new_session_btn', '+ Nouvelle session') }}
+                    </button>
+                </div>
+
+                <!-- Sessions Interactive Table -->
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;" id="sessionsTable">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                <th style="padding: 0.85rem 1rem;">{{ t(request, 'visites.col_property', 'Bien Immobilier') }}</th>
+                                <th style="padding: 0.85rem 0.75rem;">{{ t(request, 'visites.col_type', 'Type & Étape') }}</th>
+                                <th style="padding: 0.85rem 0.75rem;">{{ t(request, 'visites.col_datetime', 'Date & Heure') }}</th>
+                                <th style="padding: 0.85rem 0.75rem;">{{ t(request, 'visites.col_status', 'Statut') }}</th>
+                                <th style="padding: 0.85rem 0.75rem;">{{ t(request, 'visites.col_participants', 'Participants & RDV') }}</th>
+                                <th style="padding: 0.85rem 1rem; text-align: right;">{{ t(request, 'visites.col_actions', 'Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionsTableBody">
+                            {% if visits_with_listings %}
+                            {% for item in visits_with_listings %}
+                            {% set v = item.visit %}
+                            {% set l = item.listing %}
+                            {% set photos = l._photos if l and l._photos is defined else [] %}
+                            <tr class="session-row" 
+                                data-id="{{ v.id }}"
+                                data-type="{{ v.visit_type or 'visite' }}"
+                                data-status="{{ v.status or 'programme' }}"
+                                data-title="{{ (l.title if l else '')|lower }}"
+                                data-address="{{ ((v.meeting_address or (l.address if l else '') or (l.city if l else '')))|lower }}"
+                                data-visitor="{{ (v.visitor or '')|lower }}"
+                                data-notes="{{ (v.notes or '')|lower }}"
+                                style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;">
+                                
+                                <!-- Bien Immobilier -->
+                                <td style="padding: 0.85rem 1rem; vertical-align: middle;">
+                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                        <div style="width: 52px; height: 52px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--surface-2); display: flex; align-items: center; justify-content: center;">
+                                            {% if photos %}
+                                            <img src="/{{ photos[0] }}" alt="{{ l.title if l else 'Bien' }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                            {% else %}
+                                            <i class="fa-solid fa-building" style="color: var(--text-2); font-size: 1.25rem;"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div style="min-width: 0; max-width: 260px;">
+                                            {% if l %}
+                                            <a href="/listings/{{ l.id }}" target="_blank" style="font-weight: 700; color: var(--text); text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ l.title }}">
+                                                {{ l.title }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.65rem; color: var(--text-2);"></i>
+                                            </a>
+                                            <div style="font-size: 0.78rem; color: #10d9a4; font-weight: 700;">
+                                                {{ "{:,.0f}".format(l.price).replace(',', ' ') if l.price else 'Prix N/C' }} €
+                                                {% if l.area %}<span style="color: var(--text-2); font-weight: 400; margin-left: 0.35rem;">• {{ l.area }} m²</span>{% endif %}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                <i class="fa-solid fa-location-dot" style="font-size: 0.7rem;"></i> {{ l.city or l.location or 'Localisation N/C' }}
+                                            </div>
+                                            {% else %}
+                                            <div style="color: var(--text-2); font-style: italic;">Bien non disponible (ID #{{ v.listing_id }})</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Type & Étape -->
+                                <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                    {% if v.visit_type == 'contre_visite' %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3);">
+                                        <i class="fa-solid fa-rotate-right"></i> Contre-visite
+                                    </span>
+                                    {% elif v.step_family == 'offre' %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                        <i class="fa-solid fa-handshake"></i> Offre
+                                    </span>
+                                    {% else %}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <i class="fa-solid fa-house-chimney-user"></i> 1ère Visite
+                                    </span>
+                                    {% endif %}
+                                    {% if v.step and v.step != '1ere_visite' and v.step != 'contre_visite' %}
+                                    <div style="font-size: 0.72rem; color: var(--text-2); margin-top: 0.25rem;">
+                                        {{ v.step }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Date & Heure -->
+                                <td style="padding: 0.85rem 0.75rem; vertical-align: middle; white-space: nowrap;">
+                                    <div style="font-weight: 700; color: var(--text);">
+                                        <i class="fa-regular fa-calendar-days" style="color: var(--accent); margin-right: 0.3rem;"></i>
+                                        {{ v.scheduled_at.strftime('%d/%m/%Y') if v.scheduled_at else 'Date non fixée' }}
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: var(--text-2); margin-top: 0.15rem;">
+                                        <i class="fa-regular fa-clock" style="margin-right: 0.3rem;"></i>
+                                        {{ v.scheduled_at.strftime('%H:%M') if v.scheduled_at else '' }}
+                                    </div>
+                                </td>
+
+                                <!-- Statut -->
+                                <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                    <div class="session-status-badge status-{{ v.status }}" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;" onclick="quickToggleSessionStatus({{ v.id }}, '{{ v.status }}')" title="Cliquer pour faire défiler le statut">
+                                        {% if v.status == 'programme' %}
+                                        <i class="fa-regular fa-clock" style="color: var(--orange);"></i> <span style="color: var(--orange);">Programmée</span>
+                                        {% elif v.status == 'effectuee' %}
+                                        <i class="fa-solid fa-check-double" style="color: #10b981;"></i> <span style="color: #10b981;">Effectuée</span>
+                                        {% elif v.status == 'annulee' %}
+                                        <i class="fa-solid fa-ban" style="color: var(--red);"></i> <span style="color: var(--red);">Annulée</span>
+                                        {% else %}
+                                        <span>{{ v.status }}</span>
+                                        {% endif %}
+                                        <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; opacity: 0.6; margin-left: 2px;"></i>
+                                    </div>
+                                </td>
+
+                                <!-- Participants & RDV -->
+                                <td style="padding: 0.85rem 0.75rem; vertical-align: middle;">
+                                    <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+                                        <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; background: var(--surface-2); padding: 0.2rem 0.5rem; border-radius: 4px; color: var(--text);" title="Organisateur">
+                                            <i class="fa-solid fa-user-tie" style="color: var(--accent); font-size: 0.7rem;"></i>
+                                            <strong>{{ v.visitor or 'Visiteur' }}</strong>
+                                        </span>
+                                        {% set part_list = item.participants if item.participants is defined else [] %}
+                                        {% if part_list %}
+                                            {% for p in part_list[:2] %}
+                                            <span style="display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; background: rgba(59, 130, 246, 0.1); padding: 0.2rem 0.45rem; border-radius: 4px; color: #93c5fd;" title="{{ p.name or p.email }} ({{ p.role or 'Participant' }})">
+                                                <i class="fa-solid fa-user" style="font-size: 0.65rem;"></i>
+                                                {{ (p.name or p.username or p.email)[:12] }}
+                                            </span>
+                                            {% endfor %}
+                                            {% if part_list|length > 2 %}
+                                            <span style="font-size: 0.7rem; color: var(--text-2); font-weight: 600;">+{{ part_list|length - 2 }}</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    {% if v.meeting_address %}
+                                    <div style="font-size: 0.72rem; color: var(--text-2); margin-top: 0.25rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ v.meeting_address }}">
+                                        <i class="fa-solid fa-map-pin" style="color: var(--accent);"></i> {{ v.meeting_address }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Actions rapides -->
+                                <td style="padding: 0.85rem 1rem; vertical-align: middle; text-align: right; white-space: nowrap;">
+                                    <div style="display: inline-flex; align-items: center; gap: 0.45rem;">
+                                        <!-- Open Collaborative Session -->
+                                        <a href="/visites/{{ v.id }}/session" class="btn" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; background: rgba(59, 130, 246, 0.15); color: #93c5fd; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem;" title="Ouvrir l'Espace Collaboratif de Visite & FAQ">
+                                            <i class="fa-solid fa-clipboard-question"></i>
+                                            <span>Espace Visite</span>
+                                        </a>
+
+                                        <!-- Edit Visit -->
+                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;" title="Modifier la session" onclick="editVisit({{ v.id }}, {{ v.listing_id }}, '{{ v.step_family or 'visite' }}', '{{ v.step or '1ere_visite' }}', '{{ v.scheduled_at.isoformat() if v.scheduled_at else '' }}', '{{ v.status or 'programme' }}', {{ (v.visitor or '')|tojson }}, {{ (v.notes or '')|tojson }}, {{ v.contacts[0].agent_id if v.contacts and v.contacts[0].agent_id else 'null' }}, {{ v.contacts[0].agency_id if v.contacts and v.contacts[0].agency_id else 'null' }}, {{ (v.meeting_address or '')|tojson }}, {{ (v.instructions or '')|tojson }})">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+
+                                        <!-- Delete Visit -->
+                                        <button class="btn" style="padding: 0.35rem 0.6rem; font-size: 0.75rem; color: var(--red);" title="Supprimer la session" onclick="deleteVisit({{ v.id }})">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr id="sessionsNoDataRow">
+                                <td colspan="6" style="text-align: center; padding: 3.5rem 1rem; color: var(--text-2);">
+                                    <i class="fa-solid fa-calendar-xmark" style="font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5;"></i>
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">{{ t(request, 'visites.no_sessions_title', 'Aucune session enregistrée') }}</div>
+                                    <div style="font-size: 0.85rem; margin-top: 0.35rem;">{{ t(request, 'visites.no_sessions_desc', 'Planifiez votre première visite ou contre-visite en cliquant sur "+ Nouvelle session".') }}</div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            <!-- Filter empty state (hidden by default) -->
+                            <tr id="sessionsFilterEmptyRow" style="display: none;">
+                                <td colspan="6" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-2);">
+                                    <i class="fa-solid fa-filter-circle-xmark" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;"></i>
+                                    <div>{{ t(request, 'visites.no_matching_sessions', 'Aucune session ne correspond à vos filtres de recherche.') }}</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- ── TAB 3: History & Pipeline ── -->
@@ -1449,6 +1730,16 @@
                         {% endfor %}
                     </div>
                     <input type="text" id="visitVisitorCustom" placeholder="Autre(s) interlocuteur(s) (ex: Marie, Agent Immobilier, Vendeur)..." style="font-size: 0.82rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="visitMeetingAddress"><i class="fa-solid fa-map-location-dot" style="color: var(--accent);"></i> {{ t(request, 'visites.meeting_address_label', 'Adresse ou point de RDV spécifique (si différent)') }}</label>
+                    <input type="text" id="visitMeetingAddress" placeholder="Ex: Devant le portail, café d'en face, sonnette Dupont..." style="font-size: 0.82rem;">
+                </div>
+
+                <div class="form-group">
+                    <label for="visitInstructions"><i class="fa-solid fa-clipboard-list" style="color: var(--accent);"></i> {{ t(request, 'visites.instructions_label', 'Instructions / Briefing pour les participants') }}</label>
+                    <textarea id="visitInstructions" rows="2" placeholder="Ex: Apporter un mètre, prévoir lampe torche pour la cave, RDV 10 min avant..." style="font-size: 0.82rem;"></textarea>
                 </div>
 
                 <div class="form-group">
@@ -1947,10 +2238,14 @@
         function switchTab(tab) {
             document.getElementById('tabCalendar').style.display = tab === 'calendar' ? 'block' : 'none';
             document.getElementById('tabProperties').style.display = tab === 'properties' ? 'block' : 'none';
+            const tabSessions = document.getElementById('tabSessions');
+            if (tabSessions) tabSessions.style.display = tab === 'sessions' ? 'block' : 'none';
             document.getElementById('tabHistory').style.display = tab === 'history' ? 'block' : 'none';
 
             document.getElementById('tabBtnCal').classList.toggle('active', tab === 'calendar');
             document.getElementById('tabBtnProps').classList.toggle('active', tab === 'properties');
+            const tabBtnSessions = document.getElementById('tabBtnSessions');
+            if (tabBtnSessions) tabBtnSessions.classList.toggle('active', tab === 'sessions');
             document.getElementById('tabBtnHistory').classList.toggle('active', tab === 'history');
         }
 
@@ -2264,6 +2559,9 @@
             if (visitAddressAutocomplete) visitAddressAutocomplete.clear();
             updateVisitAddressBadge(null);
 
+            if (document.getElementById('visitMeetingAddress')) document.getElementById('visitMeetingAddress').value = '';
+            if (document.getElementById('visitInstructions')) document.getElementById('visitInstructions').value = '';
+
             if (listingId) {
                 document.getElementById('visitListingId').value = listingId;
                 onVisitListingChanged();
@@ -2302,7 +2600,7 @@
             }
         }
 
-        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes, agentId = null, agencyId = null) {
+        function editVisit(id, listingId, stepFamily, step, scheduledAt, status, visitor, notes, agentId = null, agencyId = null, meetingAddress = null, instructions = null) {
             document.getElementById('visitId').value = id;
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: var(--accent);"></i> Modifier l\'activité / visite';
             document.getElementById('visitListingId').value = listingId;
@@ -2317,6 +2615,13 @@
             }
             setVisitorUI(visitor || '');
             document.getElementById('visitNotes').value = notes || '';
+
+            if (document.getElementById('visitMeetingAddress')) {
+                document.getElementById('visitMeetingAddress').value = meetingAddress || '';
+            }
+            if (document.getElementById('visitInstructions')) {
+                document.getElementById('visitInstructions').value = instructions || '';
+            }
 
             // Handle contact pre-population
             clearVisitContactSelection();
@@ -2366,6 +2671,9 @@
             const visitor = getVisitorStringFromUI();
             const notes = document.getElementById('visitNotes').value;
 
+            const meeting_address = document.getElementById('visitMeetingAddress') ? document.getElementById('visitMeetingAddress').value.trim() : '';
+            const instructions = document.getElementById('visitInstructions') ? document.getElementById('visitInstructions').value.trim() : '';
+
             const cType = document.getElementById('visitContactType').value;
             const cId = document.getElementById('visitContactId').value;
             const contactInputVal = document.getElementById('visitContactInput').value.trim();
@@ -2386,6 +2694,8 @@
                 scheduled_at, 
                 visitor, 
                 notes,
+                meeting_address: meeting_address || null,
+                instructions: instructions || null,
                 agent_ids: (cType === 'agent' && cId) ? [parseInt(cId)] : [],
                 agency_ids: (cType === 'agency' && cId) ? [parseInt(cId)] : [],
                 update_listing_contact: chkUpdateListing,
@@ -2423,6 +2733,79 @@
                     }
                 } else {
                     alert("Erreur lors de l'enregistrement de l'activité.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur réseau: " + err.message);
+            }
+        }
+
+        // ── Sessions Table Filter & Quick Actions ───────────────────────────
+        function filterSessionsTable() {
+            const query = (document.getElementById('sessionsSearchInput')?.value || '').trim().toLowerCase();
+            const typeFilter = document.getElementById('sessionsFilterType')?.value || '';
+            const statusFilter = document.getElementById('sessionsFilterStatus')?.value || '';
+
+            const rows = document.querySelectorAll('#sessionsTableBody .session-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const title = row.getAttribute('data-title') || '';
+                const address = row.getAttribute('data-address') || '';
+                const visitor = row.getAttribute('data-visitor') || '';
+                const notes = row.getAttribute('data-notes') || '';
+                const rType = row.getAttribute('data-type') || '';
+                const rStatus = row.getAttribute('data-status') || '';
+
+                const matchesQuery = !query || title.includes(query) || address.includes(query) || visitor.includes(query) || notes.includes(query);
+                
+                let matchesType = true;
+                if (typeFilter) {
+                    if (typeFilter === 'autre') {
+                        matchesType = !['visite', 'contre_visite', 'offre'].includes(rType);
+                    } else {
+                        matchesType = rType === typeFilter;
+                    }
+                }
+
+                const matchesStatus = !statusFilter || rStatus === statusFilter;
+
+                if (matchesQuery && matchesType && matchesStatus) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const emptyFilterRow = document.getElementById('sessionsFilterEmptyRow');
+            if (emptyFilterRow) {
+                emptyFilterRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+        }
+
+        function resetSessionsFilters() {
+            if (document.getElementById('sessionsSearchInput')) document.getElementById('sessionsSearchInput').value = '';
+            if (document.getElementById('sessionsFilterType')) document.getElementById('sessionsFilterType').value = '';
+            if (document.getElementById('sessionsFilterStatus')) document.getElementById('sessionsFilterStatus').value = '';
+            filterSessionsTable();
+        }
+
+        async function quickToggleSessionStatus(visitId, currentStatus) {
+            const order = ['programme', 'effectuee', 'annulee'];
+            const nextIdx = (order.indexOf(currentStatus) + 1) % order.length;
+            const nextStatus = order[nextIdx];
+
+            try {
+                const res = await fetch(`/api/visites/${visitId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: nextStatus })
+                });
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert("Impossible de modifier le statut de la session.");
                 }
             } catch (err) {
                 console.error(err);

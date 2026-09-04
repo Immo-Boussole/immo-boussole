@@ -399,6 +399,23 @@ class VisitQuestion(Base):
     # Relationships
     visit = relationship("Visit", back_populates="questions", foreign_keys=[visit_id])
     listing = relationship("Listing", back_populates="questions", foreign_keys=[listing_id])
+    media = relationship(
+        "VisitMedia",
+        secondary="visit_question_media",
+        back_populates="questions",
+        order_by="VisitMedia.created_at.desc()"
+    )
+
+
+class VisitQuestionMedia(Base):
+    """
+    Association table linking visit questions with visit media (photos, audio recordings, videos, docs).
+    """
+    __tablename__ = "visit_question_media"
+
+    question_id = Column(Integer, ForeignKey("visit_questions.id", ondelete="CASCADE"), primary_key=True)
+    media_id = Column(Integer, ForeignKey("visit_media.id", ondelete="CASCADE"), primary_key=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class VisitInclusion(Base):
@@ -440,7 +457,7 @@ class VisitInclusion(Base):
 class VisitMedia(Base):
     """
     Stores contributions added during or before a visit (photos taken on site,
-    videos, PDF diagnostics/plans, external URLs) with bidirectional linkage
+    videos, audio recordings, PDF diagnostics/plans, external URLs) with bidirectional linkage
     to both the visit event and the main property listing.
     """
     __tablename__ = "visit_media"
@@ -448,7 +465,7 @@ class VisitMedia(Base):
     id = Column(Integer, primary_key=True, index=True)
     visit_id = Column(Integer, ForeignKey("visits.id", ondelete="CASCADE"), nullable=False, index=True)
     listing_id = Column(Integer, ForeignKey("listings.id", ondelete="CASCADE"), nullable=False, index=True)
-    media_type = Column(String(50), nullable=False, default="photo") # photo, video, document, link
+    media_type = Column(String(50), nullable=False, default="photo") # photo, video, audio, document, link
     file_path = Column(String(500), nullable=True)
     url = Column(Text, nullable=True)
     title = Column(String(255), nullable=True)
@@ -462,6 +479,11 @@ class VisitMedia(Base):
     # Relationships
     visit = relationship("Visit", back_populates="media")
     listing = relationship("Listing", back_populates="visit_media")
+    questions = relationship(
+        "VisitQuestion",
+        secondary="visit_question_media",
+        back_populates="media"
+    )
 
 
 

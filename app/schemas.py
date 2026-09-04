@@ -653,9 +653,45 @@ class VisitMediaResponse(BaseModel):
     mime_type: Optional[str] = None
     created_by: Optional[str] = None
     created_at: Optional[datetime] = None
+    question_ids: List[int] = []
 
     class Config:
         from_attributes = True
+
+
+class VisitBulkStatusUpdate(BaseModel):
+    question_ids: List[int]
+    status: str
+
+
+class VisitBulkDelete(BaseModel):
+    question_ids: List[int]
+
+
+class VisitBulkTheme(BaseModel):
+    question_ids: List[int]
+    theme: str
+
+
+class VisitQuestionMediaLink(BaseModel):
+    media_ids: List[int]
+
+
+class VisitMediaQuestionsLink(BaseModel):
+    question_ids: List[int]
+
+
+class ParticipantUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    instructions: Optional[str] = None
+    username: Optional[str] = None
+
+
+class OrganizerUpdate(BaseModel):
+    visitor: str
 
 
 class VisitInviteRequest(BaseModel):
