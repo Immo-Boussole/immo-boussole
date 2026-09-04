@@ -1259,7 +1259,7 @@
                 </div>
 
                 <div class="vs-form-group">
-                    <label class="vs-form-label" for="invite-email">Email du participant *</label>
+                    <label class="vs-form-label" for="invite-email">Email du participant <span id="invite-email-req" style="color: var(--vs-accent);">*</span></label>
                     <input type="email" id="invite-email" class="vs-form-input" placeholder="marie.dupont@exemple.com">
                     <span class="vs-field-error" id="err-invite-email">
                         <i class="fa-solid fa-circle-exclamation"></i>
@@ -2419,16 +2419,17 @@
             }
 
             // Validation Email
-            if (!emailVal) {
+            const sendEmailChecked = document.getElementById('invite-send-email-cb')?.checked ?? true;
+            if (sendEmailChecked && !emailVal) {
                 isValid = false;
                 if (showErrors) {
                     inputInviteEmail?.classList.add('vs-input-error');
                     if (errInviteEmail) {
-                        errInviteEmail.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i><span>L\'adresse email est obligatoire.</span>';
+                        errInviteEmail.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i><span>L\'adresse email est obligatoire pour envoyer une invitation.</span>';
                         errInviteEmail.classList.add('show');
                     }
                 }
-            } else if (!validateEmailFormat(emailVal)) {
+            } else if (emailVal && !validateEmailFormat(emailVal)) {
                 isValid = false;
                 if (showErrors) {
                     inputInviteEmail?.classList.add('vs-input-error');
@@ -2462,6 +2463,15 @@
             return isValid;
         }
 
+        // Changement de la case à cocher d'envoi d'email
+        const cbInviteSendEmail = document.getElementById('invite-send-email-cb');
+        cbInviteSendEmail?.addEventListener('change', () => {
+            const isChecked = cbInviteSendEmail.checked;
+            const reqSpan = document.getElementById('invite-email-req');
+            if (reqSpan) reqSpan.textContent = isChecked ? '*' : '(optionnel)';
+            validateInviteForm(false);
+        });
+
         // Changement de sélection dans le dropdown des comptes
         selectAccount?.addEventListener('change', () => {
             const selectedOpt = selectAccount.options[selectAccount.selectedIndex];
@@ -2490,7 +2500,7 @@
                 // Mettre immédiatement en avant les éventuelles données obligatoires manquantes
                 validateInviteForm(true);
 
-                if (!accountEmail) {
+                if (!accountEmail && cbInviteSendEmail?.checked) {
                     showToast('Attention : email manquant pour ce compte. Veuillez le renseigner.', 'fa-triangle-exclamation');
                     inputInviteEmail?.focus();
                 }

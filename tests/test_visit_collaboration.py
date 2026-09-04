@@ -146,10 +146,10 @@ def test_invite_participants_and_auto_account_creation():
                 assert invite_data["status"] == "success"
                 assert invite_data["emails_sent"] == 1
 
-                # Verify user was automatically created in DB
+                # Verify external participant is isolated and does NOT pollute the system User table
                 created_user = db.query(User).filter(User.email == new_participant_email).first()
-                assert created_user is not None
-                assert created_user.role == "user"
+                assert created_user is None
+                assert invite_data["participants"][0].get("id") is not None
 
                 # Verify email content sent
                 assert mock_send_email.called
@@ -178,6 +178,25 @@ def test_invite_participants_and_auto_account_creation():
                 emails_in_list = [p.get("email") for p in invite2_data["participants"]]
                 assert new_participant_email in emails_in_list
                 assert second_email in emails_in_list
+
+                # Verify adding multiple participants with identical roles (e.g. 2 conseillers) coexists without overwriting
+                c1_email = f"conseil1_{ts}@example.com"
+                c2_email = f"conseil2_{ts}@example.com"
+                invite_c1 = client.post(f"/api/visites/{visit_id}/invite", json={
+                    "participants": [{"name": "Conseiller Un", "email": c1_email, "role": "conseiller"}],
+                    "send_emails": False
+                })
+                assert invite_c1.status_code == 200
+                invite_c2 = client.post(f"/api/visites/{visit_id}/invite", json={
+                    "participants": [{"name": "Conseiller Deux", "email": c2_email, "role": "conseiller"}],
+                    "send_emails": False
+                })
+                assert invite_c2.status_code == 200
+                participants_after = invite_c2.json()["participants"]
+                conseillers = [p for p in participants_after if p.get("role") == "conseiller"]
+                assert len(conseillers) == 2
+                assert {p.get("name") for p in conseillers} == {"Conseiller Un", "Conseiller Deux"}
+                assert {p.get("email") for p in conseillers} == {c1_email, c2_email}
 
                 # Test inviting an existing user without email, updating their email in DB
                 existing_uname = f"user_no_email_{ts}"

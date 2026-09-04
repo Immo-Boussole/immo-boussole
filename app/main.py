@@ -8,6 +8,7 @@ import os
 import re
 import urllib.parse
 import asyncio
+import uuid
 
 logger = logging.getLogger(__name__)
 from contextlib import asynccontextmanager
@@ -5674,8 +5675,8 @@ def invite_visit_participants(
     _auth = Depends(user_required)
 ):
     """
-    Adds participants, auto-creates user accounts for new invited emails,
-    updates missing info (e.g. email) on existing accounts,
+    Adds participants to the visit session as independent profiles with unique IDs,
+    preserving existing participants without overwriting (even with identical roles),
     and sends styled invitation emails with GPS directions, listing details and direct visit link.
     """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
@@ -5687,77 +5688,72 @@ def invite_visit_participants(
 
     # Load existing participants to append/merge without overwriting
     try:
-        existing_participants = json.loads(visit.participants_json or "[]")
+        raw_participants = json.loads(visit.participants_json or "[]")
+        existing_participants = []
+        for ep in raw_participants:
+            if isinstance(ep, dict):
+                if not ep.get("id"):
+                    ep["id"] = str(uuid.uuid4())[:8]
+                existing_participants.append(ep)
     except Exception:
         existing_participants = []
 
-    # Process, update or auto-create users
+    # Process participants with guaranteed isolation
     newly_invited_participants = []
     for p in body.participants:
         p_dict = p.model_dump() if hasattr(p, "model_dump") else p.dict()
         clean_email = (p.email or "").strip().lower()
         clean_uname = (p.username or "").strip()
         p_name = (p.name or "").strip()
+        p_role = (p.role or "visiteur").strip()
 
         if not clean_email:
             raise HTTPException(status_code=400, detail="L'adresse email est obligatoire pour chaque participant.")
 
         p_dict["email"] = clean_email
-        if p_name:
-            p_dict["name"] = p_name
+        p_dict["name"] = p_name or (clean_email.split("@")[0] if clean_email else "Participant")
+        p_dict["role"] = p_role
 
-        # Check existing user by username or email
-        existing_user = None
+        if not p_dict.get("id"):
+            p_dict["id"] = str(uuid.uuid4())[:8]
+
+        # Link to system user ONLY if clean_uname was explicitly provided from existing accounts
         if clean_uname:
             existing_user = db.query(models.User).filter(models.User.username == clean_uname).first()
-        if not existing_user and clean_email:
-            existing_user = db.query(models.User).filter(func.lower(models.User.email) == clean_email).first()
-
-        if not existing_user:
-            uname = clean_uname or p_name or clean_email.split("@")[0]
-            base_uname = re.sub(r'[^a-zA-Z0-9_\-]', '', uname) or "visiteur"
-            final_uname = base_uname
-            counter = 1
-            while db.query(models.User).filter(models.User.username == final_uname).first():
-                final_uname = f"{base_uname}_{counter}"
-                counter += 1
-
-            salt = os.urandom(16)
-            temp_pwd = secrets.token_urlsafe(10)
-            pwd_hash = hashlib.pbkdf2_hmac('sha256', temp_pwd.encode('utf-8'), salt, 100000)
-            new_user = models.User(
-                username=final_uname,
-                password_hash=pwd_hash,
-                salt=salt,
-                role="user",
-                email=clean_email
-            )
-            db.add(new_user)
-            db.flush()
-            p_dict["username"] = final_uname
+            if existing_user:
+                p_dict["username"] = existing_user.username
+                # Only update email if the existing account lacked one
+                if clean_email and not existing_user.email:
+                    existing_user.email = clean_email
+                    db.flush()
+            else:
+                p_dict["username"] = clean_uname
         else:
-            p_dict["username"] = existing_user.username
-            # Update user in DB if missing email or info was completed
-            if clean_email and (not existing_user.email or existing_user.email.strip().lower() != clean_email):
-                existing_user.email = clean_email
-                db.flush()
+            # Independent participant profile: do not create or link to system User account
+            p_dict["username"] = None
 
         newly_invited_participants.append(p_dict)
 
     # Merge newly invited into existing participants list
+    # Match ONLY by explicit participant 'id', or if an existing participant has the exact same non-empty email
     merged_participants = list(existing_participants)
     for new_p in newly_invited_participants:
+        new_id = new_p.get("id")
         new_email = (new_p.get("email") or "").strip().lower()
-        new_uname = (new_p.get("username") or "").strip().lower()
-        matched = False
+        matched_idx = None
         for idx, exist_p in enumerate(merged_participants):
+            exist_id = exist_p.get("id")
             exist_email = (exist_p.get("email") or "").strip().lower()
-            exist_uname = (exist_p.get("username") or "").strip().lower()
-            if (new_email and exist_email and new_email == exist_email) or (new_uname and exist_uname and new_uname == exist_uname):
-                merged_participants[idx] = {**exist_p, **new_p}
-                matched = True
+            if new_id and exist_id and new_id == exist_id:
+                matched_idx = idx
                 break
-        if not matched:
+            if new_email and exist_email and new_email == exist_email:
+                matched_idx = idx
+                break
+
+        if matched_idx is not None:
+            merged_participants[matched_idx] = {**merged_participants[matched_idx], **new_p}
+        else:
             merged_participants.append(new_p)
 
     visit.participants_json = json.dumps(merged_participants, ensure_ascii=False)
@@ -5825,18 +5821,20 @@ def update_visit_participant(
         raise HTTPException(status_code=404, detail="Participant non trouvé")
 
     p = participants[participant_index]
+    if not p.get("id"):
+        p["id"] = str(uuid.uuid4())[:8]
     if body.name is not None:
         p["name"] = body.name.strip()
     if body.email is not None:
-        p["email"] = body.email.strip().lower()
+        p["email"] = body.email.strip().lower() if body.email.strip() else None
     if body.role is not None:
         p["role"] = body.role.strip()
     if body.phone is not None:
-        p["phone"] = body.phone.strip()
+        p["phone"] = body.phone.strip() if body.phone.strip() else None
     if body.instructions is not None:
-        p["instructions"] = body.instructions.strip()
+        p["instructions"] = body.instructions.strip() if body.instructions.strip() else None
     if body.username is not None:
-        p["username"] = body.username.strip()
+        p["username"] = body.username.strip() if body.username.strip() else None
 
     participants[participant_index] = p
     visit.participants_json = json.dumps(participants, ensure_ascii=False)
