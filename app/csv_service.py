@@ -16,6 +16,114 @@ from app.models import VisitQuestion, GlobalQuestion, Visit, Listing, VisitInclu
 from app.visit_templates import record_in_global_catalog
 
 
+def fix_mojibake(text: Optional[str]) -> Optional[str]:
+    """
+    Restaure les chaînes contenant des artefacts de mojibake causés par un décodage
+    ou ré-encodage défectueux (ex: UTF-8 décodé à tort comme Latin-1 / CP1252 / Windows-1252).
+    Exemples réparés :
+    - 'sÃ©curitÃ©' -> 'sécurité'
+    - 'Salle Ã  manger' -> 'Salle à manger'
+    - 'RÃ©frigÃ©rateur' -> 'Réfrigérateur'
+    - 'Ã\x80 nÃ©gocier' -> 'À négocier'
+    - 'mÃ¢t' -> 'mât'
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    s = text
+    # Si le texte contient des marqueurs caractéristiques de double encodage UTF-8
+    mojibake_markers = ("Ã©", "Ã¨", "Ã\xa0", "Ã¢", "Ãª", "Ã®", "Ã¯", "Ã´", "Ã»", "Ã¹", "Ã§", "Ã ", "Ã\x80", "Ã\x89", "Ã\x88", "Ã\x8a", "Ã\x87", "â\x80\x99", "â\x80\x98", "â\x80\x9c", "â\x80\x9d", "â\x80\x93", "â\x80\x94", "â\x82¬")
+    has_marker = any(m in s for m in mojibake_markers)
+
+    if has_marker:
+        for enc in ("cp1252", "latin-1", "iso-8859-1"):
+            try:
+                candidate = s.encode(enc).decode("utf-8")
+                # Si le candidat ne produit pas de caractère de remplacement non résolu et réduit les marqueurs
+                if candidate != s:
+                    s = candidate
+                    break
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                continue
+
+    # Remplacements ciblés de résidus fréquents de conversion Windows-1252 / Excel
+    replacements = {
+        "Ã\x80": "À",
+        "Ã©": "é",
+        "Ã¨": "è",
+        "Ã\xa0": "à",
+        "Ã¢": "â",
+        "Ãª": "ê",
+        "Ã®": "î",
+        "Ã¯": "ï",
+        "Ã´": "ô",
+        "Ã»": "û",
+        "Ã¹": "ù",
+        "Ã§": "ç",
+        "Ã\x89": "É",
+        "Ã\x88": "È",
+        "Ã\x8a": "Ê",
+        "Ã\x87": "Ç",
+        "â\x80\x99": "'",
+        "â\x80\x98": "'",
+        "â\x80\x9c": '"',
+        "â\x80\x9d": '"',
+        "â\x80\x93": "-",
+        "â\x80\x94": "-",
+        "â\x82¬": "€",
+        "\xa0": " ",
+    }
+    for bad, good in replacements.items():
+        if bad in s:
+            s = s.replace(bad, good)
+
+    return s.strip() if isinstance(s, str) else s
+
+
+def decode_csv_bytes(content_bytes: bytes) -> str:
+    """
+    Détecte l'encodage et décode de manière ultra-tolérante le flux d'octets d'un fichier CSV.
+    Supporte UTF-8-SIG (BOM Excel), UTF-8 standard, CP1252 (Windows français standard),
+    Latin-1 (ISO-8859-1), UTF-16-LE / UTF-16-BE.
+    Applique ensuite une passe de réparation des mojibakes.
+    """
+    if not content_bytes:
+        return ""
+
+    decoded_text = None
+    encodings_to_try = [
+        "utf-8-sig",
+        "utf-8",
+        "cp1252",
+        "latin-1",
+        "iso-8859-15",
+        "utf-16",
+        "utf-16-le",
+        "utf-16-be",
+    ]
+
+    for enc in encodings_to_try:
+        try:
+            decoded = content_bytes.decode(enc)
+            # Vérification de cohérence minimale
+            if "\x00" in decoded and "utf-16" not in enc:
+                continue
+            decoded_text = decoded
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    if decoded_text is None:
+        decoded_text = content_bytes.decode("latin-1", errors="replace")
+
+    # Nettoyage du BOM UTF-8 éventuel restant
+    if decoded_text.startswith("\ufeff"):
+        decoded_text = decoded_text[1:]
+
+    # Réparation automatique globale du mojibake sur l'ensemble du flux textuel
+    return fix_mojibake(decoded_text) or ""
+
+
 def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
     """
     Exporte une liste de questions de visite/bien au format CSV (UTF-8-SIG, séparateur ';').
@@ -128,17 +236,17 @@ def import_questions_from_csv(
     max_order = max([q.order_index for q in existing_questions], default=-1)
 
     for row in reader:
-        raw_q_text = row.get(header_map.get("question", "question"), "").strip()
+        raw_q_text = fix_mojibake(row.get(header_map.get("question", "question"), ""))
         if not raw_q_text:
             continue
 
         raw_id = row.get(header_map.get("id", "id"), "").strip()
-        raw_lang = row.get(header_map.get("language", "langue"), "").strip().lower() or default_language or "fr"
-        raw_themes = row.get(header_map.get("themes", "thematiques"), "").strip()
-        raw_status = row.get(header_map.get("status", "statut"), "").strip().lower()
-        raw_answer = row.get(header_map.get("answer", "reponse"), "").strip()
-        raw_author = row.get(header_map.get("created_by", "auteur_question"), "").strip() or author
-        raw_answered_by = row.get(header_map.get("answered_by", "auteur_reponse"), "").strip()
+        raw_lang = (row.get(header_map.get("language", "langue"), "") or default_language or "fr").strip().lower()
+        raw_themes = fix_mojibake(row.get(header_map.get("themes", "thematiques"), ""))
+        raw_status = (row.get(header_map.get("status", "statut"), "") or "").strip().lower()
+        raw_answer = fix_mojibake(row.get(header_map.get("answer", "reponse"), ""))
+        raw_author = fix_mojibake(row.get(header_map.get("created_by", "auteur_question"), "")) or author
+        raw_answered_by = fix_mojibake(row.get(header_map.get("answered_by", "auteur_reponse"), ""))
 
         # Parse themes
         if raw_themes:
@@ -665,12 +773,12 @@ def import_inclusions_from_csv(
             continue
 
         total_processed += 1
-        title = (row.get("titre") or "").strip()
+        title = fix_mojibake(row.get("titre") or "")
         if not title:
             errors.append(f"Ligne {row_idx}: le titre ou la désignation est obligatoire.")
             continue
 
-        raw_type = (row.get("type") or "objet").strip().lower()
+        raw_type = fix_mojibake(row.get("type") or "objet").strip().lower()
         item_type = "service" if ("serv" in raw_type or "contrat" in raw_type) else "objet"
 
         raw_id = row.get("id")
@@ -683,20 +791,33 @@ def import_inclusions_from_csv(
 
         target_item = existing_by_id.get(parsed_id) if (parsed_id and not replace_all) else None
 
-        room = row.get("piece") or None
-        variation_notes = row.get("variantes_declinaisons") or None
-        condition = row.get("etat") or ("À définir" if item_type == "objet" else None)
+        room = fix_mojibake(row.get("piece")) or None
+        variation_notes = fix_mojibake(row.get("variantes_declinaisons")) or None
+        condition = fix_mojibake(row.get("etat")) or ("À définir" if item_type == "objet" else None)
         estimated_value = _parse_float(row.get("valeur_estimee_notaire"))
-        provider_name = row.get("fournisseur") or None
-        equipment_included = row.get("materiel_inclus") or None
+        provider_name = fix_mojibake(row.get("fournisseur")) or None
+        equipment_included = fix_mojibake(row.get("materiel_inclus")) or None
         contract_start_date = _parse_date(row.get("date_debut_contrat"))
         contract_end_date = _parse_date(row.get("date_fin_contrat"))
         initial_cost = _parse_float(row.get("cout_initial"))
         monthly_cost = _parse_float(row.get("cout_mensuel"))
         annual_cost = _parse_float(row.get("cout_annuel"))
-        transfer_status = row.get("statut_transfert") or None
-        negotiation_status = row.get("statut_negociation") or "inclus_prix_negocie"
-        notes = row.get("notes") or None
+        transfer_status = fix_mojibake(row.get("statut_transfert")) or None
+
+        raw_neg = fix_mojibake(row.get("statut_negociation") or "")
+        clean_neg = (raw_neg or "").lower().strip()
+        if "negoc" in clean_neg or "disc" in clean_neg or "cours" in clean_neg:
+            negotiation_status = "en_discussion"
+        elif "excl" in clean_neg or "refus" in clean_neg:
+            negotiation_status = "exclu_vendeur"
+        elif "opt" in clean_neg or "payan" in clean_neg or "suppl" in clean_neg:
+            negotiation_status = "option_payante"
+        elif "inclus" in clean_neg or "prix" in clean_neg or "accord" in clean_neg or not clean_neg:
+            negotiation_status = "inclus_prix_negocie"
+        else:
+            negotiation_status = raw_neg or "inclus_prix_negocie"
+
+        notes = fix_mojibake(row.get("notes")) or None
         photo_url = row.get("photo_url") or None
 
         if target_item:

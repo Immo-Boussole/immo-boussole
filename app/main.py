@@ -6526,13 +6526,9 @@ async def import_visit_questions_csv(
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
     content_bytes = await file.read()
-    try:
-        csv_text = content_bytes.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        try:
-            csv_text = content_bytes.decode("latin-1")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Impossible de lire le fichier CSV (encodage non supporté)")
+    csv_text = csv_service.decode_csv_bytes(content_bytes)
+    if not csv_text or not csv_text.strip():
+        raise HTTPException(status_code=400, detail="Fichier CSV vide ou illisible.")
 
     author = request.session.get("username") or "Import CSV"
     default_lang = request.session.get("lang", "fr")
@@ -6907,13 +6903,9 @@ async def import_visit_inclusions_csv(
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
     content_bytes = await file.read()
-    try:
-        csv_text = content_bytes.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        try:
-            csv_text = content_bytes.decode("latin-1")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Impossible de lire le fichier CSV (encodage non supporté)")
+    csv_text = csv_service.decode_csv_bytes(content_bytes)
+    if not csv_text or not csv_text.strip():
+        raise HTTPException(status_code=400, detail="Fichier CSV vide ou illisible.")
 
     author = request.session.get("username") or "Import CSV"
     res = csv_service.import_inclusions_from_csv(

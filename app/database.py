@@ -397,3 +397,62 @@ def run_migrations():
     except Exception as e:
         print(f"[Migration] Note: could not auto-seed global questions: {e}")
 
+    # Auto-repair corrupted text (mojibake) in visit_inclusions and visit_questions
+    try:
+        from app.csv_service import fix_mojibake
+        with engine.connect() as conn:
+            # 1. Repair visit_inclusions
+            inc_rows = conn.execute(text(
+                "SELECT id, title, room, variation_notes, condition, provider_name, equipment_included, transfer_status, negotiation_status, notes "
+                "FROM visit_inclusions"
+            )).fetchall()
+
+            for r in inc_rows:
+                inc_id = r[0]
+                updates = {}
+                cols = ["title", "room", "variation_notes", "condition", "provider_name", "equipment_included", "transfer_status", "negotiation_status", "notes"]
+                for idx, col in enumerate(cols, start=1):
+                    val = r[idx]
+                    if val and isinstance(val, str):
+                        fixed = fix_mojibake(val)
+                        if col == "negotiation_status":
+                            c_neg = (fixed or "").lower().strip()
+                            if "negoc" in c_neg or "disc" in c_neg or "cours" in c_neg:
+                                fixed = "en_discussion"
+                            elif "excl" in c_neg or "refus" in c_neg:
+                                fixed = "exclu_vendeur"
+                            elif "opt" in c_neg or "payan" in c_neg or "suppl" in c_neg:
+                                fixed = "option_payante"
+                            elif "inclus" in c_neg or "prix" in c_neg or "accord" in c_neg:
+                                fixed = "inclus_prix_negocie"
+                        if fixed != val:
+                            updates[col] = fixed
+
+                if updates:
+                    set_clauses = ", ".join([f"{c} = :{c}" for c in updates.keys()])
+                    updates["id"] = inc_id
+                    conn.execute(text(f"UPDATE visit_inclusions SET {set_clauses} WHERE id = :id"), updates)
+
+            # 2. Repair visit_questions
+            q_rows = conn.execute(text(
+                "SELECT id, question_text, answer, created_by, answered_by FROM visit_questions"
+            )).fetchall()
+            for r in q_rows:
+                q_id = r[0]
+                q_updates = {}
+                for idx, col in enumerate(["question_text", "answer", "created_by", "answered_by"], start=1):
+                    val = r[idx]
+                    if val and isinstance(val, str):
+                        fixed = fix_mojibake(val)
+                        if fixed != val:
+                            q_updates[col] = fixed
+                if q_updates:
+                    set_clauses = ", ".join([f"{c} = :{c}" for c in q_updates.keys()])
+                    q_updates["id"] = q_id
+                    conn.execute(text(f"UPDATE visit_questions SET {set_clauses} WHERE id = :id"), q_updates)
+
+            conn.commit()
+    except Exception as e:
+        print(f"[Migration] Note: could not execute mojibake text repair: {e}")
+
+

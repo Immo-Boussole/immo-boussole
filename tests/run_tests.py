@@ -29,7 +29,8 @@ TEST_GROUPS = {
         "test_search_page_validation.py",
         "test_missing_location_repair.py",
         "test_source_preview_proxy.py",
-        "test_visit_collaboration.py"
+        "test_visit_collaboration.py",
+        "test_csv_encoding.py"
     ],
     "Network": [
         "test_tls.py"
