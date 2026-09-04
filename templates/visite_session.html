@@ -523,6 +523,14 @@
                     </div>
 
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="/api/visites/{{ visit.id }}/inclusions/export-csv" class="vs-btn vs-btn-secondary" title="Exporter l'ensemble du mobilier et des contrats au format CSV (UTF-8-SIG)" style="text-decoration: none;">
+                            <i class="fa-solid fa-file-export"></i>
+                            <span>Exporter CSV</span>
+                        </a>
+                        <button type="button" class="vs-btn vs-btn-secondary" onclick="openModal('modal-import-inclusions')" title="Importer du mobilier ou des contrats depuis un fichier CSV">
+                            <i class="fa-solid fa-file-import"></i>
+                            <span>Importer CSV</span>
+                        </button>
                         <button class="vs-btn vs-btn-secondary" id="btn-copy-offer-clause" title="Générer et copier la clause d'annexe pour l'offre d'achat">
                             <i class="fa-solid fa-file-signature"></i>
                             <span>Copier l'Annexe Offre</span>
@@ -552,6 +560,9 @@
                             </button>
                             <button class="vs-btn vs-btn-secondary" onclick="openModal('modal-add-inclusion-service')">
                                 <i class="fa-solid fa-shield-halved"></i> Ajouter un contrat de service
+                            </button>
+                            <button class="vs-btn vs-btn-secondary" onclick="openModal('modal-import-inclusions')">
+                                <i class="fa-solid fa-file-import"></i> Importer un fichier CSV
                             </button>
                         </div>
                     </div>
@@ -1184,6 +1195,56 @@
                 <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-offer-clause-preview')">Fermer</button>
                 <button class="vs-btn vs-btn-primary" id="btn-copy-clause-clipboard">
                     <i class="fa-regular fa-copy"></i> Copier dans le presse-papier
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : IMPORTER MOBILIER & SERVICES VIA CSV ═════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-import-inclusions">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div>
+                    <div class="vs-modal-title">📥 Importer Mobilier & Contrats de Service</div>
+                    <div style="font-size: 12px; color: var(--vs-text-muted);">Format CSV standardisé (UTF-8 avec BOM, séparateur <code>;</code>)</div>
+                </div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-import-inclusions')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 14px; line-height: 1.5;">
+                    Importez vos meubles, objets et contrats de service négociés. Par défaut, les nouveaux éléments sont ajoutés et les éléments dont l'ID existe déjà sont mis à jour sans perte.
+                </p>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label" for="inclusions-csv-file-input">Fichier CSV *</label>
+                    <input type="file" id="inclusions-csv-file-input" accept=".csv,text/csv" class="vs-form-input">
+                </div>
+
+                <div style="margin-top: 12px; background: var(--vs-surface-2, rgba(255,255,255,0.03)); border: 1px solid var(--vs-border); border-radius: 8px; padding: 10px 12px;">
+                    <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="inclusions-csv-replace-all" style="margin-top: 2px; accent-color: var(--vs-accent);">
+                        <div>
+                            <strong>Remplacer l'ensemble de la liste existante</strong>
+                            <div style="font-size: 11px; color: var(--vs-text-muted); margin-top: 2px;">
+                                Supprime les objets et contrats actuels de cette visite pour les remplacer intégralement par le contenu du fichier.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--vs-text-muted);">
+                    <span>Besoin du format exact des colonnes ?</span>
+                    <a href="/api/visites/inclusions/csv-template" class="vs-btn vs-btn-secondary vs-btn-sm" download="template_mobilier_services.csv" style="text-decoration: none;">
+                        <i class="fa-solid fa-download"></i> Télécharger le modèle CSV pré-rempli
+                    </a>
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-import-inclusions')">Annuler</button>
+                <button class="vs-btn vs-btn-primary" id="btn-submit-inclusions-csv">
+                    <i class="fa-solid fa-file-import"></i> Importer le fichier
                 </button>
             </div>
         </div>
@@ -2100,6 +2161,48 @@
 
         document.getElementById('btn-open-add-service-modal')?.addEventListener('click', () => {
             openModal('modal-add-inclusion-service');
+        });
+
+        // Import CSV Mobilier & Services
+        document.getElementById('btn-submit-inclusions-csv')?.addEventListener('click', async () => {
+            const fileInput = document.getElementById('inclusions-csv-file-input');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Veuillez sélectionner un fichier CSV.');
+                return;
+            }
+
+            const replaceAll = document.getElementById('inclusions-csv-replace-all')?.checked || false;
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('replace_all', replaceAll);
+
+            const submitBtn = document.getElementById('btn-submit-inclusions-csv');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Importation en cours...';
+
+            try {
+                const res = await fetch(`/api/visites/${visitId}/inclusions/import-csv`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    closeModal('modal-import-inclusions');
+                    const msg = `Import réussi : ${data.created} créés, ${data.updated} mis à jour.`;
+                    showToast(msg);
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    alert(errData.detail || 'Erreur lors du traitement du fichier CSV.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Erreur de connexion lors de l'import du fichier CSV.");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
         });
 
         // Submit furniture object

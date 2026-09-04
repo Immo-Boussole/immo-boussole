@@ -6857,6 +6857,80 @@ def get_visit_inclusions_offer_clause(visit_id: int, db: Session = Depends(get_d
     }
 
 
+@app.get("/api/visites/{visit_id}/inclusions/export-csv")
+def export_visit_inclusions_csv(
+    visit_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Exports all furniture and service contracts for this visit/listing to a CSV file (UTF-8-SIG, ';')."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    inclusions = db.query(VisitInclusion).filter(
+        VisitInclusion.listing_id == visit.listing_id
+    ).order_by(VisitInclusion.item_type.asc(), VisitInclusion.room.asc(), VisitInclusion.title.asc()).all()
+
+    csv_data = csv_service.export_inclusions_to_csv(inclusions)
+    date_str = visit.scheduled_at.strftime('%Y%m%d') if visit.scheduled_at else datetime.now().strftime('%Y%m%d')
+    filename = f"mobilier_services_visite_{visit.listing_id or visit.id}_{date_str}.csv"
+
+    return Response(
+        content=csv_data.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename=\"{filename}\""}
+    )
+
+
+@app.get("/api/visites/inclusions/csv-template")
+def get_inclusions_csv_template(
+    _auth = Depends(user_required)
+):
+    """Returns a prefilled sample CSV template for furniture and service contracts."""
+    csv_data = csv_service.generate_inclusions_csv_template()
+    return Response(
+        content=csv_data.encode("utf-8-sig"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="template_mobilier_services.csv"'}
+    )
+
+
+@app.post("/api/visites/{visit_id}/inclusions/import-csv")
+async def import_visit_inclusions_csv(
+    visit_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    replace_all: bool = Form(False),
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
+):
+    """Uploads and imports a CSV file containing furniture and services into the visit/listing."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    content_bytes = await file.read()
+    try:
+        csv_text = content_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            csv_text = content_bytes.decode("latin-1")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Impossible de lire le fichier CSV (encodage non supporté)")
+
+    author = request.session.get("username") or "Import CSV"
+    res = csv_service.import_inclusions_from_csv(
+        db=db,
+        listing_id=visit.listing_id,
+        visit_id=visit.id,
+        csv_content=csv_text,
+        replace_all=replace_all,
+        created_by=author
+    )
+    return res
+
+
 # ─── Media & Live Updates Endpoints ──────────────────────────────────────────
 
 @app.post("/api/visites/{visit_id}/media")

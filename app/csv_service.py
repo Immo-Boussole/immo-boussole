@@ -10,8 +10,9 @@ import csv
 import io
 import json
 from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime, date
 from sqlalchemy.orm import Session
-from app.models import VisitQuestion, GlobalQuestion, Visit, Listing
+from app.models import VisitQuestion, GlobalQuestion, Visit, Listing, VisitInclusion
 from app.visit_templates import record_in_global_catalog
 
 
@@ -384,3 +385,386 @@ def get_faq_csv_template() -> str:
     ])
 
     return output.getvalue()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MOBILIER & SERVICES (INCLUSIONS) : EXPORT, IMPORT ET TEMPLATE CSV
+# ─────────────────────────────────────────────────────────────────────────────
+
+INCLUSIONS_CSV_HEADERS = [
+    "id",
+    "type",
+    "piece",
+    "titre",
+    "variantes_declinaisons",
+    "etat",
+    "valeur_estimee_notaire",
+    "fournisseur",
+    "materiel_inclus",
+    "date_debut_contrat",
+    "date_fin_contrat",
+    "cout_initial",
+    "cout_mensuel",
+    "cout_annuel",
+    "statut_transfert",
+    "statut_negociation",
+    "notes",
+    "photo_url"
+]
+
+
+def export_inclusions_to_csv(inclusions: List[VisitInclusion]) -> str:
+    """
+    Exporte une liste de mobilier, objets et contrats de service au format CSV unifié (UTF-8-SIG, séparateur ';').
+    """
+    output = io.StringIO()
+    output.write('\ufeff')
+    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(INCLUSIONS_CSV_HEADERS)
+
+    for inc in inclusions:
+        start_date = inc.contract_start_date.isoformat() if inc.contract_start_date else ""
+        end_date = inc.contract_end_date.isoformat() if inc.contract_end_date else ""
+
+        writer.writerow([
+            inc.id or "",
+            inc.item_type or "objet",
+            inc.room or "",
+            inc.title or "",
+            inc.variation_notes or "",
+            inc.condition or "",
+            inc.estimated_value if inc.estimated_value is not None else "",
+            inc.provider_name or "",
+            inc.equipment_included or "",
+            start_date,
+            end_date,
+            inc.initial_cost if inc.initial_cost is not None else "",
+            inc.monthly_cost if inc.monthly_cost is not None else "",
+            inc.annual_cost if inc.annual_cost is not None else "",
+            inc.transfer_status or "",
+            inc.negotiation_status or "inclus_prix_negocie",
+            inc.notes or "",
+            inc.photo_url or ""
+        ])
+
+    return output.getvalue()
+
+
+def generate_inclusions_csv_template() -> str:
+    """
+    Génère un fichier modèle CSV (UTF-8-SIG, séparateur ';') pré-rempli avec des exemples concrets
+    d'objets mobiliers et de contrats de service.
+    """
+    output = io.StringIO()
+    output.write('\ufeff')
+    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(INCLUSIONS_CSV_HEADERS)
+
+    # Exemples Mobilier & Objets
+    writer.writerow([
+        "",  # id vide pour création
+        "objet",
+        "Salon",
+        "Canapé d'angle convertible 4 places",
+        "Tissu gris anthracite avec coffre de rangement intégré",
+        "Très bon état",
+        "850.0",
+        "",  # fournisseur
+        "",  # materiel_inclus
+        "",  # date_debut_contrat
+        "",  # date_fin_contrat
+        "",  # cout_initial
+        "",  # cout_mensuel
+        "",  # cout_annuel
+        "",  # statut_transfert
+        "inclus_prix_negocie",
+        "Facture d'achat 2023 fournie",
+        ""   # photo_url
+    ])
+    writer.writerow([
+        "",
+        "objet",
+        "Cuisine",
+        "Îlot central avec 4 tabourets hauts",
+        "Plateau chêne massif et piétement métal noir",
+        "Bon état",
+        "450.0",
+        "", "", "", "", "", "", "", "",
+        "inclus_prix_negocie",
+        "Parfaitement ajusté aux dimensions de la pièce",
+        ""
+    ])
+
+    # Exemples Services & Contrats
+    writer.writerow([
+        "",
+        "service",
+        "",  # piece
+        "Abonnement Télésurveillance & Alarme",
+        "",  # variantes
+        "",  # etat
+        "",  # valeur notaire
+        "Verisure",
+        "Centrale alarme GSM + 3 détecteurs volumétriques + 2 badges + 1 sirène",
+        "2022-06-01",
+        "2027-05-31",
+        "299.0",
+        "39.90",
+        "478.80",
+        "reprise_contrat",
+        "inclus_prix_negocie",
+        "Transfert de contrat possible sans frais d'installation",
+        ""
+    ])
+    writer.writerow([
+        "",
+        "service",
+        "",
+        "Contrat Entretien Pompe à Chaleur (PAC)",
+        "",
+        "",
+        "",
+        "Engie Home Services",
+        "Visite annuelle d'entretien + dépannage 7j/7 sous 48h inclus",
+        "2024-01-01",
+        "2025-12-31",
+        "",
+        "18.50",
+        "222.0",
+        "reprise_contrat",
+        "en_discussion",
+        "Dernier certificat d'entretien annuel disponible",
+        ""
+    ])
+
+    return output.getvalue()
+
+
+def _parse_float(val: Any) -> Optional[float]:
+    if val is None:
+        return None
+    s = str(val).strip().replace("€", "").replace(" ", "").replace(",", ".")
+    try:
+        return float(s) if s else None
+    except ValueError:
+        return None
+
+
+def _parse_date(val: Any) -> Optional[date]:
+    if not val:
+        return None
+    s = str(val).strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def import_inclusions_from_csv(
+    db: Session,
+    listing_id: int,
+    visit_id: int,
+    csv_content: str,
+    replace_all: bool = False,
+    created_by: str = "Import CSV"
+) -> Dict[str, Any]:
+    """
+    Importe mobilier, objets et contrats de service depuis un contenu CSV unifié.
+    - Détection automatique du séparateur (';' ou ',')
+    - Tolérance aux en-têtes français et anglais
+    - Si replace_all=True : vide les inclusions existantes de cette visite avant import
+    - Si 'id' correspond à un élément existant du bien/visite : mise à jour
+    - Sinon : création d'un nouvel élément VisitInclusion
+    """
+    if not csv_content or not csv_content.strip():
+        return {
+            "status": "error",
+            "message": "Le fichier CSV est vide.",
+            "total_processed": 0,
+            "created": 0,
+            "updated": 0,
+            "errors": ["Le fichier CSV est vide."]
+        }
+
+    # Nettoyage du BOM UTF-8 éventuel
+    if csv_content.startswith('\ufeff'):
+        csv_content = csv_content[1:]
+
+    first_line = csv_content.strip().split('\n')[0]
+    delimiter = ';' if ';' in first_line else ','
+
+    reader = csv.DictReader(io.StringIO(csv_content), delimiter=delimiter)
+    fieldnames = reader.fieldnames or []
+
+    # Correspondance tolérante des noms de colonnes
+    header_map = {}
+    for f in fieldnames:
+        clean = f.strip().lower().replace(" ", "_").replace("é", "e").replace("è", "e").replace("à", "a").replace("'", "_")
+        if clean in ("id", "identifiant"):
+            header_map[f] = "id"
+        elif clean in ("type", "type_element", "item_type", "categorie"):
+            header_map[f] = "type"
+        elif clean in ("piece", "room", "chambre", "espace", "lieu"):
+            header_map[f] = "piece"
+        elif clean in ("titre", "title", "designation", "nom", "meuble", "contrat"):
+            header_map[f] = "titre"
+        elif "variante" in clean or "declinaison" in clean or "precision" in clean or "variation" in clean:
+            header_map[f] = "variantes_declinaisons"
+        elif clean in ("etat", "condition", "etat_bien"):
+            header_map[f] = "etat"
+        elif "valeur" in clean or "notaire" in clean or "estimation" in clean:
+            header_map[f] = "valeur_estimee_notaire"
+        elif clean in ("fournisseur", "prestataire", "provider", "societe", "entreprise"):
+            header_map[f] = "fournisseur"
+        elif "materiel" in clean or "equipement" in clean or "equipment" in clean:
+            header_map[f] = "materiel_inclus"
+        elif "debut" in clean or "start" in clean:
+            header_map[f] = "date_debut_contrat"
+        elif "fin" in clean or "end" in clean or "echeance" in clean:
+            header_map[f] = "date_fin_contrat"
+        elif "initial" in clean or "achat" in clean or "pose" in clean:
+            header_map[f] = "cout_initial"
+        elif "mensuel" in clean or "month" in clean:
+            header_map[f] = "cout_mensuel"
+        elif "annuel" in clean or "year" in clean:
+            header_map[f] = "cout_annuel"
+        elif "transfert" in clean or "reprise" in clean:
+            header_map[f] = "statut_transfert"
+        elif "negociation" in clean or "inclus" in clean:
+            header_map[f] = "statut_negociation"
+        elif clean in ("notes", "remarque", "remarques", "commentaire", "commentaires"):
+            header_map[f] = "notes"
+        elif clean in ("photo", "photo_url", "image", "url_photo"):
+            header_map[f] = "photo_url"
+
+    if replace_all:
+        db.query(VisitInclusion).filter(
+            VisitInclusion.listing_id == listing_id,
+            VisitInclusion.visit_id == visit_id
+        ).delete()
+        db.flush()
+
+    # Indexation des éléments existants pour mise à jour éventuelle par ID
+    existing_items = db.query(VisitInclusion).filter(
+        VisitInclusion.listing_id == listing_id
+    ).all()
+    existing_by_id = {item.id: item for item in existing_items}
+
+    created_count = 0
+    updated_count = 0
+    errors = []
+    total_processed = 0
+
+    for row_idx, raw_row in enumerate(reader, start=2):
+        row = {header_map.get(k, k): (v.strip() if isinstance(v, str) else v) for k, v in raw_row.items() if k}
+
+        # Ignorer lignes entièrement vides
+        if not any(bool(v) for v in row.values()):
+            continue
+
+        total_processed += 1
+        title = (row.get("titre") or "").strip()
+        if not title:
+            errors.append(f"Ligne {row_idx}: le titre ou la désignation est obligatoire.")
+            continue
+
+        raw_type = (row.get("type") or "objet").strip().lower()
+        item_type = "service" if ("serv" in raw_type or "contrat" in raw_type) else "objet"
+
+        raw_id = row.get("id")
+        parsed_id = None
+        if raw_id:
+            try:
+                parsed_id = int(str(raw_id).strip())
+            except ValueError:
+                parsed_id = None
+
+        target_item = existing_by_id.get(parsed_id) if (parsed_id and not replace_all) else None
+
+        room = row.get("piece") or None
+        variation_notes = row.get("variantes_declinaisons") or None
+        condition = row.get("etat") or ("À définir" if item_type == "objet" else None)
+        estimated_value = _parse_float(row.get("valeur_estimee_notaire"))
+        provider_name = row.get("fournisseur") or None
+        equipment_included = row.get("materiel_inclus") or None
+        contract_start_date = _parse_date(row.get("date_debut_contrat"))
+        contract_end_date = _parse_date(row.get("date_fin_contrat"))
+        initial_cost = _parse_float(row.get("cout_initial"))
+        monthly_cost = _parse_float(row.get("cout_mensuel"))
+        annual_cost = _parse_float(row.get("cout_annuel"))
+        transfer_status = row.get("statut_transfert") or None
+        negotiation_status = row.get("statut_negociation") or "inclus_prix_negocie"
+        notes = row.get("notes") or None
+        photo_url = row.get("photo_url") or None
+
+        if target_item:
+            target_item.item_type = item_type
+            target_item.title = title
+            if room is not None:
+                target_item.room = room
+            if variation_notes is not None:
+                target_item.variation_notes = variation_notes
+            if condition is not None:
+                target_item.condition = condition
+            if estimated_value is not None:
+                target_item.estimated_value = estimated_value
+            if provider_name is not None:
+                target_item.provider_name = provider_name
+            if equipment_included is not None:
+                target_item.equipment_included = equipment_included
+            if contract_start_date is not None:
+                target_item.contract_start_date = contract_start_date
+            if contract_end_date is not None:
+                target_item.contract_end_date = contract_end_date
+            if initial_cost is not None:
+                target_item.initial_cost = initial_cost
+            if monthly_cost is not None:
+                target_item.monthly_cost = monthly_cost
+            if annual_cost is not None:
+                target_item.annual_cost = annual_cost
+            if transfer_status is not None:
+                target_item.transfer_status = transfer_status
+            if negotiation_status is not None:
+                target_item.negotiation_status = negotiation_status
+            if notes is not None:
+                target_item.notes = notes
+            if photo_url is not None:
+                target_item.photo_url = photo_url
+            updated_count += 1
+        else:
+            new_inc = VisitInclusion(
+                listing_id=listing_id,
+                visit_id=visit_id,
+                item_type=item_type,
+                title=title,
+                room=room,
+                variation_notes=variation_notes,
+                condition=condition,
+                estimated_value=estimated_value,
+                provider_name=provider_name,
+                equipment_included=equipment_included,
+                contract_start_date=contract_start_date,
+                contract_end_date=contract_end_date,
+                initial_cost=initial_cost,
+                monthly_cost=monthly_cost,
+                annual_cost=annual_cost,
+                transfer_status=transfer_status,
+                negotiation_status=negotiation_status,
+                notes=notes,
+                photo_url=photo_url,
+                created_by=created_by
+            )
+            db.add(new_inc)
+            created_count += 1
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "total_processed": total_processed,
+        "created": created_count,
+        "updated": updated_count,
+        "errors": errors
+    }
