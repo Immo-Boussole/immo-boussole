@@ -242,79 +242,71 @@
 
                 <!-- Respondent Source Filter Row -->
                 <div class="vs-respondent-filters-row">
-                    <span style="font-size: 12px; font-weight: 600; color: var(--vs-text-muted); margin-right: 4px;">
-                        <i class="fa-solid fa-filter"></i> Source de réponse :
-                    </span>
-                    <button type="button" class="vs-resp-filter-btn active" data-respondent="">Toutes les sources</button>
-                    <button type="button" class="vs-resp-filter-btn" data-respondent="agent">
-                        <i class="fa-solid fa-user-tie" style="color: #3b82f6;"></i> Agent immobilier
-                    </button>
-                    <button type="button" class="vs-resp-filter-btn" data-respondent="proprietaire_via_agent">
-                        <i class="fa-solid fa-handshake" style="color: #a855f7;"></i> Propriétaire via agent
-                    </button>
-                    <button type="button" class="vs-resp-filter-btn" data-respondent="proprietaire_direct">
-                        <i class="fa-solid fa-house-user" style="color: #10b981;"></i> Propriétaire direct
-                    </button>
+                    <label for="filter-respondent-select" class="vs-filter-label">
+                        <i class="fa-solid fa-filter"></i>
+                        <span>Source de réponse :</span>
+                    </label>
+                    <select id="filter-respondent-select" class="vs-form-input vs-filter-select">
+                        <option value="">Toutes les sources</option>
+                        <option value="agent">👤 Agent immobilier</option>
+                        <option value="proprietaire_via_agent">🤝 Propriétaire via agent</option>
+                        <option value="proprietaire_direct">🏡 Propriétaire direct</option>
+                    </select>
                 </div>
 
                 <!-- Unified Selection & Bulk Actions Row -->
                 <div class="vs-selection-row" id="vs-selection-row">
                     <div class="vs-selection-row-left">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500; color: var(--vs-text-muted);">
-                            <input type="checkbox" id="cb-select-all-questions" onchange="toggleSelectAllQuestions(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--vs-primary);">
-                            <span>Tout sélectionner (<span id="selected-questions-count">0</span> sélectionnée(s))</span>
-                        </label>
+                        <button type="button" id="btn-toggle-select-all" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="toggleSelectAllAction()" title="Tout sélectionner ou tout désélectionner les questions visibles">
+                            <i class="fa-regular fa-square-check"></i>
+                            <span>Tout sélectionner</span>
+                        </button>
                     </div>
 
-                    <div class="vs-selection-row-right">
-                        <!-- In-Row Bulk Actions (displayed dynamically when >= 1 question selected) -->
-                        <div class="vs-row-bulk-actions" id="vs-row-bulk-actions">
-                            <select id="bulk-status-select" class="vs-form-input vs-bulk-select" style="padding: 6px 12px; font-size: 13px; width: auto; background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);" onchange="applyBulkStatus(this.value)">
-                                <option value="" style="background-color: #131929; color: #94a3b8;">Modifier statut...</option>
-                                <option value="en_attente" style="background-color: #131929; color: #ffffff;">⏳ En attente</option>
-                                <option value="satisfaisante" style="background-color: #131929; color: #ffffff;">✅ Satisfaisante</option>
-                                <option value="relance_necessaire" style="background-color: #131929; color: #ffffff;">⚠️ Relance</option>
-                                <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
-                                <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
-                            </select>
-                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkAssignModal()" title="Affecter les questions sélectionnées à une ou plusieurs personnes">
-                                <i class="fa-solid fa-user-check"></i> Affecter à...
-                            </button>
-                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
-                                <i class="fa-solid fa-tags"></i> Thématique
-                            </button>
-                            <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteSelectedQuestions()" title="Supprimer définitivement la sélection">
-                                <i class="fa-solid fa-trash-can"></i> Supprimer
-                            </button>
-                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="clearSelectedQuestions()" title="Désélectionner tout">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
+                    <!-- In-Row Bulk Actions (displayed dynamically when >= 1 question selected) -->
+                    <div class="vs-row-bulk-actions" id="vs-row-bulk-actions">
+                        <select id="bulk-status-select" class="vs-form-input vs-bulk-select" style="padding: 6px 12px; font-size: 13px; width: auto; background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);" onchange="applyBulkStatus(this.value)">
+                            <option value="" style="background-color: #131929; color: #94a3b8;">Modifier statut...</option>
+                            <option value="en_attente" style="background-color: #131929; color: #ffffff;">⏳ En attente</option>
+                            <option value="satisfaisante" style="background-color: #131929; color: #ffffff;">✅ Satisfaisante</option>
+                            <option value="relance_necessaire" style="background-color: #131929; color: #ffffff;">⚠️ Relance</option>
+                            <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
+                            <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
+                        </select>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkAssignModal()" title="Affecter les questions sélectionnées à une ou plusieurs personnes">
+                            <i class="fa-solid fa-user-check"></i> Affecter à...
+                        </button>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
+                            <i class="fa-solid fa-tags"></i> Thématique
+                        </button>
+                        <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteSelectedQuestions()" title="Supprimer définitivement la sélection">
+                            <i class="fa-solid fa-trash-can"></i> Supprimer
+                        </button>
+                    </div>
 
-                        <!-- CSV Menu Dropdown (permanently visible at far right of row) -->
-                        <div class="vs-dropdown-wrapper">
-                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm vs-dropdown-toggle" id="btn-csv-menu">
-                                <i class="fa-solid fa-file-csv"></i>
-                                <span>CSV ▾</span>
+                    <!-- CSV Menu Dropdown (permanently visible on same row) -->
+                    <div class="vs-dropdown-wrapper" style="margin-left: auto;">
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm vs-dropdown-toggle" id="btn-csv-menu">
+                            <i class="fa-solid fa-file-csv"></i>
+                            <span>CSV ▾</span>
+                        </button>
+                        <div class="vs-dropdown-menu" id="csv-menu-dropdown">
+                            <button type="button" class="vs-dropdown-item" id="btn-csv-export-selected" onclick="exportSelectedQuestionsCSV()" disabled style="opacity: 0.5; cursor: not-allowed; width: 100%; text-align: left; background: none; border: none;">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span>Exporter les lignes cochées de la FAQ (<span id="csv-selected-count">0</span>)</span>
                             </button>
-                            <div class="vs-dropdown-menu" id="csv-menu-dropdown">
-                                <button type="button" class="vs-dropdown-item" id="btn-csv-export-selected" onclick="exportSelectedQuestionsCSV()" disabled style="opacity: 0.5; cursor: not-allowed; width: 100%; text-align: left; background: none; border: none;">
-                                    <i class="fa-solid fa-list-check"></i>
-                                    <span>Exporter les lignes cochées de la FAQ (<span id="csv-selected-count">0</span>)</span>
-                                </button>
-                                <a href="/api/visites/{{ visit.id }}/questions/export-csv" class="vs-dropdown-item" download>
-                                    <i class="fa-solid fa-file-export"></i>
-                                    <span>Exporter toute la FAQ</span>
-                                </a>
-                                <button type="button" class="vs-dropdown-item" id="btn-open-import-csv-modal" style="width: 100%; text-align: left; background: none; border: none;">
-                                    <i class="fa-solid fa-file-import"></i>
-                                    <span>Importer des questions (.csv)</span>
-                                </button>
-                                <a href="/api/visites/questions/csv-template" class="vs-dropdown-item" download>
-                                    <i class="fa-solid fa-download"></i>
-                                    <span>Télécharger le modèle CSV</span>
-                                </a>
-                            </div>
+                            <a href="/api/visites/{{ visit.id }}/questions/export-csv" class="vs-dropdown-item" download>
+                                <i class="fa-solid fa-file-export"></i>
+                                <span>Exporter toute la FAQ</span>
+                            </a>
+                            <button type="button" class="vs-dropdown-item" id="btn-open-import-csv-modal" style="width: 100%; text-align: left; background: none; border: none;">
+                                <i class="fa-solid fa-file-import"></i>
+                                <span>Importer des questions (.csv)</span>
+                            </button>
+                            <a href="/api/visites/questions/csv-template" class="vs-dropdown-item" download>
+                                <i class="fa-solid fa-download"></i>
+                                <span>Télécharger le modèle CSV</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -2150,15 +2142,14 @@
             });
         });
 
-        // Respondent Source Filter buttons
-        document.querySelectorAll('.vs-resp-filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.vs-resp-filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentRespondentFilter = btn.dataset.respondent || "";
+        // Respondent Source Filter dropdown
+        const respondentSelect = document.getElementById('filter-respondent-select');
+        if (respondentSelect) {
+            respondentSelect.addEventListener('change', (e) => {
+                currentRespondentFilter = e.target.value || "";
                 applyUniversalFilters();
             });
-        });
+        }
 
         // Summary Cards Quick Filter Click Handlers
         document.getElementById('summary-card-furn')?.addEventListener('click', () => {
@@ -3289,10 +3280,31 @@
                 }
             }
 
-            const masterCb = document.getElementById('cb-select-all-questions');
-            if (masterCb) {
-                masterCb.checked = (total > 0 && cnt === total);
-                masterCb.indeterminate = (cnt > 0 && cnt < total);
+            // Dynamic Toggle Select/Deselect button
+            const toggleSelectBtn = document.getElementById('btn-toggle-select-all');
+            if (toggleSelectBtn) {
+                if (cnt > 0) {
+                    toggleSelectBtn.innerHTML = `<i class="fa-solid fa-square-check" style="color: var(--vs-accent);"></i> <span>Tout désélectionner (<span id="selected-questions-count">${cnt}</span>)</span>`;
+                    toggleSelectBtn.classList.add('active');
+                } else {
+                    toggleSelectBtn.innerHTML = `<i class="fa-regular fa-square-check"></i> <span>Tout sélectionner</span>`;
+                    toggleSelectBtn.classList.remove('active');
+                }
+            }
+        }
+
+        function toggleSelectAllAction() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.vs-q-checkbox:checked'));
+            if (checkedBoxes.length > 0) {
+                clearSelectedQuestions();
+            } else {
+                document.querySelectorAll('.vs-q-checkbox').forEach(cb => {
+                    const card = cb.closest('.vs-q-card');
+                    if (card && card.style.display !== 'none') {
+                        cb.checked = true;
+                    }
+                });
+                onQuestionCheckChanged();
             }
         }
 
@@ -3309,11 +3321,6 @@
 
         function clearSelectedQuestions() {
             document.querySelectorAll('.vs-q-checkbox').forEach(cb => { cb.checked = false; });
-            const masterCb = document.getElementById('cb-select-all-questions');
-            if (masterCb) {
-                masterCb.checked = false;
-                masterCb.indeterminate = false;
-            }
             onQuestionCheckChanged();
         }
 

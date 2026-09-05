@@ -2091,13 +2091,12 @@ mark.vs-highlight {
 .vs-selection-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     margin-top: 14px;
     padding-top: 12px;
     border-top: 1px solid var(--vs-border);
     font-size: 13px;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
 }
 
 .vs-selection-row-left {
@@ -2105,6 +2104,21 @@ mark.vs-highlight {
     align-items: center;
     gap: 8px;
     user-select: none;
+}
+
+#btn-toggle-select-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: var(--vs-transition);
+}
+
+#btn-toggle-select-all.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--vs-accent);
+    color: #fff;
 }
 
 .vs-selection-row-right {
@@ -2725,36 +2739,76 @@ mark.vs-highlight {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid var(--vs-border);
 }
 
-.vs-resp-filter-btn {
+.vs-filter-label {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 9999px;
+    gap: 6px;
     font-size: 12px;
-    background: var(--vs-surface-2);
-    border: 1px solid var(--vs-border);
-    color: var(--vs-text-muted);
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.vs-resp-filter-btn:hover {
-    color: var(--vs-text);
-    border-color: var(--vs-border-strong);
-}
-
-.vs-resp-filter-btn.active {
-    background: var(--vs-primary);
-    border-color: var(--vs-primary);
-    color: #fff;
     font-weight: 600;
+    color: var(--vs-text-muted);
+}
+
+.vs-filter-select {
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--vs-radius-sm, 6px);
+    background-color: #131929;
+    color: #ffffff;
+    color-scheme: dark;
+    border: 1px solid var(--vs-border-strong, rgba(255, 255, 255, 0.15));
+    cursor: pointer;
+    min-width: 190px;
+    max-width: 280px;
+    transition: var(--vs-transition);
+}
+
+.vs-filter-select:hover, .vs-filter-select:focus {
+    border-color: var(--vs-accent, #3b82f6);
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .vs-selection-row {
+        gap: 8px;
+    }
+    .vs-selection-row-left {
+        width: 100%;
+    }
+    #btn-toggle-select-all {
+        width: 100%;
+        justify-content: center;
+    }
+    .vs-row-bulk-actions {
+        width: 100%;
+        gap: 6px;
+    }
+    .vs-bulk-select {
+        flex: 1 1 100%;
+    }
+    .vs-selection-row .vs-dropdown-wrapper {
+        margin-left: 0 !important;
+        width: 100%;
+    }
+    .vs-selection-row .vs-dropdown-wrapper .vs-dropdown-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+    .vs-respondent-filters-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .vs-filter-select {
+        width: 100%;
+        max-width: none;
+    }
 }
 
 
