@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 # pyrefly: ignore [missing-import]
 from sqlalchemy.sql import func
 import enum
+import json
 from app.database import Base
 
 
@@ -392,6 +393,8 @@ class VisitQuestion(Base):
     assigned_to = Column(String(100), nullable=True)
     answer_text = Column(Text, nullable=True)
     answered_by = Column(String(100), nullable=True)
+    answered_at = Column(DateTime(timezone=True), nullable=True)
+    respondent_type = Column(String(50), nullable=True) # agent, proprietaire_via_agent, proprietaire_direct
     order_index = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -405,6 +408,27 @@ class VisitQuestion(Base):
         back_populates="questions",
         order_by="VisitMedia.created_at.desc()"
     )
+
+    @property
+    def assigned_list(self) -> list:
+        if not self.assigned_to:
+            return []
+        try:
+            val = json.loads(self.assigned_to)
+            if isinstance(val, list):
+                return [str(x).strip() for x in val if str(x).strip()]
+            return [str(val).strip()]
+        except Exception:
+            return [x.strip() for x in self.assigned_to.split(",") if x.strip()]
+
+    @property
+    def respondent_label(self) -> str:
+        mapping = {
+            "agent": "Agent immobilier",
+            "proprietaire_via_agent": "Propriétaire via agent",
+            "proprietaire_direct": "Propriétaire direct"
+        }
+        return mapping.get(self.respondent_type, "")
 
 
 class VisitQuestionMedia(Base):

@@ -285,6 +285,10 @@ _MIGRATIONS = [
     # global_questions & visit_questions — language code v38
     ("global_questions", "language",                       "TEXT DEFAULT 'fr'"),
     ("visit_questions", "language",                        "TEXT DEFAULT 'fr'"),
+
+    # visit_questions — answered_at timestamp and respondent_type v39
+    ("visit_questions", "answered_at",                     "DATETIME"),
+    ("visit_questions", "respondent_type",                 "TEXT"),
 ]
 
 

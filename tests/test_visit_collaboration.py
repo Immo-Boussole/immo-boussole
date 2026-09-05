@@ -971,7 +971,154 @@ def test_invite_unmocked_email_service_and_global_settings_safety():
             app.dependency_overrides.clear()
 
 
+def test_visit_question_assignees_attribution_and_value_added():
+    """
+    Tests:
+    1. Creating a question with multiple assignees and respondent_type.
+    2. Auto-setting answered_by and answered_at upon adding answer_text.
+    3. Customizing answered_by and switching respondent_type.
+    4. Bulk assigning questions to multiple persons.
+    5. CSV export & import round-trip preserving assignees, respondent_type, answered_by, and answered_at.
+    6. Rendering value-added statistics in the visit session view.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        listing = Listing(
+            title="Maison Lumineuse avec Jardin",
+            url=f"https://example.com/test-assignees-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+        db.refresh(listing)
+
+        app.dependency_overrides[user_required] = lambda: {"username": "alice", "role": "user"}
+        app.dependency_overrides[login_required] = lambda: {"username": "alice", "role": "user"}
+
+        try:
+            with patch("fastapi.Request.session", new_callable=lambda: property(lambda self: {"username": "alice", "role": "user", "authenticated": True})):
+                # 1. Create visit
+                v_resp = client.post("/api/visites", json={
+                    "listing_id": listing.id,
+                    "scheduled_at": (datetime.datetime.now() + datetime.timedelta(days=1)).isoformat(),
+                    "import_default_questions": False
+                })
+                assert v_resp.status_code == 200
+                visit_id = v_resp.json()["id"]
+                token = v_resp.json()["access_token"]
+
+                # 2. Create question with assignees and respondent_type
+                q1_resp = client.post(f"/api/visites/{visit_id}/questions", json={
+                    "question_text": "Quel est l'âge de la chaudière ?",
+                    "themes": ["Chauffage & Énergie"],
+                    "status": "en_attente",
+                    "assigned_to": ["Marie", "Jean"],
+                    "respondent_type": "agent"
+                })
+                assert q1_resp.status_code == 200, q1_resp.text
+                q1_data = q1_resp.json()
+                assert q1_data["assigned_list"] == ["Marie", "Jean"]
+                assert q1_data["respondent_type"] == "agent"
+                q1_id = q1_data["id"]
+
+                # Create second question
+                q2_resp = client.post(f"/api/visites/{visit_id}/questions", json={
+                    "question_text": "Y a-t-il eu des infiltrations en toiture ?",
+                    "themes": ["Toiture & Charpente"],
+                    "status": "en_attente",
+                    "assigned_to": "Bob",
+                    "respondent_type": "proprietaire_direct"
+                })
+                assert q2_resp.status_code == 200
+                q2_data = q2_resp.json()
+                assert q2_data["assigned_list"] == ["Bob"]
+                q2_id = q2_data["id"]
+
+                # 3. Answer q1 -> auto-attribution to alice and timestamp
+                ans_resp = client.patch(f"/api/visites/questions/{q1_id}", json={
+                    "answer_text": "Chaudière installée en 2021, révisée annuellement."
+                })
+                assert ans_resp.status_code == 200
+                ans_data = ans_resp.json()
+                assert ans_data["answered_by"] == "alice"
+                assert ans_data["answered_at"] is not None
+
+                # 4. Modify answered_by, respondent_type and assignees
+                mod_resp = client.patch(f"/api/visites/questions/{q1_id}", json={
+                    "answered_by": "Agent Stéphane",
+                    "respondent_type": "proprietaire_via_agent",
+                    "assigned_to": ["Marie", "Expert Chauffage"]
+                })
+                assert mod_resp.status_code == 200
+                mod_data = mod_resp.json()
+                assert mod_data["answered_by"] == "Agent Stéphane"
+                assert mod_data["respondent_type"] == "proprietaire_via_agent"
+                assert mod_data["assigned_list"] == ["Marie", "Expert Chauffage"]
+
+                # 5. Bulk Assign
+                bulk_resp = client.post(f"/api/visites/{visit_id}/questions/bulk-assign", json={
+                    "question_ids": [q1_id, q2_id],
+                    "assigned_to": ["Notaire", "Jean"]
+                })
+                assert bulk_resp.status_code == 200
+                assert bulk_resp.json()["updated_count"] == 2
+
+                # Verify both questions have updated assignees
+                q_list_resp = client.get(f"/api/visites/{visit_id}/questions")
+                assert q_list_resp.status_code == 200
+                questions_map = {q["id"]: q for q in q_list_resp.json()}
+                assert questions_map[q1_id]["assigned_list"] == ["Notaire", "Jean"]
+                assert questions_map[q2_id]["assigned_list"] == ["Notaire", "Jean"]
+
+                # 6. CSV Export verification
+                export_resp = client.get(f"/api/visites/{visit_id}/questions/export-csv")
+                assert export_resp.status_code == 200
+                csv_content = export_resp.content.decode("utf-8-sig")
+                assert "personnes_affectees" in csv_content
+                assert "source_reponse" in csv_content
+                assert "compte_reponse" in csv_content
+                assert "date_reponse" in csv_content
+                assert "Notaire, Jean" in csv_content
+                assert "proprietaire_via_agent" in csv_content
+
+                # 7. CSV Import verification
+                csv_to_import = (
+                    "question;reponse;statut;thematiques;personnes_affectees;source_reponse;compte_reponse;date_reponse\n"
+                    "La toiture est-elle isolée ?;Oui, laine de roche 30cm;satisfaisante;Isolation, Toiture;Artisan Couvreur;agent;alice;2026-09-01 10:00\n"
+                )
+                import_file = io.BytesIO(csv_to_import.encode("utf-8"))
+                import_resp = client.post(
+                    f"/api/visites/{visit_id}/questions/import-csv",
+                    files={"file": ("test_import.csv", import_file, "text/csv")}
+                )
+                assert import_resp.status_code == 200
+                import_data = import_resp.json()
+                assert import_data["created_count"] >= 1
+
+                # Verify the imported question has the right properties
+                q_list_resp2 = client.get(f"/api/visites/{visit_id}/questions")
+                imported_q = next((q for q in q_list_resp2.json() if "toiture est-elle isolée" in q["question_text"]), None)
+                assert imported_q is not None
+                assert imported_q["assigned_list"] == ["Artisan Couvreur"]
+                assert imported_q["respondent_type"] == "agent"
+                assert imported_q["answered_by"] == "alice"
+
+                # 8. HTML Visit Session View Check
+                view_resp = client.get(f"/v/{token}")
+                assert view_resp.status_code == 200
+                assert "vs-value-added-card" in view_resp.text
+                assert "Valeur Ajoutée & Contributions" in view_resp.text
+                assert "Source de réponse" in view_resp.text
+
+        finally:
+            app.dependency_overrides.clear()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
+
 
 

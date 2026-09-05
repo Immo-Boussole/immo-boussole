@@ -127,7 +127,7 @@ def decode_csv_bytes(content_bytes: bytes) -> str:
 def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
     """
     Exporte une liste de questions de visite/bien au format CSV (UTF-8-SIG, séparateur ';').
-    Colonnes : id;langue;thematiques;question;statut;reponse;auteur_question;auteur_reponse;date_creation;date_reponse
+    Colonnes : id;langue;thematiques;question;statut;personnes_affectees;reponse;source_reponse;compte_reponse;date_reponse;auteur_question;date_creation
     """
     output = io.StringIO()
     # Write BOM for Excel UTF-8 compatibility
@@ -140,11 +140,13 @@ def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
         "thematiques",
         "question",
         "statut",
+        "personnes_affectees",
         "reponse",
+        "source_reponse",
+        "compte_reponse",
+        "date_reponse",
         "auteur_question",
-        "auteur_reponse",
-        "date_creation",
-        "date_reponse"
+        "date_creation"
     ]
     writer.writerow(headers)
 
@@ -159,8 +161,12 @@ def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
                 pass
         
         themes_str = ", ".join(themes)
+        assigned_str = ", ".join(q.assigned_list) if hasattr(q, "assigned_list") else (q.assigned_to or "")
         created_str = q.created_at.strftime("%Y-%m-%d %H:%M:%S") if q.created_at else ""
-        updated_str = q.updated_at.strftime("%Y-%m-%d %H:%M:%S") if q.updated_at else ""
+        answered_date_str = (
+            q.answered_at.strftime("%Y-%m-%d %H:%M:%S") if (hasattr(q, "answered_at") and q.answered_at)
+            else (q.updated_at.strftime("%Y-%m-%d %H:%M:%S") if q.answer_text and q.updated_at else "")
+        )
 
         writer.writerow([
             q.id,
@@ -168,11 +174,13 @@ def export_questions_to_csv(questions: List[VisitQuestion]) -> str:
             themes_str,
             q.question_text or "",
             q.status or "en_attente",
+            assigned_str,
             q.answer_text or "",
-            q.created_by or "",
+            q.respondent_type or "",
             q.answered_by or "",
-            created_str,
-            updated_str
+            answered_date_str,
+            q.created_by or "",
+            created_str
         ])
 
     return output.getvalue()
@@ -210,8 +218,14 @@ def import_questions_from_csv(
             header_map["language"] = f
         elif clean in ("thematiques", "thematique", "themes", "theme", "tags", "tag", "categorie", "categories") or "theme" in clean or "tag" in clean:
             header_map["themes"] = f
-        elif clean in ("auteur_reponse", "auteur_rep", "repondu_par", "answered_by") or "auteur_rep" in clean:
+        elif clean in ("personnes_affectees", "personnes_assignees", "personnes_assignee", "personne_affectee", "assignes", "assigne", "affecte_a", "affectes", "assigned_to"):
+            header_map["assigned_to"] = f
+        elif clean in ("source_reponse", "source", "qui_a_repondu", "respondent_type", "repondeur", "source_rep"):
+            header_map["respondent_type"] = f
+        elif clean in ("compte_reponse", "auteur_reponse", "auteur_rep", "repondu_par", "answered_by") or "auteur_rep" in clean:
             header_map["answered_by"] = f
+        elif clean in ("date_reponse", "date_rep", "answered_at"):
+            header_map["answered_at"] = f
         elif clean in ("auteur_question", "auteur_quest", "auteur", "createur", "user", "created_by") or "auteur" in clean or "createur" in clean:
             header_map["created_by"] = f
         elif clean in ("question", "titre", "libelle_question", "intitule") or "quest" in clean:
@@ -244,15 +258,46 @@ def import_questions_from_csv(
         raw_lang = (row.get(header_map.get("language", "langue"), "") or default_language or "fr").strip().lower()
         raw_themes = fix_mojibake(row.get(header_map.get("themes", "thematiques"), ""))
         raw_status = (row.get(header_map.get("status", "statut"), "") or "").strip().lower()
+        raw_assigned = fix_mojibake(row.get(header_map.get("assigned_to", "personnes_affectees"), ""))
         raw_answer = fix_mojibake(row.get(header_map.get("answer", "reponse"), ""))
+        raw_resp_type = (row.get(header_map.get("respondent_type", "source_reponse"), "") or "").strip().lower()
         raw_author = fix_mojibake(row.get(header_map.get("created_by", "auteur_question"), "")) or author
-        raw_answered_by = fix_mojibake(row.get(header_map.get("answered_by", "auteur_reponse"), ""))
+        raw_answered_by = fix_mojibake(row.get(header_map.get("answered_by", "compte_reponse"), "")) or fix_mojibake(row.get("auteur_reponse", ""))
+        raw_date_reponse = row.get(header_map.get("answered_at", "date_reponse"), "").strip()
 
         # Parse themes
         if raw_themes:
             themes = [t.strip() for t in raw_themes.replace(";", ",").replace("/", ",").split(",") if t.strip()]
         else:
             themes = ["Général"]
+
+        # Parse assigned_to
+        clean_assigned = None
+        if raw_assigned:
+            items = [x.strip() for x in raw_assigned.replace(";", ",").replace("/", ",").split(",") if x.strip()]
+            clean_assigned = json.dumps(items, ensure_ascii=False) if items else None
+
+        # Parse respondent_type
+        clean_resp_type = None
+        if raw_resp_type:
+            if "agent" in raw_resp_type and "via" not in raw_resp_type:
+                clean_resp_type = "agent"
+            elif "via" in raw_resp_type or ("agent" in raw_resp_type and "proprio" in raw_resp_type):
+                clean_resp_type = "proprietaire_via_agent"
+            elif "direct" in raw_resp_type or "proprio" in raw_resp_type or "proprietaire" in raw_resp_type:
+                clean_resp_type = "proprietaire_direct"
+            elif raw_resp_type in ("agent", "proprietaire_via_agent", "proprietaire_direct"):
+                clean_resp_type = raw_resp_type
+
+        # Parse date_reponse
+        parsed_answered_at = None
+        if raw_date_reponse:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%Y-%m-%d"):
+                try:
+                    parsed_answered_at = datetime.strptime(raw_date_reponse, fmt)
+                    break
+                except ValueError:
+                    pass
 
         # Validate status
         valid_statuses = {"en_attente", "satisfaisante", "relance_necessaire", "resolu", "non_applicable"}
@@ -281,10 +326,18 @@ def import_questions_from_csv(
             target_q.status = raw_status
             target_q.themes_json = json.dumps(themes, ensure_ascii=False)
             target_q.language = raw_lang
+            if clean_assigned is not None:
+                target_q.assigned_to = clean_assigned
             if raw_answer:
                 target_q.answer_text = raw_answer
             if raw_answered_by:
                 target_q.answered_by = raw_answered_by
+            if clean_resp_type is not None:
+                target_q.respondent_type = clean_resp_type
+            if parsed_answered_at is not None:
+                target_q.answered_at = parsed_answered_at
+            elif raw_answer and not target_q.answered_at:
+                target_q.answered_at = datetime.now()
             if not target_q.listing_id:
                 target_q.listing_id = listing_id
             updated_count += 1
@@ -299,8 +352,11 @@ def import_questions_from_csv(
                 themes_json=json.dumps(themes, ensure_ascii=False),
                 language=raw_lang,
                 created_by=raw_author,
+                assigned_to=clean_assigned,
                 answer_text=raw_answer or None,
                 answered_by=raw_answered_by or (author if raw_answer else None),
+                answered_at=parsed_answered_at or (datetime.now() if raw_answer else None),
+                respondent_type=clean_resp_type,
                 order_index=max_order
             )
             db.add(new_q)
@@ -457,6 +513,9 @@ def get_faq_csv_template() -> str:
         "question",
         "statut",
         "reponse",
+        "personnes_affectees",
+        "source_reponse",
+        "compte_reponse",
         "auteur_question"
     ])
     writer.writerow([
@@ -465,6 +524,9 @@ def get_faq_csv_template() -> str:
         "Quel est l'état général de la toiture et des combles ?",
         "satisfaisante",
         "Toiture refaite à neuf en 2021, factures fournies par le vendeur.",
+        "Marie Martin, Jean Dupont",
+        "proprietaire_via_agent",
+        "Marie Martin",
         "Jean Dupont"
     ])
     writer.writerow([
@@ -473,6 +535,9 @@ def get_faq_csv_template() -> str:
         "Quel est l'âge du liner de la piscine et l'état du système de filtration ?",
         "relance_necessaire",
         "Liner d'origine (12 ans), pompe changée l'an passé. Attente devis changement liner.",
+        "Jean Dupont",
+        "agent",
+        "Jean Dupont",
         "Marie Martin"
     ])
     writer.writerow([
@@ -481,13 +546,19 @@ def get_faq_csv_template() -> str:
         "What is the overall condition of the roof and timber framework?",
         "satisfaisante",
         "Roof renewed in 2021, warranty invoices supplied by seller.",
-        "John Doe"
+        "John Doe",
+        "proprietaire_direct",
+        "John Doe",
+        "Jane Doe"
     ])
     writer.writerow([
         "en",
         "Swimming Pool, Exterior, Garden",
         "What is the age of the pool liner and filtration pump?",
         "en_attente",
+        "",
+        "Jane Doe",
+        "",
         "",
         "John Doe"
     ])

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, field_validator
-from typing import Optional, List
+from typing import Optional, List, Union, Dict, Any
 from datetime import datetime, date
 
 class SubmitUrlRequest(BaseModel):
@@ -526,20 +526,28 @@ class GlobalQuestionBatchImport(BaseModel):
 class VisitQuestionCreate(BaseModel):
     question_text: str
     themes: List[str] = []
-    assigned_to: Optional[str] = None
+    assigned_to: Optional[Union[List[str], str]] = None
     status: Optional[str] = "en_attente"
     language: Optional[str] = "fr"
+    respondent_type: Optional[str] = None
 
 
 class VisitQuestionUpdate(BaseModel):
     question_text: Optional[str] = None
     status: Optional[str] = None # en_attente, satisfaisante, relance_necessaire, resolu, non_applicable
     themes: Optional[List[str]] = None
-    assigned_to: Optional[str] = None
+    assigned_to: Optional[Union[List[str], str]] = None
     answer_text: Optional[str] = None
     answered_by: Optional[str] = None
+    answered_at: Optional[datetime] = None
+    respondent_type: Optional[str] = None # agent, proprietaire_via_agent, proprietaire_direct
     language: Optional[str] = None
     order_index: Optional[int] = None
+
+
+class VisitQuestionBulkAssign(BaseModel):
+    question_ids: List[int] = []
+    assigned_to: Union[List[str], str] = []
 
 
 class VisitQuestionResponse(BaseModel):
@@ -552,8 +560,12 @@ class VisitQuestionResponse(BaseModel):
     language: str = "fr"
     created_by: Optional[str] = None
     assigned_to: Optional[str] = None
+    assigned_list: List[str] = []
     answer_text: Optional[str] = None
     answered_by: Optional[str] = None
+    answered_at: Optional[datetime] = None
+    respondent_type: Optional[str] = None
+    respondent_label: Optional[str] = None
     order_index: int = 0
     origin_visit_type: Optional[str] = None
     origin_visit_date: Optional[str] = None

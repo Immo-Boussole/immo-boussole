@@ -180,6 +180,65 @@
         <!-- ─── TAB 1 : FAQ & QUESTIONS D'INSPECTION UNIFIÉES ───────────── -->
         <section id="tab-faq" class="vs-tab-content active">
 
+            <!-- ─── VALEUR AJOUTÉE & RÉPARTITION DES RÉPONSES ─── -->
+            <div class="vs-value-added-card" id="vs-value-added-summary">
+                <div class="vs-va-header">
+                    <div class="vs-va-title-box">
+                        <div class="vs-va-title-icon">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <div class="vs-va-title">Valeur Ajoutée & Contributions aux Réponses</div>
+                            <div class="vs-va-subtitle">Mise en valeur de l'implication de chaque partie prenante dans la levée des doutes</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--vs-text-muted);">
+                        <span id="va-total-answered">{{ faq_stats.total_answered if faq_stats else 0 }}</span> / <span id="va-total-questions">{{ faq_stats.total_questions if faq_stats else questions|length }}</span> point(s) éclairci(s)
+                    </div>
+                </div>
+
+                <!-- Segmented Progress Bar -->
+                <div class="vs-va-progress-track" title="Répartition visuelle des réponses obtenues">
+                    <div class="vs-va-progress-seg seg-agent" id="va-bar-agent" style="width: {{ faq_stats.pct_agent if faq_stats else 0 }}%;" title="Agent immobilier: {{ faq_stats.count_agent if faq_stats else 0 }} ({{ faq_stats.pct_agent if faq_stats else 0 }}%)"></div>
+                    <div class="vs-va-progress-seg seg-proprio-agent" id="va-bar-proprio-agent" style="width: {{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%;" title="Propriétaire via agent: {{ faq_stats.count_proprio_agent if faq_stats else 0 }} ({{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%)"></div>
+                    <div class="vs-va-progress-seg seg-proprio-direct" id="va-bar-proprio-direct" style="width: {{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%;" title="Propriétaire direct: {{ faq_stats.count_proprio_direct if faq_stats else 0 }} ({{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%)"></div>
+                </div>
+
+                <!-- Breakdown Metric Cards -->
+                <div class="vs-va-metrics-grid">
+                    <div class="vs-va-metric-item metric-agent">
+                        <div class="vs-va-metric-left">
+                            <i class="fa-solid fa-user-tie vs-va-metric-icon" style="color: #3b82f6;"></i>
+                            <span class="vs-va-metric-label">Agent immobilier</span>
+                        </div>
+                        <div class="vs-va-metric-right">
+                            <div class="vs-va-metric-count" id="va-cnt-agent">{{ faq_stats.count_agent if faq_stats else 0 }}</div>
+                            <div class="vs-va-metric-pct" id="va-pct-agent">{{ faq_stats.pct_agent if faq_stats else 0 }}%</div>
+                        </div>
+                    </div>
+                    <div class="vs-va-metric-item metric-proprio-agent">
+                        <div class="vs-va-metric-left">
+                            <i class="fa-solid fa-handshake vs-va-metric-icon" style="color: #a855f7;"></i>
+                            <span class="vs-va-metric-label">Propriétaire via agent</span>
+                        </div>
+                        <div class="vs-va-metric-right">
+                            <div class="vs-va-metric-count" id="va-cnt-proprio-agent">{{ faq_stats.count_proprio_agent if faq_stats else 0 }}</div>
+                            <div class="vs-va-metric-pct" id="va-pct-proprio-agent">{{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%</div>
+                        </div>
+                    </div>
+                    <div class="vs-va-metric-item metric-proprio-direct">
+                        <div class="vs-va-metric-left">
+                            <i class="fa-solid fa-house-user vs-va-metric-icon" style="color: #10b981;"></i>
+                            <span class="vs-va-metric-label">Propriétaire direct</span>
+                        </div>
+                        <div class="vs-va-metric-right">
+                            <div class="vs-va-metric-count" id="va-cnt-proprio-direct">{{ faq_stats.count_proprio_direct if faq_stats else 0 }}</div>
+                            <div class="vs-va-metric-pct" id="va-pct-proprio-direct">{{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Thématiques Filter Chips Bar -->
             <div class="vs-themes-bar-container">
                 <div class="vs-themes-chips-scroll" id="themes-chips-list">
@@ -261,6 +320,23 @@
                     </div>
                 </div>
 
+                <!-- Respondent Source Filter Row -->
+                <div class="vs-respondent-filters-row">
+                    <span style="font-size: 12px; font-weight: 600; color: var(--vs-text-muted); margin-right: 4px;">
+                        <i class="fa-solid fa-filter"></i> Source de réponse :
+                    </span>
+                    <button type="button" class="vs-resp-filter-btn active" data-respondent="">Toutes les sources</button>
+                    <button type="button" class="vs-resp-filter-btn" data-respondent="agent">
+                        <i class="fa-solid fa-user-tie" style="color: #3b82f6;"></i> Agent immobilier
+                    </button>
+                    <button type="button" class="vs-resp-filter-btn" data-respondent="proprietaire_via_agent">
+                        <i class="fa-solid fa-handshake" style="color: #a855f7;"></i> Propriétaire via agent
+                    </button>
+                    <button type="button" class="vs-resp-filter-btn" data-respondent="proprietaire_direct">
+                        <i class="fa-solid fa-house-user" style="color: #10b981;"></i> Propriétaire direct
+                    </button>
+                </div>
+
                 <!-- Select-all and Bulk bar trigger row -->
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--vs-border); font-size: 13px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500; color: var(--vs-text-muted);">
@@ -289,6 +365,9 @@
                             <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
                             <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
                         </select>
+                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkAssignModal()" title="Affecter les questions sélectionnées à une ou plusieurs personnes">
+                            <i class="fa-solid fa-user-check"></i> Affecter à...
+                        </button>
                         <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
                             <i class="fa-solid fa-tags"></i> Thématique
                         </button>
@@ -330,6 +409,9 @@
                          data-themes='{{ q.themes_json or "[]" }}'
                          data-language="{{ q.language or 'fr' }}"
                          data-created-by="{{ q.created_by or '' }}"
+                         data-assigned="{{ q.assigned_list|join(', ') }}"
+                         data-assigned-json='{{ q.assigned_list|tojson }}'
+                         data-respondent-type="{{ q.respondent_type or '' }}"
                          data-answered-by="{{ q.answered_by or '' }}">
                         <div class="vs-q-header" onclick="toggleQuestionCard(this, event)">
                             <div class="vs-q-header-left">
@@ -349,6 +431,30 @@
                                         <span class="vs-q-author">
                                             <i class="fa-regular fa-user"></i> {{ q.created_by or 'Visiteur' }}
                                         </span>
+
+                                        <!-- Personnes affectées -->
+                                        <span class="vs-q-assignee-badge {% if not q.assigned_list %}empty{% endif %}" id="q-assignee-badge-{{ q.id }}" onclick="event.stopPropagation(); openEditQuestionAssigneesModal({{ q.id }});" title="Personnes affectées à cette question (cliquer pour modifier)">
+                                            <i class="fa-solid fa-user-check"></i>
+                                            <span id="q-assignee-label-{{ q.id }}">
+                                                {% if q.assigned_list %}
+                                                    {{ q.assigned_list|join(', ') }}
+                                                {% else %}
+                                                    + Affecter
+                                                {% endif %}
+                                            </span>
+                                        </span>
+
+                                        <!-- Source de la réponse -->
+                                        <span class="vs-q-respondent-badge resp-{{ q.respondent_type }}" id="q-resp-badge-{{ q.id }}" {% if not q.respondent_type %}style="display: none;"{% endif %}>
+                                            {% if q.respondent_type == 'agent' %}
+                                                <i class="fa-solid fa-user-tie"></i> Agent
+                                            {% elif q.respondent_type == 'proprietaire_via_agent' %}
+                                                <i class="fa-solid fa-handshake"></i> Propriétaire via agent
+                                            {% elif q.respondent_type == 'proprietaire_direct' %}
+                                                <i class="fa-solid fa-house-user"></i> Propriétaire direct
+                                            {% endif %}
+                                        </span>
+
                                         {% if q.media and q.media|length > 0 %}
                                             <span class="vs-q-theme-tag" style="background: rgba(16, 217, 164, 0.15); color: #10d9a4;" title="{{ q.media|length }} média(s) attaché(s)">
                                                 <i class="fa-solid fa-paperclip"></i> {{ q.media|length }}
@@ -393,16 +499,50 @@
                                 </div>
                             </div>
 
+                            <!-- Source de la réponse -->
+                            <div class="vs-q-respondent-selector">
+                                <span class="vs-q-status-label" style="display: flex; align-items: center; justify-content: space-between;">
+                                    <span>Source de la réponse :</span>
+                                    <button type="button" class="vs-btn-link" id="btn-clear-resp-{{ q.id }}" onclick="changeQuestionRespondentType({{ q.id }}, '')" style="font-size: 11px; color: var(--vs-text-muted); cursor: pointer; background: none; border: none; text-decoration: underline; {% if not q.respondent_type %}display: none;{% endif %}">
+                                        Effacer
+                                    </button>
+                                </span>
+                                <div class="vs-respondent-options" id="resp-opts-{{ q.id }}">
+                                    <button type="button" class="vs-resp-opt-btn opt-agent {% if q.respondent_type == 'agent' %}selected{% endif %}" onclick="changeQuestionRespondentType({{ q.id }}, 'agent')" title="L'agent immobilier a fourni la réponse">
+                                        <i class="fa-solid fa-user-tie" style="color: #3b82f6;"></i> Agent immobilier
+                                    </button>
+                                    <button type="button" class="vs-resp-opt-btn opt-proprio-agent {% if q.respondent_type == 'proprietaire_via_agent' %}selected{% endif %}" onclick="changeQuestionRespondentType({{ q.id }}, 'proprietaire_via_agent')" title="Le propriétaire a répondu par l'intermédiaire de l'agent">
+                                        <i class="fa-solid fa-handshake" style="color: #a855f7;"></i> Propriétaire via agent
+                                    </button>
+                                    <button type="button" class="vs-resp-opt-btn opt-proprio-direct {% if q.respondent_type == 'proprietaire_direct' %}selected{% endif %}" onclick="changeQuestionRespondentType({{ q.id }}, 'proprietaire_direct')" title="Le propriétaire a répondu directement">
+                                        <i class="fa-solid fa-house-user" style="color: #10b981;"></i> Propriétaire direct
+                                    </button>
+                                </div>
+                            </div>
+
                             <div class="vs-q-answer-section">
-                                <label class="vs-answer-label">
-                                    <span>Réponse / Constat sur place</span>
-                                    {% if q.answered_by %}
-                                        <span class="vs-answered-by-hint">
-                                            (Dernière réponse par {{ q.answered_by }}{% if q.updated_at %} le {{ q.updated_at.strftime('%d/%m à %H:%M') }}{% endif %})
+                                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px;">
+                                    <label class="vs-answer-label" style="margin: 0; font-weight: 600;">
+                                        <span>Réponse / Constat sur place</span>
+                                    </label>
+                                    <div class="vs-answer-meta" style="font-size: 12px; color: var(--vs-text-muted); display: flex; align-items: center; gap: 6px;">
+                                        <span class="vs-answered-by-pill" id="ans-meta-{{ q.id }}" {% if not (q.answer_text and (q.answered_by or q.answered_at or q.updated_at)) %}style="display: none;"{% endif %}>
+                                            <i class="fa-solid fa-circle-user"></i>
+                                            Obtenue par <strong class="vs-answered-by-name" id="ans-name-{{ q.id }}">{{ q.answered_by or 'Visiteur' }}</strong>
+                                            <span id="ans-date-{{ q.id }}">
+                                                {% if q.answered_at %}
+                                                    le {{ q.answered_at.strftime('%d/%m/%Y à %H:%M') }}
+                                                {% elif q.updated_at %}
+                                                    le {{ q.updated_at.strftime('%d/%m/%Y à %H:%M') }}
+                                                {% endif %}
+                                            </span>
                                         </span>
-                                    {% endif %}
-                                </label>
-                                <textarea class="vs-answer-textarea" placeholder="Notez ici les explications du vendeur ou vos constats..." onblur="saveQuestionAnswer({{ q.id }}, this.value)">{{ q.answer_text or '' }}</textarea>
+                                        <button type="button" class="vs-btn-link" id="btn-edit-ans-meta-{{ q.id }}" onclick="openEditAnsweredByModal({{ q.id }}, '{{ q.answered_by or '' }}')" title="Changer le compte responsable de cette réponse" style="background: none; border: none; color: var(--vs-primary); font-size: 11px; cursor: pointer; text-decoration: underline; {% if not q.answer_text %}display: none;{% endif %}">
+                                            <i class="fa-solid fa-pen"></i> Modifier
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea class="vs-answer-textarea" id="ans-text-{{ q.id }}" placeholder="Notez ici les explications du vendeur ou vos constats..." onblur="saveQuestionAnswer({{ q.id }}, this.value)">{{ q.answer_text or '' }}</textarea>
                             </div>
 
                             <!-- Attached Media & File Import Section -->
@@ -1000,6 +1140,23 @@
                 </div>
 
                 <div class="vs-form-group">
+                    <label class="vs-form-label">Personnes affectées (optionnel)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="new-q-assignees" class="vs-form-input" placeholder="Ex: Marie, Jean Dupont (séparés par des virgules)">
+                    </div>
+                </div>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Source de la réponse (si déjà connue)</label>
+                    <select id="new-q-respondent-type" class="vs-form-input">
+                        <option value="" selected>Non précisé (en attente)</option>
+                        <option value="agent">👔 Agent immobilier</option>
+                        <option value="proprietaire_via_agent">🤝 Propriétaire via agent</option>
+                        <option value="proprietaire_direct">🏡 Propriétaire direct</option>
+                    </select>
+                </div>
+
+                <div class="vs-form-group">
                     <label class="vs-form-label">Thématiques associées (sélectionnez ou ajoutez)</label>
                     <div class="vs-theme-selector-chips" id="theme-selector-chips">
                         <button type="button" class="vs-theme-chip" data-val="Toiture & Charpente">Toiture & Charpente</button>
@@ -1022,6 +1179,132 @@
             <div class="vs-modal-footer">
                 <button class="vs-btn vs-btn-secondary" onclick="closeModal('modal-add-question')">Annuler</button>
                 <button class="vs-btn vs-btn-primary" id="btn-submit-new-q">Enregistrer la question</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : MODIFIER LES PERSONNES AFFECTÉES À UNE QUESTION ═════════ -->
+    <div class="vs-modal-backdrop" id="modal-edit-question-assignees">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div>
+                    <div class="vs-modal-title"><i class="fa-solid fa-user-check"></i> Personnes affectées à la question</div>
+                    <div style="font-size: 12px; color: var(--vs-text-muted);" id="modal-assignees-q-title">Question</div>
+                </div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-edit-question-assignees')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <input type="hidden" id="edit-assignees-qid" value="">
+                <label class="vs-form-label">Sélectionner parmi les participants et comptes :</label>
+                <div class="vs-assignees-checkboxes" id="assignees-checkbox-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; padding: 6px 0;">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <div class="vs-form-group" style="margin-top: 14px;">
+                    <label class="vs-form-label">Ajouter un nom libre (ex: Artisan, Notaire) :</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="input-new-assignee-name" class="vs-form-input" placeholder="Prénom et nom..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addCustomAssigneeChip();}">
+                        <button type="button" class="vs-btn vs-btn-secondary" onclick="addCustomAssigneeChip()">
+                            <i class="fa-solid fa-plus"></i> Ajouter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="vs-form-group" style="margin-top: 14px;">
+                    <label class="vs-form-label">Personnes sélectionnées :</label>
+                    <div id="selected-assignees-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 8px; background: var(--vs-surface-2); border-radius: var(--vs-radius-md); border: 1px solid var(--vs-border);">
+                        <span style="font-size: 12px; color: var(--vs-text-muted); font-style: italic;" id="no-assignee-placeholder">Aucune personne affectée.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button type="button" class="vs-btn vs-btn-secondary" onclick="closeModal('modal-edit-question-assignees')">Annuler</button>
+                <button type="button" class="vs-btn vs-btn-primary" onclick="submitQuestionAssignees()">Enregistrer l'affectation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : AFFECTATION GROUPÉE DE QUESTIONS ═════════════════════════ -->
+    <div class="vs-modal-backdrop" id="modal-bulk-assign">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div>
+                    <div class="vs-modal-title"><i class="fa-solid fa-users-gear"></i> Affectation groupée</div>
+                    <div style="font-size: 12px; color: var(--vs-text-muted);">Assigner les questions cochées à une ou plusieurs personnes</div>
+                </div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-bulk-assign')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 12px;">
+                    Affecter les <strong id="bulk-assign-count-label" style="color: var(--vs-text);">0</strong> questions sélectionnées à :
+                </p>
+
+                <div class="vs-assignees-checkboxes" id="bulk-assignees-checkbox-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; padding: 6px 0;">
+                    <!-- Dynamically populated -->
+                </div>
+
+                <div class="vs-form-group" style="margin-top: 14px;">
+                    <label class="vs-form-label">Ajouter un autre nom :</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="input-bulk-assignee-name" class="vs-form-input" placeholder="Prénom et nom..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addBulkCustomAssigneeChip();}">
+                        <button type="button" class="vs-btn vs-btn-secondary" onclick="addBulkCustomAssigneeChip()">
+                            <i class="fa-solid fa-plus"></i> Ajouter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="vs-form-group" style="margin-top: 14px;">
+                    <label class="vs-form-label">Personnes à affecter :</label>
+                    <div id="bulk-selected-assignees-chips" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 8px; background: var(--vs-surface-2); border-radius: var(--vs-radius-md); border: 1px solid var(--vs-border);">
+                        <span style="font-size: 12px; color: var(--vs-text-muted); font-style: italic;" id="bulk-no-assignee-placeholder">Sélectionnez au moins une personne.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button type="button" class="vs-btn vs-btn-secondary" onclick="closeModal('modal-bulk-assign')">Annuler</button>
+                <button type="button" class="vs-btn vs-btn-primary" onclick="submitBulkAssign()">Appliquer l'affectation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODAL : MODIFIER LE COMPTE RESPONSABLE DE LA RÉPONSE ════════════ -->
+    <div class="vs-modal-backdrop" id="modal-edit-answered-by">
+        <div class="vs-modal-card">
+            <div class="vs-modal-header">
+                <div>
+                    <div class="vs-modal-title"><i class="fa-solid fa-circle-user"></i> Compte responsable de la réponse</div>
+                    <div style="font-size: 12px; color: var(--vs-text-muted);">Désigner qui a obtenu ou saisi cette réponse</div>
+                </div>
+                <button class="vs-modal-close-btn" onclick="closeModal('modal-edit-answered-by')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="vs-modal-body">
+                <input type="hidden" id="edit-ans-qid" value="">
+                <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 12px;">
+                    Précisez quel compte ou participant a pris en charge l'obtention de la réponse.
+                </p>
+
+                <div class="vs-form-group">
+                    <label class="vs-form-label">Sélectionner un compte ou participant :</label>
+                    <select id="edit-ans-account-select" class="vs-form-input" onchange="onAnsweredBySelectChange(this.value)">
+                        <option value="">-- Choisir un compte --</option>
+                        <!-- Dynamically populated -->
+                    </select>
+                </div>
+
+                <div class="vs-form-group" id="group-custom-answered-by" style="display: none;">
+                    <label class="vs-form-label">Ou saisir un nom libre :</label>
+                    <input type="text" id="edit-ans-custom-name" class="vs-form-input" placeholder="Ex: Jean Dupont">
+                </div>
+            </div>
+            <div class="vs-modal-footer">
+                <button type="button" class="vs-btn vs-btn-secondary" onclick="closeModal('modal-edit-answered-by')">Annuler</button>
+                <button type="button" class="vs-btn vs-btn-primary" onclick="submitAnsweredBy()">Enregistrer</button>
             </div>
         </div>
     </div>
@@ -1574,9 +1857,28 @@
         let currentThemeFilter = "";
         let currentStatusFilters = new Set();
         let currentAuthorFilter = "";
+        let currentRespondentFilter = "";
         let currentInclusionTypeFilter = "";
         let currentActiveTab = "faq";
         let globalCatalogCache = [];
+
+        // Preload candidate assignees from available system accounts and visit participants
+        const rawCandidateAssignees = [
+            {% for u in available_users %}
+            { name: "{{ u.name }}", username: "{{ u.username }}", type: "user" },
+            {% endfor %}
+            {% for p in participants %}
+            { name: "{{ p.name or p.username }}", username: "{{ p.username or p.name }}", type: "participant" },
+            {% endfor %}
+        ];
+        const uniqueCandidateMap = new Map();
+        rawCandidateAssignees.forEach(item => {
+            const key = (item.name || item.username || "").trim();
+            if (key && !uniqueCandidateMap.has(key.toLowerCase())) {
+                uniqueCandidateMap.set(key.toLowerCase(), { name: key, type: item.type });
+            }
+        });
+        const allCandidateAssignees = Array.from(uniqueCandidateMap.values());
 
         function showToast(msg, icon = 'fa-circle-check', isError = false) {
             const toast = document.getElementById('vs-toast');
@@ -1770,6 +2072,16 @@
             });
         });
 
+        // Respondent Source Filter buttons
+        document.querySelectorAll('.vs-resp-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.vs-resp-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentRespondentFilter = btn.dataset.respondent || "";
+                applyUniversalFilters();
+            });
+        });
+
         // Summary Cards Quick Filter Click Handlers
         document.getElementById('summary-card-furn')?.addEventListener('click', () => {
             setInclusionTypeFilter(currentInclusionTypeFilter === 'objet' ? '' : 'objet');
@@ -1819,16 +2131,25 @@
                 const themesStr = themes.join(" ").toLowerCase();
                 const createdBy = (card.dataset.createdBy || "").toLowerCase();
                 const answeredBy = (card.dataset.answeredBy || "").toLowerCase();
+                const assigned = (card.dataset.assigned || "").toLowerCase();
+                const respondentType = card.dataset.respondentType || "";
 
-                const combinedBlob = `${text} ${answer} ${themesStr} ${createdBy} ${answeredBy}`;
+                const combinedBlob = `${text} ${answer} ${themesStr} ${createdBy} ${answeredBy} ${assigned}`;
 
                 // Check text terms
                 const matchTerms = terms.length === 0 || terms.every(t => combinedBlob.includes(t));
                 const matchStatus = currentStatusFilters.size === 0 || currentStatusFilters.has(status);
                 const matchTheme = !currentThemeFilter || themes.includes(currentThemeFilter);
-                const matchAuthor = !currentAuthorFilter || createdBy === currentAuthorFilter.toLowerCase() || answeredBy === currentAuthorFilter.toLowerCase();
+                const matchAuthor = !currentAuthorFilter || createdBy === currentAuthorFilter.toLowerCase() || answeredBy === currentAuthorFilter.toLowerCase() || assigned.includes(currentAuthorFilter.toLowerCase());
 
-                if (matchTerms && matchStatus && matchTheme && matchAuthor) {
+                let matchRespondent = true;
+                if (currentRespondentFilter === 'none') {
+                    matchRespondent = !respondentType;
+                } else if (currentRespondentFilter) {
+                    matchRespondent = respondentType === currentRespondentFilter;
+                }
+
+                if (matchTerms && matchStatus && matchTheme && matchAuthor && matchRespondent) {
                     card.style.display = 'block';
                     visibleFaqCount++;
 
@@ -1926,6 +2247,60 @@
             }
         }
 
+        async function changeQuestionRespondentType(qId, respType) {
+            try {
+                const res = await fetch(`/api/visites/questions/${qId}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ respondent_type: respType || null })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const card = document.querySelector(`.vs-q-card[data-id="${qId}"]`);
+                    if (card) {
+                        card.dataset.respondentType = respType || "";
+
+                        const badge = document.getElementById(`q-resp-badge-${qId}`);
+                        if (badge) {
+                            if (respType === 'agent') {
+                                badge.style.display = 'inline-flex';
+                                badge.className = 'vs-q-respondent-badge resp-agent';
+                                badge.innerHTML = '<i class="fa-solid fa-user-tie"></i> Agent';
+                            } else if (respType === 'proprietaire_via_agent') {
+                                badge.style.display = 'inline-flex';
+                                badge.className = 'vs-q-respondent-badge resp-proprietaire_via_agent';
+                                badge.innerHTML = '<i class="fa-solid fa-handshake"></i> Propriétaire via agent';
+                            } else if (respType === 'proprietaire_direct') {
+                                badge.style.display = 'inline-flex';
+                                badge.className = 'vs-q-respondent-badge resp-proprietaire_direct';
+                                badge.innerHTML = '<i class="fa-solid fa-house-user"></i> Propriétaire direct';
+                            } else {
+                                badge.style.display = 'none';
+                                badge.className = 'vs-q-respondent-badge';
+                                badge.innerHTML = '';
+                            }
+                        }
+
+                        const container = document.getElementById(`resp-opts-${qId}`);
+                        if (container) {
+                            container.querySelectorAll('.vs-resp-opt-btn').forEach(b => b.classList.remove('selected'));
+                            if (respType === 'agent') container.querySelector('.opt-agent')?.classList.add('selected');
+                            else if (respType === 'proprietaire_via_agent') container.querySelector('.opt-proprio-agent')?.classList.add('selected');
+                            else if (respType === 'proprietaire_direct') container.querySelector('.opt-proprio-direct')?.classList.add('selected');
+                        }
+
+                        const clearBtn = document.getElementById(`btn-clear-resp-${qId}`);
+                        if (clearBtn) clearBtn.style.display = respType ? 'inline-block' : 'none';
+                    }
+                    showToast('Source de la réponse mise à jour');
+                    refreshValueAddedStats();
+                    applyUniversalFilters();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
         async function saveQuestionAnswer(qId, text) {
             const ind = document.getElementById(`save-ind-${qId}`);
             try {
@@ -1935,10 +2310,34 @@
                     body: JSON.stringify({ answer_text: text })
                 });
                 if (res.ok) {
+                    const data = await res.json();
                     if (ind) {
                         ind.classList.add('show');
                         setTimeout(() => ind.classList.remove('show'), 2000);
                     }
+                    const card = document.querySelector(`.vs-q-card[data-id="${qId}"]`);
+                    if (card && data) {
+                        if (data.answered_by) {
+                            card.dataset.answeredBy = data.answered_by;
+                            const pill = document.getElementById(`ans-meta-${qId}`);
+                            const nameEl = document.getElementById(`ans-name-${qId}`);
+                            const dateEl = document.getElementById(`ans-date-${qId}`);
+                            const editBtn = document.getElementById(`btn-edit-ans-meta-${qId}`);
+
+                            if (pill) pill.style.display = 'inline-flex';
+                            if (nameEl) nameEl.textContent = data.answered_by;
+                            if (dateEl && data.answered_at) {
+                                const d = new Date(data.answered_at);
+                                const dateFormatted = d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+                                dateEl.textContent = ` le ${dateFormatted}`;
+                            }
+                            if (editBtn) {
+                                editBtn.style.display = 'inline-block';
+                                editBtn.setAttribute('onclick', `openEditAnsweredByModal(${qId}, '${(data.answered_by || '').replace(/'/g, "\\'")}')`);
+                            }
+                        }
+                    }
+                    refreshValueAddedStats();
                 }
             } catch (err) {
                 console.error(err);
@@ -1973,6 +2372,9 @@
 
             const status = document.getElementById('new-q-status').value;
             const language = document.getElementById('new-q-language')?.value || 'fr';
+            const assigneesRaw = document.getElementById('new-q-assignees')?.value || '';
+            const assigneesList = assigneesRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const respondentType = document.getElementById('new-q-respondent-type')?.value || null;
 
             try {
                 const res = await fetch(`/api/visites/${visitId}/questions`, {
@@ -1982,7 +2384,9 @@
                         question_text: text,
                         themes: selectedThemes,
                         status: status,
-                        language: language
+                        language: language,
+                        assigned_to: assigneesList,
+                        respondent_type: respondentType
                     })
                 });
                 if (res.ok) {
@@ -2892,6 +3296,343 @@
                 console.error(err);
                 alert('Erreur de communication avec le serveur.');
             }
+        }
+
+        // ─── ASSIGNEES & VALUE-ADDED ENGINE ─────────────────────────────────
+        let currentModalAssignees = new Set();
+        let currentBulkAssignees = new Set();
+
+        function renderAssigneeCheckboxes(containerId, activeSet, callbackName) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            let html = '';
+            if (allCandidateAssignees.length === 0) {
+                html = '<div style="font-size: 12px; color: var(--vs-text-muted); font-style: italic; padding: 4px;">Aucun compte ou participant préenregistré. Vous pouvez saisir un nom ci-dessous.</div>';
+            } else {
+                allCandidateAssignees.forEach(item => {
+                    const isChecked = activeSet.has(item.name);
+                    const typeIcon = item.type === 'user' ? 'fa-circle-user' : 'fa-user-group';
+                    const typeLabel = item.type === 'user' ? 'Compte' : 'Participant';
+                    const safeName = item.name.replace(/'/g, "\\'");
+                    html += `
+                        <label style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--vs-surface-1); border-radius: var(--vs-radius-sm); border: 1px solid var(--vs-border); cursor: pointer; font-size: 13px;">
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="${callbackName}('${safeName}', this.checked)">
+                                <i class="fa-solid ${typeIcon}" style="color: var(--vs-primary); font-size: 12px;"></i>
+                                <span>${item.name}</span>
+                            </span>
+                            <span style="font-size: 10px; color: var(--vs-text-muted); text-transform: uppercase;">${typeLabel}</span>
+                        </label>
+                    `;
+                });
+            }
+            container.innerHTML = html;
+        }
+
+        function renderAssigneeChips(containerId, placeholderId, activeSet, callbackName) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (activeSet.size === 0) {
+                container.innerHTML = `<span style="font-size: 12px; color: var(--vs-text-muted); font-style: italic;" id="${placeholderId}">Aucune personne sélectionnée.</span>`;
+                return;
+            }
+            let html = '';
+            activeSet.forEach(name => {
+                const safeName = name.replace(/'/g, "\\'");
+                html += `
+                    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; border-radius: 9999px; font-size: 12px; font-weight: 500;">
+                        <span>${name}</span>
+                        <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="${callbackName}('${safeName}')" title="Retirer"></i>
+                    </span>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function openBulkAssignModal() {
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) {
+                alert('Veuillez sélectionner au moins une question.');
+                return;
+            }
+            document.getElementById('bulk-assign-count-label').textContent = ids.length;
+            currentBulkAssignees.clear();
+            renderAssigneeCheckboxes('bulk-assignees-checkbox-list', currentBulkAssignees, 'onBulkAssigneeToggle');
+            renderAssigneeChips('bulk-selected-assignees-chips', 'bulk-no-assignee-placeholder', currentBulkAssignees, 'removeBulkAssigneeChip');
+            document.getElementById('input-bulk-assignee-name').value = '';
+            openModal('modal-bulk-assign');
+        }
+
+        function onBulkAssigneeToggle(name, isChecked) {
+            if (isChecked) {
+                currentBulkAssignees.add(name);
+            } else {
+                currentBulkAssignees.delete(name);
+            }
+            renderAssigneeChips('bulk-selected-assignees-chips', 'bulk-no-assignee-placeholder', currentBulkAssignees, 'removeBulkAssigneeChip');
+        }
+
+        function removeBulkAssigneeChip(name) {
+            currentBulkAssignees.delete(name);
+            renderAssigneeCheckboxes('bulk-assignees-checkbox-list', currentBulkAssignees, 'onBulkAssigneeToggle');
+            renderAssigneeChips('bulk-selected-assignees-chips', 'bulk-no-assignee-placeholder', currentBulkAssignees, 'removeBulkAssigneeChip');
+        }
+
+        function addBulkCustomAssigneeChip() {
+            const input = document.getElementById('input-bulk-assignee-name');
+            const name = (input.value || '').trim();
+            if (!name) return;
+            currentBulkAssignees.add(name);
+            input.value = '';
+            renderAssigneeCheckboxes('bulk-assignees-checkbox-list', currentBulkAssignees, 'onBulkAssigneeToggle');
+            renderAssigneeChips('bulk-selected-assignees-chips', 'bulk-no-assignee-placeholder', currentBulkAssignees, 'removeBulkAssigneeChip');
+        }
+
+        async function submitBulkAssign() {
+            const ids = getSelectedQuestionIds();
+            if (ids.length === 0) return;
+            if (currentBulkAssignees.size === 0) {
+                alert('Veuillez sélectionner au moins une personne.');
+                return;
+            }
+
+            const list = Array.from(currentBulkAssignees);
+            try {
+                showToast('Affectation groupée en cours...', 'fa-spinner');
+                const res = await fetch(`/api/visites/${visitId}/questions/bulk-assign`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ question_ids: ids, assigned_to: list })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    closeModal('modal-bulk-assign');
+                    showToast(`${data.updated_count} question(s) affectée(s) avec succès !`);
+                    clearSelectedQuestions();
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Erreur lors de l\'affectation groupée.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erreur réseau.');
+            }
+        }
+
+        function openEditQuestionAssigneesModal(qId) {
+            const card = document.querySelector(`.vs-q-card[data-id="${qId}"]`);
+            if (!card) return;
+            document.getElementById('edit-assignees-qid').value = qId;
+
+            const qText = card.querySelector('.vs-q-text')?.textContent || "Question #" + qId;
+            const shortTitle = qText.length > 70 ? qText.substring(0, 70) + "..." : qText;
+            document.getElementById('modal-assignees-q-title').textContent = shortTitle;
+
+            let assigned = [];
+            try {
+                assigned = JSON.parse(card.dataset.assignedJson || "[]");
+            } catch (e) {
+                assigned = (card.dataset.assigned || "").split(',').map(s => s.trim()).filter(Boolean);
+            }
+            currentModalAssignees = new Set(assigned);
+
+            renderAssigneeCheckboxes('assignees-checkbox-list', currentModalAssignees, 'onSingleAssigneeToggle');
+            renderAssigneeChips('selected-assignees-chips-container', 'no-assignee-placeholder', currentModalAssignees, 'removeSingleAssigneeChip');
+            document.getElementById('input-new-assignee-name').value = '';
+            openModal('modal-edit-question-assignees');
+        }
+
+        function onSingleAssigneeToggle(name, isChecked) {
+            if (isChecked) {
+                currentModalAssignees.add(name);
+            } else {
+                currentModalAssignees.delete(name);
+            }
+            renderAssigneeChips('selected-assignees-chips-container', 'no-assignee-placeholder', currentModalAssignees, 'removeSingleAssigneeChip');
+        }
+
+        function removeSingleAssigneeChip(name) {
+            currentModalAssignees.delete(name);
+            renderAssigneeCheckboxes('assignees-checkbox-list', currentModalAssignees, 'onSingleAssigneeToggle');
+            renderAssigneeChips('selected-assignees-chips-container', 'no-assignee-placeholder', currentModalAssignees, 'removeSingleAssigneeChip');
+        }
+
+        function addCustomAssigneeChip() {
+            const input = document.getElementById('input-new-assignee-name');
+            const name = (input.value || '').trim();
+            if (!name) return;
+            currentModalAssignees.add(name);
+            input.value = '';
+            renderAssigneeCheckboxes('assignees-checkbox-list', currentModalAssignees, 'onSingleAssigneeToggle');
+            renderAssigneeChips('selected-assignees-chips-container', 'no-assignee-placeholder', currentModalAssignees, 'removeSingleAssigneeChip');
+        }
+
+        async function submitQuestionAssignees() {
+            const qId = document.getElementById('edit-assignees-qid').value;
+            const card = document.querySelector(`.vs-q-card[data-id="${qId}"]`);
+            if (!card) return;
+
+            const list = Array.from(currentModalAssignees);
+            try {
+                showToast('Enregistrement de l\'affectation...', 'fa-spinner');
+                const res = await fetch(`/api/visites/questions/${qId}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ assigned_to: list })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const updatedList = data.assigned_list || list;
+                    card.dataset.assignedJson = JSON.stringify(updatedList);
+                    card.dataset.assigned = updatedList.join(', ');
+
+                    const badge = document.getElementById(`q-assignee-badge-${qId}`);
+                    if (badge) {
+                        const textEl = badge.querySelector('.vs-q-assignee-text');
+                        if (textEl) {
+                            textEl.textContent = updatedList.length > 0 ? updatedList.join(', ') : '+ Affecter';
+                        }
+                    }
+                    closeModal('modal-edit-question-assignees');
+                    showToast('Affectation mise à jour avec succès');
+                    applyUniversalFilters();
+                } else {
+                    alert('Erreur lors de la mise à jour de l\'affectation.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Erreur réseau.');
+            }
+        }
+
+        function openEditAnsweredByModal(qId, currentName) {
+            document.getElementById('edit-ans-qid').value = qId;
+            const select = document.getElementById('edit-ans-account-select');
+            const customGroup = document.getElementById('group-custom-answered-by');
+            const customInput = document.getElementById('edit-ans-custom-name');
+
+            let html = '<option value="">-- Choisir un compte ou participant --</option>';
+            let found = false;
+            allCandidateAssignees.forEach(item => {
+                const selected = (item.name.toLowerCase() === (currentName || '').toLowerCase());
+                if (selected) found = true;
+                html += `<option value="${item.name}" ${selected ? 'selected' : ''}>${item.name} (${item.type === 'user' ? 'Compte' : 'Participant'})</option>`;
+            });
+            html += '<option value="__custom__">Autre nom personnalisé...</option>';
+            select.innerHTML = html;
+
+            if (currentName && !found) {
+                select.value = '__custom__';
+                customGroup.style.display = 'block';
+                customInput.value = currentName;
+            } else {
+                customGroup.style.display = 'none';
+                customInput.value = '';
+            }
+
+            openModal('modal-edit-answered-by');
+        }
+
+        function onAnsweredBySelectChange(val) {
+            const customGroup = document.getElementById('group-custom-answered-by');
+            if (val === '__custom__') {
+                customGroup.style.display = 'block';
+                document.getElementById('edit-ans-custom-name').focus();
+            } else {
+                customGroup.style.display = 'none';
+            }
+        }
+
+        async function submitAnsweredBy() {
+            const qId = document.getElementById('edit-ans-qid').value;
+            const selectVal = document.getElementById('edit-ans-account-select').value;
+            let finalName = selectVal;
+            if (selectVal === '__custom__') {
+                finalName = document.getElementById('edit-ans-custom-name').value.trim();
+            }
+            if (!finalName) {
+                alert('Veuillez sélectionner ou saisir un nom.');
+                return;
+            }
+
+            try {
+                showToast('Mise à jour du compte...', 'fa-spinner');
+                const res = await fetch(`/api/visites/questions/${qId}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ answered_by: finalName })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const card = document.querySelector(`.vs-q-card[data-id="${qId}"]`);
+                    if (card) {
+                        card.dataset.answeredBy = finalName;
+                        const nameEl = document.getElementById(`ans-name-${qId}`);
+                        if (nameEl) nameEl.textContent = finalName;
+                        const editBtn = document.getElementById(`btn-edit-ans-meta-${qId}`);
+                        if (editBtn) editBtn.setAttribute('onclick', `openEditAnsweredByModal(${qId}, '${finalName.replace(/'/g, "\\'")}')`);
+                    }
+                    closeModal('modal-edit-answered-by');
+                    showToast('Compte responsable mis à jour');
+                    applyUniversalFilters();
+                } else {
+                    alert('Erreur lors de la mise à jour du compte.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Erreur réseau.');
+            }
+        }
+
+        function refreshValueAddedStats() {
+            const qCards = document.querySelectorAll('.vs-q-card');
+            let totalQuestions = qCards.length;
+            let totalAnswered = 0;
+            let cntAgent = 0;
+            let cntProprioAgent = 0;
+            let cntProprioDirect = 0;
+
+            qCards.forEach(card => {
+                const text = (card.querySelector('.vs-answer-textarea')?.value || '').trim();
+                const respType = card.dataset.respondentType || '';
+                if (text.length > 0) {
+                    totalAnswered++;
+                    if (respType === 'agent') cntAgent++;
+                    else if (respType === 'proprietaire_via_agent') cntProprioAgent++;
+                    else if (respType === 'proprietaire_direct') cntProprioDirect++;
+                }
+            });
+
+            const pctAgent = totalAnswered > 0 ? (cntAgent / totalAnswered * 100).toFixed(1) : 0;
+            const pctProprioAgent = totalAnswered > 0 ? (cntProprioAgent / totalAnswered * 100).toFixed(1) : 0;
+            const pctProprioDirect = totalAnswered > 0 ? (cntProprioDirect / totalAnswered * 100).toFixed(1) : 0;
+
+            const totalAnsEl = document.getElementById('va-total-answered');
+            if (totalAnsEl) totalAnsEl.textContent = totalAnswered;
+            const totalQEl = document.getElementById('va-total-questions');
+            if (totalQEl) totalQEl.textContent = totalQuestions;
+
+            const barAgent = document.getElementById('va-bar-agent');
+            if (barAgent) barAgent.style.width = pctAgent + '%';
+            const barProprioAgent = document.getElementById('va-bar-proprio-agent');
+            if (barProprioAgent) barProprioAgent.style.width = pctProprioAgent + '%';
+            const barProprioDirect = document.getElementById('va-bar-proprio-direct');
+            if (barProprioDirect) barProprioDirect.style.width = pctProprioDirect + '%';
+
+            const cntAgentEl = document.getElementById('va-cnt-agent');
+            if (cntAgentEl) cntAgentEl.textContent = cntAgent;
+            const pctAgentEl = document.getElementById('va-pct-agent');
+            if (pctAgentEl) pctAgentEl.textContent = pctAgent + '%';
+
+            const cntPAEl = document.getElementById('va-cnt-proprio-agent');
+            if (cntPAEl) cntPAEl.textContent = cntProprioAgent;
+            const pctPAEl = document.getElementById('va-pct-proprio-agent');
+            if (pctPAEl) pctPAEl.textContent = pctProprioAgent + '%';
+
+            const cntPDEl = document.getElementById('va-cnt-proprio-direct');
+            if (cntPDEl) cntPDEl.textContent = cntProprioDirect;
+            const pctPDEEl = document.getElementById('va-pct-proprio-direct');
+            if (pctPDEEl) pctPDEEl.textContent = pctProprioDirect + '%';
         }
 
         async function deleteSelectedQuestions() {

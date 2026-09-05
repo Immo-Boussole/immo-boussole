@@ -5541,6 +5541,9 @@ def visit_short_url_session(
             all_authors_set.add(q.created_by)
         if q.answered_by:
             all_authors_set.add(q.answered_by)
+        for a in q.assigned_list:
+            if a:
+                all_authors_set.add(a)
 
         # Compute provenance label if from another visit
         if q.visit_id != visit.id and q.visit:
@@ -5619,10 +5622,35 @@ def visit_short_url_session(
     total_services = sum(1 for i in inclusions if i.item_type == "service")
     total_furniture_val = sum(i.estimated_value or 0.0 for i in inclusions if i.item_type == "objet" and i.negotiation_status == "inclus_prix_negocie")
 
+    # FAQ stats & value-added breakdown by respondent type
+    answered_questions = [q for q in questions if q.answer_text and q.answer_text.strip()]
+    total_answered = len(answered_questions)
+    count_agent = sum(1 for q in answered_questions if q.respondent_type == "agent")
+    count_proprio_agent = sum(1 for q in answered_questions if q.respondent_type == "proprietaire_via_agent")
+    count_proprio_direct = sum(1 for q in answered_questions if q.respondent_type == "proprietaire_direct")
+    count_unspecified = total_answered - (count_agent + count_proprio_agent + count_proprio_direct)
+
+    pct_agent = round((count_agent / total_answered * 100), 1) if total_answered > 0 else 0
+    pct_proprio_agent = round((count_proprio_agent / total_answered * 100), 1) if total_answered > 0 else 0
+    pct_proprio_direct = round((count_proprio_direct / total_answered * 100), 1) if total_answered > 0 else 0
+
+    faq_stats = {
+        "total_questions": len(questions),
+        "total_answered": total_answered,
+        "count_agent": count_agent,
+        "count_proprio_agent": count_proprio_agent,
+        "count_proprio_direct": count_proprio_direct,
+        "count_unspecified": count_unspecified,
+        "pct_agent": pct_agent,
+        "pct_proprio_agent": pct_proprio_agent,
+        "pct_proprio_direct": pct_proprio_direct,
+    }
+
     return templates.TemplateResponse(request=request, name="visite_session.html", context={
         "visit": visit,
         "listing": listing,
         "questions": questions,
+        "faq_stats": faq_stats,
         "all_themes": all_themes,
         "all_authors": all_authors,
         "inclusions": inclusions,
@@ -6100,6 +6128,73 @@ def get_visit_questions_csv_template():
 
 # ─── Questions & FAQ Endpoints ───────────────────────────────────────────────
 
+def serialize_assigned_to(val) -> Optional[str]:
+    if val is None:
+        return None
+    if isinstance(val, list):
+        clean = [str(x).strip() for x in val if str(x).strip()]
+        return json.dumps(clean, ensure_ascii=False) if clean else None
+    if isinstance(val, str):
+        v = val.strip()
+        if not v:
+            return None
+        if v.startswith("[") and v.endswith("]"):
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    clean = [str(x).strip() for x in parsed if str(x).strip()]
+                    return json.dumps(clean, ensure_ascii=False) if clean else None
+            except Exception:
+                pass
+        items = [x.strip() for x in v.split(",") if x.strip()]
+        return json.dumps(items, ensure_ascii=False) if items else None
+    return str(val)
+
+
+def format_question_dict(item: VisitQuestion) -> dict:
+    try:
+        th_list = json.loads(item.themes_json or "[]")
+    except Exception:
+        th_list = []
+
+    v_type = item.visit.visit_type if item.visit else None
+    v_date = item.visit.scheduled_at.strftime("%d/%m/%Y") if (item.visit and item.visit.scheduled_at) else None
+
+    return {
+        "id": item.id,
+        "listing_id": item.listing_id,
+        "visit_id": item.visit_id,
+        "question_text": item.question_text,
+        "status": item.status,
+        "themes": th_list,
+        "language": item.language or "fr",
+        "created_by": item.created_by,
+        "assigned_to": item.assigned_to,
+        "assigned_list": item.assigned_list,
+        "answer_text": item.answer_text,
+        "answered_by": item.answered_by,
+        "answered_at": item.answered_at.isoformat() if item.answered_at else None,
+        "respondent_type": item.respondent_type,
+        "respondent_label": item.respondent_label,
+        "order_index": item.order_index,
+        "origin_visit_type": v_type,
+        "origin_visit_date": v_date,
+        "created_at": item.created_at.isoformat() if item.created_at else None,
+        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
+        "media": [
+            {
+                "id": m.id,
+                "media_type": m.media_type,
+                "file_path": m.file_path,
+                "title": m.title,
+                "url": m.url,
+                "file_size": m.file_size
+            }
+            for m in item.media
+        ] if hasattr(item, "media") and item.media else [],
+    }
+
+
 @app.get("/api/visites/{visit_id}/questions")
 def get_visit_questions(
     visit_id: int,
@@ -6111,7 +6206,7 @@ def get_visit_questions(
     db: Session = Depends(get_db)
 ):
     """
-    Retrieves all inspection & FAQ questions for a visit/listing.
+    Returns the unified FAQ / inspection questions list for a property visit.
     Supports multi-criteria filtering: theme, status, author, language, and full-text keyword query.
     """
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
@@ -6155,44 +6250,15 @@ def get_visit_questions(
                 term in (item.created_by or "").lower() or
                 term in (item.answered_by or "").lower() or
                 term in (item.language or "").lower() or
+                term in (item.respondent_type or "").lower() or
+                term in (item.respondent_label or "").lower() or
+                any(term in a.lower() for a in item.assigned_list) or
                 any(term in t.lower() for t in th_list)
             )
             if not text_match:
                 continue
 
-        # Origin info
-        v_type = item.visit.visit_type if item.visit else None
-        v_date = item.visit.scheduled_at.strftime("%d/%m/%Y") if (item.visit and item.visit.scheduled_at) else None
-
-        results.append({
-            "id": item.id,
-            "listing_id": item.listing_id,
-            "visit_id": item.visit_id,
-            "question_text": item.question_text,
-            "status": item.status,
-            "themes": th_list,
-            "language": item.language or "fr",
-            "created_by": item.created_by,
-            "assigned_to": item.assigned_to,
-            "answer_text": item.answer_text,
-            "answered_by": item.answered_by,
-            "order_index": item.order_index,
-            "origin_visit_type": v_type,
-            "origin_visit_date": v_date,
-            "created_at": item.created_at.isoformat() if item.created_at else None,
-            "updated_at": item.updated_at.isoformat() if item.updated_at else None,
-            "media": [
-                {
-                    "id": m.id,
-                    "media_type": m.media_type,
-                    "file_path": m.file_path,
-                    "title": m.title,
-                    "url": m.url,
-                    "file_size": m.file_size
-                }
-                for m in item.media
-            ],
-        })
+        results.append(format_question_dict(item))
 
     return results
 
@@ -6229,7 +6295,8 @@ def create_visit_question(
         themes_json=json.dumps(clean_themes, ensure_ascii=False),
         language=lang,
         created_by=author,
-        assigned_to=body.assigned_to,
+        assigned_to=serialize_assigned_to(body.assigned_to),
+        respondent_type=body.respondent_type.strip() if body.respondent_type else None,
         order_index=max_order + 1
     )
     db.add(vq)
@@ -6245,21 +6312,7 @@ def create_visit_question(
         created_by=author
     )
 
-    return {
-        "id": vq.id,
-        "listing_id": vq.listing_id,
-        "visit_id": vq.visit_id,
-        "question_text": vq.question_text,
-        "status": vq.status,
-        "themes": clean_themes,
-        "language": vq.language or "fr",
-        "created_by": vq.created_by,
-        "assigned_to": vq.assigned_to,
-        "answer_text": vq.answer_text,
-        "answered_by": vq.answered_by,
-        "order_index": vq.order_index,
-        "created_at": vq.created_at.isoformat() if vq.created_at else None,
-    }
+    return format_question_dict(vq)
 
 
 @app.patch("/api/visites/questions/{question_id}")
@@ -6269,7 +6322,7 @@ def update_visit_question(
     body: schemas.VisitQuestionUpdate,
     db: Session = Depends(get_db)
 ):
-    """Updates a question's status (including non_applicable), answer, themes, or language."""
+    """Updates a question's status (including non_applicable), answer, attribution, themes, or language."""
     vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
     if not vq:
         raise HTTPException(status_code=404, detail="Question non trouvée")
@@ -6284,36 +6337,54 @@ def update_visit_question(
         clean_themes = [t.strip() for t in body.themes if t.strip()]
         vq.themes_json = json.dumps(clean_themes, ensure_ascii=False)
     if body.assigned_to is not None:
-        vq.assigned_to = body.assigned_to
+        vq.assigned_to = serialize_assigned_to(body.assigned_to)
     if body.answer_text is not None:
         vq.answer_text = body.answer_text.strip()
-        vq.answered_by = body.answered_by or request.session.get("username") or "Visiteur"
+        if vq.answer_text:
+            vq.answered_by = body.answered_by or vq.answered_by or request.session.get("username") or "Visiteur"
+            if body.answered_at is not None:
+                vq.answered_at = body.answered_at
+            elif not vq.answered_at:
+                vq.answered_at = datetime.now(timezone.utc)
+    if body.answered_by is not None:
+        vq.answered_by = body.answered_by.strip() if body.answered_by else None
+    if body.answered_at is not None:
+        vq.answered_at = body.answered_at
+    if body.respondent_type is not None:
+        vq.respondent_type = body.respondent_type.strip() if body.respondent_type else None
     if body.order_index is not None:
         vq.order_index = body.order_index
 
     db.commit()
     db.refresh(vq)
+    return format_question_dict(vq)
 
-    try:
-        th_list = json.loads(vq.themes_json or "[]")
-    except Exception:
-        th_list = []
 
-    return {
-        "id": vq.id,
-        "listing_id": vq.listing_id,
-        "visit_id": vq.visit_id,
-        "question_text": vq.question_text,
-        "status": vq.status,
-        "themes": th_list,
-        "language": vq.language or "fr",
-        "created_by": vq.created_by,
-        "assigned_to": vq.assigned_to,
-        "answer_text": vq.answer_text,
-        "answered_by": vq.answered_by,
-        "order_index": vq.order_index,
-        "updated_at": vq.updated_at.isoformat() if vq.updated_at else None,
-    }
+@app.post("/api/visites/{visit_id}/questions/bulk-assign")
+def bulk_assign_visit_questions(
+    visit_id: int,
+    body: schemas.VisitQuestionBulkAssign,
+    db: Session = Depends(get_db)
+):
+    """Assigns people to a set of visit questions in bulk."""
+    visit = db.query(Visit).filter(Visit.id == visit_id).first()
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    if not body.question_ids:
+        return {"status": "ok", "updated_count": 0}
+
+    questions = db.query(VisitQuestion).filter(
+        VisitQuestion.id.in_(body.question_ids),
+        or_(VisitQuestion.listing_id == visit.listing_id, VisitQuestion.visit_id == visit.id)
+    ).all()
+
+    assigned_str = serialize_assigned_to(body.assigned_to)
+    for q in questions:
+        q.assigned_to = assigned_str
+
+    db.commit()
+    return {"status": "ok", "updated_count": len(questions)}
 
 
 @app.delete("/api/visites/questions/{question_id}")
@@ -7220,8 +7291,12 @@ def get_visit_live_updates(
             "themes": th_list,
             "created_by": q.created_by,
             "assigned_to": q.assigned_to,
+            "assigned_list": q.assigned_list,
             "answer_text": q.answer_text,
             "answered_by": q.answered_by,
+            "answered_at": q.answered_at.isoformat() if q.answered_at else None,
+            "respondent_type": q.respondent_type,
+            "respondent_label": q.respondent_label,
             "order_index": q.order_index,
             "media": [
                 {
