@@ -1117,6 +1117,118 @@ def test_visit_question_assignees_attribution_and_value_added():
             app.dependency_overrides.clear()
 
 
+def test_visit_organizer_update_with_local_user_and_participant_transfer():
+    """
+    Tests updating the visit organizer:
+    - Rejects invalid / non-existent local account with 400.
+    - Rejects empty organizer name with 400.
+    - Successfully assigns an existing local account as primary organizer.
+    - If new organizer was in participants_json, removes them from participants.
+    - Automatically transfers previous organizer to participants_json.
+    """
+    client = TestClient(app)
+    ts = int(datetime.datetime.now().timestamp() * 1000)
+
+    with SessionLocal() as db:
+        user1 = User(
+            username=f"user_orig_{ts}",
+            password_hash=b"hash",
+            salt=b"salt",
+            role="admin",
+            email=f"user1_{ts}@example.com"
+        )
+        user2 = User(
+            username=f"user_new_{ts}",
+            password_hash=b"hash",
+            salt=b"salt",
+            role="user",
+            email=f"user2_{ts}@example.com"
+        )
+        db.add_all([user1, user2])
+        db.commit()
+
+        listing = Listing(
+            title="Maison Test Organisateur",
+            url=f"https://example.com/test-organizer-{ts}",
+            source=Source.MANUAL,
+            status=ListingStatus.ACTIVE
+        )
+        db.add(listing)
+        db.commit()
+
+        visit = Visit(
+            listing_id=listing.id,
+            visitor=user1.username,
+            scheduled_at=datetime.datetime.now() + datetime.timedelta(days=1),
+            participants_json=json.dumps([
+                {
+                    "id": "p12345",
+                    "name": user2.username,
+                    "username": user2.username,
+                    "email": user2.email,
+                    "role": "visiteur",
+                    "instructions": None
+                },
+                {
+                    "id": "p67890",
+                    "name": "External Guest",
+                    "username": None,
+                    "email": "guest@example.com",
+                    "role": "invité",
+                    "instructions": None
+                }
+            ])
+        )
+        db.add(visit)
+        db.commit()
+        db.refresh(visit)
+        visit_id = visit.id
+
+        app.dependency_overrides[user_required] = lambda: {"username": user1.username, "role": "admin"}
+        app.dependency_overrides[login_required] = lambda: {"username": user1.username, "role": "admin"}
+
+        try:
+            # 1. Non-existent account -> 400
+            res_bad = client.put(f"/api/visites/{visit_id}/organizer", json={"visitor": "non_existent_account_xyz"})
+            assert res_bad.status_code == 400
+            assert "n'existe pas" in res_bad.json()["detail"]
+
+            # 2. Empty visitor -> 400
+            res_empty = client.put(f"/api/visites/{visit_id}/organizer", json={"visitor": "   "})
+            assert res_empty.status_code == 400
+
+            # 3. Valid local user (user2) -> 200
+            res_ok = client.put(f"/api/visites/{visit_id}/organizer", json={"visitor": user2.username})
+            assert res_ok.status_code == 200
+            data = res_ok.json()
+            assert data["visitor"] == user2.username
+
+            db.expire_all()
+            updated_visit = db.query(Visit).filter(Visit.id == visit_id).first()
+            assert updated_visit.visitor == user2.username
+
+            parts = json.loads(updated_visit.participants_json or "[]")
+            part_names = [p["name"] for p in parts]
+            assert user2.username not in [p.get("username") for p in parts]
+            assert user1.username in part_names
+            assert "External Guest" in part_names
+
+            # 4. Changing organizer back to user1
+            res_ok2 = client.put(f"/api/visites/{visit_id}/organizer", json={"visitor": user1.username})
+            assert res_ok2.status_code == 200
+            db.expire_all()
+            updated_visit2 = db.query(Visit).filter(Visit.id == visit_id).first()
+            assert updated_visit2.visitor == user1.username
+
+            parts2 = json.loads(updated_visit2.participants_json or "[]")
+            assert user1.username not in [p.get("username") for p in parts2]
+            assert user2.username in [p.get("name") for p in parts2]
+            assert "External Guest" in [p.get("name") for p in parts2]
+
+        finally:
+            app.dependency_overrides.clear()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
 

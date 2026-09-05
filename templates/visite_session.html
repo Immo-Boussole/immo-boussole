@@ -1827,8 +1827,13 @@
             </div>
             <div class="vs-modal-body">
                 <div class="vs-form-group">
-                    <label class="vs-form-label" for="edit-organizer-name">Nom ou identifiant de l'organisateur *</label>
-                    <input type="text" id="edit-organizer-name" class="vs-form-input" placeholder="Ex: Jean-Marc">
+                    <label class="vs-form-label" for="edit-organizer-select">Sélectionner un compte local *</label>
+                    <select id="edit-organizer-select" class="vs-form-input" style="background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);">
+                    </select>
+                    <div style="font-size: 12px; color: var(--vs-text-muted); margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-info" style="color: var(--vs-primary);"></i>
+                        <span>L'ancien organisateur sera automatiquement basculé en tant que participant co-visiteur.</span>
+                    </div>
                 </div>
             </div>
             <div class="vs-modal-footer">
@@ -1860,7 +1865,8 @@
         let currentActiveTab = "faq";
         let globalCatalogCache = [];
 
-        // Preload candidate assignees from available system accounts and visit participants
+        // System accounts and candidate assignees
+        const systemUsersList = {{ available_users|tojson }};
         const rawCandidateAssignees = [
             {% for u in available_users %}
             { name: "{{ u.name }}", username: "{{ u.username }}", type: "user" },
@@ -4012,14 +4018,61 @@
 
         // ─── FINE PARTICIPANT MANAGEMENT ENGINE ──────────────────────────────
         function openEditOrganizerModal(currentName) {
-            document.getElementById('edit-organizer-name').value = currentName || '';
+            const select = document.getElementById('edit-organizer-select');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const curr = (currentName || '').trim();
+            let currentFoundInUsers = false;
+
+            const userOptions = [];
+            (systemUsersList || []).forEach(u => {
+                const isMatch = curr && (u.username.toLowerCase() === curr.toLowerCase());
+                if (isMatch) currentFoundInUsers = true;
+
+                const roleLabel = u.role === 'admin' ? 'Administrateur' : 'Utilisateur';
+                const emailLabel = u.email ? ` • ${u.email}` : '';
+                const label = `👤 ${u.username} (${roleLabel}${emailLabel})`;
+
+                userOptions.push({
+                    value: u.username,
+                    label: label,
+                    selected: isMatch
+                });
+            });
+
+            if (curr && !currentFoundInUsers) {
+                const unlinkedOpt = document.createElement('option');
+                unlinkedOpt.value = "";
+                unlinkedOpt.textContent = `⚠️ [Actuel] ${curr} (Compte non lié - choisir un compte ci-dessous)`;
+                unlinkedOpt.disabled = true;
+                unlinkedOpt.selected = true;
+                select.appendChild(unlinkedOpt);
+            } else if (!curr) {
+                const placeholderOpt = document.createElement('option');
+                placeholderOpt.value = "";
+                placeholderOpt.textContent = `-- Sélectionner un compte local --`;
+                placeholderOpt.disabled = true;
+                placeholderOpt.selected = true;
+                select.appendChild(placeholderOpt);
+            }
+
+            userOptions.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt.value;
+                el.textContent = opt.label;
+                if (opt.selected) el.selected = true;
+                select.appendChild(el);
+            });
+
             openModal('modal-edit-organizer');
         }
 
         async function submitEditOrganizer() {
-            const name = document.getElementById('edit-organizer-name').value.trim();
-            if (!name) {
-                alert('Veuillez renseigner le nom de l\'organisateur.');
+            const select = document.getElementById('edit-organizer-select');
+            const username = (select?.value || '').trim();
+            if (!username) {
+                alert('Veuillez sélectionner un compte local pour l\'organisateur principal.');
                 return;
             }
 
@@ -4028,16 +4081,22 @@
                 const res = await fetch(`/api/visites/${visitId}/organizer`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ visitor: name })
+                    body: JSON.stringify({ visitor: username })
                 });
 
                 if (res.ok) {
+                    const data = await res.json();
                     closeModal('modal-edit-organizer');
+                    showToast(`Organisateur mis à jour : ${data.visitor} !`);
                     const nameEl = document.getElementById('display-organizer-name');
-                    if (nameEl) nameEl.textContent = name;
-                    showToast('Organisateur mis à jour avec succès !');
+                    if (nameEl) nameEl.textContent = data.visitor;
+                    setTimeout(() => {
+                        window.location.hash = '#participants';
+                        location.reload();
+                    }, 600);
                 } else {
-                    alert('Erreur lors de la mise à jour de l\'organisateur.');
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || 'Erreur lors de la mise à jour de l\'organisateur.');
                 }
             } catch (err) {
                 console.error(err);

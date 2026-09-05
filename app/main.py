@@ -5949,14 +5949,70 @@ def update_visit_organizer(
     body: schemas.OrganizerUpdate,
     db: Session = Depends(get_db)
 ):
-    """Updates the visit organizer / primary visitor."""
+    """Updates the visit organizer / primary visitor to a local user account and shifts participants accordingly."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
 
-    visit.visitor = body.visitor.strip()
+    new_visitor_username = (body.visitor or "").strip()
+    if not new_visitor_username:
+        raise HTTPException(status_code=400, detail="Veuillez spécifier un compte local valide pour l'organisateur.")
+
+    target_user = db.query(models.User).filter(
+        func.lower(models.User.username) == new_visitor_username.lower()
+    ).first()
+    if not target_user:
+        raise HTTPException(status_code=400, detail=f"Le compte local '{new_visitor_username}' n'existe pas.")
+
+    canonical_username = target_user.username
+    old_visitor = (visit.visitor or "").strip()
+
+    try:
+        participants = json.loads(visit.participants_json or "[]")
+    except Exception:
+        participants = []
+
+    if old_visitor.lower() != canonical_username.lower():
+        # Remove the new organizer from the participants list if they were previously listed
+        participants = [
+            p for p in participants
+            if (p.get("username") or "").strip().lower() != canonical_username.lower()
+            and (p.get("name") or "").strip().lower() != canonical_username.lower()
+        ]
+
+        # Automatically transfer the previous organizer to the participants list if they have a non-empty name
+        if old_visitor:
+            old_user = db.query(models.User).filter(
+                func.lower(models.User.username) == old_visitor.lower()
+            ).first()
+
+            old_part_name = old_user.username if old_user else old_visitor
+            old_part_username = old_user.username if old_user else None
+            old_part_email = old_user.email if old_user else None
+            old_part_phone = old_user.phone if old_user else None
+
+            already_in_participants = any(
+                (p.get("username") and p.get("username").strip().lower() == (old_part_username or "").lower())
+                or (p.get("name") and p.get("name").strip().lower() == old_part_name.lower())
+                for p in participants
+            )
+
+            if not already_in_participants:
+                participants.append({
+                    "id": str(uuid.uuid4())[:8],
+                    "name": old_part_name,
+                    "username": old_part_username,
+                    "email": old_part_email,
+                    "phone": old_part_phone,
+                    "role": "visiteur",
+                    "instructions": None
+                })
+
+        visit.participants_json = json.dumps(participants, ensure_ascii=False)
+
+    visit.visitor = canonical_username
     db.commit()
-    return {"status": "success", "visitor": visit.visitor}
+    return {"status": "success", "visitor": visit.visitor, "participants": participants}
 
 
 # ─── Platform Global Question Catalog Endpoints ──────────────────────────────
