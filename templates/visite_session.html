@@ -180,64 +180,7 @@
         <!-- ─── TAB 1 : FAQ & QUESTIONS D'INSPECTION UNIFIÉES ───────────── -->
         <section id="tab-faq" class="vs-tab-content active">
 
-            <!-- ─── VALEUR AJOUTÉE & RÉPARTITION DES RÉPONSES ─── -->
-            <div class="vs-value-added-card" id="vs-value-added-summary">
-                <div class="vs-va-header">
-                    <div class="vs-va-title-box">
-                        <div class="vs-va-title-icon">
-                            <i class="fa-solid fa-chart-pie"></i>
-                        </div>
-                        <div>
-                            <div class="vs-va-title">Valeur Ajoutée & Contributions aux Réponses</div>
-                            <div class="vs-va-subtitle">Mise en valeur de l'implication de chaque partie prenante dans la levée des doutes</div>
-                        </div>
-                    </div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--vs-text-muted);">
-                        <span id="va-total-answered">{{ faq_stats.total_answered if faq_stats else 0 }}</span> / <span id="va-total-questions">{{ faq_stats.total_questions if faq_stats else questions|length }}</span> point(s) éclairci(s)
-                    </div>
-                </div>
 
-                <!-- Segmented Progress Bar -->
-                <div class="vs-va-progress-track" title="Répartition visuelle des réponses obtenues">
-                    <div class="vs-va-progress-seg seg-agent" id="va-bar-agent" style="width: {{ faq_stats.pct_agent if faq_stats else 0 }}%;" title="Agent immobilier: {{ faq_stats.count_agent if faq_stats else 0 }} ({{ faq_stats.pct_agent if faq_stats else 0 }}%)"></div>
-                    <div class="vs-va-progress-seg seg-proprio-agent" id="va-bar-proprio-agent" style="width: {{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%;" title="Propriétaire via agent: {{ faq_stats.count_proprio_agent if faq_stats else 0 }} ({{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%)"></div>
-                    <div class="vs-va-progress-seg seg-proprio-direct" id="va-bar-proprio-direct" style="width: {{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%;" title="Propriétaire direct: {{ faq_stats.count_proprio_direct if faq_stats else 0 }} ({{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%)"></div>
-                </div>
-
-                <!-- Breakdown Metric Cards -->
-                <div class="vs-va-metrics-grid">
-                    <div class="vs-va-metric-item metric-agent">
-                        <div class="vs-va-metric-left">
-                            <i class="fa-solid fa-user-tie vs-va-metric-icon" style="color: #3b82f6;"></i>
-                            <span class="vs-va-metric-label">Agent immobilier</span>
-                        </div>
-                        <div class="vs-va-metric-right">
-                            <div class="vs-va-metric-count" id="va-cnt-agent">{{ faq_stats.count_agent if faq_stats else 0 }}</div>
-                            <div class="vs-va-metric-pct" id="va-pct-agent">{{ faq_stats.pct_agent if faq_stats else 0 }}%</div>
-                        </div>
-                    </div>
-                    <div class="vs-va-metric-item metric-proprio-agent">
-                        <div class="vs-va-metric-left">
-                            <i class="fa-solid fa-handshake vs-va-metric-icon" style="color: #a855f7;"></i>
-                            <span class="vs-va-metric-label">Propriétaire via agent</span>
-                        </div>
-                        <div class="vs-va-metric-right">
-                            <div class="vs-va-metric-count" id="va-cnt-proprio-agent">{{ faq_stats.count_proprio_agent if faq_stats else 0 }}</div>
-                            <div class="vs-va-metric-pct" id="va-pct-proprio-agent">{{ faq_stats.pct_proprio_agent if faq_stats else 0 }}%</div>
-                        </div>
-                    </div>
-                    <div class="vs-va-metric-item metric-proprio-direct">
-                        <div class="vs-va-metric-left">
-                            <i class="fa-solid fa-house-user vs-va-metric-icon" style="color: #10b981;"></i>
-                            <span class="vs-va-metric-label">Propriétaire direct</span>
-                        </div>
-                        <div class="vs-va-metric-right">
-                            <div class="vs-va-metric-count" id="va-cnt-proprio-direct">{{ faq_stats.count_proprio_direct if faq_stats else 0 }}</div>
-                            <div class="vs-va-metric-pct" id="va-pct-proprio-direct">{{ faq_stats.pct_proprio_direct if faq_stats else 0 }}%</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Thématiques Filter Chips Bar -->
             <div class="vs-themes-bar-container">
@@ -411,53 +354,54 @@
                                 <input type="checkbox" class="vs-q-checkbox" data-qid="{{ q.id }}" onclick="event.stopPropagation(); onQuestionCheckChanged();" title="Sélectionner pour action groupée">
                                 <span class="vs-status-indicator status-{{ q.status }}"></span>
                                 <div class="vs-q-header-text">
-                                        <span class="vs-q-lang-badge">
-                                            {% if q.language == 'en' %}
-                                                <svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>
-                                                <span>EN</span>
-                                            {% else %}
-                                                <svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg>
-                                                <span>FR</span>
-                                            {% endif %}
-                                        </span>
-                                        {% if q.origin_label %}
-                                            <span class="vs-q-origin-badge">{{ q.origin_label }}</span>
-                                        {% endif %}
-                                        {% for th in q.themes_list %}
-                                            <span class="vs-q-theme-tag" data-theme="{{ th }}">{{ th }}</span>
-                                        {% endfor %}
-                                        <span class="vs-q-author">
-                                            <i class="fa-regular fa-user"></i> {{ q.created_by or 'Visiteur' }}
-                                        </span>
-
-                                        <!-- Personnes affectées -->
-                                        <span class="vs-q-assignee-badge {% if not q.assigned_list %}empty{% endif %}" id="q-assignee-badge-{{ q.id }}" onclick="event.stopPropagation(); openEditQuestionAssigneesModal({{ q.id }});" title="Personnes affectées à cette question (cliquer pour modifier)">
-                                            <i class="fa-solid fa-user-check"></i>
-                                            <span id="q-assignee-label-{{ q.id }}">
-                                                {% if q.assigned_list %}
-                                                    {{ q.assigned_list|join(', ') }}
+                                    <div class="vs-q-badges-line">
+                                        <div class="vs-q-badges-left">
+                                            <span class="vs-q-lang-badge" title="{% if q.language == 'en' %}English (EN){% else %}Français (FR){% endif %}">
+                                                {% if q.language == 'en' %}
+                                                    <svg class="vs-lang-flag" width="16" height="11" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>
                                                 {% else %}
-                                                    + Affecter
+                                                    <svg class="vs-lang-flag" width="16" height="11" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg>
                                                 {% endif %}
                                             </span>
-                                        </span>
-
-                                        <!-- Source de la réponse -->
-                                        <span class="vs-q-respondent-badge resp-{{ q.respondent_type }}" id="q-resp-badge-{{ q.id }}" {% if not q.respondent_type %}style="display: none;"{% endif %}>
-                                            {% if q.respondent_type == 'agent' %}
-                                                <i class="fa-solid fa-user-tie"></i> Agent
-                                            {% elif q.respondent_type == 'proprietaire_via_agent' %}
-                                                <i class="fa-solid fa-handshake"></i> Propriétaire via agent
-                                            {% elif q.respondent_type == 'proprietaire_direct' %}
-                                                <i class="fa-solid fa-house-user"></i> Propriétaire direct
+                                            {% if q.origin_label %}
+                                                <span class="vs-q-origin-badge">{{ q.origin_label }}</span>
                                             {% endif %}
-                                        </span>
-
-                                        {% if q.media and q.media|length > 0 %}
-                                            <span class="vs-q-theme-tag" style="background: rgba(16, 217, 164, 0.15); color: #10d9a4;" title="{{ q.media|length }} média(s) attaché(s)">
-                                                <i class="fa-solid fa-paperclip"></i> {{ q.media|length }}
+                                            {% for th in q.themes_list %}
+                                                <span class="vs-q-theme-tag" data-theme="{{ th }}">{{ th }}</span>
+                                            {% endfor %}
+                                            <span class="vs-q-author">
+                                                <i class="fa-regular fa-user"></i> {{ q.created_by or 'Visiteur' }}
                                             </span>
-                                        {% endif %}
+                                            {% if q.media and q.media|length > 0 %}
+                                                <span class="vs-q-theme-tag" style="background: rgba(16, 217, 164, 0.15); color: #10d9a4;" title="{{ q.media|length }} média(s) attaché(s)">
+                                                    <i class="fa-solid fa-paperclip"></i> {{ q.media|length }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="vs-q-badges-right">
+                                            <!-- Personnes affectées -->
+                                            <span class="vs-q-assignee-badge {% if not q.assigned_list %}empty{% endif %}" id="q-assignee-badge-{{ q.id }}" onclick="event.stopPropagation(); openEditQuestionAssigneesModal({{ q.id }});" title="Personnes affectées à cette question (cliquer pour modifier)">
+                                                <i class="fa-solid fa-user-check"></i>
+                                                <span id="q-assignee-label-{{ q.id }}">
+                                                    {% if q.assigned_list %}
+                                                        {{ q.assigned_list|join(', ') }}
+                                                    {% else %}
+                                                        + Affecter
+                                                    {% endif %}
+                                                </span>
+                                            </span>
+
+                                            <!-- Source de la réponse -->
+                                            <span class="vs-q-respondent-badge resp-{{ q.respondent_type }}" id="q-resp-badge-{{ q.id }}" {% if not q.respondent_type %}style="display: none;"{% endif %}>
+                                                {% if q.respondent_type == 'agent' %}
+                                                    <i class="fa-solid fa-user-tie"></i> Agent
+                                                {% elif q.respondent_type == 'proprietaire_via_agent' %}
+                                                    <i class="fa-solid fa-handshake"></i> Propriétaire via agent
+                                                {% elif q.respondent_type == 'proprietaire_direct' %}
+                                                    <i class="fa-solid fa-house-user"></i> Propriétaire direct
+                                                {% endif %}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="vs-q-text">{{ q.question_text }}</div>
                                 </div>
@@ -1979,33 +1923,33 @@
 
         // ─── THEME DYNAMIC PALETTE ENGINE ──────────────────────────────────────
         const THEME_COLOR_PALETTES = {
-            'toiture': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fbbf24', dot: '#f59e0b' },
-            'charpente': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fbbf24', dot: '#f59e0b' },
-            'structure': { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.4)', text: '#a5b4fc', dot: '#6366f1' },
-            'gros oeuvre': { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.4)', text: '#a5b4fc', dot: '#6366f1' },
-            'chauffage': { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)', text: '#fca5a5', dot: '#ef4444' },
-            'energie': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)', text: '#fdba74', dot: '#f97316' },
-            'dpe': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
-            'isolation': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
-            'electricite': { bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)', text: '#fde047', dot: '#eab308' },
-            'plomberie': { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.4)', text: '#67e8f9', dot: '#06b6d4' },
-            'sanitaires': { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.4)', text: '#67e8f9', dot: '#06b6d4' },
-            'humidite': { bg: 'rgba(20, 184, 166, 0.15)', border: 'rgba(20, 184, 166, 0.4)', text: '#5eead4', dot: '#14b8a6' },
-            'assainissement': { bg: 'rgba(20, 184, 166, 0.15)', border: 'rgba(20, 184, 166, 0.4)', text: '#5eead4', dot: '#14b8a6' },
-            'piscine': { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#93c5fd', dot: '#3b82f6' },
-            'exterieur': { bg: 'rgba(132, 204, 22, 0.15)', border: 'rgba(132, 204, 22, 0.4)', text: '#bef264', dot: '#84cc16' },
-            'jardin': { bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.4)', text: '#86efac', dot: '#22c55e' },
-            'copropriete': { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)', text: '#d8b4fe', dot: '#a855f7' },
-            'charges': { bg: 'rgba(217, 70, 239, 0.15)', border: 'rgba(217, 70, 239, 0.4)', text: '#f0abfc', dot: '#d946ef' },
-            'budget': { bg: 'rgba(217, 70, 239, 0.15)', border: 'rgba(217, 70, 239, 0.4)', text: '#f0abfc', dot: '#d946ef' },
-            'negociation': { bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.4)', text: '#fde68a', dot: '#f59e0b' },
-            'financier': { bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.4)', text: '#fde68a', dot: '#f59e0b' },
-            'securite': { bg: 'rgba(225, 29, 72, 0.15)', border: 'rgba(225, 29, 72, 0.4)', text: '#fda4af', dot: '#e11d48' },
-            'urbanisme': { bg: 'rgba(147, 51, 234, 0.15)', border: 'rgba(147, 51, 234, 0.4)', text: '#d8b4fe', dot: '#9333ea' },
-            'environnement': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
-            'entretien': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)', text: '#fdba74', dot: '#f97316' },
-            'travaux': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fcd34d', dot: '#d97706' },
-            'renovation': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fcd34d', dot: '#d97706' }
+            'toiture': { bg: 'rgba(245, 158, 11, 0.20)', bgActive: 'rgba(245, 158, 11, 0.45)', border: 'rgba(245, 158, 11, 0.55)', text: '#fbbf24', dot: '#f59e0b' },
+            'charpente': { bg: 'rgba(245, 158, 11, 0.20)', bgActive: 'rgba(245, 158, 11, 0.45)', border: 'rgba(245, 158, 11, 0.55)', text: '#fbbf24', dot: '#f59e0b' },
+            'structure': { bg: 'rgba(99, 102, 241, 0.20)', bgActive: 'rgba(99, 102, 241, 0.45)', border: 'rgba(99, 102, 241, 0.55)', text: '#a5b4fc', dot: '#6366f1' },
+            'gros oeuvre': { bg: 'rgba(99, 102, 241, 0.20)', bgActive: 'rgba(99, 102, 241, 0.45)', border: 'rgba(99, 102, 241, 0.55)', text: '#a5b4fc', dot: '#6366f1' },
+            'chauffage': { bg: 'rgba(239, 68, 68, 0.20)', bgActive: 'rgba(239, 68, 68, 0.45)', border: 'rgba(239, 68, 68, 0.55)', text: '#fca5a5', dot: '#ef4444' },
+            'energie': { bg: 'rgba(249, 115, 22, 0.20)', bgActive: 'rgba(249, 115, 22, 0.45)', border: 'rgba(249, 115, 22, 0.55)', text: '#fdba74', dot: '#f97316' },
+            'dpe': { bg: 'rgba(16, 185, 129, 0.20)', bgActive: 'rgba(16, 185, 129, 0.45)', border: 'rgba(16, 185, 129, 0.55)', text: '#6ee7b7', dot: '#10b981' },
+            'isolation': { bg: 'rgba(16, 185, 129, 0.20)', bgActive: 'rgba(16, 185, 129, 0.45)', border: 'rgba(16, 185, 129, 0.55)', text: '#6ee7b7', dot: '#10b981' },
+            'electricite': { bg: 'rgba(234, 179, 8, 0.20)', bgActive: 'rgba(234, 179, 8, 0.45)', border: 'rgba(234, 179, 8, 0.55)', text: '#fde047', dot: '#eab308' },
+            'plomberie': { bg: 'rgba(6, 182, 212, 0.20)', bgActive: 'rgba(6, 182, 212, 0.45)', border: 'rgba(6, 182, 212, 0.55)', text: '#67e8f9', dot: '#06b6d4' },
+            'sanitaires': { bg: 'rgba(6, 182, 212, 0.20)', bgActive: 'rgba(6, 182, 212, 0.45)', border: 'rgba(6, 182, 212, 0.55)', text: '#67e8f9', dot: '#06b6d4' },
+            'humidite': { bg: 'rgba(20, 184, 166, 0.20)', bgActive: 'rgba(20, 184, 166, 0.45)', border: 'rgba(20, 184, 166, 0.55)', text: '#5eead4', dot: '#14b8a6' },
+            'assainissement': { bg: 'rgba(20, 184, 166, 0.20)', bgActive: 'rgba(20, 184, 166, 0.45)', border: 'rgba(20, 184, 166, 0.55)', text: '#5eead4', dot: '#14b8a6' },
+            'piscine': { bg: 'rgba(59, 130, 246, 0.20)', bgActive: 'rgba(59, 130, 246, 0.45)', border: 'rgba(59, 130, 246, 0.55)', text: '#93c5fd', dot: '#3b82f6' },
+            'exterieur': { bg: 'rgba(132, 204, 22, 0.20)', bgActive: 'rgba(132, 204, 22, 0.45)', border: 'rgba(132, 204, 22, 0.55)', text: '#bef264', dot: '#84cc16' },
+            'jardin': { bg: 'rgba(34, 197, 94, 0.20)', bgActive: 'rgba(34, 197, 94, 0.45)', border: 'rgba(34, 197, 94, 0.55)', text: '#86efac', dot: '#22c55e' },
+            'copropriete': { bg: 'rgba(168, 85, 247, 0.20)', bgActive: 'rgba(168, 85, 247, 0.45)', border: 'rgba(168, 85, 247, 0.55)', text: '#d8b4fe', dot: '#a855f7' },
+            'charges': { bg: 'rgba(217, 70, 239, 0.20)', bgActive: 'rgba(217, 70, 239, 0.45)', border: 'rgba(217, 70, 239, 0.55)', text: '#f0abfc', dot: '#d946ef' },
+            'budget': { bg: 'rgba(217, 70, 239, 0.20)', bgActive: 'rgba(217, 70, 239, 0.45)', border: 'rgba(217, 70, 239, 0.55)', text: '#f0abfc', dot: '#d946ef' },
+            'negociation': { bg: 'rgba(251, 191, 36, 0.20)', bgActive: 'rgba(251, 191, 36, 0.45)', border: 'rgba(251, 191, 36, 0.55)', text: '#fde68a', dot: '#f59e0b' },
+            'financier': { bg: 'rgba(251, 191, 36, 0.20)', bgActive: 'rgba(251, 191, 36, 0.45)', border: 'rgba(251, 191, 36, 0.55)', text: '#fde68a', dot: '#f59e0b' },
+            'securite': { bg: 'rgba(225, 29, 72, 0.20)', bgActive: 'rgba(225, 29, 72, 0.45)', border: 'rgba(225, 29, 72, 0.55)', text: '#fda4af', dot: '#e11d48' },
+            'urbanisme': { bg: 'rgba(147, 51, 234, 0.20)', bgActive: 'rgba(147, 51, 234, 0.45)', border: 'rgba(147, 51, 234, 0.55)', text: '#d8b4fe', dot: '#9333ea' },
+            'environnement': { bg: 'rgba(16, 185, 129, 0.20)', bgActive: 'rgba(16, 185, 129, 0.45)', border: 'rgba(16, 185, 129, 0.55)', text: '#6ee7b7', dot: '#10b981' },
+            'entretien': { bg: 'rgba(249, 115, 22, 0.20)', bgActive: 'rgba(249, 115, 22, 0.45)', border: 'rgba(249, 115, 22, 0.55)', text: '#fdba74', dot: '#f97316' },
+            'travaux': { bg: 'rgba(245, 158, 11, 0.20)', bgActive: 'rgba(245, 158, 11, 0.45)', border: 'rgba(245, 158, 11, 0.55)', text: '#fcd34d', dot: '#d97706' },
+            'renovation': { bg: 'rgba(245, 158, 11, 0.20)', bgActive: 'rgba(245, 158, 11, 0.45)', border: 'rgba(245, 158, 11, 0.55)', text: '#fcd34d', dot: '#d97706' }
         };
 
         function getThemeColors(theme) {
@@ -2020,10 +1964,11 @@
             }
             const hue = Math.abs(hash) % 360;
             return {
-                bg: `hsla(${hue}, 70%, 55%, 0.15)`,
-                border: `hsla(${hue}, 70%, 55%, 0.4)`,
-                text: `hsl(${hue}, 80%, 75%)`,
-                dot: `hsl(${hue}, 75%, 60%)`
+                bg: `hsla(${hue}, 70%, 55%, 0.20)`,
+                bgActive: `hsla(${hue}, 75%, 55%, 0.45)`,
+                border: `hsla(${hue}, 70%, 55%, 0.55)`,
+                text: `hsl(${hue}, 85%, 78%)`,
+                dot: `hsl(${hue}, 80%, 60%)`
             };
         }
 
@@ -2031,19 +1976,47 @@
             // Apply to theme chips
             root.querySelectorAll('.vs-theme-chip').forEach(chip => {
                 const theme = chip.dataset.theme ?? chip.dataset.val ?? chip.dataset.cat ?? '';
-                if (!theme) return;
+                if (!theme) {
+                    if (chip.classList.contains('active')) {
+                        chip.style.backgroundColor = '';
+                        chip.style.borderColor = '';
+                        chip.style.color = '#ffffff';
+                        chip.style.boxShadow = '';
+                    } else {
+                        chip.style.backgroundColor = '';
+                        chip.style.borderColor = '';
+                        chip.style.color = '';
+                        chip.style.boxShadow = '';
+                    }
+                    return;
+                }
                 const colors = getThemeColors(theme);
                 if (colors) {
                     chip.style.setProperty('--chip-color', colors.text);
                     chip.style.setProperty('--chip-border', colors.border);
                     chip.style.setProperty('--chip-bg', colors.bg);
+                    chip.style.setProperty('--chip-bg-active', colors.bgActive);
                     chip.style.setProperty('--chip-dot', colors.dot);
-                    if (!chip.querySelector('.vs-theme-dot')) {
-                        const dot = document.createElement('span');
+
+                    if (chip.classList.contains('active')) {
+                        chip.style.backgroundColor = colors.bgActive;
+                        chip.style.borderColor = colors.dot;
+                        chip.style.color = '#ffffff';
+                        chip.style.boxShadow = `0 0 14px ${colors.border}`;
+                    } else {
+                        chip.style.backgroundColor = colors.bg;
+                        chip.style.borderColor = colors.border;
+                        chip.style.color = colors.text;
+                        chip.style.boxShadow = 'none';
+                    }
+
+                    let dot = chip.querySelector('.vs-theme-dot');
+                    if (!dot) {
+                        dot = document.createElement('span');
                         dot.className = 'vs-theme-dot';
-                        dot.style.backgroundColor = colors.dot;
                         chip.insertBefore(dot, chip.firstChild);
                     }
+                    dot.style.backgroundColor = colors.dot;
                 }
             });
 
@@ -2056,12 +2029,17 @@
                     tag.style.setProperty('--tag-bg', colors.bg);
                     tag.style.setProperty('--tag-border', colors.border);
                     tag.style.setProperty('--tag-color', colors.text);
-                    if (!tag.querySelector('.vs-theme-dot')) {
-                        const dot = document.createElement('span');
+                    tag.style.backgroundColor = colors.bg;
+                    tag.style.borderColor = colors.border;
+                    tag.style.color = colors.text;
+
+                    let dot = tag.querySelector('.vs-theme-dot');
+                    if (!dot) {
+                        dot = document.createElement('span');
                         dot.className = 'vs-theme-dot';
-                        dot.style.backgroundColor = colors.dot;
                         tag.insertBefore(dot, tag.firstChild);
                     }
+                    dot.style.backgroundColor = colors.dot;
                 }
             });
         }
@@ -2100,6 +2078,7 @@
             document.querySelectorAll('#themes-chips-list .vs-theme-chip').forEach(c => {
                 c.classList.toggle('active', c.dataset.theme === currentThemeFilter);
             });
+            applyThemeColors();
             applyUniversalFilters();
         });
 
@@ -2116,6 +2095,7 @@
                 chip.classList.add('active');
                 currentThemeFilter = chip.dataset.theme || "";
                 document.getElementById('filter-theme-select').value = currentThemeFilter;
+                applyThemeColors();
                 applyUniversalFilters();
             });
         });
@@ -2124,6 +2104,7 @@
         document.querySelectorAll('#theme-selector-chips .vs-theme-chip').forEach(chip => {
             chip.addEventListener('click', () => {
                 chip.classList.toggle('active');
+                applyThemeColors();
             });
         });
 
@@ -2553,16 +2534,17 @@
             }
 
             listEl.innerHTML = items.map(item => {
+                const langTitle = item.language === 'en' ? 'English (EN)' : 'Français (FR)';
                 const flagSvg = item.language === 'en'
-                    ? '<svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg><span>EN</span>'
-                    : '<svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg><span>FR</span>';
+                    ? '<svg class="vs-lang-flag" width="16" height="11" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>'
+                    : '<svg class="vs-lang-flag" width="16" height="11" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg>';
 
                 return `
                 <div class="vs-catalog-item" onclick="toggleCatalogItemCb(this)">
                     <input type="checkbox" class="vs-cat-cb" value="${item.id}" onclick="event.stopPropagation(); updateCatalogSelectedCount();">
                     <div class="vs-catalog-item-content">
                         <div class="vs-catalog-badges">
-                            <span class="vs-q-lang-badge">${flagSvg}</span>
+                            <span class="vs-q-lang-badge" title="${langTitle}">${flagSvg}</span>
                             <span class="vs-catalog-cat-badge">${item.category || 'Inspection'}</span>
                             ${(item.themes || []).map(t => `<span class="vs-q-theme-tag" data-theme="${t}">${t}</span>`).join('')}
                         </div>
@@ -2601,6 +2583,7 @@
             chip.addEventListener('click', () => {
                 document.querySelectorAll('#catalog-category-chips .vs-theme-chip').forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
+                applyThemeColors();
                 const cat = chip.dataset.cat || "";
                 const q = document.getElementById('catalog-search-input').value.trim();
                 const lang = document.getElementById('catalog-lang-filter')?.value || "";

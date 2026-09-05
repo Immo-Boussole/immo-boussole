@@ -518,30 +518,32 @@ body.visite-session-body {
 .vs-theme-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: var(--vs-surface);
-    border: 1px solid var(--vs-border);
-    color: var(--vs-text-muted);
+    gap: 7px;
+    padding: 7px 14px;
+    background: var(--chip-bg, var(--vs-surface));
+    border: 1px solid var(--chip-border, var(--vs-border));
+    color: var(--chip-color, var(--vs-text-muted));
     border-radius: 20px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
     transition: var(--vs-transition);
-    min-height: 40px;
+    min-height: 38px;
 }
 .vs-theme-chip:hover {
     border-color: var(--chip-dot, var(--vs-border-strong));
-    color: var(--vs-text);
+    color: #fff;
+    filter: brightness(1.2);
 }
 .vs-theme-chip.active {
-    background: var(--chip-bg, var(--vs-surface-3));
-    border-color: var(--chip-dot, var(--vs-accent));
-    color: #fff;
-    box-shadow: 0 0 12px var(--chip-border, rgba(59, 130, 246, 0.25));
+    background: var(--chip-bg-active, var(--vs-surface-3)) !important;
+    border-color: var(--chip-dot, var(--vs-accent)) !important;
+    color: #fff !important;
+    box-shadow: 0 0 14px var(--chip-border, rgba(59, 130, 246, 0.35));
 }
 .vs-theme-chip[data-theme]:not([data-theme=""]) {
+    background: var(--chip-bg, var(--vs-surface));
     border-color: var(--chip-border, var(--vs-border));
     color: var(--chip-color, var(--vs-text-muted));
 }
@@ -766,33 +768,50 @@ body.visite-session-body {
 
 .vs-q-badges-line {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
     align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.vs-q-badges-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.vs-q-badges-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    flex-shrink: 0;
 }
 
 .vs-q-lang-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    color: #a5b4fc;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 6px;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 2px 3px;
     border-radius: 4px;
     line-height: 1;
+    flex-shrink: 0;
+    cursor: help;
 }
 
 .vs-lang-flag {
-    width: 14px;
-    height: 10px;
+    width: 16px;
+    height: 11px;
     border-radius: 2px;
-    display: inline-block;
+    display: block;
     flex-shrink: 0;
     box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
-    vertical-align: middle;
 }
 
 .vs-q-origin-badge {
@@ -806,8 +825,8 @@ body.visite-session-body {
 }
 
 .vs-q-theme-tag {
-    background: var(--tag-bg, rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--tag-border, rgba(255, 255, 255, 0.08));
+    background: var(--tag-bg, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--tag-border, rgba(255, 255, 255, 0.15));
     color: var(--tag-color, var(--vs-text-muted));
     font-size: 11px;
     font-weight: 600;
@@ -815,7 +834,7 @@ body.visite-session-body {
     border-radius: 4px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     transition: var(--vs-transition);
 }
 

@@ -1106,12 +1106,12 @@ def test_visit_question_assignees_attribution_and_value_added():
                 assert imported_q["respondent_type"] == "agent"
                 assert imported_q["answered_by"] == "alice"
 
-                # 8. HTML Visit Session View Check
+                # 8. HTML Visit Session View Check (badges are present, top summary is removed per user request)
                 view_resp = client.get(f"/v/{token}")
                 assert view_resp.status_code == 200
-                assert "vs-value-added-card" in view_resp.text
-                assert "Valeur Ajoutée & Contributions" in view_resp.text
-                assert "Source de réponse" in view_resp.text
+                assert "vs-q-assignee-badge" in view_resp.text
+                assert "vs-q-respondent-badge" in view_resp.text
+                assert "vs-value-added-card" not in view_resp.text
 
         finally:
             app.dependency_overrides.clear()
