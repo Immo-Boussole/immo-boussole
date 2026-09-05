@@ -532,14 +532,18 @@ body.visite-session-body {
     min-height: 40px;
 }
 .vs-theme-chip:hover {
-    border-color: var(--vs-border-strong);
+    border-color: var(--chip-dot, var(--vs-border-strong));
     color: var(--vs-text);
 }
 .vs-theme-chip.active {
-    background: var(--vs-surface-3);
-    border-color: var(--vs-accent);
+    background: var(--chip-bg, var(--vs-surface-3));
+    border-color: var(--chip-dot, var(--vs-accent));
     color: #fff;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 12px var(--chip-border, rgba(59, 130, 246, 0.25));
+}
+.vs-theme-chip[data-theme]:not([data-theme=""]) {
+    border-color: var(--chip-border, var(--vs-border));
+    color: var(--chip-color, var(--vs-text-muted));
 }
 
 .vs-chip-count {
@@ -547,6 +551,14 @@ body.visite-session-body {
     background: rgba(255, 255, 255, 0.1);
     padding: 2px 6px;
     border-radius: 10px;
+}
+
+.vs-theme-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
 /* ─── Status & Search Controls Bar ────────────────────────────────────────── */
@@ -760,6 +772,9 @@ body.visite-session-body {
 }
 
 .vs-q-lang-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     background: rgba(99, 102, 241, 0.15);
     border: 1px solid rgba(99, 102, 241, 0.35);
     color: #a5b4fc;
@@ -767,6 +782,17 @@ body.visite-session-body {
     font-weight: 600;
     padding: 2px 6px;
     border-radius: 4px;
+    line-height: 1;
+}
+
+.vs-lang-flag {
+    width: 14px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+    vertical-align: middle;
 }
 
 .vs-q-origin-badge {
@@ -780,13 +806,22 @@ body.visite-session-body {
 }
 
 .vs-q-theme-tag {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--vs-text-muted);
+    background: var(--tag-bg, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--tag-border, rgba(255, 255, 255, 0.08));
+    color: var(--tag-color, var(--vs-text-muted));
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 600;
     padding: 2px 8px;
     border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: var(--vs-transition);
+}
+
+.vs-q-theme-tag .vs-theme-dot {
+    width: 6px;
+    height: 6px;
 }
 
 .vs-q-author {
@@ -2033,48 +2068,44 @@ mark.vs-highlight {
     }
 }
 
-/* ─── Floating / Sticky Bulk Actions Bar ───────────────────────────────────── */
-.vs-bulk-bar {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    width: calc(100% - 32px);
-    max-width: 820px;
-    animation: vsSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vs-bulk-bar-inner {
-    background: rgba(18, 24, 38, 0.94);
-    border: 1px solid rgba(79, 142, 247, 0.4);
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(79, 142, 247, 0.2);
-    backdrop-filter: blur(12px);
-    border-radius: 14px;
-    padding: 10px 16px;
+/* ─── Selection Row & In-Row Bulk Actions ─────────────────────────────────── */
+.vs-selection-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--vs-border);
+    font-size: 13px;
     flex-wrap: wrap;
+    gap: 10px;
 }
 
-.vs-bulk-info {
+.vs-selection-row-left {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--vs-text);
+    user-select: none;
 }
 
-.vs-bulk-count {
-    background: var(--vs-accent);
-    color: #0b0f1a;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
+.vs-selection-row-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.vs-row-bulk-actions {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    animation: vsFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vs-row-bulk-actions.visible {
+    display: flex;
 }
 
 .vs-bulk-actions {

@@ -284,35 +284,12 @@
                         </button>
                     </div>
 
-                    <!-- Action Buttons & CSV Dropdown -->
+                    <!-- Action Buttons -->
                     <div class="vs-faq-action-buttons">
                         <button class="vs-btn vs-btn-secondary" id="btn-open-catalog-modal" title="Explorer et piocher dans le catalogue global">
                             <i class="fa-solid fa-book-bookmark"></i>
                             <span>Catalogue global</span>
                         </button>
-
-                        <!-- CSV Menu Dropdown -->
-                        <div class="vs-dropdown-wrapper">
-                            <button class="vs-btn vs-btn-secondary vs-dropdown-toggle" id="btn-csv-menu">
-                                <i class="fa-solid fa-file-csv"></i>
-                                <span>CSV ▾</span>
-                            </button>
-                            <div class="vs-dropdown-menu" id="csv-menu-dropdown">
-                                <a href="/api/visites/{{ visit.id }}/questions/export-csv" class="vs-dropdown-item" download>
-                                    <i class="fa-solid fa-file-export"></i>
-                                    <span>Exporter la FAQ (.csv)</span>
-                                </a>
-                                <button type="button" class="vs-dropdown-item" id="btn-open-import-csv-modal">
-                                    <i class="fa-solid fa-file-import"></i>
-                                    <span>Importer des questions (.csv)</span>
-                                </button>
-                                <a href="/api/visites/questions/csv-template" class="vs-dropdown-item" download>
-                                    <i class="fa-solid fa-download"></i>
-                                    <span>Télécharger le modèle CSV</span>
-                                </a>
-                            </div>
-                        </div>
-
                         <button class="vs-btn vs-btn-primary" id="btn-open-add-q-modal">
                             <i class="fa-solid fa-plus"></i>
                             <span>Poser une question</span>
@@ -337,49 +314,65 @@
                     </button>
                 </div>
 
-                <!-- Select-all and Bulk bar trigger row -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--vs-border); font-size: 13px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500; color: var(--vs-text-muted);">
-                        <input type="checkbox" id="cb-select-all-questions" onchange="toggleSelectAllQuestions(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--vs-primary);">
-                        <span>Tout sélectionner (<span id="selected-questions-count">0</span> sélectionnée(s))</span>
-                    </label>
-                    <div id="bulk-selection-hint" style="font-size: 12px; color: var(--vs-text-muted); display: none;">
-                        <i class="fa-solid fa-layer-group"></i> Barre d'actions groupées active ci-dessous
+                <!-- Unified Selection & Bulk Actions Row -->
+                <div class="vs-selection-row" id="vs-selection-row">
+                    <div class="vs-selection-row-left">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500; color: var(--vs-text-muted);">
+                            <input type="checkbox" id="cb-select-all-questions" onchange="toggleSelectAllQuestions(this.checked)" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--vs-primary);">
+                            <span>Tout sélectionner (<span id="selected-questions-count">0</span> sélectionnée(s))</span>
+                        </label>
                     </div>
-                </div>
-            </div>
 
-            <!-- Floating / Sticky Bulk Actions Bar -->
-            <div id="vs-bulk-bar" class="vs-bulk-bar">
-                <div class="vs-bulk-bar-inner">
-                    <span class="vs-bulk-count">
-                        <i class="fa-solid fa-check-double"></i>
-                        <strong id="bulk-selected-label">0</strong> question(s) sélectionnée(s)
-                    </span>
-                    <div class="vs-bulk-actions">
-                        <select id="bulk-status-select" class="vs-form-input vs-bulk-select" style="padding: 6px 12px; font-size: 13px; width: auto; background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);" onchange="applyBulkStatus(this.value)">
-                            <option value="" style="background-color: #131929; color: #94a3b8;">Modifier statut...</option>
-                            <option value="en_attente" style="background-color: #131929; color: #ffffff;">⏳ En attente</option>
-                            <option value="satisfaisante" style="background-color: #131929; color: #ffffff;">✅ Satisfaisante</option>
-                            <option value="relance_necessaire" style="background-color: #131929; color: #ffffff;">⚠️ Relance</option>
-                            <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
-                            <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
-                        </select>
-                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkAssignModal()" title="Affecter les questions sélectionnées à une ou plusieurs personnes">
-                            <i class="fa-solid fa-user-check"></i> Affecter à...
-                        </button>
-                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
-                            <i class="fa-solid fa-tags"></i> Thématique
-                        </button>
-                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="exportSelectedQuestionsCSV()" title="Exporter uniquement la sélection en CSV">
-                            <i class="fa-solid fa-file-export"></i> Exporter CSV
-                        </button>
-                        <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteSelectedQuestions()" title="Supprimer définitivement la sélection">
-                            <i class="fa-solid fa-trash-can"></i> Supprimer
-                        </button>
-                        <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="clearSelectedQuestions()" title="Annuler la sélection">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
+                    <div class="vs-selection-row-right">
+                        <!-- In-Row Bulk Actions (displayed dynamically when >= 1 question selected) -->
+                        <div class="vs-row-bulk-actions" id="vs-row-bulk-actions">
+                            <select id="bulk-status-select" class="vs-form-input vs-bulk-select" style="padding: 6px 12px; font-size: 13px; width: auto; background-color: #131929; color: #ffffff; color-scheme: dark; border: 1px solid var(--vs-border-strong);" onchange="applyBulkStatus(this.value)">
+                                <option value="" style="background-color: #131929; color: #94a3b8;">Modifier statut...</option>
+                                <option value="en_attente" style="background-color: #131929; color: #ffffff;">⏳ En attente</option>
+                                <option value="satisfaisante" style="background-color: #131929; color: #ffffff;">✅ Satisfaisante</option>
+                                <option value="relance_necessaire" style="background-color: #131929; color: #ffffff;">⚠️ Relance</option>
+                                <option value="resolu" style="background-color: #131929; color: #ffffff;">🎯 Résolu</option>
+                                <option value="non_applicable" style="background-color: #131929; color: #ffffff;">🚫 Non applicable</option>
+                            </select>
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkAssignModal()" title="Affecter les questions sélectionnées à une ou plusieurs personnes">
+                                <i class="fa-solid fa-user-check"></i> Affecter à...
+                            </button>
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="openBulkThemeModal()" title="Assigner une thématique aux questions sélectionnées">
+                                <i class="fa-solid fa-tags"></i> Thématique
+                            </button>
+                            <button type="button" class="vs-btn vs-btn-danger vs-btn-sm" onclick="deleteSelectedQuestions()" title="Supprimer définitivement la sélection">
+                                <i class="fa-solid fa-trash-can"></i> Supprimer
+                            </button>
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm" onclick="clearSelectedQuestions()" title="Désélectionner tout">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+
+                        <!-- CSV Menu Dropdown (permanently visible at far right of row) -->
+                        <div class="vs-dropdown-wrapper">
+                            <button type="button" class="vs-btn vs-btn-secondary vs-btn-sm vs-dropdown-toggle" id="btn-csv-menu">
+                                <i class="fa-solid fa-file-csv"></i>
+                                <span>CSV ▾</span>
+                            </button>
+                            <div class="vs-dropdown-menu" id="csv-menu-dropdown">
+                                <button type="button" class="vs-dropdown-item" id="btn-csv-export-selected" onclick="exportSelectedQuestionsCSV()" disabled style="opacity: 0.5; cursor: not-allowed; width: 100%; text-align: left; background: none; border: none;">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>Exporter les lignes cochées de la FAQ (<span id="csv-selected-count">0</span>)</span>
+                                </button>
+                                <a href="/api/visites/{{ visit.id }}/questions/export-csv" class="vs-dropdown-item" download>
+                                    <i class="fa-solid fa-file-export"></i>
+                                    <span>Exporter toute la FAQ</span>
+                                </a>
+                                <button type="button" class="vs-dropdown-item" id="btn-open-import-csv-modal" style="width: 100%; text-align: left; background: none; border: none;">
+                                    <i class="fa-solid fa-file-import"></i>
+                                    <span>Importer des questions (.csv)</span>
+                                </button>
+                                <a href="/api/visites/questions/csv-template" class="vs-dropdown-item" download>
+                                    <i class="fa-solid fa-download"></i>
+                                    <span>Télécharger le modèle CSV</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -418,15 +411,20 @@
                                 <input type="checkbox" class="vs-q-checkbox" data-qid="{{ q.id }}" onclick="event.stopPropagation(); onQuestionCheckChanged();" title="Sélectionner pour action groupée">
                                 <span class="vs-status-indicator status-{{ q.status }}"></span>
                                 <div class="vs-q-header-text">
-                                    <div class="vs-q-badges-line">
                                         <span class="vs-q-lang-badge">
-                                            {% if q.language == 'en' %}🇬🇧 EN{% else %}🇫🇷 FR{% endif %}
+                                            {% if q.language == 'en' %}
+                                                <svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg>
+                                                <span>EN</span>
+                                            {% else %}
+                                                <svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg>
+                                                <span>FR</span>
+                                            {% endif %}
                                         </span>
                                         {% if q.origin_label %}
                                             <span class="vs-q-origin-badge">{{ q.origin_label }}</span>
                                         {% endif %}
                                         {% for th in q.themes_list %}
-                                            <span class="vs-q-theme-tag">{{ th }}</span>
+                                            <span class="vs-q-theme-tag" data-theme="{{ th }}">{{ th }}</span>
                                         {% endfor %}
                                         <span class="vs-q-author">
                                             <i class="fa-regular fa-user"></i> {{ q.created_by or 'Visiteur' }}
@@ -1964,6 +1962,7 @@
             if (hash) {
                 switchTab(hash, false);
             }
+            applyThemeColors();
         });
         if (window.location.hash) {
             const initialHash = window.location.hash.replace('#', '');
@@ -1971,6 +1970,98 @@
                 setTimeout(() => switchTab(initialHash, false), 50);
             }
         }
+
+        // ─── THEME DYNAMIC PALETTE ENGINE ──────────────────────────────────────
+        const THEME_COLOR_PALETTES = {
+            'toiture': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fbbf24', dot: '#f59e0b' },
+            'charpente': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fbbf24', dot: '#f59e0b' },
+            'structure': { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.4)', text: '#a5b4fc', dot: '#6366f1' },
+            'gros oeuvre': { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.4)', text: '#a5b4fc', dot: '#6366f1' },
+            'chauffage': { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.4)', text: '#fca5a5', dot: '#ef4444' },
+            'energie': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)', text: '#fdba74', dot: '#f97316' },
+            'dpe': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
+            'isolation': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
+            'electricite': { bg: 'rgba(234, 179, 8, 0.15)', border: 'rgba(234, 179, 8, 0.4)', text: '#fde047', dot: '#eab308' },
+            'plomberie': { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.4)', text: '#67e8f9', dot: '#06b6d4' },
+            'sanitaires': { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.4)', text: '#67e8f9', dot: '#06b6d4' },
+            'humidite': { bg: 'rgba(20, 184, 166, 0.15)', border: 'rgba(20, 184, 166, 0.4)', text: '#5eead4', dot: '#14b8a6' },
+            'assainissement': { bg: 'rgba(20, 184, 166, 0.15)', border: 'rgba(20, 184, 166, 0.4)', text: '#5eead4', dot: '#14b8a6' },
+            'piscine': { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.4)', text: '#93c5fd', dot: '#3b82f6' },
+            'exterieur': { bg: 'rgba(132, 204, 22, 0.15)', border: 'rgba(132, 204, 22, 0.4)', text: '#bef264', dot: '#84cc16' },
+            'jardin': { bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.4)', text: '#86efac', dot: '#22c55e' },
+            'copropriete': { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.4)', text: '#d8b4fe', dot: '#a855f7' },
+            'charges': { bg: 'rgba(217, 70, 239, 0.15)', border: 'rgba(217, 70, 239, 0.4)', text: '#f0abfc', dot: '#d946ef' },
+            'budget': { bg: 'rgba(217, 70, 239, 0.15)', border: 'rgba(217, 70, 239, 0.4)', text: '#f0abfc', dot: '#d946ef' },
+            'negociation': { bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.4)', text: '#fde68a', dot: '#f59e0b' },
+            'financier': { bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.4)', text: '#fde68a', dot: '#f59e0b' },
+            'securite': { bg: 'rgba(225, 29, 72, 0.15)', border: 'rgba(225, 29, 72, 0.4)', text: '#fda4af', dot: '#e11d48' },
+            'urbanisme': { bg: 'rgba(147, 51, 234, 0.15)', border: 'rgba(147, 51, 234, 0.4)', text: '#d8b4fe', dot: '#9333ea' },
+            'environnement': { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.4)', text: '#6ee7b7', dot: '#10b981' },
+            'entretien': { bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.4)', text: '#fdba74', dot: '#f97316' },
+            'travaux': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fcd34d', dot: '#d97706' },
+            'renovation': { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.4)', text: '#fcd34d', dot: '#d97706' }
+        };
+
+        function getThemeColors(theme) {
+            if (!theme) return null;
+            const norm = theme.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            for (const [key, val] of Object.entries(THEME_COLOR_PALETTES)) {
+                if (norm.includes(key)) return val;
+            }
+            let hash = 0;
+            for (let i = 0; i < theme.length; i++) {
+                hash = theme.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash) % 360;
+            return {
+                bg: `hsla(${hue}, 70%, 55%, 0.15)`,
+                border: `hsla(${hue}, 70%, 55%, 0.4)`,
+                text: `hsl(${hue}, 80%, 75%)`,
+                dot: `hsl(${hue}, 75%, 60%)`
+            };
+        }
+
+        function applyThemeColors(root = document) {
+            // Apply to theme chips
+            root.querySelectorAll('.vs-theme-chip').forEach(chip => {
+                const theme = chip.dataset.theme ?? chip.dataset.val ?? chip.dataset.cat ?? '';
+                if (!theme) return;
+                const colors = getThemeColors(theme);
+                if (colors) {
+                    chip.style.setProperty('--chip-color', colors.text);
+                    chip.style.setProperty('--chip-border', colors.border);
+                    chip.style.setProperty('--chip-bg', colors.bg);
+                    chip.style.setProperty('--chip-dot', colors.dot);
+                    if (!chip.querySelector('.vs-theme-dot')) {
+                        const dot = document.createElement('span');
+                        dot.className = 'vs-theme-dot';
+                        dot.style.backgroundColor = colors.dot;
+                        chip.insertBefore(dot, chip.firstChild);
+                    }
+                }
+            });
+
+            // Apply to question card tags
+            root.querySelectorAll('.vs-q-theme-tag').forEach(tag => {
+                const theme = tag.dataset.theme || tag.textContent.trim();
+                if (!theme) return;
+                const colors = getThemeColors(theme);
+                if (colors) {
+                    tag.style.setProperty('--tag-bg', colors.bg);
+                    tag.style.setProperty('--tag-border', colors.border);
+                    tag.style.setProperty('--tag-color', colors.text);
+                    if (!tag.querySelector('.vs-theme-dot')) {
+                        const dot = document.createElement('span');
+                        dot.className = 'vs-theme-dot';
+                        dot.style.backgroundColor = colors.dot;
+                        tag.insertBefore(dot, tag.firstChild);
+                    }
+                }
+            });
+        }
+
+        // Run immediately for pre-rendered elements
+        applyThemeColors();
 
         // Keyboard Shortcut '/' for fast search
         document.addEventListener('keydown', (e) => {
@@ -2455,21 +2546,28 @@
                 return;
             }
 
-            listEl.innerHTML = items.map(item => `
+            listEl.innerHTML = items.map(item => {
+                const flagSvg = item.language === 'en'
+                    ? '<svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 60 30" aria-label="English"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></svg><span>EN</span>'
+                    : '<svg class="vs-lang-flag" width="14" height="10" viewBox="0 0 3 2" aria-label="Français"><rect width="1" height="2" x="0" fill="#002395"/><rect width="1" height="2" x="1" fill="#ffffff"/><rect width="1" height="2" x="2" fill="#ed2939"/></svg><span>FR</span>';
+
+                return `
                 <div class="vs-catalog-item" onclick="toggleCatalogItemCb(this)">
                     <input type="checkbox" class="vs-cat-cb" value="${item.id}" onclick="event.stopPropagation(); updateCatalogSelectedCount();">
                     <div class="vs-catalog-item-content">
                         <div class="vs-catalog-badges">
-                            <span class="vs-q-lang-badge">${item.language === 'en' ? '🇬🇧 EN' : (item.language === 'fr' ? '🇫🇷 FR' : (item.language || 'FR').toUpperCase())}</span>
+                            <span class="vs-q-lang-badge">${flagSvg}</span>
                             <span class="vs-catalog-cat-badge">${item.category || 'Inspection'}</span>
-                            ${(item.themes || []).map(t => `<span class="vs-q-theme-tag">${t}</span>`).join('')}
+                            ${(item.themes || []).map(t => `<span class="vs-q-theme-tag" data-theme="${t}">${t}</span>`).join('')}
                         </div>
                         <div class="vs-catalog-q-text">${item.question_text}</div>
                         ${item.advice_notes ? `<div class="vs-catalog-advice"><i class="fa-solid fa-lightbulb"></i> ${item.advice_notes}</div>` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
+            applyThemeColors(listEl);
             updateCatalogSelectedCount();
         }
 
@@ -3176,18 +3274,29 @@
             const countEl = document.getElementById('selected-questions-count');
             if (countEl) countEl.textContent = cnt;
             
-            const bulkBar = document.getElementById('vs-bulk-bar');
-            const bulkLabel = document.getElementById('bulk-selected-label');
-            const hint = document.getElementById('bulk-selection-hint');
-            
-            if (bulkBar && bulkLabel) {
-                bulkLabel.textContent = cnt;
+            // In-row bulk actions container
+            const rowActions = document.getElementById('vs-row-bulk-actions');
+            if (rowActions) {
                 if (cnt > 0) {
-                    bulkBar.classList.add('visible');
-                    if (hint) hint.style.display = 'inline-block';
+                    rowActions.classList.add('visible');
                 } else {
-                    bulkBar.classList.remove('visible');
-                    if (hint) hint.style.display = 'none';
+                    rowActions.classList.remove('visible');
+                }
+            }
+
+            // CSV dropdown menu item for selected questions
+            const csvSelectedBtn = document.getElementById('btn-csv-export-selected');
+            const csvSelectedCount = document.getElementById('csv-selected-count');
+            if (csvSelectedCount) csvSelectedCount.textContent = cnt;
+            if (csvSelectedBtn) {
+                if (cnt > 0) {
+                    csvSelectedBtn.disabled = false;
+                    csvSelectedBtn.style.opacity = '1';
+                    csvSelectedBtn.style.cursor = 'pointer';
+                } else {
+                    csvSelectedBtn.disabled = true;
+                    csvSelectedBtn.style.opacity = '0.5';
+                    csvSelectedBtn.style.cursor = 'not-allowed';
                 }
             }
 
