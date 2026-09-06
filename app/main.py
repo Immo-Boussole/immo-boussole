@@ -149,6 +149,60 @@ app.add_middleware(
     same_site="lax"
 )
 
+
+class HeaderEnforcementMiddleware(BaseHTTPMiddleware):
+    """Enforces the presence and validity of required HTTP headers (e.g. from Cloudflare Tunnel).
+    
+    Protects against direct origin bypass when exposed behind Cloudflared or a reverse proxy.
+    Exempts internal healthchecks, CORS preflights, and optionally localhost callers.
+    """
+    async def dispatch(self, request: Request, call_next):
+        required_headers = settings.parsed_required_headers
+        if not required_headers:
+            return await call_next(request)
+
+        # 1. Exempt CORS preflight (OPTIONS)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # 2. Exempt container health check endpoints
+        path = request.url.path
+        if path in ("/health", "/api/health"):
+            return await call_next(request)
+
+        # 3. Exempt localhost / loopback calls if configured
+        if settings.REQUIRED_HEADERS_EXEMPT_LOCALHOST:
+            client_host = request.client.host if request.client else ""
+            if client_host in ("127.0.0.1", "::1", "localhost"):
+                return await call_next(request)
+
+        # 4. Enforce presence and expected values
+        client_ip = request.client.host if request.client else "unknown"
+        for req_header, expected_val in required_headers.items():
+            actual_val = request.headers.get(req_header)
+            if actual_val is None:
+                logger.warning(
+                    f"[Security] Blocked direct request from {client_ip} to {path}: missing required header '{req_header}'"
+                )
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Access Denied: Direct origin connection prohibited"},
+                )
+            if expected_val is not None:
+                if not secrets.compare_digest(actual_val, expected_val):
+                    logger.warning(
+                        f"[Security] Blocked direct request from {client_ip} to {path}: invalid value for header '{req_header}'"
+                    )
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "Access Denied: Direct origin connection prohibited"},
+                    )
+
+        return await call_next(request)
+
+
+app.add_middleware(HeaderEnforcementMiddleware)
+
 # Mount static files (local media storage)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

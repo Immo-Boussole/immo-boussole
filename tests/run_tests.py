@@ -30,7 +30,8 @@ TEST_GROUPS = {
         "test_missing_location_repair.py",
         "test_source_preview_proxy.py",
         "test_visit_collaboration.py",
-        "test_csv_encoding.py"
+        "test_csv_encoding.py",
+        "test_header_enforcement.py"
     ],
     "Network": [
         "test_tls.py"

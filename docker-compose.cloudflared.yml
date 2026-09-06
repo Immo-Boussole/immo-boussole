@@ -29,6 +29,8 @@ services:
       BROWSERLESS_URL: "ws://browserless:3000"
       SCRAPING_INTERVAL_HOURS: "${SCRAPING_INTERVAL_HOURS:-12}"
       DEBUG: "${DEBUG:-false}"
+      # Enforce Cloudflare Tunnel headers to block direct origin bypass (e.g. "CF-Ray,X-Origin-Verify:secret")
+      REQUIRED_HEADERS: "${REQUIRED_HEADERS:-}"
     volumes:
       # SQLite database persistence
       - db-data:/app/data

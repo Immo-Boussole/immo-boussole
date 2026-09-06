@@ -174,6 +174,23 @@ Principales variables configurables dans `.env` :
 | `GEORISQUES_API_KEY` | *(optionnel)* | Clé API pour les risques naturels et technologiques français. |
 | `OLLAMA_URL` | `http://host.docker.internal:11434` | Endpoint pour l'assistant IA Ollama. |
 | `OLLAMA_MODEL` | `llama3` | Modèle utilisé pour le chat et l'analyse. |
+| `REQUIRED_HEADERS` | *(vide)* | Liste d'en-têtes obligatoires (présence `Header-Name` ou correspondance exacte `Header-Name:Valeur`) pour forcer le transit par Cloudflare. |
+| `REQUIRED_HEADERS_EXEMPT_LOCALHOST` | `true` | Si `true`, exempte les requêtes locales (`127.0.0.1`, `::1`) du contrôle d'en-têtes. |
+
+---
+
+### 🛡️ Sécurité Cloudflare Tunnel & Forçage d'En-têtes
+
+Lorsqu'Immo-Boussole est exposé au moyen d'un **Cloudflare Tunnel (`cloudflared`)**, vous pouvez bloquer tout accès direct à l'origine et contraindre le trafic externe à transiter exclusivement par Cloudflare :
+
+1. **Configurer Immo-Boussole** : Dans votre `.env`, définissez `REQUIRED_HEADERS` :
+   ```ini
+   REQUIRED_HEADERS="X-Origin-Verify:votre_secret_tres_robuste,CF-Ray"
+   ```
+2. **Configurer Cloudflare** :
+   - **Via Cloudflare Zero Trust** : Rendez-vous dans **Networks** > **Tunnels** > Modifier votre hostname public > **Additional application settings** > **HTTP Headers** > Ajouter l'en-tête `X-Origin-Verify` avec la valeur `votre_secret_tres_robuste`.
+   - **Via les Règles de Transformation** : Dans le Dashboard Cloudflare > **Rules** > **Transform Rules** > **Modify Request Header** > Ajouter l'en-tête de requête `X-Origin-Verify` avec votre valeur secrète.
+3. Les sondes de santé internes de Docker (`/health`) et les requêtes CORS `OPTIONS` restent automatiquement exemptées.
 
 ---
 

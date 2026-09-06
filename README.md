@@ -174,6 +174,23 @@ Common configuration variables in `.env`:
 | `GEORISQUES_API_KEY` | *(optional)* | API key for French natural/technological risk data. |
 | `OLLAMA_URL` | `http://host.docker.internal:11434` | Endpoint for the Ollama AI assistant. |
 | `OLLAMA_MODEL` | `llama3` | Model used for chat and listing analysis. |
+| `REQUIRED_HEADERS` | *(empty)* | Comma-separated list of required headers (presence `Header-Name` or exact match `Header-Name:Value`) to enforce connections through Cloudflare. |
+| `REQUIRED_HEADERS_EXEMPT_LOCALHOST` | `true` | When `true`, exempts local loopback calls (`127.0.0.1`, `::1`) from required header enforcement. |
+
+---
+
+### 🛡️ Cloudflare Tunnel Security & Header Enforcement
+
+When exposing Immo-Boussole through a **Cloudflare Tunnel (`cloudflared`)**, you can block direct origin bypass and force all external traffic to transit via Cloudflare:
+
+1. **Configure Immo-Boussole**: In `.env`, define `REQUIRED_HEADERS`:
+   ```ini
+   REQUIRED_HEADERS="X-Origin-Verify:your_super_secret_token,CF-Ray"
+   ```
+2. **Configure Cloudflare**:
+   - **Via Cloudflare Zero Trust**: Navigate to **Networks** > **Tunnels** > Edit your tunnel public hostname > **Additional application settings** > **HTTP Headers** > Add header `X-Origin-Verify` with value `your_super_secret_token`.
+   - **Via Cloudflare Transform Rules**: In Cloudflare Dashboard > **Rules** > **Transform Rules** > **Modify Request Header** > Add request header `X-Origin-Verify` with your secret value for your domain.
+3. Internal Docker healthcheck endpoints (`/health`) and CORS `OPTIONS` preflight requests remain automatically exempted.
 
 ---
 

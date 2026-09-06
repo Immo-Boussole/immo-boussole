@@ -48,6 +48,30 @@ class Settings(BaseSettings):
     OLLAMA_URL: str = "http://host.docker.internal:11434"
     OLLAMA_MODEL: str = "llama3"
 
+    # Header Enforcement (Cloudflare Tunnel / Reverse Proxy security)
+    # Format: comma-separated list of "Header-Name" (presence only) or "Header-Name:Expected-Value" (exact match)
+    # Example: "CF-Ray,X-Origin-Verify:my-super-secret-token"
+    # Disabled when empty or whitespace.
+    REQUIRED_HEADERS: str = ""
+    REQUIRED_HEADERS_EXEMPT_LOCALHOST: bool = True
+
+    @property
+    def parsed_required_headers(self) -> dict:
+        """Parse REQUIRED_HEADERS into a dictionary {header_name_lowercase: expected_value_or_none}."""
+        if not self.REQUIRED_HEADERS or not self.REQUIRED_HEADERS.strip():
+            return {}
+        result = {}
+        for item in self.REQUIRED_HEADERS.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            if ":" in item:
+                key, val = item.split(":", 1)
+                result[key.strip().lower()] = val.strip()
+            else:
+                result[item.lower()] = None
+        return result
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
