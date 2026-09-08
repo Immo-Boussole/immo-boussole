@@ -113,9 +113,10 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
     path_obj = Path(image_path)
     if not path_obj.is_file():
         # Essayer avec le préfixe relatif au workspace ou static
+        clean_name = str(image_path).lstrip("/\\")
         alt_paths = [
-            Path(str(image_path).lstrip("/\\")),
-            Path(f"static/{str(image_path).lstrip('/\\')}"),
+            Path(clean_name),
+            Path("static") / clean_name,
         ]
         found = False
         for p in alt_paths:
