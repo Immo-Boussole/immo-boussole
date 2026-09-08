@@ -1033,6 +1033,31 @@ async def create_listing_from_details(
         except Exception as e:
             print(f"[Services] Fallback repair_listing_photos failed for listing {listing.id}: {e}")
 
+    # ── Détection Sous compromis (Texte + OCR 1ère photo) ──
+    try:
+        from app.compromis import analyze_listing_compromis
+        first_local_photo = local_paths[0] if local_paths else None
+        if not first_local_photo and listing.photos_local:
+            p_list = json_to_photos(listing.photos_local)
+            if p_list:
+                first_local_photo = p_list[0]
+
+        is_compromis, detected_by = analyze_listing_compromis(
+            description=listing.description_text,
+            first_photo_path=first_local_photo
+        )
+        if is_compromis and not (existing and existing.compromis_detected_by == "manual"):
+            listing.is_under_compromis = True
+            listing.compromis_detected_by = detected_by
+            db.commit()
+        elif not is_compromis and not (existing and existing.compromis_detected_by == "manual"):
+            if listing.compromis_detected_by in ("description", "ocr"):
+                listing.is_under_compromis = False
+                listing.compromis_detected_by = None
+                db.commit()
+    except Exception as e:
+        print(f"[Services] Error analyzing compromis for listing {listing.id}: {e}")
+
     # ── Geocoding ──
     if (listing.location or listing.city) and listing.latitude is None:
         loc = listing.location or listing.city
@@ -1300,6 +1325,21 @@ async def scrape_and_diff(query: SearchQuery, db: Session, ready_search=None):
                             db.commit()
                     except Exception as e:
                         print(f"[Services] Error downloading photos for NEW listing {new_listing.id}: {e}")
+
+                # ── Détection Sous compromis (Texte + OCR 1ère photo) ──
+                try:
+                    from app.compromis import analyze_listing_compromis
+                    first_photo = downloaded[0] if (photo_urls and 'downloaded' in locals() and downloaded) else None
+                    is_comp, det_by = analyze_listing_compromis(
+                        description=new_listing.description_text,
+                        first_photo_path=first_photo
+                    )
+                    if is_comp:
+                        new_listing.is_under_compromis = True
+                        new_listing.compromis_detected_by = det_by
+                        db.commit()
+                except Exception as e:
+                    print(f"[Services] Error detecting compromis for listing {new_listing.id}: {e}")
 
                 await update_listing_georisques(new_listing, db)
                 if new_listing.city:

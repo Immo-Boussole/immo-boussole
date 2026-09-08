@@ -623,6 +623,32 @@
             z-index: 1;
         }
 
+        /* ── Corner Ribbon: Sous Compromis ── */
+        .corner-ribbon-compromis {
+            position: absolute;
+            top: 14px;
+            left: -34px;
+            transform: rotate(-45deg);
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            font-size: 0.58rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 4px 32px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+            z-index: 12;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.35);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+            white-space: nowrap;
+        }
+
+        .card-img.has-compromis .badge {
+            top: 2.25rem;
+        }
+
         /* DPE pill on image */
         .dpe-pill {
             position: absolute;
@@ -1458,6 +1484,9 @@
                     <button type="button" class="tbl-filter-chip" id="f-rejetee" onclick="toggleStatusFilter('rejetee', this)" style="color: var(--orange);" title="{{ t(request, 'dashboard.rejected', 'Rejetées') }}">
                         <i class="fa-solid fa-ban"></i> <span>{{ t(request, 'dashboard.rejected', 'Rejetées') }}</span>
                     </button>
+                    <button type="button" class="tbl-filter-chip" id="f-compromis" onclick="toggleCompromisFilter(this)" style="color: #f97316;" title="{{ t(request, 'dashboard.filters.compromis', 'Sous compromis') }}">
+                        <i class="fa-solid fa-handshake"></i> <span>{{ t(request, 'dashboard.filters.compromis', 'Sous compromis') }}</span>
+                    </button>
                 </div>
             </div>
 
@@ -1545,9 +1574,15 @@
                     data-visit-status="{{ listing.last_visit_status or '' }}"
                     data-contacted="{{ 'true' if listing.has_contact_or_visit else 'false' }}"
                     data-repair-tags="{{ listing.repair_tags or '[]' }}"
+                    data-under-compromis="{{ 'true' if listing.is_under_compromis else 'false' }}"
                     onclick="window.open('/listings/{{ listing.id }}', '_blank')">
 
-                    <div class="card-img">
+                    <div class="card-img {% if listing.is_under_compromis %}has-compromis{% endif %}">
+                        {% if listing.is_under_compromis %}
+                        <div class="corner-ribbon-compromis" title="{{ t(request, 'listing.under_compromis_tooltip', 'Bien sous compromis de vente ou sous offre') }}">
+                            <span>{{ t(request, 'listing.under_compromis_badge', 'Sous compromis') }}</span>
+                        </div>
+                        {% endif %}
                         {% if photos %}
                         <img src="/{{ photos[0] }}" alt="{{ listing.title }}" loading="lazy">
                         {% else %}
@@ -2243,6 +2278,17 @@
             }
 
             let selectedStatuses = new Set(['nouvelle', 'active']);
+            let showCompromis = false;
+
+            function toggleCompromisFilter(btn) {
+                showCompromis = !showCompromis;
+                if (showCompromis) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+                applyListingFilters();
+            }
 
             function toggleStatusFilter(status, btn) {
                 if (selectedStatuses.has(status)) {
@@ -2269,6 +2315,15 @@
 
                 cards.forEach(card => {
                     const cardStatus = (card.dataset.status || '').toLowerCase();
+                    const isUnderCompromis = card.dataset.underCompromis === 'true';
+
+                    let matchCompromis = true;
+                    if (isUnderCompromis) {
+                        matchCompromis = showCompromis;
+                    } else if (showCompromis && selectedStatuses.size === 0) {
+                        matchCompromis = false;
+                    }
+
                     const matchStatus = selectedStatuses.size === 0 || selectedStatuses.has(cardStatus);
 
                     const searchVal = search.replace('#', '');
@@ -2299,7 +2354,7 @@
                         matchRepair = Array.isArray(tags) && tags.includes(repairTag);
                     }
 
-                    const show = matchStatus && matchSearch && matchSource && matchDpe && matchContacted && matchVisit && matchRepair;
+                    const show = matchCompromis && matchStatus && matchSearch && matchSource && matchDpe && matchContacted && matchVisit && matchRepair;
                     card.style.display = show ? '' : 'none';
                     if (show) visible++;
                 });
@@ -2326,6 +2381,10 @@
                 if (vstEl) vstEl.value = '';
                 const rprEl = document.getElementById('filter-repair-tag');
                 if (rprEl) rprEl.value = '';
+
+                showCompromis = false;
+                const fCompromis = document.getElementById('f-compromis');
+                if (fCompromis) fCompromis.classList.remove('active');
 
                 selectedStatuses = new Set(['nouvelle', 'active']);
                 document.querySelectorAll('.tbl-filter-chip').forEach(chip => {

@@ -124,6 +124,8 @@ class ListingUpdateRequest(BaseModel):
     orientation: Optional[str] = None
     is_favorite: Optional[bool] = None
     contact_made: Optional[bool] = None
+    is_under_compromis: Optional[bool] = None
+    compromis_detected_by: Optional[str] = None
     last_visit_status: Optional[str] = None
 
 

@@ -26,7 +26,7 @@ WORKDIR /app
 
 # Upgrade system packages for security and install basic tools
 RUN apt-get update && apt-get upgrade -y \
-    && apt-get install -y --no-install-recommends curl wget \
+    && apt-get install -y --no-install-recommends curl wget tesseract-ocr tesseract-ocr-fra \
     && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="WikiJM"

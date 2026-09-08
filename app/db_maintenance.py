@@ -876,3 +876,52 @@ def optimize_sqlite_database() -> dict:
     }
 
 
+def scan_all_listings_for_compromis(db: Session) -> dict:
+    """
+    Parcourt toutes les annonces de la base de données pour détecter les mentions
+    de 'sous compromis' ou 'sous offre' dans la description et via OCR sur la première photo locale.
+    Préserve formellement les annonces dont le statut a été défini manuellement par l'utilisateur.
+    """
+    from app.compromis import analyze_listing_compromis
+    from app.media import json_to_photos
+
+    listings = db.query(Listing).filter(Listing.status != ListingStatus.REJECTED).all()
+    scanned_count = 0
+    detected_count = 0
+    cleared_count = 0
+
+    for l in listings:
+        scanned_count += 1
+        # Préserver les saisies manuelles
+        if l.compromis_detected_by == "manual":
+            continue
+
+        first_photo = None
+        if l.photos_local:
+            p_list = json_to_photos(l.photos_local)
+            if p_list:
+                first_photo = p_list[0]
+
+        is_comp, det_by = analyze_listing_compromis(
+            description=l.description_text,
+            first_photo_path=first_photo
+        )
+
+        if is_comp and not l.is_under_compromis:
+            l.is_under_compromis = True
+            l.compromis_detected_by = det_by
+            detected_count += 1
+        elif not is_comp and l.is_under_compromis and l.compromis_detected_by in ("description", "ocr"):
+            l.is_under_compromis = False
+            l.compromis_detected_by = None
+            cleared_count += 1
+
+    db.commit()
+    return {
+        "scanned": scanned_count,
+        "detected": detected_count,
+        "cleared": cleared_count
+    }
+
+
+

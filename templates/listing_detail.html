@@ -379,6 +379,28 @@
         .dot.active { background: var(--accent); transform: scale(1.3); }
         .photo-count { position: absolute; bottom: 0.75rem; right: 0.75rem; background: rgba(0,0,0,0.6); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; z-index: 3; }
 
+        /* ── Corner Ribbon: Sous Compromis ── */
+        .corner-ribbon-compromis {
+            position: absolute;
+            top: 20px;
+            left: -38px;
+            transform: rotate(-45deg);
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            font-size: 0.70rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 5px 42px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+            z-index: 55;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.35);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+            white-space: nowrap;
+        }
+
         /* ── Duplicate Photo Overlay Banner ── */
         .duplicate-photo-banner {
             position: absolute;
@@ -1765,6 +1787,11 @@
 
             <!-- Photo Carousel -->
             <div class="carousel" id="carousel">
+                {% if listing.is_under_compromis %}
+                <div class="corner-ribbon-compromis" title="{{ t(request, 'listing.under_compromis_tooltip', 'Bien sous compromis de vente ou sous offre') }}">
+                    <span>{{ t(request, 'listing.under_compromis_badge', 'Sous compromis') }}</span>
+                </div>
+                {% endif %}
                 {% if listing.last_visit_status %}
                 <div class="visit-status-container" style="top: 12px; right: 12px; z-index: 50;" data-listing-id="{{ listing.id }}" data-listing-title="{{ listing.title|default('') }}" onclick="event.stopPropagation();">
                     <div class="visit-status-badge status-{{ listing.last_visit_status }}" onclick="toggleVisitStatusDropdown(this, event)" title="Cliquer pour modifier l'état">
@@ -3174,6 +3201,14 @@
                     </select>
                 </div>
                 
+                <!-- Sous compromis status toggle -->
+                <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0; background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25); border-radius: 9px; padding: 0.75rem 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.65rem; margin-bottom: 0; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="edit-under-compromis" {% if listing.is_under_compromis %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #f97316; cursor: pointer;">
+                        <span style="font-weight: 700; color: #f97316; font-size: 0.88rem;"><i class="fa-solid fa-handshake"></i> {{ t(request, 'listing.edit_under_compromis', 'Bien sous compromis de vente') }}</span>
+                    </label>
+                </div>
+
                 <!-- Full width Description -->
                 <div class="form-row" style="grid-column: 1 / -1; margin-bottom: 0;">
                     <label>{{ t(request, 'listing.edit_description') }}</label>
@@ -4640,6 +4675,7 @@
             agency_fee: valNum('edit-fees'),
             parking_count: valNum('edit-parking'),
             orientation: valStr('edit-orientation'),
+            is_under_compromis: document.getElementById('edit-under-compromis') ? document.getElementById('edit-under-compromis').checked : false,
             description_text: valStr('edit-desc'),
         };
 

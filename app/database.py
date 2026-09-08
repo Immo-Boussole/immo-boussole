@@ -289,6 +289,10 @@ _MIGRATIONS = [
     # visit_questions — answered_at timestamp and respondent_type v39
     ("visit_questions", "answered_at",                     "DATETIME"),
     ("visit_questions", "respondent_type",                 "TEXT"),
+
+    # listings — sous compromis status v40
+    ("listings", "is_under_compromis",                     "BOOLEAN DEFAULT 0"),
+    ("listings", "compromis_detected_by",                  "TEXT"),
 ]
 
 
@@ -321,6 +325,7 @@ def run_migrations():
         # Strategic Indexes for High Performance Queries
         _INDEXES = [
             ("idx_listings_status", "CREATE INDEX IF NOT EXISTS idx_listings_status ON listings(status);"),
+            ("idx_listings_is_under_compromis", "CREATE INDEX IF NOT EXISTS idx_listings_is_under_compromis ON listings(is_under_compromis);"),
             ("idx_listings_is_duplicate", "CREATE INDEX IF NOT EXISTS idx_listings_is_duplicate ON listings(is_duplicate);"),
             ("idx_listings_duplicate_of_id", "CREATE INDEX IF NOT EXISTS idx_listings_duplicate_of_id ON listings(duplicate_of_id);"),
             ("idx_listings_to_visit", "CREATE INDEX IF NOT EXISTS idx_listings_to_visit ON listings(to_visit);"),

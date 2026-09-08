@@ -263,6 +263,26 @@ async def _enrich_external_listing(url: str, listing_id: Optional[int] = None, f
                     except Exception as e:
                         print(f"[API] Floorplan attachment error for listing {listing.id}: {e}")
 
+                # 1c. Compromis detection
+                if not listing.is_under_compromis or listing.compromis_detected_by != "manual":
+                    try:
+                        from app.compromis import analyze_listing_compromis
+                        first_photo = downloaded[0] if ('downloaded' in locals() and downloaded) else None
+                        if not first_photo and listing.photos_local:
+                            p_list = json.loads(listing.photos_local)
+                            if p_list:
+                                first_photo = p_list[0]
+                        is_comp, det_by = analyze_listing_compromis(
+                            description=listing.description_text,
+                            first_photo_path=first_photo
+                        )
+                        if is_comp:
+                            listing.is_under_compromis = True
+                            listing.compromis_detected_by = det_by
+                            db.commit()
+                    except Exception as e:
+                        print(f"[API] Compromis check error for listing {listing.id}: {e}")
+
                 # 2. Geocoding if coordinates are missing
                 if listing.latitude is None and (listing.location or listing.city):
                     loc = listing.location or listing.city

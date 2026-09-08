@@ -31,7 +31,8 @@ TEST_GROUPS = {
         "test_source_preview_proxy.py",
         "test_visit_collaboration.py",
         "test_csv_encoding.py",
-        "test_header_enforcement.py"
+        "test_header_enforcement.py",
+        "test_compromis_detection.py"
     ],
     "Network": [
         "test_tls.py"

@@ -288,6 +288,8 @@ class ListingUpdateRequest(BaseModel):
     condition: Optional[str] = None
     parking_count: Optional[int] = None
     orientation: Optional[str] = None
+    is_under_compromis: Optional[bool] = None
+    compromis_detected_by: Optional[str] = None
 
 
 class PhotoImportRequest(BaseModel):
@@ -2935,6 +2937,22 @@ def refresh_tags(background_tasks: BackgroundTasks, _auth = Depends(login_requir
     return {"status": "success", "message": "Le rafraîchissement complet des tags et statuts a été lancé en arrière-plan."}
 
 
+@app.post("/api/admin/compromis/scan-all")
+def scan_compromis_all(
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _auth = Depends(admin_required)
+):
+    """Triggers a full retroactive scan of all listings to detect under compromis mentions."""
+    def _run_scan():
+        from app.database import SessionLocal
+        with SessionLocal() as session:
+            db_maintenance.scan_all_listings_for_compromis(session)
+
+    background_tasks.add_task(_run_scan)
+    return {"status": "success", "message": "Le scan rétroactif des biens sous compromis a été lancé en arrière-plan."}
+
+
 # ─── Administration: Database Maintenance ──────────────────────────────────────
 
 @app.get("/api/admin/db/problems")
@@ -5079,6 +5097,9 @@ def update_listing(
         re_geocode = True
     if "city" in update_data and update_data["city"] != listing.city:
         re_geocode = True
+
+    if "is_under_compromis" in update_data and "compromis_detected_by" not in update_data:
+        update_data["compromis_detected_by"] = "manual"
 
     for key, value in update_data.items():
         setattr(listing, key, value)

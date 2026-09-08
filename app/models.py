@@ -157,6 +157,8 @@ class Listing(Base):
     is_disliked = Column(Boolean, default=False)
     to_visit = Column(Boolean, default=False)
     contact_made = Column(Boolean, default=False)
+    is_under_compromis = Column(Boolean, default=False, nullable=False, index=True)
+    compromis_detected_by = Column(String(50), nullable=True)  # "description", "ocr", "manual"
     last_visit_status = Column(String(50), nullable=True)  # retour_agence, visite_programmee, deja_visitee, contre_visite, sans_suite_acheteur, sans_suite_visiteur, a_relancer
     repair_tags = Column(Text, nullable=True)              # JSON list of active error type keys (e.g. ["missing_location", "empty_description"])
     scraped_at = Column(DateTime(timezone=True), nullable=True)  # When this data was retrieved
