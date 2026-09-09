@@ -136,8 +136,8 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
 
     try:
         with Image.open(path_obj) as img:
-            # Redimensionner si image supérieure à 900px pour accélérer l'OCR
-            max_dimension = 900
+            # Redimensionner si image supérieure à 800px pour accélérer l'OCR
+            max_dimension = 800
             w, h = img.size
             if max(w, h) > max_dimension:
                 scale = max_dimension / max(w, h)
@@ -154,7 +154,6 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
 
             ocr_passes = [
                 (img_gray, "--psm 11"),
-                (img_gray, ""),
             ]
 
             try:
@@ -162,25 +161,18 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
                 enhancer = ImageEnhance.Contrast(img_gray)
                 img_contrast = enhancer.enhance(1.8)
                 if img_contrast is not None:
-                    ocr_passes.insert(1, (img_contrast, "--psm 11"))
-                    ocr_passes.append((img_contrast, ""))
+                    ocr_passes.append((img_contrast, "--psm 11"))
             except Exception as e_enh:
                 logger.debug(f"[Compromis OCR] ImageEnhance contrast non appliqué: {e_enh}")
 
             for image_variant, config_flag in ocr_passes:
                 try:
-                    if config_flag:
-                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", config=config_flag, timeout=6)
-                    else:
-                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", timeout=6)
+                    extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", config=config_flag, timeout=4)
                 except Exception as e_lang:
-                    # Fallback sur la langue par défaut si fra n'est pas installé
+                    # Fallback sur la langue par défaut si fra n'est pas installé ou timeout
                     logger.debug(f"[Compromis OCR] Langue 'fra+eng' non disponible ou timeout ({e_lang}), fallback langue par défaut")
                     try:
-                        if config_flag:
-                            extracted_text = pytesseract.image_to_string(image_variant, config=config_flag, timeout=6)
-                        else:
-                            extracted_text = pytesseract.image_to_string(image_variant, timeout=6)
+                        extracted_text = pytesseract.image_to_string(image_variant, config=config_flag, timeout=4)
                     except Exception:
                         extracted_text = ""
 

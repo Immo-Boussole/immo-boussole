@@ -264,18 +264,12 @@ def identify_problems(db: Session, hide_rejected: bool = True):
     ]
     past_first_visit_listing_ids = list(dict.fromkeys(v.listing_id for v in past_first_visits if v.listing_id))
 
-    # Missing compromis tag (mentions of compromis/offre in description or 1st photo, but listing.is_under_compromis is False)
+    # Missing compromis tag (mentions of compromis/offre in description, but listing.is_under_compromis is False)
     missing_compromis_tag_listings = []
-    from app.compromis import analyze_listing_compromis
-    from app.media import json_to_photos
+    from app.compromis import detect_compromis_in_text
     for l in target_listings:
         if not l.is_under_compromis and l.compromis_detected_by != "manual":
-            first_p = None
-            if l.photos_local:
-                p_list = json_to_photos(l.photos_local)
-                if p_list:
-                    first_p = p_list[0]
-            is_comp, _ = analyze_listing_compromis(l.description_text, first_p)
+            is_comp, _ = detect_compromis_in_text(l.description_text)
             if is_comp:
                 missing_compromis_tag_listings.append(l)
 
