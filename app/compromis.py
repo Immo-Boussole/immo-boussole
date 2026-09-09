@@ -144,34 +144,55 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
                 img = img.resize((int(w * scale), int(h * scale)), Image.Resampling.BILINEAR)
 
             # Convertir en niveaux de gris pour améliorer le contraste du texte
-            if img.mode != "L":
-                img_gray = img.convert("L")
-            else:
+            try:
+                if getattr(img, "mode", None) != "L":
+                    img_gray = img.convert("L")
+                else:
+                    img_gray = img
+            except Exception:
                 img_gray = img
 
-            # Exécuter l'OCR en français + anglais (souvent 'SOLD' ou 'VENDU')
+            ocr_passes = [
+                (img_gray, "--psm 11"),
+                (img_gray, ""),
+            ]
+
             try:
-                extracted_text = pytesseract.image_to_string(img_gray, lang="fra+eng")
-            except Exception as e_lang:
-                # Fallback sur la langue par défaut si fra n'est pas installé
-                logger.debug(f"[Compromis OCR] Langue 'fra+eng' non disponible ({e_lang}), fallback langue par défaut")
-                extracted_text = pytesseract.image_to_string(img_gray)
+                from PIL import ImageEnhance
+                enhancer = ImageEnhance.Contrast(img_gray)
+                img_contrast = enhancer.enhance(1.8)
+                if img_contrast is not None:
+                    ocr_passes.insert(1, (img_contrast, "--psm 11"))
+                    ocr_passes.append((img_contrast, ""))
+            except Exception as e_enh:
+                logger.debug(f"[Compromis OCR] ImageEnhance contrast non appliqué: {e_enh}")
 
-            if not extracted_text:
-                return False, None
+            for image_variant, config_flag in ocr_passes:
+                try:
+                    if config_flag:
+                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", config=config_flag)
+                    else:
+                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng")
+                except Exception as e_lang:
+                    # Fallback sur la langue par défaut si fra n'est pas installé
+                    logger.debug(f"[Compromis OCR] Langue 'fra+eng' non disponible ({e_lang}), fallback langue par défaut")
+                    if config_flag:
+                        extracted_text = pytesseract.image_to_string(image_variant, config=config_flag)
+                    else:
+                        extracted_text = pytesseract.image_to_string(image_variant)
 
-            normalized_ocr = normalize_text_for_detection(extracted_text)
+                if extracted_text:
+                    normalized_ocr = normalize_text_for_detection(extracted_text)
+                    for pattern, label in OCR_BANNER_PATTERNS:
+                        if pattern.search(normalized_ocr):
+                            logger.info(f"[Compromis OCR] Bandeau '{label}' détecté sur l'image {path_obj.name} (config='{config_flag}')")
+                            return True, label
 
-            for pattern, label in OCR_BANNER_PATTERNS:
-                if pattern.search(normalized_ocr):
-                    logger.info(f"[Compromis OCR] Bandeau '{label}' détecté sur l'image {path_obj.name}")
-                    return True, label
+        return False, None
 
     except Exception as e:
         logger.warning(f"[Compromis OCR] Erreur lors de l'analyse de l'image {path_obj}: {e}")
         return False, None
-
-    return False, None
 
 
 def analyze_listing_compromis(
