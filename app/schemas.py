@@ -914,6 +914,19 @@ class ListingLinkResponse(BaseModel):
         from_attributes = True
 
 
+class ListingRepairActionsRequest(BaseModel):
+    actions: List[str]
+
+
+class BulkListingRepairItem(BaseModel):
+    listing_id: int
+    actions: List[str]
+
+
+class BulkListingRepairRequest(BaseModel):
+    items: List[BulkListingRepairItem]
+
+
 
 
 

@@ -924,4 +924,352 @@ def scan_all_listings_for_compromis(db: Session) -> dict:
     }
 
 
+def evaluate_single_listing_health(listing: Listing, db: Session) -> dict:
+    """
+    Évalue la santé complète d'une annonce individuelle et retourne un bilan structuré
+    avec l'état de chaque dimension de réparation possible et le statut d'anomalie.
+    """
+    from app.media import json_to_photos
+    from app.compromis import analyze_listing_compromis
+    from app.services import fetch_sncf_times_for_city
+    from app.models import ZoneRule
+
+    photos_list = json_to_photos(listing.photos_local) if listing.photos_local else []
+    first_photo = photos_list[0] if photos_list else None
+    
+    # 1. Photos check
+    photos_anomaly = False
+    photos_details = ""
+    if is_missing_or_corrupt_photos(listing):
+        photos_anomaly = True
+        photos_details = "Photos manquantes ou fichiers locaux introuvables"
+    elif photos_list:
+        photos_details = f"{len(photos_list)} photo(s) locale(s) valide(s)"
+    else:
+        photos_anomaly = True
+        photos_details = "Aucune photo associée à l'annonce"
+
+    # 2. Title check
+    title_anomaly = False
+    title_details = ""
+    if not listing.title or not listing.title.strip():
+        title_anomaly = True
+        title_details = "Titre complètement vide"
+    elif is_error_or_generic_title(listing.title):
+        title_anomaly = True
+        title_details = "Titre générique ou message d'erreur détecté"
+    else:
+        title_details = "Titre valide et informatif"
+
+    # 3. Location check
+    loc_anomaly = False
+    loc_details = ""
+    if is_missing_location(listing):
+        loc_anomaly = True
+        loc_details = "Localisation inconnue ou manquante"
+    else:
+        city_str = (listing.city or "").strip()
+        is_std = bool(re.match(r'^.+\s\(\d{5}\)$', city_str)) if city_str else False
+        has_coords = bool(listing.latitude is not None and listing.longitude is not None)
+        if not is_std or not has_coords:
+            loc_anomaly = True
+            loc_details = "Commune non standardisée ou coordonnées GPS manquantes"
+        else:
+            loc_details = f"{city_str} ({listing.latitude:.4f}, {listing.longitude:.4f})"
+
+    # 4. Stations SNCF check
+    stations_anomaly = False
+    stations_details = ""
+    if listing.city and not is_missing_location(listing):
+        if listing.nearest_sncf_station is None or listing.walk_time_sncf is None:
+            stations_anomaly = True
+            stations_details = "Gare SNCF la plus proche ou temps de trajet non calculés"
+        else:
+            stations_details = f"Gare : {listing.nearest_sncf_station} (à pied : {listing.walk_time_sncf} min)"
+    else:
+        stations_details = "Localisation requise pour calculer les gares"
+
+    # 5. Price per sqm check
+    price_sqm_anomaly = False
+    price_sqm_details = ""
+    listing_area = getattr(listing, 'area', None)
+    if listing.price and listing_area and listing_area > 0 and listing.price > 0:
+        expected_sqm = round(listing.price / listing_area)
+        if listing.price_per_sqm is None or abs(listing.price_per_sqm - expected_sqm) > 1:
+            price_sqm_anomaly = True
+            price_sqm_details = f"Prix/m² ({listing.price_per_sqm or 'non calculé'}) différent de l'attendu ({expected_sqm} €/m²)"
+        else:
+            price_sqm_details = f"{listing.price_per_sqm} €/m² (conforme)"
+    else:
+        price_sqm_details = "Surface ou prix non renseignés"
+
+    # 6. Visits check
+    visits_anomaly = False
+    visits_details = ""
+    overdue_visits = []
+    listing_visits = db.query(Visit).filter(Visit.listing_id == listing.id).all()
+    for v in listing_visits:
+        if v.status != "effectuee" and _is_past_date(v.scheduled_at):
+            overdue_visits.append(v)
+    if overdue_visits:
+        visits_anomaly = True
+        visits_details = f"{len(overdue_visits)} visite(s) passée(s) non marquée(s) 'effectuée'"
+    elif listing_visits:
+        visits_details = f"{len(listing_visits)} visite(s) à jour"
+    else:
+        visits_details = "Aucune visite enregistrée"
+
+    # 7. Compromis check
+    compromis_anomaly = False
+    compromis_details = ""
+    is_comp, det_by = analyze_listing_compromis(
+        description=listing.description_text,
+        first_photo_path=first_photo
+    )
+    if is_comp and not listing.is_under_compromis:
+        compromis_anomaly = True
+        compromis_details = f"Mention de compromis détectée ({det_by}) mais statut non mis à jour"
+    elif listing.is_under_compromis:
+        compromis_details = f"Bien sous compromis (identifié par {listing.compromis_detected_by or 'manuel'})"
+    else:
+        compromis_details = "Aucune mention de compromis détectée"
+
+    # 8. Rescrape check
+    rescrape_anomaly = False
+    rescrape_details = ""
+    if not listing.description_text or not listing.description_text.strip():
+        rescrape_anomaly = True
+        rescrape_details = "Description textuelle vide — re-scraping conseillé"
+    elif title_anomaly and listing.url:
+        rescrape_anomaly = True
+        rescrape_details = "Titre d'erreur ou incomplet — re-scraping conseillé"
+    else:
+        rescrape_details = "Données textuelles et description présentes"
+
+    # Actions dictionary
+    actions = {
+        "photos": {
+            "key": "photos",
+            "label": "Photos & Médias",
+            "icon": "fa-camera",
+            "description": "Télécharger ou réparer les photos manquantes et corrompues",
+            "is_anomaly": photos_anomaly,
+            "details": photos_details,
+        },
+        "title": {
+            "key": "title",
+            "label": "Titre de l'annonce",
+            "icon": "fa-heading",
+            "description": "Régénérer un titre propre à partir de la description ou du portail",
+            "is_anomaly": title_anomaly,
+            "details": title_details,
+        },
+        "location": {
+            "key": "location",
+            "label": "Commune & Géocodage",
+            "icon": "fa-location-dot",
+            "description": "Extraire le code postal, standardiser la commune et géocoder",
+            "is_anomaly": loc_anomaly,
+            "details": loc_details,
+        },
+        "stations": {
+            "key": "stations",
+            "label": "Gares SNCF & Trajets",
+            "icon": "fa-train",
+            "description": "Calculer la gare la plus proche et les temps de trajet (marche/vélo/voiture)",
+            "is_anomaly": stations_anomaly,
+            "details": stations_details,
+        },
+        "price_sqm": {
+            "key": "price_sqm",
+            "label": "Prix au m²",
+            "icon": "fa-calculator",
+            "description": "Recalculer le prix au mètre carré à partir du prix et de la surface",
+            "is_anomaly": price_sqm_anomaly,
+            "details": price_sqm_details,
+        },
+        "visits": {
+            "key": "visits",
+            "label": "Statut des visites",
+            "icon": "fa-calendar-check",
+            "description": "Valider et passer à 'effectuée' les visites planifiées antérieures",
+            "is_anomaly": visits_anomaly,
+            "details": visits_details,
+        },
+        "compromis": {
+            "key": "compromis",
+            "label": "Détection 'Sous compromis'",
+            "icon": "fa-signature",
+            "description": "Analyser la description et l'image pour détecter les compromis ou offres",
+            "is_anomaly": compromis_anomaly,
+            "details": compromis_details,
+        },
+        "rescrape": {
+            "key": "rescrape",
+            "label": "Re-scraping source web",
+            "icon": "fa-rotate",
+            "description": "Re-télécharger la page source complète depuis le portail immobilier",
+            "is_anomaly": rescrape_anomaly,
+            "details": rescrape_details,
+        },
+    }
+
+    anomaly_count = sum(1 for a in actions.values() if a["is_anomaly"])
+
+    first_photo_url = f"/{first_photo}" if first_photo else None
+
+    return {
+        "listing_id": listing.id,
+        "title": listing.title or f"Annonce #{listing.id}",
+        "price": listing.price,
+        "surface": getattr(listing, 'area', None),
+        "city": listing.city or listing.location or "Ville inconnue",
+        "location": listing.location or "",
+        "source": listing.source.value if hasattr(listing.source, 'value') else str(listing.source or ""),
+        "status": listing.status.value if hasattr(listing.status, 'value') else str(listing.status or ""),
+        "url": listing.url or "",
+        "first_photo": first_photo_url,
+        "is_healthy": anomaly_count == 0,
+        "anomaly_count": anomaly_count,
+        "is_under_compromis": bool(listing.is_under_compromis),
+        "actions": actions,
+    }
+
+
+async def apply_listing_repair_actions(listing_id: int, actions: list[str], db: Session) -> dict:
+    """
+    Applique les actions de réparation sélectionnées à une annonce spécifique,
+    persiste les modifications et renvoie le rapport de santé actualisé.
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        return {"error": "Listing not found", "success": False}
+
+    repaired_actions = []
+    errors = []
+
+    for act in actions:
+        try:
+            if act == "photos":
+                await repair_listing_photos(listing, db)
+                repaired_actions.append("photos")
+
+            elif act == "title":
+                await repair_listing_title(listing, db)
+                repaired_actions.append("title")
+
+            elif act == "location":
+                from app.geo import standardize_and_enrich_city, get_coordinates
+                from app.services import ensure_city_map_pin
+                found_city = None
+                if listing.title:
+                    zip_match = re.search(r'\b(0[1-9]|[1-8]\d|9[0-5]|97[1-8]|2[ABab])\d{3}\b', listing.title)
+                    if zip_match:
+                        std_city, _, _ = standardize_and_enrich_city(zip_match.group(0))
+                        if std_city:
+                            found_city = std_city
+                if not found_city and listing.description_text:
+                    zip_match = re.search(r'\b(0[1-9]|[1-8]\d|9[0-5]|97[1-8]|2[ABab])\d{3}\b', listing.description_text[:500])
+                    if zip_match:
+                        std_city, _, _ = standardize_and_enrich_city(zip_match.group(0))
+                        if std_city:
+                            found_city = std_city
+                if not found_city and (listing.city or listing.location):
+                    std_city, _, _ = standardize_and_enrich_city(listing.city or listing.location)
+                    if std_city:
+                        found_city = std_city
+
+                if found_city:
+                    listing.city = found_city
+                    listing.location = found_city
+                    coords = get_coordinates(found_city)
+                    if coords:
+                        listing.latitude, listing.longitude = coords
+                    ensure_city_map_pin(found_city, db)
+                    db.commit()
+                repaired_actions.append("location")
+
+            elif act == "stations":
+                if listing.city:
+                    from app.models import ZoneRule
+                    from app.services import fetch_sncf_times_for_city
+                    forbidden_stations = {r.name.strip().lower() for r in db.query(ZoneRule).filter(
+                        ZoneRule.zone_type == "station", ZoneRule.rule == "forbidden"
+                    ).all()}
+                    sncf_data = fetch_sncf_times_for_city(listing.city, forbidden_stations)
+                    if sncf_data:
+                        listing.nearest_sncf_station = sncf_data.get('nearest_sncf_station')
+                        listing.walk_time_sncf = sncf_data.get('walk_time_sncf')
+                        listing.bike_time_sncf = sncf_data.get('bike_time_sncf')
+                        listing.car_time_sncf = sncf_data.get('car_time_sncf')
+                        listing.second_sncf_station = sncf_data.get('second_sncf_station')
+                        listing.walk_time_second_sncf = sncf_data.get('walk_time_second_sncf')
+                        listing.bike_time_second_sncf = sncf_data.get('bike_time_second_sncf')
+                        listing.car_time_second_sncf = sncf_data.get('car_time_second_sncf')
+                        db.commit()
+                repaired_actions.append("stations")
+
+            elif act == "price_sqm":
+                listing.update_price_per_sqm()
+                db.commit()
+                repaired_actions.append("price_sqm")
+
+            elif act == "visits":
+                visits = db.query(Visit).filter(Visit.listing_id == listing.id, Visit.status != "effectuee").all()
+                repaired_any = False
+                for v in visits:
+                    if _is_past_date(v.scheduled_at):
+                        v.status = "effectuee"
+                        repaired_any = True
+                        try:
+                            from app import google_service
+                            google_service.sync_visit_to_google_calendar(db, v)
+                        except Exception as eg:
+                            pass
+                if repaired_any:
+                    from app.main import _derive_visit_status_from_visit
+                    latest_visit = db.query(Visit).filter(Visit.listing_id == listing.id).order_by(Visit.scheduled_at.desc()).first()
+                    if latest_visit:
+                        derived = _derive_visit_status_from_visit(latest_visit)
+                        if derived:
+                            listing.last_visit_status = derived
+                    db.commit()
+                repaired_actions.append("visits")
+
+            elif act == "compromis":
+                from app.media import json_to_photos
+                from app.compromis import analyze_listing_compromis
+                photos_list = json_to_photos(listing.photos_local) if listing.photos_local else []
+                first_p = photos_list[0] if photos_list else None
+                is_comp, det_by = analyze_listing_compromis(listing.description_text, first_p)
+                if is_comp:
+                    listing.is_under_compromis = True
+                    listing.compromis_detected_by = det_by
+                elif listing.compromis_detected_by != "manual":
+                    listing.is_under_compromis = False
+                    listing.compromis_detected_by = None
+                db.commit()
+                repaired_actions.append("compromis")
+
+            elif act == "rescrape":
+                await refresh_listing_status(listing, db, force_update=True)
+                repaired_actions.append("rescrape")
+
+        except Exception as e:
+            errors.append(f"Erreur sur l'action '{act}': {str(e)}")
+
+    db.commit()
+    db.refresh(listing)
+
+    # Ré-évaluer la santé mise à jour
+    new_health = evaluate_single_listing_health(listing, db)
+
+    return {
+        "success": len(errors) == 0,
+        "repaired_actions": repaired_actions,
+        "errors": errors,
+        "health": new_health,
+    }
+
+
 

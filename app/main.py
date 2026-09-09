@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 import io
 
 
-from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File
+from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, Form, Response, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -2953,7 +2953,115 @@ def scan_compromis_all(
     return {"status": "success", "message": "Le scan rétroactif des biens sous compromis a été lancé en arrière-plan."}
 
 
+# ─── API: Listing Health & Individual Repairs ──────────────────────────────────
+
+@app.get("/api/listings/health/search")
+def search_listings_for_health(
+    q: str = Query("", description="Terme de recherche"),
+    limit: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Recherche des annonces avec diagnostic de santé compact pour l'autocomplétion."""
+    query = db.query(Listing)
+    q_clean = q.strip()
+    if q_clean:
+        if q_clean.isdigit():
+            id_filter = Listing.id == int(q_clean)
+        else:
+            id_filter = None
+
+        search_filter = or_(
+            Listing.title.ilike(f"%{q_clean}%"),
+            Listing.city.ilike(f"%{q_clean}%"),
+            Listing.location.ilike(f"%{q_clean}%"),
+            Listing.url.ilike(f"%{q_clean}%"),
+            Listing.external_id.ilike(f"%{q_clean}%"),
+        )
+        if id_filter is not None:
+            query = query.filter(or_(id_filter, search_filter))
+        else:
+            query = query.filter(search_filter)
+
+    listings = query.order_by(Listing.date_added.desc()).limit(limit).all()
+    results = [db_maintenance.evaluate_single_listing_health(l, db) for l in listings]
+    return {"results": results, "total": len(results)}
+
+
+@app.get("/api/listings/health/quick-list")
+def get_listings_health_quick_list(
+    filter_type: str = Query("anomalies", description="anomalies | all | active | recent"),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Retourne une liste d'annonces avec leur bilan de santé pour le sélecteur déroulant."""
+    query = db.query(Listing)
+    if filter_type == "active":
+        query = query.filter(Listing.status.in_([ListingStatus.ACTIVE, "active"]))
+    elif filter_type == "recent":
+        pass
+
+    listings = query.order_by(Listing.date_added.desc()).limit(limit).all()
+    evaluated = [db_maintenance.evaluate_single_listing_health(l, db) for l in listings]
+
+    if filter_type == "anomalies":
+        results = [e for e in evaluated if e["anomaly_count"] > 0]
+    else:
+        results = evaluated
+
+    return {"results": results, "total": len(results)}
+
+
+@app.get("/api/listings/{listing_id}/health")
+def get_single_listing_health(
+    listing_id: int,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Retourne l'audit de santé complet d'une annonce individuelle."""
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return db_maintenance.evaluate_single_listing_health(listing, db)
+
+
+@app.post("/api/listings/{listing_id}/repair-actions")
+async def repair_single_listing_actions(
+    listing_id: int,
+    req: schemas.ListingRepairActionsRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Applique les actions de réparation sélectionnées à une annonce."""
+    res = await db_maintenance.apply_listing_repair_actions(listing_id, req.actions, db)
+    if not res.get("success") and "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+
+@app.post("/api/listings/health/bulk-repair")
+async def bulk_repair_listings_actions(
+    req: schemas.BulkListingRepairRequest,
+    db: Session = Depends(get_db),
+    _auth = Depends(login_required)
+):
+    """Applique les réparations sur plusieurs annonces en séquence."""
+    results = []
+    for item in req.items:
+        res = await db_maintenance.apply_listing_repair_actions(item.listing_id, item.actions, db)
+        results.append({
+            "listing_id": item.listing_id,
+            "success": res.get("success", False),
+            "repaired_actions": res.get("repaired_actions", []),
+            "errors": res.get("errors", []),
+            "health": res.get("health")
+        })
+    return {"success": True, "results": results}
+
+
 # ─── Administration: Database Maintenance ──────────────────────────────────────
+
 
 @app.get("/api/admin/db/problems")
 def get_db_problems(db: Session = Depends(get_db), _auth = Depends(admin_required)):

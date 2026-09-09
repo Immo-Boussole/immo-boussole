@@ -243,6 +243,428 @@
         }
         .problem-timestamps span { font-style: italic; }
 
+        /* Corner ribbon for compromis */
+        .corner-ribbon-compromis {
+            position: absolute;
+            top: 10px;
+            left: -30px;
+            transform: rotate(-45deg);
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #ffffff;
+            font-size: 0.52rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 3px 26px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+            z-index: 10;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+            white-space: nowrap;
+        }
+
+        /* Listing Health tab styles */
+        .health-selection-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .health-search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+        .health-search-input {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.65rem 2.4rem 0.65rem 2.5rem;
+            color: var(--text);
+            font-size: 0.92rem;
+            font-family: inherit;
+            box-sizing: border-box;
+            transition: var(--trans);
+            min-height: 44px;
+        }
+        .health-search-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.2);
+        }
+        .health-search-icon {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-2);
+            pointer-events: none;
+        }
+        .health-search-clear {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: var(--text-2);
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: none;
+            width: 28px;
+            height: 28px;
+            align-items: center;
+            justify-content: center;
+        }
+        .health-search-clear:hover { color: var(--text); }
+        .health-autocomplete-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            max-height: 380px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+            display: none;
+        }
+        .health-autocomplete-dropdown.open { display: block; }
+        .health-autocomplete-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.65rem 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .health-autocomplete-item:hover, .health-autocomplete-item.active {
+            background: rgba(79, 142, 247, 0.12);
+        }
+        .health-item-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: var(--surface-2);
+            flex-shrink: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .health-item-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .health-item-thumb-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-2);
+            font-size: 1.1rem;
+        }
+        .health-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .health-item-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text);
+        }
+        .health-item-sub {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.78rem;
+            color: var(--text-2);
+            margin-top: 0.2rem;
+            flex-wrap: wrap;
+        }
+        .health-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+        .health-badge.anomaly {
+            background: rgba(242, 92, 105, 0.18);
+            color: #ff7682;
+            border: 1px solid rgba(242, 92, 105, 0.35);
+        }
+        .health-badge.healthy {
+            background: rgba(16, 217, 164, 0.15);
+            color: #10d9a4;
+            border: 1px solid rgba(16, 217, 164, 0.3);
+        }
+        .health-dropdown-btn-wrap {
+            position: relative;
+        }
+        .health-select-popover {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            width: 440px;
+            max-width: calc(100vw - 2rem);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.65);
+            z-index: 1000;
+            padding: 1rem;
+            display: none;
+        }
+        .health-select-popover.open { display: block; }
+        .health-popover-filters {
+            display: flex;
+            gap: 0.4rem;
+            margin-bottom: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+        }
+        .health-chip {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-2);
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--trans);
+            white-space: nowrap;
+        }
+        .health-chip.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+        .health-popover-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .health-bulk-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+        .health-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow);
+            transition: var(--trans);
+            position: relative;
+        }
+        .health-card.repaired {
+            border-color: rgba(16, 217, 164, 0.4);
+        }
+        .health-card-header {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .health-card-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
+            background: var(--surface-2);
+        }
+        .health-card-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .health-card-meta {
+            flex: 1;
+            min-width: 0;
+        }
+        .health-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 0.35rem 0;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .health-card-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .health-card-title a:hover {
+            color: var(--accent);
+        }
+        .health-card-tags {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: var(--text-2);
+            margin-bottom: 0.4rem;
+        }
+        .health-card-close {
+            background: transparent;
+            border: none;
+            color: var(--text-2);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: var(--trans);
+        }
+        .health-card-close:hover {
+            color: var(--red);
+            background: rgba(242,92,105,0.12);
+        }
+        .health-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .health-action-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            transition: var(--trans);
+            cursor: pointer;
+            user-select: none;
+        }
+        .health-action-item.is-anomaly {
+            border: 1px solid var(--red);
+            background: rgba(242, 92, 105, 0.12);
+            color: #fff;
+        }
+        .health-action-item.is-repaired {
+            border: 1px solid var(--green);
+            background: rgba(16, 217, 164, 0.12);
+            color: #fff;
+        }
+        .health-action-top {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .health-action-top input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+        }
+        .health-action-desc {
+            font-size: 0.76rem;
+            color: var(--text-2);
+            line-height: 1.35;
+        }
+        .health-action-item.is-anomaly .health-action-desc {
+            color: #ffd6da;
+            font-weight: 500;
+        }
+        .health-action-item.is-repaired .health-action-desc {
+            color: #b3f7e5;
+        }
+        .health-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 0.85rem;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .health-quick-selects {
+            display: flex;
+            gap: 0.6rem;
+            font-size: 0.78rem;
+        }
+        .health-quick-selects button {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+            font-size: 0.78rem;
+            font-family: inherit;
+        }
+        .health-quick-selects button:hover {
+            color: var(--accent-2);
+        }
+        .health-progress-wrap {
+            width: 100%;
+            height: 6px;
+            background: var(--surface);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 0.6rem;
+            display: none;
+        }
+        .health-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--green));
+            width: 0%;
+            transition: width 0.25s ease;
+        }
+        .health-empty-state {
+            text-align: center;
+            padding: 3.5rem 1.5rem;
+            color: var(--text-2);
+        }
+        .health-empty-state i {
+            font-size: 2.5rem;
+            color: var(--accent);
+            opacity: 0.6;
+            margin-bottom: 1rem;
+        }
+        .health-empty-state h3 {
+            font-size: 1.1rem;
+            color: var(--text);
+            margin: 0 0 0.5rem 0;
+        }
+        .health-empty-state p {
+            max-width: 480px;
+            margin: 0 auto;
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
         .problem-actions {
             display: flex;
             align-items: center;
@@ -1095,10 +1517,13 @@
                 <!-- ── Navigation Tabs ── -->
                 <nav class="nav-tabs" role="tablist">
                     <button class="nav-tab-btn active" id="tab_btn_db_checks" onclick="switchTab('db_checks')">
-                        <i class="fa-solid fa-database"></i> Vérifications de la Base
+                        <i class="fa-solid fa-database"></i> {{ t(request, 'repairs.tab_db_checks', 'Vérifications de la Base') }}
                     </button>
                     <button class="nav-tab-btn" id="tab_btn_scrapers_analytics" onclick="switchTab('scrapers_analytics')">
-                        <i class="fa-solid fa-chart-pie"></i> Santé des Scrapers &amp; Parsers
+                        <i class="fa-solid fa-chart-pie"></i> {{ t(request, 'repairs.tab_scrapers_analytics', 'Santé des Scrapers & Parsers') }}
+                    </button>
+                    <button class="nav-tab-btn" id="tab_btn_listing_health" onclick="switchTab('listing_health')">
+                        <i class="fa-solid fa-heart-pulse"></i> {{ t(request, 'repairs.tab_listing_health', "Santé d'une annonce") }}
                     </button>
                 </nav>
 
@@ -1324,7 +1749,122 @@
 
                 </div>
 
-            </div>
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                <!-- ── PANEL 3: Santé d'une annonce ─────────────────────────────── -->
+                <!-- ════════════════════════════════════════════════════════════════ -->
+                <div id="panel_listing_health" style="display: none;">
+                    <div class="card">
+                        <h2 class="card-title">
+                            <i class="fa-solid fa-heart-pulse" style="color: var(--accent);"></i>
+                            {{ t(request, 'repairs.tab_listing_health', "Santé d'une annonce") }}
+                        </h2>
+                        <p style="color: var(--text-2); font-size: 0.88rem; margin: -0.5rem 0 1.25rem 0;">
+                            Sélectionnez une ou plusieurs annonces pour auditer leurs anomalies en direct et choisir les réparations modulaires ciblées.
+                        </p>
+
+                        <!-- Selection Bar (Auto-completion search + Custom dropdown selector) -->
+                        <div class="health-selection-bar">
+                            <!-- Search with auto-completion -->
+                            <div class="health-search-wrap">
+                                <i class="fa-solid fa-magnifying-glass health-search-icon"></i>
+                                <input type="text" id="health_search_input" class="health-search-input"
+                                    placeholder="{{ t(request, 'repairs.health_search_placeholder', 'Rechercher une annonce par mot-clé, ville, CP, réf, ID...') }}"
+                                    autocomplete="off" oninput="onHealthSearchInput(this.value)" onkeydown="onHealthSearchKeyDown(event)">
+                                <button type="button" id="health_search_clear_btn" class="health-search-clear" onclick="clearHealthSearch()" title="Effacer">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                                <div id="health_search_dropdown" class="health-autocomplete-dropdown"></div>
+                            </div>
+
+                            <!-- Quick dropdown selector with popover -->
+                            <div class="health-dropdown-btn-wrap">
+                                <button type="button" class="btn secondary" id="btn_open_health_popover" onclick="toggleHealthSelectPopover(event)" style="gap: 0.5rem;">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    <span>{{ t(request, 'repairs.health_select_btn', 'Choisir une offre...') }}</span>
+                                    <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
+                                </button>
+
+                                <div id="health_select_popover" class="health-select-popover">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text);">Sélectionner une annonce</span>
+                                        <button type="button" class="expand-btn" onclick="toggleHealthSelectPopover(event)" style="min-height: 28px; padding: 2px 6px;">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Filter chips -->
+                                    <div class="health-popover-filters">
+                                        <button type="button" class="health-chip active" id="chip_anomalies" onclick="setHealthFilter('anomalies')">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> {{ t(request, 'repairs.health_filter_anomalies', 'Anomalies seules') }}
+                                        </button>
+                                        <button type="button" class="health-chip" id="chip_active" onclick="setHealthFilter('active')">
+                                            {{ t(request, 'repairs.health_filter_active', 'Actives') }}
+                                        </button>
+                                        <button type="button" class="health-chip" id="chip_recent" onclick="setHealthFilter('recent')">
+                                            {{ t(request, 'repairs.health_filter_recent', 'Récentes') }}
+                                        </button>
+                                        <button type="button" class="health-chip" id="chip_all" onclick="setHealthFilter('all')">
+                                            {{ t(request, 'repairs.health_filter_all', 'Toutes') }}
+                                        </button>
+                                    </div>
+
+                                    <!-- Quick bulk add all button -->
+                                    <div style="margin-bottom: 0.75rem;">
+                                        <button type="button" class="btn sm" id="btn_add_all_anomalies" onclick="addAllAnomaliesToList()" style="width: 100%; justify-content: center; background: rgba(242,92,105,0.18); border: 1px solid rgba(242,92,105,0.35); color: #ff8e97;">
+                                            <i class="fa-solid fa-plus"></i> {{ t(request, 'repairs.health_add_all_anomalies', 'Ajouter toutes les annonces avec anomalies') }}
+                                        </button>
+                                    </div>
+
+                                    <div id="health_popover_list" class="health-popover-list">
+                                        <div style="text-align: center; padding: 1.5rem; color: var(--text-2); font-size: 0.85rem;">
+                                            <i class="fas fa-spinner fa-spin"></i> Chargement...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bulk Action Bar -->
+                        <div id="health_bulk_bar" class="health-bulk-bar" style="display: none;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text);" id="health_selected_count_label">0 annonce sélectionnée</span>
+                                <button type="button" class="btn sm secondary" onclick="checkAllAnomaliesGlobal()">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> {{ t(request, 'repairs.health_check_anomalies', 'Anomalies seules') }}
+                                </button>
+                                <button type="button" class="btn sm secondary" onclick="checkAllRepairsGlobal()">
+                                    <i class="fa-solid fa-check-double"></i> {{ t(request, 'repairs.health_check_all', 'Tout cocher') }}
+                                </button>
+                                <button type="button" class="btn sm secondary" onclick="uncheckAllRepairsGlobal()">
+                                    <i class="fa-solid fa-ban"></i> {{ t(request, 'repairs.health_uncheck_all', 'Tout décocher') }}
+                                </button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <button type="button" class="btn secondary sm" onclick="clearAllHealthCards()">
+                                    <i class="fa-solid fa-trash-can"></i> {{ t(request, 'repairs.health_clear_list', 'Vider la liste') }}
+                                </button>
+                                <button type="button" class="btn" id="btn_run_bulk_repair" onclick="executeBulkRepairs()">
+                                    <i class="fa-solid fa-wrench"></i> <span id="btn_run_bulk_repair_label">Réparer les annonces sélectionnées</span>
+                                </button>
+                            </div>
+                            <!-- Live Progress Bar -->
+                            <div id="health_progress_wrap" class="health-progress-wrap">
+                                <div id="health_progress_bar" class="health-progress-bar"></div>
+                            </div>
+                            <div id="health_progress_status" style="width: 100%; font-size: 0.8rem; color: var(--text-2); display: none; margin-top: 0.25rem;"></div>
+                        </div>
+
+                        <!-- Selected listings cards container -->
+                        <div id="health_cards_list">
+                            <!-- Empty State -->
+                            <div id="health_empty_state" class="health-empty-state">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                                <h3>{{ t(request, 'repairs.health_empty_title', 'Aucune annonce sélectionnée') }}</h3>
+                                <p>{{ t(request, 'repairs.health_empty_desc', "Utilisez le champ de recherche avec auto-complétion ci-dessus ou le sélecteur d'offres pour ajouter des annonces à auditer et réparer.") }}</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
         </div>
     </main>
 
@@ -1439,9 +1979,14 @@
 
             document.getElementById('panel_db_checks').style.display = (tabId === 'db_checks') ? 'block' : 'none';
             document.getElementById('panel_scrapers_analytics').style.display = (tabId === 'scrapers_analytics') ? 'block' : 'none';
+            const panelHealth = document.getElementById('panel_listing_health');
+            if (panelHealth) panelHealth.style.display = (tabId === 'listing_health') ? 'block' : 'none';
 
             if (tabId === 'scrapers_analytics' && !analyticsLoaded) {
                 fetchScraperAnalytics(false);
+            }
+            if (tabId === 'listing_health' && !healthQuickListLoaded) {
+                loadHealthQuickList();
             }
         }
 
@@ -2863,9 +3408,719 @@
             }
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        // ── Listing Health & Individual Repairs Tab Logic ─────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+
+        const selectedHealthListings = new Map();
+        let healthQuickListLoaded = false;
+        let healthCurrentFilter = 'anomalies';
+        let healthSearchDebounceTimer = null;
+        let healthSearchAbortCtrl = null;
+        let healthActiveSearchIndex = -1;
+        let healthBulkRepairRunning = false;
+
+        function formatHealthPrice(val) {
+            if (!val || isNaN(val)) return 'Prix NC';
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(val);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // ── Auto-completion Search ──
+        function onHealthSearchInput(val) {
+            const clearBtn = document.getElementById('health_search_clear_btn');
+            const dropdown = document.getElementById('health_search_dropdown');
+            const query = (val || '').trim();
+
+            if (clearBtn) {
+                clearBtn.style.display = query.length > 0 ? 'inline-flex' : 'none';
+            }
+
+            if (healthSearchDebounceTimer) clearTimeout(healthSearchDebounceTimer);
+            if (healthSearchAbortCtrl) healthSearchAbortCtrl.abort();
+
+            if (!query) {
+                if (dropdown) {
+                    dropdown.classList.remove('open');
+                    dropdown.innerHTML = '';
+                }
+                return;
+            }
+
+            healthSearchDebounceTimer = setTimeout(async () => {
+                try {
+                    healthSearchAbortCtrl = new AbortController();
+                    if (dropdown) {
+                        dropdown.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-2); font-size: 0.85rem;"><i class="fas fa-spinner fa-spin"></i> Recherche…</div>';
+                        dropdown.classList.add('open');
+                    }
+                    const res = await fetch(`/api/listings/health/search?q=${encodeURIComponent(query)}&limit=20`, {
+                        signal: healthSearchAbortCtrl.signal
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderHealthAutocompleteResults(data.results || []);
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Search error:', err);
+                    }
+                }
+            }, 250);
+        }
+
+        function clearHealthSearch() {
+            const input = document.getElementById('health_search_input');
+            const clearBtn = document.getElementById('health_search_clear_btn');
+            const dropdown = document.getElementById('health_search_dropdown');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+            if (clearBtn) clearBtn.style.display = 'none';
+            if (dropdown) {
+                dropdown.classList.remove('open');
+                dropdown.innerHTML = '';
+            }
+        }
+
+        function onHealthSearchKeyDown(e) {
+            const dropdown = document.getElementById('health_search_dropdown');
+            if (!dropdown || !dropdown.classList.contains('open')) return;
+
+            const items = dropdown.querySelectorAll('.health-autocomplete-item');
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                healthActiveSearchIndex = (healthActiveSearchIndex + 1) % items.length;
+                updateActiveSearchItem(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                healthActiveSearchIndex = (healthActiveSearchIndex - 1 + items.length) % items.length;
+                updateActiveSearchItem(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (healthActiveSearchIndex >= 0 && healthActiveSearchIndex < items.length) {
+                    items[healthActiveSearchIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                dropdown.classList.remove('open');
+            }
+        }
+
+        function updateActiveSearchItem(items) {
+            items.forEach((it, idx) => {
+                if (idx === healthActiveSearchIndex) {
+                    it.classList.add('active');
+                    it.scrollIntoView({ block: 'nearest' });
+                } else {
+                    it.classList.remove('active');
+                }
+            });
+        }
+
+        function renderHealthAutocompleteResults(results) {
+            const dropdown = document.getElementById('health_search_dropdown');
+            if (!dropdown) return;
+
+            healthActiveSearchIndex = -1;
+            if (!results || results.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-2); font-size: 0.85rem;">Aucune annonce trouvée.</div>';
+                dropdown.classList.add('open');
+                return;
+            }
+
+            let html = '';
+            results.forEach(item => {
+                const thumbHtml = item.first_photo
+                    ? `<img src="${item.first_photo}" alt="${escapeHtml(item.title)}" loading="lazy">`
+                    : `<div class="health-item-thumb-placeholder"><i class="fa-regular fa-image"></i></div>`;
+
+                const ribbonHtml = item.is_under_compromis
+                    ? `<div class="corner-ribbon-compromis" style="top:6px;left:-24px;font-size:0.45rem;padding:2px 20px;"><span>Compromis</span></div>`
+                    : '';
+
+                const badgeHtml = item.anomaly_count > 0
+                    ? `<span class="health-badge anomaly"><i class="fa-solid fa-triangle-exclamation"></i> ${item.anomaly_count} anomalie(s)</span>`
+                    : `<span class="health-badge healthy"><i class="fa-solid fa-check"></i> Sain</span>`;
+
+                const portalBadge = getPortalBadgeHtml(item.source);
+
+                html += `
+                    <div class="health-autocomplete-item" onclick="onSelectHealthItemById(${item.listing_id})">
+                        <div class="health-item-thumb">
+                            ${ribbonHtml}
+                            ${thumbHtml}
+                        </div>
+                        <div class="health-item-info">
+                            <div class="health-item-title">${escapeHtml(item.title)}</div>
+                            <div class="health-item-sub">
+                                <span>${portalBadge}</span>
+                                <span><strong>${formatHealthPrice(item.price)}</strong></span>
+                                ${item.surface ? `<span>${item.surface} m²</span>` : ''}
+                                <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.city || 'Ville inconnue')}</span>
+                                ${badgeHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            dropdown.innerHTML = html;
+            dropdown.classList.add('open');
+        }
+
+        async function onSelectHealthItemById(listingId) {
+            const dropdown = document.getElementById('health_search_dropdown');
+            if (dropdown) dropdown.classList.remove('open');
+
+            if (selectedHealthListings.has(listingId)) {
+                const el = document.getElementById(`health_card_${listingId}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/health`);
+                if (!res.ok) return;
+                const healthData = await res.json();
+                addListingToHealthWorkspace(healthData);
+            } catch (err) {
+                console.error('Error fetching listing health:', err);
+            }
+        }
+
+        // ── Custom Dropdown Selector & Popover ──
+        function toggleHealthSelectPopover(e) {
+            if (e) e.stopPropagation();
+            const popover = document.getElementById('health_select_popover');
+            if (!popover) return;
+
+            const isOpen = popover.classList.contains('open');
+            if (!isOpen) {
+                popover.classList.add('open');
+                if (!healthQuickListLoaded) {
+                    loadHealthQuickList();
+                }
+            } else {
+                popover.classList.remove('open');
+            }
+        }
+
+        function setHealthFilter(filterType) {
+            healthCurrentFilter = filterType;
+            ['anomalies', 'active', 'recent', 'all'].forEach(f => {
+                const chip = document.getElementById(`chip_${f}`);
+                if (chip) chip.classList.toggle('active', f === filterType);
+            });
+            loadHealthQuickList();
+        }
+
+        async function loadHealthQuickList() {
+            const container = document.getElementById('health_popover_list');
+            if (!container) return;
+
+            container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-2); font-size: 0.85rem;"><i class="fas fa-spinner fa-spin"></i> Chargement…</div>';
+
+            try {
+                const res = await fetch(`/api/listings/health/quick-list?filter_type=${healthCurrentFilter}&limit=100`);
+                if (!res.ok) throw new Error('Erreur lors du chargement des annonces');
+                const data = await res.json();
+                healthQuickListLoaded = true;
+                renderHealthPopoverList(data.results || []);
+            } catch (err) {
+                container.innerHTML = `<div style="text-align: center; padding: 1rem; color: var(--red); font-size: 0.85rem;">${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function renderHealthPopoverList(results) {
+            const container = document.getElementById('health_popover_list');
+            if (!container) return;
+
+            if (!results || results.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 1.5rem; color: var(--text-2); font-size: 0.85rem;">Aucune annonce dans cette catégorie.</div>';
+                return;
+            }
+
+            let html = '';
+            results.forEach(item => {
+                const isSelected = selectedHealthListings.has(item.listing_id);
+                const thumbHtml = item.first_photo
+                    ? `<img src="${item.first_photo}" alt="${escapeHtml(item.title)}" loading="lazy">`
+                    : `<div class="health-item-thumb-placeholder"><i class="fa-regular fa-image"></i></div>`;
+
+                const ribbonHtml = item.is_under_compromis
+                    ? `<div class="corner-ribbon-compromis" style="top:6px;left:-24px;font-size:0.45rem;padding:2px 20px;"><span>Compromis</span></div>`
+                    : '';
+
+                const badgeHtml = item.anomaly_count > 0
+                    ? `<span class="health-badge anomaly"><i class="fa-solid fa-triangle-exclamation"></i> ${item.anomaly_count} anomalie(s)</span>`
+                    : `<span class="health-badge healthy"><i class="fa-solid fa-check"></i> Sain</span>`;
+
+                html += `
+                    <div class="health-autocomplete-item" style="${isSelected ? 'opacity: 0.6;' : ''}" onclick="onSelectFromPopover(${item.listing_id})">
+                        <div class="health-item-thumb">
+                            ${ribbonHtml}
+                            ${thumbHtml}
+                        </div>
+                        <div class="health-item-info">
+                            <div class="health-item-title">${escapeHtml(item.title)}</div>
+                            <div class="health-item-sub">
+                                <span>${getPortalBadgeHtml(item.source)}</span>
+                                <span><strong>${formatHealthPrice(item.price)}</strong></span>
+                                <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(item.city || 'NC')}</span>
+                                ${badgeHtml}
+                                ${isSelected ? '<span style="color: var(--green); font-size: 0.72rem; font-weight:700;"><i class="fa-solid fa-check"></i> Ajoutée</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function onSelectFromPopover(listingId) {
+            toggleHealthSelectPopover();
+            await onSelectHealthItemById(listingId);
+        }
+
+        async function addAllAnomaliesToList() {
+            const btn = document.getElementById('btn_add_all_anomalies');
+            if (btn) btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/listings/health/quick-list?filter_type=anomalies&limit=150`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const items = data.results || [];
+                let addedCount = 0;
+
+                items.forEach(item => {
+                    if (item.anomaly_count > 0 && !selectedHealthListings.has(item.listing_id)) {
+                        addListingToHealthWorkspace(item, false);
+                        addedCount++;
+                    }
+                });
+
+                renderAllHealthCards();
+                toggleHealthSelectPopover();
+                showAlert(`${addedCount} annonce(s) avec anomalies ajoutée(s) à la liste.`, 'success');
+            } catch (err) {
+                console.error(err);
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', (e) => {
+            const searchWrap = document.querySelector('.health-search-wrap');
+            const searchDropdown = document.getElementById('health_search_dropdown');
+            if (searchDropdown && searchWrap && !searchWrap.contains(e.target)) {
+                searchDropdown.classList.remove('open');
+            }
+
+            const popoverWrap = document.querySelector('.health-dropdown-btn-wrap');
+            const popover = document.getElementById('health_select_popover');
+            if (popover && popoverWrap && !popoverWrap.contains(e.target)) {
+                popover.classList.remove('open');
+            }
+        });
+
+        // ── Workspace & Health Cards Management ──
+        function addListingToHealthWorkspace(healthData, shouldRender = true) {
+            if (!healthData || !healthData.listing_id) return;
+
+            const initialSelectedActions = new Set();
+            if (healthData.actions) {
+                Object.entries(healthData.actions).forEach(([key, act]) => {
+                    if (act.is_anomaly) {
+                        initialSelectedActions.add(key);
+                    }
+                });
+            }
+
+            selectedHealthListings.set(healthData.listing_id, {
+                data: healthData,
+                selectedActions: initialSelectedActions,
+                repairedActions: new Set()
+            });
+
+            if (shouldRender) {
+                renderAllHealthCards();
+                const el = document.getElementById(`health_card_${healthData.listing_id}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function removeListingFromHealth(listingId) {
+            selectedHealthListings.delete(listingId);
+            renderAllHealthCards();
+        }
+
+        function clearAllHealthCards() {
+            selectedHealthListings.clear();
+            renderAllHealthCards();
+        }
+
+        function updateBulkBar() {
+            const bar = document.getElementById('health_bulk_bar');
+            const label = document.getElementById('health_selected_count_label');
+            const runBtn = document.getElementById('btn_run_bulk_repair_label');
+            const count = selectedHealthListings.size;
+
+            if (!bar) return;
+
+            if (count > 0) {
+                bar.style.display = 'flex';
+                if (label) label.textContent = `${count} annonce${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''}`;
+                if (runBtn) runBtn.textContent = `Réparer les ${count} annonce${count > 1 ? 's' : ''}`;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        function renderAllHealthCards() {
+            const container = document.getElementById('health_cards_list');
+            if (!container) return;
+
+            updateBulkBar();
+
+            if (selectedHealthListings.size === 0) {
+                container.innerHTML = `
+                    <div id="health_empty_state" class="health-empty-state">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                        <h3>Aucune annonce sélectionnée</h3>
+                        <p>Utilisez le champ de recherche avec auto-complétion ci-dessus ou le sélecteur d'offres pour ajouter des annonces à auditer et réparer.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            selectedHealthListings.forEach((entry, listingId) => {
+                html += generateHealthCardHtml(entry.data, entry.selectedActions, entry.repairedActions);
+            });
+
+            container.innerHTML = html;
+        }
+
+        function generateHealthCardHtml(data, selectedActions, repairedActions) {
+            const listingId = data.listing_id;
+            const thumbHtml = data.first_photo
+                ? `<img src="${data.first_photo}" alt="${escapeHtml(data.title)}" loading="lazy">`
+                : `<div class="health-item-thumb-placeholder"><i class="fa-regular fa-image"></i></div>`;
+
+            const ribbonHtml = data.is_under_compromis
+                ? `<div class="corner-ribbon-compromis"><span>Sous compromis</span></div>`
+                : '';
+
+            const anomalyBadge = data.anomaly_count > 0
+                ? `<span class="health-badge anomaly"><i class="fa-solid fa-triangle-exclamation"></i> ${data.anomaly_count} anomalie(s) détectée(s)</span>`
+                : `<span class="health-badge healthy"><i class="fa-solid fa-check"></i> Annonce saine</span>`;
+
+            let actionsGridHtml = '';
+            if (data.actions) {
+                Object.entries(data.actions).forEach(([key, act]) => {
+                    const isAnomaly = act.is_anomaly;
+                    const isRepaired = repairedActions && repairedActions.has(key);
+                    const isChecked = selectedActions && selectedActions.has(key);
+
+                    let itemClass = 'health-action-item';
+                    if (isRepaired) itemClass += ' is-repaired';
+                    else if (isAnomaly) itemClass += ' is-anomaly';
+
+                    actionsGridHtml += `
+                        <div class="${itemClass}" onclick="onToggleActionCard(${listingId}, '${key}', event)">
+                            <div class="health-action-top">
+                                <input type="checkbox" id="chk_${listingId}_${key}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); onCheckboxActionCard(${listingId}, '${key}', this.checked)">
+                                <i class="fa-solid ${act.icon}" style="font-size: 0.95rem;"></i>
+                                <span>${escapeHtml(act.label)}</span>
+                                ${isRepaired ? '<span class="health-badge healthy" style="margin-left: auto; font-size: 0.68rem; padding: 1px 5px;"><i class="fa-solid fa-check"></i> Réparé</span>' : ''}
+                                ${isAnomaly && !isRepaired ? '<span class="health-badge anomaly" style="margin-left: auto; font-size: 0.68rem; padding: 1px 5px;"><i class="fa-solid fa-circle-exclamation"></i> Requis</span>' : ''}
+                            </div>
+                            <div class="health-action-desc">${escapeHtml(act.details || act.description)}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            return `
+                <div class="health-card ${data.anomaly_count === 0 ? 'repaired' : ''}" id="health_card_${listingId}">
+                    <div class="health-card-header">
+                        <div class="health-card-thumb">
+                            ${ribbonHtml}
+                            ${thumbHtml}
+                        </div>
+                        <div class="health-card-meta">
+                            <div class="health-card-title">
+                                <a href="/listings/${listingId}" target="_blank" title="Ouvrir la fiche de l'annonce">
+                                    ${escapeHtml(data.title)}
+                                    <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.75rem; margin-left: 0.3rem;"></i>
+                                </a>
+                                <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-2); background: var(--surface-2); padding: 0.15rem 0.5rem; border-radius: 4px; border: 1px solid var(--border);">#${listingId}</span>
+                            </div>
+                            <div class="health-card-tags">
+                                <span>${getPortalBadgeHtml(data.source)}</span>
+                                <span><strong>${formatHealthPrice(data.price)}</strong></span>
+                                ${data.surface ? `<span>${data.surface} m²</span>` : ''}
+                                <span><i class="fa-solid fa-location-dot"></i> ${escapeHtml(data.city || 'Ville inconnue')}</span>
+                                ${anomalyBadge}
+                            </div>
+                        </div>
+                        <button type="button" class="health-card-close" onclick="removeListingFromHealth(${listingId})" title="Retirer cette annonce de la sélection">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <!-- Actions Grid -->
+                    <div class="health-actions-grid" id="actions_grid_${listingId}">
+                        ${actionsGridHtml}
+                    </div>
+
+                    <!-- Card Footer -->
+                    <div class="health-card-footer">
+                        <div class="health-quick-selects">
+                            <span style="color: var(--text-2); font-weight: 600;">Sélection :</span>
+                            <button type="button" onclick="checkCardAnomaliesOnly(${listingId})">Anomalies seules</button>
+                            <span>•</span>
+                            <button type="button" onclick="checkCardAllActions(${listingId})">Tout cocher</button>
+                            <span>•</span>
+                            <button type="button" onclick="uncheckCardAllActions(${listingId})">Tout décocher</button>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div id="card_feedback_${listingId}" style="font-size: 0.8rem; color: var(--text-2);"></div>
+                            <button type="button" class="btn sm" id="btn_repair_card_${listingId}" onclick="repairSingleListing(${listingId})">
+                                <i class="fa-solid fa-wrench"></i> Réparer cette annonce
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Checkbox interaction
+        function onToggleActionCard(listingId, actionKey, e) {
+            const chk = document.getElementById(`chk_${listingId}_${actionKey}`);
+            if (!chk) return;
+            chk.checked = !chk.checked;
+            onCheckboxActionCard(listingId, actionKey, chk.checked);
+        }
+
+        function onCheckboxActionCard(listingId, actionKey, isChecked) {
+            const entry = selectedHealthListings.get(listingId);
+            if (!entry) return;
+            if (isChecked) {
+                entry.selectedActions.add(actionKey);
+            } else {
+                entry.selectedActions.delete(actionKey);
+            }
+        }
+
+        function checkCardAnomaliesOnly(listingId) {
+            const entry = selectedHealthListings.get(listingId);
+            if (!entry || !entry.data.actions) return;
+            entry.selectedActions.clear();
+            Object.entries(entry.data.actions).forEach(([key, act]) => {
+                const chk = document.getElementById(`chk_${listingId}_${key}`);
+                if (act.is_anomaly) {
+                    entry.selectedActions.add(key);
+                    if (chk) chk.checked = true;
+                } else {
+                    if (chk) chk.checked = false;
+                }
+            });
+        }
+
+        function checkCardAllActions(listingId) {
+            const entry = selectedHealthListings.get(listingId);
+            if (!entry || !entry.data.actions) return;
+            Object.keys(entry.data.actions).forEach(key => {
+                entry.selectedActions.add(key);
+                const chk = document.getElementById(`chk_${listingId}_${key}`);
+                if (chk) chk.checked = true;
+            });
+        }
+
+        function uncheckCardAllActions(listingId) {
+            const entry = selectedHealthListings.get(listingId);
+            if (!entry) return;
+            entry.selectedActions.clear();
+            if (entry.data.actions) {
+                Object.keys(entry.data.actions).forEach(key => {
+                    const chk = document.getElementById(`chk_${listingId}_${key}`);
+                    if (chk) chk.checked = false;
+                });
+            }
+        }
+
+        function checkAllAnomaliesGlobal() {
+            selectedHealthListings.forEach((entry, listingId) => {
+                checkCardAnomaliesOnly(listingId);
+            });
+        }
+
+        function checkAllRepairsGlobal() {
+            selectedHealthListings.forEach((entry, listingId) => {
+                checkCardAllActions(listingId);
+            });
+        }
+
+        function uncheckAllRepairsGlobal() {
+            selectedHealthListings.forEach((entry, listingId) => {
+                uncheckCardAllActions(listingId);
+            });
+        }
+
+        // ── Single Card Repair Execution with In-Place Dynamic Update ──
+        async function repairSingleListing(listingId) {
+            const entry = selectedHealthListings.get(listingId);
+            if (!entry) return;
+
+            const actionsToRun = Array.from(entry.selectedActions);
+            if (actionsToRun.length === 0) {
+                showAlert('Veuillez cocher au moins une action de réparation pour cette annonce.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById(`btn_repair_card_${listingId}`);
+            const feedback = document.getElementById(`card_feedback_${listingId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Réparation…';
+            }
+            if (feedback) feedback.textContent = '';
+
+            try {
+                const res = await fetch(`/api/listings/${listingId}/repair-actions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actions: actionsToRun })
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.detail || 'Erreur lors de la réparation');
+
+                entry.data = result.health;
+                if (result.repaired_actions) {
+                    result.repaired_actions.forEach(a => entry.repairedActions.add(a));
+                }
+
+                entry.selectedActions.clear();
+                if (result.health && result.health.actions) {
+                    Object.entries(result.health.actions).forEach(([key, act]) => {
+                        if (act.is_anomaly) entry.selectedActions.add(key);
+                    });
+                }
+
+                const cardEl = document.getElementById(`health_card_${listingId}`);
+                if (cardEl) {
+                    const tempWrap = document.createElement('div');
+                    tempWrap.innerHTML = generateHealthCardHtml(entry.data, entry.selectedActions, entry.repairedActions);
+                    const newCardEl = tempWrap.firstElementChild;
+                    cardEl.replaceWith(newCardEl);
+                }
+
+                updateBulkBar();
+
+                const newFeedback = document.getElementById(`card_feedback_${listingId}`);
+                if (newFeedback) {
+                    newFeedback.innerHTML = `<span style="color: var(--green); font-weight: 600;"><i class="fa-solid fa-check"></i> ${result.repaired_actions.length} action(s) effectuée(s)</span>`;
+                }
+                showAlert(`Annonce #${listingId} réparée avec succès !`, 'success');
+            } catch (err) {
+                if (feedback) {
+                    feedback.innerHTML = `<span style="color: var(--red); font-weight: 600;">${escapeHtml(err.message)}</span>`;
+                }
+                showAlert(`Erreur sur l'annonce #${listingId} : ${err.message}`, 'error');
+            } finally {
+                const currentBtn = document.getElementById(`btn_repair_card_${listingId}`);
+                if (currentBtn) {
+                    currentBtn.disabled = false;
+                    currentBtn.innerHTML = '<i class="fa-solid fa-wrench"></i> Réparer cette annonce';
+                }
+            }
+        }
+
+        // ── Bulk Repairs Execution with Real-Time Progress ──
+        async function executeBulkRepairs() {
+            if (healthBulkRepairRunning) return;
+
+            const itemsToRepair = [];
+            selectedHealthListings.forEach((entry, listingId) => {
+                const actions = Array.from(entry.selectedActions);
+                if (actions.length > 0) {
+                    itemsToRepair.push({ listingId, actions });
+                }
+            });
+
+            if (itemsToRepair.length === 0) {
+                showAlert('Aucune réparation cochée parmi les annonces sélectionnées.', 'error');
+                return;
+            }
+
+            const total = itemsToRepair.length;
+            const progressWrap = document.getElementById('health_progress_wrap');
+            const progressBar = document.getElementById('health_progress_bar');
+            const progressStatus = document.getElementById('health_progress_status');
+            const bulkBtn = document.getElementById('btn_run_bulk_repair');
+
+            healthBulkRepairRunning = true;
+            if (bulkBtn) bulkBtn.disabled = true;
+            if (progressWrap) progressWrap.style.display = 'block';
+            if (progressStatus) progressStatus.style.display = 'block';
+
+            let completed = 0;
+            let errorsCount = 0;
+
+            for (let i = 0; i < total; i++) {
+                const item = itemsToRepair[i];
+                if (progressBar) {
+                    const pct = Math.round(((i) / total) * 100);
+                    progressBar.style.width = `${pct}%`;
+                }
+                if (progressStatus) {
+                    progressStatus.textContent = `Traitement de l'annonce #${item.listingId} (${i + 1} / ${total})…`;
+                }
+
+                try {
+                    await repairSingleListing(item.listingId);
+                    completed++;
+                } catch (err) {
+                    errorsCount++;
+                }
+
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            if (progressBar) progressBar.style.width = '100%';
+            if (progressStatus) {
+                progressStatus.textContent = `Terminé : ${completed} annonce(s) traitée(s) avec succès${errorsCount > 0 ? `, ${errorsCount} erreur(s)` : ''}.`;
+            }
+
+            setTimeout(() => {
+                if (progressWrap) progressWrap.style.display = 'none';
+                if (progressStatus) progressStatus.style.display = 'none';
+                if (progressBar) progressBar.style.width = '0%';
+            }, 5000);
+
+            healthBulkRepairRunning = false;
+            if (bulkBtn) bulkBtn.disabled = false;
+        }
+
         // ── Init ──────────────────────────────────────────────────────────────
         initHideRejectedToggle();
         loadProblems().then(() => pollRepairStatus(true));
+
     </script>
     <script>
         if ('serviceWorker' in navigator) {

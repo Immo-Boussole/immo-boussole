@@ -32,7 +32,8 @@ TEST_GROUPS = {
         "test_visit_collaboration.py",
         "test_csv_encoding.py",
         "test_header_enforcement.py",
-        "test_compromis_detection.py"
+        "test_compromis_detection.py",
+        "test_listing_health_repair.py"
     ],
     "Network": [
         "test_tls.py"
