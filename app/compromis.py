@@ -136,8 +136,8 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
 
     try:
         with Image.open(path_obj) as img:
-            # Redimensionner si très grande image pour accélérer l'OCR
-            max_dimension = 1400
+            # Redimensionner si image supérieure à 900px pour accélérer l'OCR
+            max_dimension = 900
             w, h = img.size
             if max(w, h) > max_dimension:
                 scale = max_dimension / max(w, h)
@@ -170,16 +170,19 @@ def detect_compromis_in_image(image_path: Union[str, Path]) -> Tuple[bool, Optio
             for image_variant, config_flag in ocr_passes:
                 try:
                     if config_flag:
-                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", config=config_flag)
+                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", config=config_flag, timeout=6)
                     else:
-                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng")
+                        extracted_text = pytesseract.image_to_string(image_variant, lang="fra+eng", timeout=6)
                 except Exception as e_lang:
                     # Fallback sur la langue par défaut si fra n'est pas installé
-                    logger.debug(f"[Compromis OCR] Langue 'fra+eng' non disponible ({e_lang}), fallback langue par défaut")
-                    if config_flag:
-                        extracted_text = pytesseract.image_to_string(image_variant, config=config_flag)
-                    else:
-                        extracted_text = pytesseract.image_to_string(image_variant)
+                    logger.debug(f"[Compromis OCR] Langue 'fra+eng' non disponible ou timeout ({e_lang}), fallback langue par défaut")
+                    try:
+                        if config_flag:
+                            extracted_text = pytesseract.image_to_string(image_variant, config=config_flag, timeout=6)
+                        else:
+                            extracted_text = pytesseract.image_to_string(image_variant, timeout=6)
+                    except Exception:
+                        extracted_text = ""
 
                 if extracted_text:
                     normalized_ocr = normalize_text_for_detection(extracted_text)

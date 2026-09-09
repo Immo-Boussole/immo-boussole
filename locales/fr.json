@@ -246,7 +246,8 @@
         "details": "Détails",
         "reload": "Relancer le scraping",
         "contacted": "Contacté",
-        "visit_status": "État de visite"
+        "visit_status": "État de visite",
+        "repair_tag_missing_compromis_tag": "Sous compromis non tagué"
     },
     "listing": {
         "like": "J'aime",

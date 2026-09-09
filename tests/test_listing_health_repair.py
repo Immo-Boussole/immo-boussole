@@ -14,7 +14,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.models import Listing, ListingStatus, Source
-from app.db_maintenance import evaluate_single_listing_health, apply_listing_repair_actions
+from app.db_maintenance import (
+    evaluate_single_listing_health,
+    apply_listing_repair_actions,
+    identify_problems,
+    repair_listings_batch_task,
+    MISSING_COMPROMIS_TAG,
+)
 from app.main import app, login_required, user_required, admin_required
 from app.database import SessionLocal, run_migrations, get_db
 
@@ -209,10 +215,57 @@ def test_api_health_endpoints_integration():
         db.close()
 
 
+@pytest.mark.asyncio
+async def test_missing_compromis_tag_detection_and_repair():
+    db = SessionLocal()
+    try:
+        l_comp = Listing(
+            url="https://example.com/ad-compromis-test",
+            title="Maison de village avec terrasse",
+            description_text="Vente urgente : bien actuellement sous compromis de vente.",
+            price=150000.0,
+            area=80.0,
+            city="Vienne (38200)",
+            status=ListingStatus.ACTIVE,
+            source=Source.LEBONCOIN,
+            is_under_compromis=False,
+            compromis_detected_by=None,
+        )
+        db.add(l_comp)
+        db.commit()
+        db.refresh(l_comp)
+
+        # 1. Check identify_problems detects the missing compromis tag
+        problems = identify_problems(db, hide_rejected=True)
+        assert MISSING_COMPROMIS_TAG in problems
+        assert l_comp.id in problems[MISSING_COMPROMIS_TAG]["ids"]
+
+        # 2. Repair via batch task
+        await repair_listings_batch_task(MISSING_COMPROMIS_TAG, hide_rejected=True)
+
+        # 3. Verify listing is now tagged
+        db.refresh(l_comp)
+        assert l_comp.is_under_compromis is True
+        assert l_comp.compromis_detected_by == "description"
+
+        # 4. Check identify_problems again: listing no longer present
+        problems_after = identify_problems(db, hide_rejected=True)
+        assert l_comp.id not in problems_after[MISSING_COMPROMIS_TAG]["ids"]
+
+    finally:
+        try:
+            db.query(Listing).filter(Listing.url == "https://example.com/ad-compromis-test").delete(synchronize_session=False)
+            db.commit()
+        except Exception:
+            pass
+        db.close()
+
+
 if __name__ == "__main__":
     test_evaluate_single_listing_health_anomalies_and_clean()
     import asyncio
     asyncio.run(test_apply_listing_repair_actions())
     test_api_health_endpoints_integration()
+    asyncio.run(test_missing_compromis_tag_detection_and_repair())
     print("ALL LISTING HEALTH & REPAIR TESTS PASSED!")
 

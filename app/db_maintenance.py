@@ -42,6 +42,7 @@ FORBIDDEN_ZONE = "forbidden_zone"
 INCORRECT_PRICE_PER_SQM = "incorrect_price_per_sqm"
 MISSING_PHOTOS = "missing_photos"
 PAST_FIRST_VISIT_NOT_DONE = "past_first_visit_not_done"
+MISSING_COMPROMIS_TAG = "missing_compromis_tag"
 
 
 def is_missing_location(listing) -> bool:
@@ -84,6 +85,7 @@ def get_listing_repair_issues(listing) -> list[dict]:
         "incorrect_price_per_sqm": {"label": "Prix/m² incorrect", "icon": "fa-calculator"},
         "missing_photos": {"label": "Photos manquantes", "icon": "fa-image"},
         "past_first_visit_not_done": {"label": "Visite non validée", "icon": "fa-calendar-xmark"},
+        "missing_compromis_tag": {"label": "Sous compromis non tagué", "icon": "fa-handshake"},
     }
 
     excluded_keys = {"forbidden_zone", "forbidden_department"}
@@ -262,6 +264,21 @@ def identify_problems(db: Session, hide_rejected: bool = True):
     ]
     past_first_visit_listing_ids = list(dict.fromkeys(v.listing_id for v in past_first_visits if v.listing_id))
 
+    # Missing compromis tag (mentions of compromis/offre in description or 1st photo, but listing.is_under_compromis is False)
+    missing_compromis_tag_listings = []
+    from app.compromis import analyze_listing_compromis
+    from app.media import json_to_photos
+    for l in target_listings:
+        if not l.is_under_compromis and l.compromis_detected_by != "manual":
+            first_p = None
+            if l.photos_local:
+                p_list = json_to_photos(l.photos_local)
+                if p_list:
+                    first_p = p_list[0]
+            is_comp, _ = analyze_listing_compromis(l.description_text, first_p)
+            if is_comp:
+                missing_compromis_tag_listings.append(l)
+
     result = {
         MISSING_LOCATION: {
             "count": len(missing_loc_listings),
@@ -319,6 +336,10 @@ def identify_problems(db: Session, hide_rejected: bool = True):
         PAST_FIRST_VISIT_NOT_DONE: {
             "count": len(past_first_visits),
             "ids": past_first_visit_listing_ids
+        },
+        MISSING_COMPROMIS_TAG: {
+            "count": len(missing_compromis_tag_listings),
+            "ids": [l.id for l in missing_compromis_tag_listings]
         }
     }
 
@@ -372,6 +393,7 @@ SAFE_PROBLEM_TYPES = [
     INCORRECT_PRICE_PER_SQM,
     MISSING_PHOTOS,
     PAST_FIRST_VISIT_NOT_DONE,
+    MISSING_COMPROMIS_TAG,
 ]
 
 # Problem types reserved for admins only (potentially destructive)
@@ -693,6 +715,19 @@ async def repair_listings_batch_task(problem_type: str, is_part_of_sequence: boo
                                 await refresh_listing_status(listing, db, force_update=True)
                             elif problem_type == AGGREGATE_SEARCH_PAGE:
                                 await split_or_purge_aggregate_listing(db, listing.id)
+                            elif problem_type == MISSING_COMPROMIS_TAG:
+                                from app.compromis import analyze_listing_compromis
+                                from app.media import json_to_photos
+                                first_p = None
+                                if listing.photos_local:
+                                    p_list = json_to_photos(listing.photos_local)
+                                    if p_list:
+                                        first_p = p_list[0]
+                                is_comp, det_by = analyze_listing_compromis(listing.description_text, first_p)
+                                if is_comp:
+                                    listing.is_under_compromis = True
+                                    listing.compromis_detected_by = det_by
+                                    db.commit()
                             else:
                                 await refresh_listing_status(listing, db, force_update=True)
                         except Exception as e:

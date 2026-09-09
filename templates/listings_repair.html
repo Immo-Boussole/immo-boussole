@@ -2029,6 +2029,7 @@
             incorrect_price_per_sqm: { label: 'Prix au m² incorrects',             desc: 'Prix au m² absent ou incohérent avec le prix et la surface.' },
             missing_photos:          { label: 'Images manquantes ou corrompues',    desc: 'Annonces dont les photos locales sont absentes, invalides ou avec 1 seule image.' },
             past_first_visit_not_done: { label: '1ères visites passées non validées', desc: 'Activités «\u00a01ère Visite effectuée\u00a0» à date passée dont le statut n\'est pas «\u00a0Effectuée / Validée\u00a0».' },
+            missing_compromis_tag:   { label: 'Annonces sous compromis non taguées', desc: 'Annonces dont la description ou la 1ère photo mentionne un compromis ou une offre acceptée mais dont le tag n\'est pas activé.' },
             // Dangerous (admin only)
             forbidden_department:    { label: 'Annonces hors département autorisé', desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
             forbidden_zone:          { label: 'Annonces en zone interdite',         desc: 'Seront passées en REJETÉ. Action irréversible.', danger: true },
@@ -2263,6 +2264,7 @@
                 incorrect_price_per_sqm: '#f97316',
                 missing_photos: '#84cc16',
                 past_first_visit_not_done: '#a855f7',
+                missing_compromis_tag: '#ea580c',
                 forbidden_department: '#dc2626',
                 forbidden_zone: '#b91c1c'
             };
@@ -3365,6 +3367,7 @@
             incorrect_price_per_sqm: 'Réparation : Prix au m²…',
             missing_photos: 'Réparation : Images manquantes…',
             past_first_visit_not_done: 'Réparation : 1ères visites passées…',
+            missing_compromis_tag: 'Réparation : Annonces sous compromis…',
         };
 
         async function pollRepairStatus(initialCheck = false) {

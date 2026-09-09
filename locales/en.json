@@ -246,7 +246,8 @@
         "details": "Details",
         "reload": "Reload scraping",
         "contacted": "Contacted",
-        "visit_status": "Visit Status"
+        "visit_status": "Visit Status",
+        "repair_tag_missing_compromis_tag": "Untagged Under Compromis"
     },
     "listing": {
         "like": "Like",
