@@ -34,6 +34,10 @@
   * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo, Hektor (Ma-Boîte-Immo, Immo-Rêve).*
 * **Automated Scheduled Scraping**: Background scheduler running hourly from 6:00 to 22:30 to automatically scrape configured searches ("Ready to Search").
 * **Instant Force Search**: Trigger a complete background scraping cycle on demand without waiting for the schedule.
+* **Automated "Under Contract" Detection (Text & OCR)**: Intelligent detection of listings under sales agreement or offer (*"Sous compromis"*, *"Sous offre"*, *"Offre acceptée"*, *"Vendu"*):
+  * *Semantic Text Analysis*: Real-time description analysis with false-positive filtering (e.g., excludes *"sans compromis"*, *"compromis idéal"*).
+  * *Computer Vision OCR*: Scans the primary listing photo via Tesseract OCR (with contrast boost and sparse text detection) to catch visual photo banners.
+  * *Audit & Batch Repairs*: Dedicated corner ribbons, dashboard quick filter, detail view manual toggles, and bulk retroactive repair tools.
 * **Local Media & Offline Storage**: Photos are downloaded and served locally to ensure zero dead links.
 * **Collaborative Reviews & Notes**: Multi-user independent ratings, notes, pros/cons, and criteria evaluations for each property.
 * **"Ideal Property" AI Synthesis**: Dynamic profile automatically synthesized from top-rated listings to identify recurring matches and red flags.
@@ -49,9 +53,9 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 ### 1. 🏠 Real Estate Catalog & Property Evaluation
 | Route | View Name | Description |
 |---|---|---|
-| `/` | **Dashboard** | Executive overview with KPI metric cards, new listings feed, price changes, and status filters |
-| `/listings/table` | **Listings Table** | High-density sortable data grid with multi-criteria filtering, column customizers, and batch actions |
-| `/listing/{id}` | **Listing Detail** | Exhaustive dossier with high-res photo gallery, DPE/GES gauges, financial metrics, agency contact widget, cadastral parcel references with official DVF (explore.data.gouv.fr) links, Georisques natural hazards, document attachments, collaborative reviews, and visit scheduling |
+| `/` | **Dashboard** | Executive overview with KPI metric cards, new listings feed, price changes, status filters, and one-click "Sous compromis" filter chip |
+| `/listings/table` | **Listings Table** | High-density sortable data grid with multi-criteria filtering, column customizers, under-contract status flags, and batch actions |
+| `/listing/{id}` | **Listing Detail** | Exhaustive dossier with high-res photo gallery, "Sous compromis" banner & manual toggle, DPE/GES gauges, financial metrics, agency contact widget, cadastral parcel references with official DVF (explore.data.gouv.fr) links, Georisques natural hazards, document attachments ("Compromis / Acte / Notaire"), collaborative reviews, and visit scheduling |
 | `/a-voir` | **To Review ("À voir")** | Dedicated triage inbox for newly imported and unreviewed property listings |
 | `/a-visiter` | **To Visit ("À visiter")** | Focused shortlist of prioritized properties selected for physical on-site visits |
 
@@ -82,7 +86,7 @@ Immo-Boussole provides a suite of 20 integrated views organized across 6 functio
 | Route | View Name | Description |
 |---|---|---|
 | `/duplicates/hunt` | **Duplicate Hunt** | Perceptual visual hashing (dHash/pHash) and fuzzy attribute matching to detect cross-portal duplicates and merge listings |
-| `/listings/repair` | **Listings Repair** | Diagnostic maintenance suite to fix missing GPS coordinates, repair broken thumbnails, and re-scrape outdated entries (with rejected listings filter) |
+| `/listings/repair` | **Listings Repair** | Diagnostic maintenance suite to fix missing GPS coordinates, repair broken thumbnails, detect untagged under-contract listings (`missing_compromis_tag`) with 1-click bulk repair, and re-scrape outdated entries (with rejected listings filter) |
 
 ### 6. ⚙️ User Management, Administration & Settings
 | Route | View Name | Description |
@@ -138,6 +142,7 @@ The application is immediately accessible at **[http://localhost:8000](http://lo
 #### Prerequisites
 * Python 3.10+
 * A running [Browserless](https://www.browserless.io/) or Chrome instance
+* *(Optional)* [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) with French language data (`tesseract-ocr-fra`) for automated photo banner text recognition (already built into Docker containers).
 
 ```bash
 # 1. Clone the repository
@@ -229,6 +234,7 @@ python tests/run_tests.py --ci
 ## 🏗️ Tech Stack
 
 * **Backend**: FastAPI (Python 3.12), SQLAlchemy ORM, SQLite, APScheduler, Pydantic v2
+* **Computer Vision & OCR**: Tesseract OCR (`pytesseract`, Pillow)
 * **Scraping & Automation**: Playwright, Browserless, BeautifulSoup4, HTTPX
 * **Frontend**: HTML5, Vanilla CSS (Modern Dark Mode / Glassmorphism), Jinja2 templates
 * **Integrations**: Google Calendar API, Google People API, MCP (Model Context Protocol), Géorisques API, OpenStreetMap / Nominatim

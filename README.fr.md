@@ -34,6 +34,10 @@
   * *LeBonCoin, SeLoger, Le Figaro Immobilier, LogicImmo, BienIci, IAD France, Immobilier Notaires, Vinci Immobilier, Immobilier France, Provimo, Hektor (Ma-Boîte-Immo, Immo-Rêve).*
 * **Recherches Automatiques Planifiées** : Planificateur d'arrière-plan exécuté toutes les heures de 6h à 22h30 pour scraper vos recherches configurées ("Prêt à Rechercher").
 * **Forcer la Recherche Immédiate** : Déclenchez un cycle de scraping complet à la demande sans attendre l'heure planifiée.
+* **Détection Automatisée des Biens "Sous compromis" (Texte & OCR)** : Identification intelligente des annonces sous compromis de vente ou sous offre (*"Sous compromis"*, *"Sous offre"*, *"Offre acceptée"*, *"Vendu"*) :
+  * *Analyse Sémantique du Texte* : Analyse en temps réel de la description avec filtrage rigoureux des faux positifs (ex. exclusion de *"sans compromis"*, *"compromis idéal"*).
+  * *Reconnaissance Optique de Caractères (OCR)* : Analyse de la première photo via Tesseract OCR (avec rehaussement de contraste et détection de texte épars) pour intercepter les bandeaux visuels.
+  * *Audit & Réparations par Lots* : Bandeaux visuels en coin, filtre rapide dédié sur le tableau de bord, commutateur manuel dans la fiche détaillée et outils de réparation rétroactive en masse.
 * **Stockage Local des Médias** : Photos téléchargées et servies en local pour garantir l'absence de liens cassés.
 * **Avis Collaboratifs & Notes** : Notes individuelles multi-utilisateurs, critères d'évaluation, avantages et inconvénients pour chaque bien.
 * **Synthèse IA "Bien Idéal"** : Profil dynamique calculé à partir des meilleures annonces pour révéler vos critères clés et points de vigilance.
@@ -49,9 +53,9 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 ### 1. 🏠 Catalogue Immobilier & Évaluation des Biens
 | Route | Nom de la Vue | Description |
 |---|---|---|
-| `/` | **Tableau de bord** | Synthèse globale avec indicateurs KPI, flux des nouvelles annonces, suivi des baisses de prix et filtres de statut |
-| `/listings/table` | **Tableau des annonces** | Grille haute densité triable avec filtres multicritères, personnalisation des colonnes et actions groupées |
-| `/listing/{id}` | **Fiche détaillée** | Dossier complet avec galerie haute résolution, jauges DPE/GES, calculs financiers, fiche agence, références cadastrales avec lien officiel DVF (explore.data.gouv.fr), widget Géorisques, pièces jointes, avis collaboratifs et prise de rendez-vous |
+| `/` | **Tableau de bord** | Synthèse globale avec indicateurs KPI, flux des nouvelles annonces, suivi des baisses de prix, filtres de statut et pastille de filtrage en 1 clic « Sous compromis » |
+| `/listings/table` | **Tableau des annonces** | Grille haute densité triable avec filtres multicritères, personnalisation des colonnes, indicateurs de compromis et actions groupées |
+| `/listing/{id}` | **Fiche détaillée** | Dossier complet avec galerie haute résolution, bandeau « Sous compromis » & commutateur manuel, jauges DPE/GES, calculs financiers, fiche agence, références cadastrales avec lien officiel DVF (explore.data.gouv.fr), widget Géorisques, pièces jointes (« Compromis / Acte / Notaire »), avis collaboratifs et prise de rendez-vous |
 | `/a-voir` | **À voir** | Boîte de réception dédiée au tri des annonces importées non encore qualifiées |
 | `/a-visiter` | **À visiter** | Présélection des biens prioritaires retenus pour des visites physiques |
 
@@ -82,7 +86,7 @@ Immo-Boussole intègre 20 vues spécialisées réparties en 6 domaines fonctionn
 | Route | Nom de la Vue | Description |
 |---|---|---|
 | `/duplicates/hunt` | **Chasse aux duplicats** | Hachage visuel perceptuel (dHash/pHash) et corrélation floue pour détecter et fusionner les annonces en doublon |
-| `/listings/repair` | **Réparations** | Boîte à outils de maintenance : correction du géocodage GPS, réparation d'images et actualisation des anciennes annonces (avec filtre des annonces rejetées) |
+| `/listings/repair` | **Réparations** | Boîte à outils de maintenance : correction du géocodage GPS, réparation d'images, détection des biens sous compromis non tagués (`missing_compromis_tag`) avec réparation en lot en 1 clic et actualisation des anciennes annonces (avec filtre des annonces rejetées) |
 
 ### 6. ⚙️ Gestion Utilisateurs, Administration & Paramètres
 | Route | Nom de la Vue | Description |
@@ -138,6 +142,7 @@ L'application est immédiatement accessible sur **[http://localhost:8000](http:/
 #### Prérequis
 * Python 3.10+
 * Une instance [Browserless](https://www.browserless.io/) ou Chrome en local
+* *(Optionnel)* [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) avec le paquet linguistique français (`tesseract-ocr-fra`) pour la reconnaissance automatique des bandeaux sur les photos (déjà intégré dans les conteneurs Docker).
 
 ```bash
 # 1. Cloner le dépôt
@@ -229,6 +234,7 @@ python tests/run_tests.py --ci
 ## 🏗️ Stack Technique
 
 * **Backend** : FastAPI (Python 3.12), SQLAlchemy ORM, SQLite, APScheduler, Pydantic v2
+* **Vision par Ordinateur & OCR** : Tesseract OCR (`pytesseract`, Pillow)
 * **Scraping & Automatisation** : Playwright, Browserless, BeautifulSoup4, HTTPX
 * **Frontend** : HTML5, Vanilla CSS (Design Sombre / Glassmorphism), Templates Jinja2
 * **Intégrations** : Google Calendar API, Google People API, MCP (Model Context Protocol), API Géorisques, OpenStreetMap / Nominatim
