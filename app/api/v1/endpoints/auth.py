@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.translations import get_text
+from app.auth_limiter import check_rate_limit, record_failed_login, clear_failed_logins
 
 router = APIRouter()
 
@@ -18,9 +19,17 @@ def login_api(
     """
     Authenticate a user via username and password.
     Returns an API key (Bearer token) for browser extensions / API integrations.
+    Protected by IP-based rate limiting against brute-force attempts.
     """
+    if not check_rate_limit(request):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes."
+        )
+
     user = db.query(models.User).filter(models.User.username == credentials.username).first()
     if not user:
+        record_failed_login(request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=get_text(request, "api.invalid_credentials", default="Identifiants incorrects")
@@ -30,10 +39,13 @@ def login_api(
     pwd_hash_100k = hashlib.pbkdf2_hmac('sha256', credentials.password.encode('utf-8'), user.salt, 100000)
 
     if user.password_hash not in (pwd_hash_600k, pwd_hash_100k):
+        record_failed_login(request)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=get_text(request, "api.invalid_credentials", default="Identifiants incorrects")
         )
+
+    clear_failed_logins(request)
 
     # Generate or refresh API key for the user
     raw_key = secrets.token_urlsafe(32)

@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Optional
 
 import httpx
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 
 MEDIA_BASE_DIR = Path("static/media")
 
@@ -309,7 +309,7 @@ ALLOWED_ATTACHMENT_EXTENSIONS = {
     # Documents
     ".pdf", ".doc", ".docx", ".odt", ".rtf", ".txt",
     # Images
-    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".svg", ".tiff",
+    ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff",
     # Spreadsheets
     ".xls", ".xlsx", ".ods", ".csv",
     # Archives / other
@@ -344,8 +344,11 @@ async def save_listing_attachment_file(
     orig_name = file.filename or "document"
     orig_name = os.path.basename(orig_name)
     ext = Path(orig_name).suffix.lower()
-    if ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
-        ext = ext if ext else ".pdf"
+    if not ext or ext not in ALLOWED_ATTACHMENT_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extension '{ext}' non autorisée pour une pièce jointe. Extensions autorisées : {', '.join(sorted(ALLOWED_ATTACHMENT_EXTENSIONS))}"
+        )
 
     safe_base = sanitize_filename(Path(orig_name).stem)
     unique_suffix = uuid.uuid4().hex[:8]
@@ -761,8 +764,11 @@ async def save_visit_media_file(
     orig_name = file.filename or "media_file"
     orig_name = os.path.basename(orig_name)
     ext = Path(orig_name).suffix.lower()
-    if ext not in ALLOWED_VISIT_MEDIA_EXTENSIONS:
-        ext = ext if ext else ".jpg"
+    if not ext or ext not in ALLOWED_VISIT_MEDIA_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Extension '{ext}' non autorisée pour un média de visite. Extensions autorisées : {', '.join(sorted(ALLOWED_VISIT_MEDIA_EXTENSIONS))}"
+        )
 
     # Classify media type
     if ext in {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"}:

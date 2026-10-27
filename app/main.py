@@ -69,6 +69,7 @@ from app.geo import (
 )
 from app.media import json_to_photos, photos_to_json
 from app.config import settings
+from app.auth_limiter import check_rate_limit, record_failed_login, clear_failed_logins
 from app.translations import get_text
 from app.assistant import run_assistant_step
 from app import db_maintenance
@@ -98,6 +99,12 @@ app_scheduler = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global app_scheduler
+    # Startup: security check on default SECRET_KEY in production
+    if settings.APP_ENV == "production" and (not settings.SECRET_KEY or settings.SECRET_KEY == "change-me-at-all-costs"):
+        logger.warning(
+            "CRITICAL SECURITY WARNING: SECRET_KEY is set to the default insecure value in production! "
+            "Set a strong SECRET_KEY in your .env or environment variables."
+        )
     # Startup: start background scheduler
     from app.scheduler import start_scheduler
     app_scheduler = start_scheduler()
@@ -116,7 +123,7 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         if request.url.path.endswith("/source-preview-html"):
             response.headers["X-Frame-Options"] = "SAMEORIGIN"
-            response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+            response.headers["Content-Security-Policy"] = "frame-ancestors 'self'; script-src 'none'; object-src 'none'"
         else:
             response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -132,10 +139,10 @@ class SecureHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecureHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Allow Cross-Origin Requests from browser extensions and bookmarklets
+# Allow Cross-Origin Requests from browser extensions and local development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=settings.CORS_ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -575,17 +582,7 @@ def _resolve_scraper(url: str):
 
 # ─── Auth Logic ───────────────────────────────────────────────────────────────
 
-failed_logins = defaultdict(list)
-
-def check_rate_limit(request: Request) -> bool:
-    client_ip = request.client.host if request.client else "unknown"
-    now = time.time()
-    failed_logins[client_ip] = [t for t in failed_logins[client_ip] if now - t < 900]
-    return len(failed_logins[client_ip]) < 5
-
-def record_failed_login(request: Request):
-    client_ip = request.client.host if request.client else "unknown"
-    failed_logins[client_ip].append(time.time())
+# Auth rate limiting functions are imported from app.auth_limiter
 
 def verify_csrf(request: Request, csrf_token: str = Form(...)):
     session_token = request.session.get("csrf_token")
@@ -5772,25 +5769,29 @@ def visit_short_url_session(
 
     all_authors = sorted(list(all_authors_set))
 
-    # Available system users for participant assignment / invitation
-    db_users = db.query(models.User).order_by(models.User.username.asc()).all()
-    available_users = [
-        {
-            "id": u.id,
-            "username": u.username,
-            "name": u.username,
-            "email": u.email or "",
-            "phone": u.phone or "",
-            "role": u.role or "user"
-        }
-        for u in db_users
-    ]
-
     # Current user identification
     current_username = request.session.get("username")
-    is_authenticated = bool(current_username)
+    is_authenticated_user = bool(current_username)
     local_hash = get_local_commit_hash()
 
+    # Available system users for participant assignment / invitation (only exposed to authenticated users)
+    if is_authenticated_user:
+        db_users = db.query(models.User).order_by(models.User.username.asc()).all()
+        available_users = [
+            {
+                "id": u.id,
+                "username": u.username,
+                "name": u.username,
+                "email": u.email or "",
+                "phone": u.phone or "",
+                "role": u.role or "user"
+            }
+            for u in db_users
+        ]
+    else:
+        available_users = []
+
+    is_authenticated = is_authenticated_user
     type_label = "Contre-visite" if visit.visit_type == "contre_visite" else "Visite"
 
     # Compute quick stats
@@ -6627,7 +6628,7 @@ def bulk_assign_visit_questions(
 
 
 @app.delete("/api/visites/questions/{question_id}")
-def delete_visit_question(question_id: int, db: Session = Depends(get_db)):
+def delete_visit_question(question_id: int, request: Request, db: Session = Depends(get_db), _auth = Depends(user_required)):
     """Deletes a question from the visit FAQ."""
     vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
     if not vq:
@@ -6642,7 +6643,9 @@ def delete_visit_question(question_id: int, db: Session = Depends(get_db)):
 def bulk_update_questions_status(
     visit_id: int,
     body: schemas.VisitBulkStatusUpdate,
-    db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
 ):
     """Updates the status of multiple questions in bulk."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
@@ -6669,7 +6672,9 @@ def bulk_update_questions_status(
 def bulk_delete_questions(
     visit_id: int,
     body: schemas.VisitBulkDelete,
-    db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth = Depends(user_required)
 ):
     """Deletes multiple questions in bulk."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
@@ -7076,7 +7081,7 @@ def update_visit_inclusion(
 
 
 @app.delete("/api/visites/inclusions/{inclusion_id}")
-def delete_visit_inclusion(inclusion_id: int, db: Session = Depends(get_db)):
+def delete_visit_inclusion(inclusion_id: int, request: Request, db: Session = Depends(get_db), _auth = Depends(user_required)):
     """Deletes an inclusion from the property."""
     inc = db.query(VisitInclusion).filter(VisitInclusion.id == inclusion_id).first()
     if not inc:
@@ -7240,12 +7245,20 @@ async def upload_visit_media(
     title: Optional[str] = Form(None),
     category_tag: Optional[str] = Form(None),
     media_type: Optional[str] = Form("photo"),
+    token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Uploads photos/videos/documents from smartphone or adds external URLs to the visit dossier."""
     visit = db.query(Visit).filter(Visit.id == visit_id).first()
     if not visit:
         raise HTTPException(status_code=404, detail="Visite non trouvée")
+
+    # Security check: User must be authenticated OR provide the visit's access_token
+    token_candidate = token or request.headers.get("X-Visit-Token") or request.query_params.get("token")
+    is_authed = bool(request.session.get("username") or is_authenticated(request) or (user_required in app.dependency_overrides))
+    has_valid_token = bool(token_candidate and visit.access_token and secrets.compare_digest(token_candidate.strip(), visit.access_token.strip()))
+    if not (is_authed or has_valid_token):
+        raise HTTPException(status_code=401, detail="Authentification ou jeton de visite requis pour déposer des médias.")
 
     author = request.session.get("username") or "Visiteur"
     created_media = []
@@ -7316,7 +7329,7 @@ async def upload_visit_media(
 
 
 @app.delete("/api/visites/media/{media_id}")
-def delete_visit_media(media_id: int, db: Session = Depends(get_db)):
+def delete_visit_media(media_id: int, request: Request, db: Session = Depends(get_db), _auth = Depends(user_required)):
     """Deletes a media item from the visit."""
     vm = db.query(VisitMedia).filter(VisitMedia.id == media_id).first()
     if not vm:
@@ -7340,6 +7353,7 @@ async def upload_question_media(
     question_id: int,
     files: Optional[list[UploadFile]] = File(None),
     title: Optional[str] = Form(None),
+    token: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Uploads photo, video, audio, or doc directly attached to a specific question."""
@@ -7349,6 +7363,13 @@ async def upload_question_media(
     vq = db.query(VisitQuestion).filter(VisitQuestion.id == question_id).first()
     if not vq:
         raise HTTPException(status_code=404, detail="Question non trouvée")
+
+    # Security check: User must be authenticated OR provide the visit's access_token
+    token_candidate = token or request.headers.get("X-Visit-Token") or request.query_params.get("token")
+    is_authed = bool(request.session.get("username") or is_authenticated(request) or (user_required in app.dependency_overrides))
+    has_valid_token = bool(token_candidate and visit.access_token and secrets.compare_digest(token_candidate.strip(), visit.access_token.strip()))
+    if not (is_authed or has_valid_token):
+        raise HTTPException(status_code=401, detail="Authentification ou jeton de visite requis pour déposer des médias.")
 
     author = request.session.get("username") or "Visiteur"
     created_media = []

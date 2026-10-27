@@ -1513,24 +1513,28 @@
                 </div>
 
                 <p style="font-size: 13px; color: var(--vs-text-muted); margin-bottom: 14px;">
+                    {% if available_users %}
                     Sélectionnez un compte existant ou créez un nouveau profil pour lui donner accès au dossier collaboratif.
+                    {% else %}
+                    Renseignez les coordonnées du participant pour lui donner accès au dossier collaboratif.
+                    {% endif %}
                 </p>
 
+                {% if available_users %}
                 <div class="vs-form-group">
                     <label class="vs-form-label" for="invite-account-select">Compte utilisateur Immo-Boussole</label>
                     <select id="invite-account-select" class="vs-form-input">
                         <option value="">➕ Créer un nouveau profil / compte externe</option>
-                        {% if available_users %}
-                            <optgroup label="Comptes existants">
-                                {% for u in available_users %}
-                                    <option value="{{ u.username }}" data-name="{{ u.name or u.username }}" data-email="{{ u.email or '' }}" data-phone="{{ u.phone or '' }}" data-role="{{ u.role or 'visiteur' }}">
-                                        👤 {{ u.username }}{% if u.email %} ({{ u.email }}){% else %} [email non renseigné]{% endif %}
-                                    </option>
-                                {% endfor %}
-                            </optgroup>
-                        {% endif %}
+                        <optgroup label="Comptes existants">
+                            {% for u in available_users %}
+                                <option value="{{ u.username }}" data-name="{{ u.name or u.username }}" data-email="{{ u.email or '' }}" data-phone="{{ u.phone or '' }}" data-role="{{ u.role or 'visiteur' }}">
+                                    👤 {{ u.username }}{% if u.email %} ({{ u.email }}){% else %} [email non renseigné]{% endif %}
+                                </option>
+                            {% endfor %}
+                        </optgroup>
                     </select>
                 </div>
+                {% endif %}
 
                 <div class="vs-form-group">
                     <label class="vs-form-label" for="invite-name">Nom / Prénom du participant *</label>

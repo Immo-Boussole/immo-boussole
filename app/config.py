@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-at-all-costs"  # MUST be overridden in .env for production
     HTTPS_ONLY: bool = False  # Set to True in production to enforce secure cookies
 
+    # CORS configuration
+    CORS_ALLOWED_ORIGIN_REGEX: str = r"^(chrome-extension://.*|moz-extension://.*|https?://(localhost|127\.0\.0\.1)(:\d+)?)$"
+
     # Scraping scheduler
     SCRAPING_INTERVAL_HOURS: int = 12
     SCRAPING_SCHEDULE: str = "Toutes les 30 min, de 6h à 22h30"  # Human-readable label shown in the UI

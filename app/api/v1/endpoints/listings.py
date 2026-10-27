@@ -386,6 +386,48 @@ def _render_native_fallback_preview(listing: models.Listing, reason: str = "") -
 </html>"""
 
 
+def is_safe_external_url(url: str) -> bool:
+    """
+    Validates that a target URL is an external HTTP/HTTPS URL and does not resolve
+    to loopback, private, link-local, multicast, or reserved addresses (SSRF protection).
+    """
+    import ipaddress
+    import socket
+    import urllib.parse
+
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme.lower() not in ("http", "https"):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        # Direct loopback names
+        if hostname.lower() in ("localhost", "127.0.0.1", "::1"):
+            return False
+
+        addr_info = socket.getaddrinfo(hostname, None)
+        if not addr_info:
+            return False
+
+        for item in addr_info:
+            ip_str = item[4][0]
+            ip = ipaddress.ip_address(ip_str)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                return False
+        return True
+    except Exception:
+        return False
+
+
 @router.get("/{listing_id}/source-preview-html")
 def get_listing_source_preview_html(
     listing_id: int,
@@ -395,6 +437,7 @@ def get_listing_source_preview_html(
     """
     Fetch and sanitize source portal HTML for the right side drawer preview.
     Strips X-Frame-Options and CSP frame-ancestors, injects <base href> and anti-frame-busting guard.
+    Enforces script-src 'none' and SSRF validation for safety.
     Falls back gracefully to rich native preview if portal restricts direct access.
     """
     from fastapi.responses import HTMLResponse
@@ -406,8 +449,15 @@ def get_listing_source_preview_html(
         raise HTTPException(status_code=404, detail="Listing not found")
 
     target_url = listing.original_url or listing.url
-    if not target_url or not target_url.startswith("http"):
-        return HTMLResponse(content=_render_native_fallback_preview(listing, "URL non disponible"), status_code=200)
+    if not target_url or not is_safe_external_url(target_url):
+        return HTMLResponse(
+            content=_render_native_fallback_preview(listing, "Aperçu natif"),
+            status_code=200,
+            headers={
+                "X-Frame-Options": "SAMEORIGIN",
+                "Content-Security-Policy": "frame-ancestors 'self'; script-src 'none'; object-src 'none'"
+            }
+        )
 
     # Attempt to fetch live HTML
     try:
@@ -447,7 +497,7 @@ def get_listing_source_preview_html(
                     status_code=200,
                     headers={
                         "X-Frame-Options": "SAMEORIGIN",
-                        "Content-Security-Policy": "frame-ancestors 'self'"
+                        "Content-Security-Policy": "frame-ancestors 'self'; script-src 'none'; object-src 'none'"
                     }
                 )
     except Exception:
@@ -459,7 +509,7 @@ def get_listing_source_preview_html(
         status_code=200,
         headers={
             "X-Frame-Options": "SAMEORIGIN",
-            "Content-Security-Policy": "frame-ancestors 'self'"
+            "Content-Security-Policy": "frame-ancestors 'self'; script-src 'none'; object-src 'none'"
         }
     )
 
